@@ -5,6 +5,8 @@ declare(strict_types=1);
 
 use App\Application\Dunning\Command\CreateDunningNotice;
 use App\Application\Dunning\Command\EmailDunningNotice;
+use App\Application\Dunning\Command\SendDunningNoticeViaMessaging;
+use App\Application\Messaging\MessagingSendResult;
 use App\Application\Dunning\Query\GetDunningSettings;
 use App\Application\Dunning\Query\ListDunningLevels;
 use App\Application\Invoice\Query\GetInvoice;
@@ -31,8 +33,14 @@ use App\Domain\Invoice\Invoice;
 //   3. Falls der Kunde keine E-Mail-Adresse hinterlegt hat, wird
 //      übersprungen (kein Postversand-Fallback in dieser Version).
 //   4. Sonst: CreateDunningNotice (createdBy: 'automatic') gefolgt von
-//      EmailDunningNotice. Pro Rechnung einzeln try/catch-abgesichert,
-//      damit ein Fehler bei einer Rechnung nicht den gesamten Lauf abbricht.
+//      EmailDunningNotice UND ZUSÄTZLICH SendDunningNoticeViaMessaging (siehe
+//      SendDunningNoticeViaMessagingHandler — WhatsApp Business/Telegram/
+//      Signal, siehe App\Domain\Messaging), falls der Kunde dafür die
+//      nötigen Kontaktdaten hinterlegt hat. Ein Fehlschlag beim
+//      Messenger-Versand verhindert NIE den (bereits erfolgten) E-Mail-
+//      Versand — eigener try/catch, siehe unten. Pro Rechnung einzeln
+//      try/catch-abgesichert, damit ein Fehler bei einer Rechnung nicht den
+//      gesamten Lauf abbricht.
 /** @var \App\Infrastructure\Http\Router $router Ungenutzt — wir brauchen nur die lokalen Variablen, die bootstrap.php nebenbei definiert. */
 $router = require __DIR__ . '/../src/bootstrap.php';
 
@@ -84,6 +92,7 @@ echo 'Überfällige Rechnungen gefunden: ' . count($overdueInvoices) . "\n\n";
 $today = new DateTimeImmutable('today');
 $createdCount = 0;
 $emailedCount = 0;
+$messagedCount = 0;
 $skippedNoLevel = 0;
 $skippedDuplicate = 0;
 $skippedNoEmail = 0;
@@ -138,6 +147,24 @@ foreach ($overdueInvoices as $invoice) {
         $emailedCount++;
 
         echo "Rechnung {$invoice->invoiceNumber}: Mahnung \"{$applicableLevel->name}\" erstellt und an {$recipientEmail} verschickt.\n";
+
+        try {
+            $messagingResult = $commandBus->dispatch(new SendDunningNoticeViaMessaging($noticeId));
+            assert($messagingResult instanceof MessagingSendResult);
+            $messagedCount += count($messagingResult->sentChannels);
+            foreach ($messagingResult->sentChannels as $channel) {
+                echo "Rechnung {$invoice->invoiceNumber}: Mahnung zusätzlich per {$channel->label()} verschickt.\n";
+            }
+            foreach ($messagingResult->failedChannels as $channelValue => $errorMessage) {
+                fwrite(STDERR, "Fehler bei Rechnung {$invoice->id} (Mahnung, Messenger \"{$channelValue}\"): {$errorMessage}\n");
+            }
+        } catch (Throwable $e) {
+            // Bewusst nicht in $errorCount gezählt (siehe Kommentar oben) —
+            // der Mahnungs-E-Mail-Versand ist bereits erfolgreich
+            // abgeschlossen, ein Fehler hier betrifft nur den zusätzlichen
+            // Messenger-Kanal.
+            fwrite(STDERR, "Fehler bei Rechnung {$invoice->id} (Mahnung, Messenger-Versand): " . $e->getMessage() . "\n");
+        }
     } catch (Throwable $e) {
         $errorCount++;
         fwrite(STDERR, "Fehler bei Rechnung {$invoice->id}: " . $e->getMessage() . "\n");
@@ -147,6 +174,7 @@ foreach ($overdueInvoices as $invoice) {
 echo "\n";
 echo "Mahnungen erstellt:                {$createdCount}\n";
 echo "Davon per E-Mail verschickt:       {$emailedCount}\n";
+echo "Davon zusätzlich per Messenger (Summe über alle Kanäle): {$messagedCount}\n";
 echo "Übersprungen (keine Stufe fällig): {$skippedNoLevel}\n";
 echo "Übersprungen (Stufe schon vorhanden): {$skippedDuplicate}\n";
 echo "Übersprungen (keine Kunden-E-Mail): {$skippedNoEmail}\n";

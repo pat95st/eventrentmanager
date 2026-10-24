@@ -55,6 +55,7 @@ final class SettingsSections
                     ['key' => 'settings-preisstaffelung', 'href' => '/einstellungen/preisstaffelung', 'label' => t('nav.price_tiers')],
                     ['key' => 'settings-ueberziehung', 'href' => '/einstellungen/ueberziehung', 'label' => t('nav.overage_settings')],
                     ['key' => 'settings-mahnwesen', 'href' => '/einstellungen/mahnwesen', 'label' => t('nav.dunning_levels')],
+                    ['key' => 'settings-rechnungserinnerungen', 'href' => '/einstellungen/rechnungserinnerungen', 'label' => t('nav.invoice_due_reminder_settings')],
                 ],
             ],
             'communication' => [

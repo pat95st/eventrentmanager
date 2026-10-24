@@ -373,6 +373,27 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
 
+    public function findDueSoon(int $leadDays): array
+    {
+        // Deadline bewusst in PHP berechnet und als Datum gebunden (statt
+        // DATE_ADD mit gebundenem Parameter) — identisches Muster wie
+        // MariadbRentalRepository::findDueForReminder().
+        $today = new DateTimeImmutable('today');
+        $deadline = $today->modify("+{$leadDays} days");
+
+        $stmt = $this->pdo->prepare(
+            "SELECT * FROM invoices WHERE status = 'sent' AND due_date IS NOT NULL
+             AND due_date >= :today AND due_date <= :deadline
+             ORDER BY due_date ASC"
+        );
+        $stmt->execute([
+            'today' => $today->format('Y-m-d'),
+            'deadline' => $deadline->format('Y-m-d'),
+        ]);
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     public function findPaidBetween(DateTimeImmutable $from, DateTimeImmutable $to): array
     {
         $stmt = $this->pdo->prepare(

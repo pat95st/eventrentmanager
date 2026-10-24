@@ -478,6 +478,8 @@ $dunningLevelRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunning
 $dunningNoticeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningNoticeRepository($pdo);
 $dunningSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningSettingsRepository($pdo);
 $dunningPdfGenerator = new \App\Infrastructure\Pdf\DunningPdfGenerator();
+$invoiceDueReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderRepository($pdo);
+$invoiceDueReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderSettingsRepository($pdo);
 $receiptRepository = new MariadbReceiptRepository($pdo);
 $mailboxSettingsRepository = new MariadbMailboxSettingsRepository($pdo);
 $receiptInboxAllowedSenderRepository = new MariadbReceiptInboxAllowedSenderRepository($pdo);
@@ -782,6 +784,24 @@ $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, n
     $documentStoragePusher,
 ));
 
+$commandBus->register(\App\Application\Invoice\Command\SendInvoiceSentViaMessaging::class, new \App\Application\Invoice\Command\SendInvoiceSentViaMessagingHandler(
+    $getInvoiceHandler,
+    $invoiceSettingsRepository,
+    $messagingSettingsRepository,
+    $messagingTemplateRenderer,
+    $messageSender,
+));
+$commandBus->register(\App\Application\Invoice\Command\SendInvoiceDueReminderViaMessaging::class, new \App\Application\Invoice\Command\SendInvoiceDueReminderViaMessagingHandler(
+    $getInvoiceHandler,
+    $invoiceSettingsRepository,
+    $messagingSettingsRepository,
+    $messagingTemplateRenderer,
+    $messageSender,
+));
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceDueReminder::class, new \App\Application\Invoice\Command\CreateInvoiceDueReminderHandler($invoiceDueReminderRepository));
+$commandBus->register(\App\Application\Settings\Command\UpdateInvoiceDueReminderSettings::class, new \App\Application\Settings\Command\UpdateInvoiceDueReminderSettingsHandler($invoiceDueReminderSettingsRepository));
+$queryBus->register(\App\Application\Settings\Query\GetInvoiceDueReminderSettings::class, new \App\Application\Settings\Query\GetInvoiceDueReminderSettingsHandler($invoiceDueReminderSettingsRepository));
+
 $commandBus->register(\App\Application\Settings\Command\UpdateInvoiceSettings::class, new UpdateInvoiceSettingsHandler($invoiceSettingsRepository));
 $commandBus->register(\App\Application\Numbering\Command\UpdateDocumentNumberingSettings::class, new \App\Application\Numbering\Command\UpdateDocumentNumberingSettingsHandler($documentNumberingSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdatePricingSettings::class, new UpdatePricingSettingsHandler($pricingSettingsRepository));
@@ -812,6 +832,12 @@ $commandBus->register(\App\Application\Dunning\Command\EmailDunningNotice::class
     $emailTemplateRenderer,
     $dunningNoticeRepository,
     $documentStoragePusher,
+));
+$commandBus->register(\App\Application\Dunning\Command\SendDunningNoticeViaMessaging::class, new \App\Application\Dunning\Command\SendDunningNoticeViaMessagingHandler(
+    $getDunningNoticeHandler,
+    $messagingSettingsRepository,
+    $messagingTemplateRenderer,
+    $messageSender,
 ));
 
 // --- Belege (Receipts) -----------------------------------------------------
@@ -1240,6 +1266,7 @@ $legalSettingsController = new LegalSettingsController($commandBus, $queryBus);
 $offerPdfTemplateSettingsController = new OfferPdfTemplateSettingsController($commandBus, $queryBus);
 $pdfDesignSettingsController = new \App\Infrastructure\Http\Controllers\PdfDesignSettingsController($commandBus, $queryBus);
 $rentalReminderSettingsController = new \App\Infrastructure\Http\Controllers\RentalReminderSettingsController($commandBus, $queryBus);
+$invoiceDueReminderSettingsController = new \App\Infrastructure\Http\Controllers\InvoiceDueReminderSettingsController($commandBus, $queryBus);
 $overageSettingsController = new \App\Infrastructure\Http\Controllers\OverageSettingsController($commandBus, $queryBus);
 $legalPageController = new LegalPageController($queryBus);
 $localeController = new LocaleController($commandBus, $userRepository);
@@ -1785,6 +1812,8 @@ $router->post('/einstellungen/pdf-design', $auth->guard(Permission::Administrati
 
 $router->get('/einstellungen/erinnerungen', $auth->guard(Permission::Administration, [$rentalReminderSettingsController, 'edit']));
 $router->post('/einstellungen/erinnerungen', $auth->guard(Permission::Administration, [$rentalReminderSettingsController, 'update']));
+$router->get('/einstellungen/rechnungserinnerungen', $auth->guard(Permission::Administration, [$invoiceDueReminderSettingsController, 'edit']));
+$router->post('/einstellungen/rechnungserinnerungen', $auth->guard(Permission::Administration, [$invoiceDueReminderSettingsController, 'update']));
 
 $router->get('/einstellungen/ueberziehung', $auth->guard(Permission::Administration, [$overageSettingsController, 'edit']));
 $router->post('/einstellungen/ueberziehung', $auth->guard(Permission::Administration, [$overageSettingsController, 'update']));

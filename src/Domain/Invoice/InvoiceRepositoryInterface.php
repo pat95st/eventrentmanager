@@ -70,6 +70,16 @@ interface InvoiceRepositoryInterface
     public function findOverdue(): array;
 
     /**
+     * Rechnungen im Status "Sent" mit Fälligkeitsdatum zwischen heute und
+     * heute + $leadDays (inklusive, noch NICHT überfällig) — Grundlage für
+     * die automatische Fälligkeits-Erinnerung, siehe
+     * bin/send-invoice-due-reminders.php.
+     *
+     * @return Invoice[]
+     */
+    public function findDueSoon(int $leadDays): array;
+
+    /**
      * Als bezahlt markierte Rechnungen mit Zahlungsdatum im angegebenen
      * Zeitraum (inklusive Grenzen) — Grundlage für die Einnahmen-/
      * Ausgabenübersicht (siehe GetIncomeExpenseOverviewHandler), die

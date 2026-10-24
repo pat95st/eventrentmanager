@@ -15,6 +15,7 @@ use App\Application\Invoice\Command\EmailInvoicePdf;
 use App\Application\Invoice\Command\MarkInvoiceCancelled;
 use App\Application\Invoice\Command\MarkInvoicePaid;
 use App\Application\Invoice\Command\MarkInvoiceSent;
+use App\Application\Invoice\Command\SendInvoiceSentViaMessaging;
 use App\Application\Invoice\Command\UpdateInvoice;
 use App\Application\Invoice\Query\GetInvoice;
 use App\Application\Invoice\Query\ListInvoices;
@@ -341,6 +342,18 @@ final class InvoiceController
 
         try {
             $this->commands->dispatch(new EmailInvoicePdf($id, $recipient, $note !== '' ? $note : null));
+
+            // Zusätzlich per Messenger benachrichtigen (WhatsApp/Telegram/Signal,
+            // siehe SendInvoiceSentViaMessagingHandler) — rein additiv, ein
+            // Fehler dabei darf den bereits erfolgreichen E-Mail-Versand
+            // nicht als Fehlschlag erscheinen lassen, daher eigener try/catch.
+            try {
+                $this->commands->dispatch(new SendInvoiceSentViaMessaging($id));
+            } catch (\Throwable $e) {
+                // Bewusst ignoriert (siehe Kommentar oben) — bei Bedarf könnte
+                // hier künftig geloggt werden.
+            }
+
             Flash::success(t('invoices.flash.pdf_emailed', ['recipient' => $recipient]));
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));

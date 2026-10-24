@@ -111,6 +111,7 @@ return [
     'nav.label_printers' => 'Label printers',
     'nav.document_storage' => 'Storage targets',
     'nav.rental_reminder_settings' => 'Reminders',
+    'nav.invoice_due_reminder_settings' => 'Invoice Reminders',
     'nav.backup_settings' => 'Backup',
     'nav.logout' => 'Log out',
     'nav.language' => 'Language',
@@ -1115,6 +1116,14 @@ return [
     'settings.rental_reminders.field.checklist_lead_hours' => 'Checklist lead time (hours)',
     'settings.rental_reminders.field.checklist_lead_hours_hint' => 'How many hours before the return date the checklist link is sent automatically (if enabled).',
     'settings.rental_reminders.field.checklist_auto_send_enabled' => 'Send automatically by email',
+
+    'settings.invoice_due_reminders.title' => 'Invoice Reminders',
+    'settings.invoice_due_reminders.subtitle' => 'Controls whether, and how many days before an issued but still open invoice is due, an automatic reminder is sent to the customer via messenger (WhatsApp Business/Telegram/Signal, see Settings -> Messaging). Messenger-only — there is deliberately no email reminder for this. Requires the bin/send-invoice-due-reminders.php cron job to run (recommended: daily).',
+    'settings.invoice_due_reminders.field.enabled' => 'Send automatically',
+    'settings.invoice_due_reminders.field.lead_days' => 'Lead time (days)',
+    'settings.invoice_due_reminders.field.lead_days_hint' => 'How many days before the due date the reminder is sent.',
+    'settings.invoice_due_reminders.hint' => 'The text can be customized under Messaging -> Templates ("Reminder: Invoice due"). Each invoice is reminded automatically only once.',
+    'settings.invoice_due_reminders.flash.saved' => 'Invoice reminder settings were saved.',
 
     'settings.backup.title' => 'Backup',
     'settings.backup.export.title' => 'Export',

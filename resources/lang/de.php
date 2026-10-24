@@ -111,6 +111,7 @@ return [
     'nav.label_printers' => 'Etikettendrucker',
     'nav.document_storage' => 'Ziellaufwerke',
     'nav.rental_reminder_settings' => 'Erinnerungen',
+    'nav.invoice_due_reminder_settings' => 'Rechnungs-Erinnerungen',
     'nav.backup_settings' => 'Sicherung',
     'nav.logout' => 'Abmelden',
     'nav.language' => 'Sprache',
@@ -1115,6 +1116,14 @@ return [
     'settings.rental_reminders.field.checklist_lead_hours' => 'Vorlauf Checkliste (Stunden)',
     'settings.rental_reminders.field.checklist_lead_hours_hint' => 'Wie viele Stunden vor dem Rückgabetermin der Checklisten-Link automatisch verschickt wird (falls aktiviert).',
     'settings.rental_reminders.field.checklist_auto_send_enabled' => 'Automatisch per E-Mail verschicken',
+
+    'settings.invoice_due_reminders.title' => 'Rechnungs-Erinnerungen',
+    'settings.invoice_due_reminders.subtitle' => 'Legt fest, ob und wie viele Tage vor Fälligkeit einer versendeten, noch offenen Rechnung automatisch eine Erinnerung per Messenger (WhatsApp Business/Telegram/Signal, siehe Einstellungen -> Nachrichtendienste) an den Kunden verschickt wird. Rein Messenger-basiert — es gibt dafür bewusst keine E-Mail-Erinnerung. Voraussetzung: der Cronjob bin/send-invoice-due-reminders.php läuft (empfohlen: täglich).',
+    'settings.invoice_due_reminders.field.enabled' => 'Automatisch verschicken',
+    'settings.invoice_due_reminders.field.lead_days' => 'Vorlauf (Tage)',
+    'settings.invoice_due_reminders.field.lead_days_hint' => 'Wie viele Tage vor dem Fälligkeitsdatum die Erinnerung verschickt wird.',
+    'settings.invoice_due_reminders.hint' => 'Der Text kann unter Nachrichtendienste -> Vorlagen ("Erinnerung: Rechnung fällig") angepasst werden. Jede Rechnung wird nur einmal automatisch erinnert.',
+    'settings.invoice_due_reminders.flash.saved' => 'Rechnungs-Erinnerungs-Einstellungen wurden gespeichert.',
 
     'settings.backup.title' => 'Sicherung',
     'settings.backup.export.title' => 'Export',

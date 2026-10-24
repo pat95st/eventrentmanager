@@ -31,6 +31,9 @@ enum MessageTemplateKey: string
     case RentalPickupReminder = 'rental_pickup_reminder';
     case RentalReturnReminder = 'rental_return_reminder';
     case AdHocMessage = 'ad_hoc_message';
+    case InvoiceSent = 'invoice_sent';
+    case InvoiceDueReminder = 'invoice_due_reminder';
+    case DunningNotice = 'dunning_notice';
 
     public function label(): string
     {
@@ -38,6 +41,9 @@ enum MessageTemplateKey: string
             self::RentalPickupReminder => 'Erinnerung: Abholung',
             self::RentalReturnReminder => 'Erinnerung: Rückgabe',
             self::AdHocMessage => 'Freie Einzel-Nachricht',
+            self::InvoiceSent => 'Rechnung versendet',
+            self::InvoiceDueReminder => 'Erinnerung: Rechnung fällig',
+            self::DunningNotice => 'Mahnung',
         };
     }
 
@@ -47,6 +53,9 @@ enum MessageTemplateKey: string
             self::RentalPickupReminder => 'Wird zusätzlich zur E-Mail-Erinnerung automatisch verschickt, wenn der Abholtermin einer Vermietung bevorsteht (siehe Einstellungen -> Erinnerungen) UND der Kunde über diesen Kanal erreichbar ist.',
             self::RentalReturnReminder => 'Wird zusätzlich zur E-Mail-Erinnerung automatisch verschickt, wenn der Rückgabetermin einer Vermietung bevorsteht (siehe Einstellungen -> Erinnerungen) UND der Kunde über diesen Kanal erreichbar ist.',
             self::AdHocMessage => 'Wird verwendet, wenn über die Kundendetailseite spontan eine freie Nachricht an einen Kunden verschickt wird (siehe "Nachricht senden").',
+            self::InvoiceSent => 'Wird zusätzlich zur E-Mail verschickt, wenn eine Rechnung per PDF-Mail an den Kunden versendet wird (siehe InvoiceController::emailPdf/SendInvoiceSentViaMessaging).',
+            self::InvoiceDueReminder => 'Wird automatisch verschickt, wenn die Fälligkeit einer versendeten, noch offenen Rechnung bevorsteht (siehe Einstellungen -> Rechnungs-Erinnerungen, bin/send-invoice-due-reminders.php). Rein Messenger-basiert, es gibt dafür keine E-Mail-Erinnerung.',
+            self::DunningNotice => 'Wird zusätzlich zur E-Mail verschickt, wenn für eine überfällige Rechnung eine Mahnung erstellt wird (manuell oder automatisch, siehe Mahnwesen-Einstellungen, bin/send-dunning-notices.php).',
         };
     }
 
@@ -88,6 +97,24 @@ enum MessageTemplateKey: string
                 'warehouse_line' => 'Zeile "Rückgabeort: ..." mit Name und Adresse des Lagerorts inkl. Zeilenumbruch, oder leer, falls kein Lagerort hinterlegt ist',
             ],
             self::AdHocMessage => [],
+            self::InvoiceSent => [
+                'customer_name' => 'Name des Kunden',
+                'invoice_number' => 'Rechnungsnummer',
+                'due_date' => 'Fälligkeitsdatum, formatiert (TT.MM.JJJJ)',
+                'total_gross' => 'Rechnungsbetrag (brutto), formatiert mit Euro-Zeichen',
+            ],
+            self::InvoiceDueReminder => [
+                'customer_name' => 'Name des Kunden',
+                'invoice_number' => 'Rechnungsnummer',
+                'due_date' => 'Fälligkeitsdatum, formatiert (TT.MM.JJJJ)',
+                'total_gross' => 'Rechnungsbetrag (brutto), formatiert mit Euro-Zeichen',
+            ],
+            self::DunningNotice => [
+                'customer_name' => 'Name des Kunden',
+                'invoice_number' => 'Rechnungsnummer',
+                'dunning_level_name' => 'Name der Mahnstufe',
+                'total_due' => 'Offener Gesamtbetrag (Rechnung + Mahngebühr), formatiert mit Euro-Zeichen',
+            ],
         };
     }
 
@@ -98,6 +125,9 @@ enum MessageTemplateKey: string
             self::RentalPickupReminder => "Guten Tag {{customer_name}},\n\nwir möchten Sie an die bevorstehende Abholung für folgende Veranstaltung erinnern:\n\nVeranstaltung: {{event_name}}\nAbholtermin: {{pickup_at}}\n{{warehouse_line}}\nMit freundlichen Grüßen",
             self::RentalReturnReminder => "Guten Tag {{customer_name}},\n\nwir möchten Sie an die bevorstehende Rückgabe für folgende Veranstaltung erinnern:\n\nVeranstaltung: {{event_name}}\nRückgabetermin: {{return_at}}\n{{warehouse_line}}\nMit freundlichen Grüßen",
             self::AdHocMessage => '',
+            self::InvoiceSent => "Guten Tag {{customer_name}},\n\nwir haben Ihnen die Rechnung {{invoice_number}} über {{total_gross}} per E-Mail zugesendet. Fälligkeitsdatum: {{due_date}}.\n\nMit freundlichen Grüßen",
+            self::InvoiceDueReminder => "Guten Tag {{customer_name}},\n\nwir möchten Sie daran erinnern, dass die Rechnung {{invoice_number}} über {{total_gross}} am {{due_date}} fällig wird.\n\nMit freundlichen Grüßen",
+            self::DunningNotice => "Guten Tag {{customer_name}},\n\nwir haben Ihnen eine {{dunning_level_name}} zu unserer Rechnung {{invoice_number}} per E-Mail zugesendet. Offener Gesamtbetrag: {{total_due}}.\n\nMit freundlichen Grüßen",
         };
     }
 
@@ -115,6 +145,9 @@ enum MessageTemplateKey: string
             self::RentalPickupReminder => ['customer_name', 'event_name', 'pickup_at'],
             self::RentalReturnReminder => ['customer_name', 'event_name', 'return_at'],
             self::AdHocMessage => ['message_text'],
+            self::InvoiceSent => ['customer_name', 'invoice_number', 'total_gross', 'due_date'],
+            self::InvoiceDueReminder => ['customer_name', 'invoice_number', 'total_gross', 'due_date'],
+            self::DunningNotice => ['customer_name', 'invoice_number', 'dunning_level_name', 'total_due'],
         };
     }
 }

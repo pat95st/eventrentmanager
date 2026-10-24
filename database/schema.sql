@@ -2036,3 +2036,176 @@ CREATE TABLE offer_sale_items (
     INDEX idx_offer_sale_items_article (article_id),
     INDEX idx_offer_sale_items_inventory_number (inventory_number_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Ergänzungen, die bislang in diesem schema.sql fehlten, obwohl die
+-- zugehörigen Migrationen bereits lange existieren (schema.sql wurde nicht
+-- zuverlässig synchron zu database/migrations/ gepflegt, siehe Hinweis in
+-- App\Infrastructure\Migrations\MigrationRunner). Nachgetragen, damit ein
+-- Installationslauf auf einer wirklich leeren Datenbank (öffentlicher
+-- Web-Installer, public/install.php) direkt aus diesem schema.sql heraus
+-- den vollständigen, aktuellen Stand erzeugt. Inhaltlich 1:1 aus den
+-- jeweiligen Migrationsdateien übernommen (siehe Dateinamen in den
+-- Kommentaren), keine eigenständige Schema-Neuerfindung.
+-- =======================================================================
+
+-- --- 031_add_invoice_settings_and_sequence.sql -------------------------
+CREATE TABLE invoice_sequences (
+    id           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    next_number  INT UNSIGNED NOT NULL DEFAULT 1,
+    CONSTRAINT chk_invoice_sequences_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO invoice_sequences (id, next_number) VALUES (1, 1);
+
+-- --- 052_add_dunning.sql ------------------------------------------------
+CREATE TABLE dunning_sequences (
+    id           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    next_number  INT UNSIGNED NOT NULL DEFAULT 1,
+    CONSTRAINT chk_dunning_sequences_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO dunning_sequences (id, next_number) VALUES (1, 1);
+
+-- --- 065_add_carddav_credentials.sql ------------------------------------
+CREATE TABLE carddav_credentials (
+    id                CHAR(36)     NOT NULL PRIMARY KEY,
+    user_id           CHAR(36)     NOT NULL,
+    name              VARCHAR(255) NOT NULL,
+    token_hash        CHAR(64)     NOT NULL,
+    token_last_four   CHAR(4)      NOT NULL,
+    last_used_at      DATETIME     NULL,
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_carddav_credentials_user
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT uniq_carddav_credentials_token_hash UNIQUE (token_hash),
+    INDEX idx_carddav_credentials_user (user_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 066_add_pdf_design_settings.sql ------------------------------------
+CREATE TABLE pdf_design_settings (
+    id           TINYINT              NOT NULL PRIMARY KEY DEFAULT 1,
+    accent_r     TINYINT UNSIGNED     NOT NULL DEFAULT 0,
+    accent_g     TINYINT UNSIGNED     NOT NULL DEFAULT 0,
+    accent_b     TINYINT UNSIGNED     NOT NULL DEFAULT 0,
+    logo_position ENUM('left', 'right') NOT NULL DEFAULT 'right',
+    updated_at   DATETIME             NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_pdf_design_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO pdf_design_settings (id, accent_r, accent_g, accent_b, logo_position) VALUES (1, 0, 0, 0, 'right');
+
+-- --- 067_add_rental_reminders.sql ---------------------------------------
+CREATE TABLE rental_reminder_settings (
+    id                 TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    pickup_lead_hours  INT UNSIGNED NOT NULL DEFAULT 24,
+    return_lead_hours  INT UNSIGNED NOT NULL DEFAULT 24,
+    CONSTRAINT chk_rental_reminder_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO rental_reminder_settings (id, pickup_lead_hours, return_lead_hours) VALUES (1, 24, 24);
+
+-- type-ENUM bereits direkt in der finalen Form (inkl. 'customer_checklist',
+-- siehe 071_add_rental_customer_checklist.sql) angelegt, statt wie die
+-- Migrationshistorie erst mit ('pickup','return') zu erstellen und danach
+-- separat per MODIFY COLUMN zu erweitern — das Endergebnis ist identisch.
+CREATE TABLE rental_reminders (
+    id         CHAR(36)                                        NOT NULL PRIMARY KEY,
+    rental_id  CHAR(36)                                        NOT NULL,
+    type       ENUM('pickup', 'return', 'customer_checklist')  NOT NULL,
+    sent_at    DATETIME                                        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_rental_reminders_rental_type (rental_id, type),
+    CONSTRAINT fk_rental_reminders_rental
+        FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    INDEX idx_rental_reminders_rental (rental_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 068_add_overage_settings.sql ---------------------------------------
+CREATE TABLE overage_settings (
+    id               TINYINT        NOT NULL PRIMARY KEY DEFAULT 1,
+    flat_fee_enabled TINYINT(1)     NOT NULL DEFAULT 0,
+    flat_fee_amount  DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    CONSTRAINT chk_overage_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO overage_settings (id, flat_fee_enabled, flat_fee_amount) VALUES (1, 0, 0.00);
+
+-- --- 071_add_rental_customer_checklist.sql ------------------------------
+CREATE TABLE rental_customer_checklist_tokens (
+    id         CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id  CHAR(36)     NOT NULL,
+    token      VARCHAR(64)  NOT NULL,
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_customer_checklist_tokens_rental
+        FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT uq_rental_customer_checklist_tokens_rental UNIQUE (rental_id),
+    CONSTRAINT uq_rental_customer_checklist_tokens_token UNIQUE (token)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+ALTER TABLE rental_issued_items
+    ADD COLUMN confirmed_by_customer_at DATETIME NULL AFTER function_test_passed;
+
+ALTER TABLE rental_reminder_settings
+    ADD COLUMN checklist_lead_hours INT UNSIGNED NOT NULL DEFAULT 24,
+    ADD COLUMN checklist_auto_send_enabled TINYINT(1) NOT NULL DEFAULT 1;
+
+INSERT INTO email_templates (template_key, subject, body_html) VALUES
+('rental_customer_checklist', 'Vollständigkeits-Checkliste für {{event_name}}',
+ '<p>Guten Tag {{customer_name}},</p>\n<p>bitte prüfen Sie vor dem Abbau über folgenden Link, ob alle für Ihre Veranstaltung ausgegebenen Artikel vollständig vorhanden sind:</p>\n<p><a href="{{link}}">{{link}}</a></p>\n<p>Veranstaltung: {{event_name}}<br>Rückgabetermin: {{return_at}}</p>\n<p>Mit freundlichen Grüßen</p>');
+
+-- --- 086_add_invoice_due_reminders.sql -----------------------------------
+CREATE TABLE invoice_due_reminder_settings (
+    id         TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    enabled    TINYINT(1)   NOT NULL DEFAULT 0,
+    lead_days  INT UNSIGNED NOT NULL DEFAULT 3,
+    CONSTRAINT chk_invoice_due_reminder_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO invoice_due_reminder_settings (id, enabled, lead_days) VALUES (1, 0, 3);
+
+CREATE TABLE invoice_due_reminders (
+    id         CHAR(36)  NOT NULL PRIMARY KEY,
+    invoice_id CHAR(36)  NOT NULL,
+    sent_at    DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_invoice_due_reminders_invoice (invoice_id),
+    CONSTRAINT fk_invoice_due_reminders_invoice
+        FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 087_add_article_pre_issue_checks.sql --------------------------------
+CREATE TABLE article_pre_issue_checks (
+    id           CHAR(36)     NOT NULL PRIMARY KEY,
+    article_id   CHAR(36)     NOT NULL,
+    description  VARCHAR(255) NOT NULL,
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_article_pre_issue_checks_article
+        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
+    INDEX idx_article_pre_issue_checks_article (article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+ALTER TABLE rental_items
+    ADD COLUMN pre_issue_checks_confirmed TINYINT(1) NOT NULL DEFAULT 0 AFTER accessory_checked;
+
+-- --- 088_add_ai_ad_images.sql --------------------------------------------
+CREATE TABLE ai_ad_image_settings (
+    id              TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    openai_api_key  VARCHAR(255) NULL,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_ai_ad_image_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO ai_ad_image_settings (id) VALUES (1);
+
+CREATE TABLE article_ad_images (
+    id                       CHAR(36)     NOT NULL PRIMARY KEY,
+    article_id               CHAR(36)     NOT NULL,
+    file_path                VARCHAR(500) NOT NULL,
+    format                   VARCHAR(20)  NOT NULL,
+    prompt                   TEXT         NOT NULL,
+    source_article_image_id  CHAR(36)     NULL,
+    created_at                DATETIME     NOT NULL,
+    CONSTRAINT fk_article_ad_images_article
+        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
+    INDEX idx_article_ad_images_article (article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

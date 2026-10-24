@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Application\Customer\Command;
+
+use App\Application\Command\CommandHandlerInterface;
+use App\Application\Command\CommandInterface;
+use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerRepositoryInterface;
+use App\Domain\Exception\ValidationException;
+use App\Shared\Uuid;
+use DateTimeImmutable;
+
+final class CreateCustomerHandler implements CommandHandlerInterface
+{
+    use ValidatesCustomerInput;
+
+    public function __construct(private readonly CustomerRepositoryInterface $customers)
+    {
+    }
+
+    public function handle(CommandInterface $command): string
+    {
+        assert($command instanceof CreateCustomer);
+
+        [$errors, $data] = $this->validateCustomerInput(
+            $command->type,
+            $command->companyName,
+            $command->firstName,
+            $command->lastName,
+            $command->street,
+            $command->addressLine2,
+            $command->postalCode,
+            $command->city,
+            $command->phone,
+            $command->email,
+            $command->telegramChatId,
+        );
+
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
+
+        $now = new DateTimeImmutable();
+        $customer = new Customer(
+            id: Uuid::v4(),
+            type: $data['type'],
+            companyName: $data['companyName'],
+            firstName: $data['firstName'],
+            lastName: $data['lastName'],
+            street: $data['street'],
+            addressLine2: $data['addressLine2'],
+            postalCode: $data['postalCode'],
+            city: $data['city'],
+            phone: $data['phone'],
+            email: $data['email'],
+            telegramChatId: $data['telegramChatId'],
+            createdAt: $now,
+            updatedAt: $now,
+        );
+
+        $this->customers->save($customer);
+
+        return $customer->id;
+    }
+}

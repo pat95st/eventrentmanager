@@ -1,0 +1,13 @@
+/vendor/
+/.env
+# database.yaml sollte ohnehin außerhalb des Projekts liegen (siehe README) —
+# dieser Eintrag ist nur eine zusätzliche Absicherung, falls sie versehentlich
+# doch im Projektordner landet.
+/database.yaml
+/storage/uploads/*
+!/storage/uploads/.gitkeep
+!/storage/uploads/articles/.gitkeep
+!/storage/uploads/rma/.gitkeep
+/node_modules/
+.DS_Store
+var/phpstan/

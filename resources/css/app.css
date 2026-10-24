@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Farbschema: Die "brand"-Farbpalette (siehe tailwind.config.js) wird nicht
+   mehr fest verdrahtet, sondern liest ihre RGB-Werte zur Laufzeit aus diesen
+   CSS-Variablen. So kann das data-scheme-Attribut auf <html> (gesetzt per JS
+   in settings/index.php bzw. beim Seitenaufruf aus localStorage übernommen,
+   siehe layout.php/auth/*.php) die tatsächlich sichtbare Farbe umschalten,
+   ohne dass Tailwind neu gebaut werden muss. Die Werte je Schema entsprechen
+   exakt den Swatch-Farben aus $colorSchemes in settings/index.php (jeweils
+   die "600"-Stufe der Standard-Tailwind-v3-Palette). "blue" ist zusätzlich
+   auf :root (ohne Attribut-Selektor) gesetzt, damit die Seite auch vor dem
+   ersten JS-Lauf (z. B. beim allerersten Seitenaufruf) korrekt blau startet. */
+:root,
+:root[data-scheme='blue'] {
+  --color-brand-50: 239 246 255;
+  --color-brand-100: 219 234 254;
+  --color-brand-200: 191 219 254;
+  --color-brand-300: 147 197 253;
+  --color-brand-400: 96 165 250;
+  --color-brand-500: 59 130 246;
+  --color-brand-600: 37 99 235;
+  --color-brand-700: 29 78 216;
+  --color-brand-800: 30 64 175;
+  --color-brand-900: 30 58 138;
+  --color-brand-950: 23 37 84;
+}
+
+:root[data-scheme='green'] {
+  --color-brand-50: 236 253 245;
+  --color-brand-100: 209 250 229;
+  --color-brand-200: 167 243 208;
+  --color-brand-300: 110 231 183;
+  --color-brand-400: 52 211 153;
+  --color-brand-500: 16 185 129;
+  --color-brand-600: 5 150 105;
+  --color-brand-700: 4 120 87;
+  --color-brand-800: 6 95 70;
+  --color-brand-900: 6 78 59;
+  --color-brand-950: 2 44 34;
+}
+
+:root[data-scheme='violet'] {
+  --color-brand-50: 245 243 255;
+  --color-brand-100: 237 233 254;
+  --color-brand-200: 221 214 254;
+  --color-brand-300: 196 181 253;
+  --color-brand-400: 167 139 250;
+  --color-brand-500: 139 92 246;
+  --color-brand-600: 124 58 237;
+  --color-brand-700: 109 40 217;
+  --color-brand-800: 91 33 182;
+  --color-brand-900: 76 29 149;
+  --color-brand-950: 46 16 101;
+}
+
+:root[data-scheme='amber'] {
+  --color-brand-50: 255 251 235;
+  --color-brand-100: 254 243 199;
+  --color-brand-200: 253 230 138;
+  --color-brand-300: 252 211 77;
+  --color-brand-400: 251 191 36;
+  --color-brand-500: 245 158 11;
+  --color-brand-600: 217 119 6;
+  --color-brand-700: 180 83 9;
+  --color-brand-800: 146 64 14;
+  --color-brand-900: 120 53 15;
+  --color-brand-950: 69 26 3;
+}
+
+:root[data-scheme='rose'] {
+  --color-brand-50: 255 241 242;
+  --color-brand-100: 255 228 230;
+  --color-brand-200: 254 205 211;
+  --color-brand-300: 253 164 175;
+  --color-brand-400: 251 113 133;
+  --color-brand-500: 244 63 94;
+  --color-brand-600: 225 29 72;
+  --color-brand-700: 190 18 60;
+  --color-brand-800: 159 18 57;
+  --color-brand-900: 136 19 55;
+  --color-brand-950: 76 5 25;
+}
+
+:root[data-scheme='teal'] {
+  --color-brand-50: 240 253 250;
+  --color-brand-100: 204 251 241;
+  --color-brand-200: 153 246 228;
+  --color-brand-300: 94 234 212;
+  --color-brand-400: 45 212 191;
+  --color-brand-500: 20 184 166;
+  --color-brand-600: 13 148 136;
+  --color-brand-700: 15 118 110;
+  --color-brand-800: 17 94 89;
+  --color-brand-900: 19 78 74;
+  --color-brand-950: 4 47 46;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+  }
+
+  /* Formularfelder haben in den Templates keine eigene Hintergrund-/Textfarben-
+     Klasse (nur border/ring/focus), damit sie im Dunkelmodus nicht als heller
+     Fleck stehen bleiben, bekommen sie hier zentral eine passende Farbe. */
+  input,
+  select,
+  textarea {
+    @apply bg-white text-slate-900 dark:bg-slate-800 dark:text-slate-100;
+  }
+
+  ::placeholder {
+    @apply text-slate-400 dark:text-slate-500;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Hintergrundbild (Admin-Einstellung, siehe Einstellungen -> Firma und
+   App\Infrastructure\Http\CompanyBranding::backgroundImageUrl()): ist ein
+   Hintergrundbild hinterlegt, trägt <body> die Klasse "has-bg-image" und
+   die CSS-Variable --app-bg-image (siehe resources/views/layout.php).
+   Damit das Bild tatsächlich zu sehen ist, werden die sonst blickdichten
+   weißen/dunklen Flächen (Kopf-/Fußzeile, Karten/Panels im Inhaltsbereich)
+   halbtransparent mit leichtem Weichzeichner ("Glaseffekt") dargestellt.
+   Bewusst als globale CSS-Regel statt einer neuen Utility-Klasse in jeder
+   einzelnen View, damit bestehende Templates unverändert bleiben.
+   ------------------------------------------------------------------- */
+body.has-bg-image {
+  background-image: var(--app-bg-image);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+body.has-bg-image > header,
+body.has-bg-image > footer,
+body.has-bg-image .bg-white {
+  background-color: rgb(255 255 255 / 0.82) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+html.dark body.has-bg-image > header,
+html.dark body.has-bg-image > footer,
+html.dark body.has-bg-image .dark\:bg-slate-900 {
+  background-color: rgb(15 23 42 / 0.82) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}

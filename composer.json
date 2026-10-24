@@ -1,0 +1,39 @@
+{
+    "name": "materialverleih/software",
+    "description": "Lagerhaltung fuer einen Veranstaltungstechnik-Verleih (PHP, CQRS/UseCases, MariaDB, Tailwind).",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-fileinfo": "*"
+    },
+    "require-dev": {
+        "codeception/codeception": "^5.0",
+        "codeception/module-asserts": "^3.0",
+        "codeception/module-phpbrowser": "^3.0",
+        "codeception/module-db": "^3.0",
+        "squizlabs/php_codesniffer": "^3.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\Support\\": "tests/_support/",
+            "Tests\\Unit\\": "tests/unit/",
+            "Tests\\Acceptance\\": "tests/acceptance/"
+        }
+    },
+    "scripts": {
+        "post-install-cmd": "codecept build",
+        "post-update-cmd": "codecept build",
+        "test": "codecept run",
+        "test:unit": "codecept run unit",
+        "test:acceptance": "codecept run acceptance",
+        "cs-check": "phpcs",
+        "cs-fix": "phpcbf"
+    }
+}

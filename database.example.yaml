@@ -1,0 +1,38 @@
+# Vorlage für die Datenbank-Zugangsdaten.
+#
+# WICHTIG: Diese Datei NICHT so im Projekt-Wurzelverzeichnis belassen und
+# befüllen! Stattdessen eine Kopie außerhalb des Projektordners ablegen und
+# dort mit den echten Zugangsdaten befüllen, damit die Zugangsdaten nicht
+# über den Webserver ausgeliefert werden können und nicht versehentlich mit
+# ins Git-Repository wandern.
+#
+# Der feste Standard-Suchpfad der Anwendung (siehe src/bootstrap.php) ist:
+#   /usr/home/patricya/material_database.yaml
+#
+# Soll die Datei woanders liegen (z. B. auf einer anderen Umgebung), den
+# absoluten Pfad stattdessen über die Umgebungsvariable
+# DATABASE_CONFIG_PATH setzen (siehe README).
+#
+# Format: nur flache "schluessel: wert"-Zeilen (kein verschachteltes YAML).
+
+host: 127.0.0.1
+port: 3306
+database: materialverleih
+username: materialverleih_app
+password: "bitte-aendern"
+charset: utf8mb4
+
+# Optional: verschlüsselte (TLS/SSL) Verbindung zur Datenbank. Pfad zu einer
+# CA-Zertifikatsdatei angeben (z. B. von einem Hosting-Anbieter einer
+# verwalteten MariaDB/MySQL-Instanz bereitgestellt) — mit diesem Schlüssel
+# wird die Verbindung verschlüsselt UND das Server-Zertifikat serverseitig
+# gegen diese CA geprüft. Über den Web-Installer wird die hochgeladene Datei
+# automatisch hierher eingetragen. Fehlt dieser Schlüssel (Standard), bleibt
+# die Verbindung wie bisher unverschlüsselt.
+# ssl_ca: /pfad/zur/ca.pem
+#
+# Nur in Ausnahmefällen nötig (z. B. selbstsigniertes Zertifikat ohne zum
+# Hostnamen passendem CN/SAN): die Server-Zertifikatsprüfung abschalten,
+# die Verbindung bleibt dabei trotzdem verschlüsselt. Ohne gesetztes ssl_ca
+# ohne Wirkung.
+# ssl_verify_server_cert: false

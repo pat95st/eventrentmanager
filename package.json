@@ -1,0 +1,12 @@
+{
+  "name": "materialverleih-software",
+  "private": true,
+  "description": "Build-Tooling für das lokal eingebundene Tailwind-CSS (die PHP-Anwendung selbst läuft ohne Node.js).",
+  "scripts": {
+    "build:css": "tailwindcss -i resources/css/app.css -o public/assets/css/app.css --minify",
+    "watch:css": "tailwindcss -i resources/css/app.css -o public/assets/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

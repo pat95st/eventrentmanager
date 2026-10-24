@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Domain\Invoice;
+
+/**
+ * Eine Position (Artikel + Menge) innerhalb einer Rechnung — strukturell
+ * identisch zu OfferItem (siehe dortiger Kommentar für die genaue Bedeutung
+ * von unitPricePerDay). Zeilensumme = unitPricePerDay * quantity.
+ */
+final class InvoiceItem
+{
+    public function __construct(
+        public readonly string $id,
+        public readonly string $invoiceId,
+        public readonly string $articleId,
+        public int $quantity,
+        public string $unitPricePerDay,
+        public ?string $lineNote,
+    ) {
+    }
+
+    public function lineTotal(): float
+    {
+        return ((float) $this->unitPricePerDay) * $this->quantity;
+    }
+}

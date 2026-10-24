@@ -391,6 +391,7 @@ $laborTimeArticleRepository = new MariadbLaborTimeArticleRepository($pdo);
 $articleRepository = new MariadbArticleRepository($pdo);
 $articleAccessoryRepository = new MariadbArticleAccessoryRepository($pdo);
 $articlePreIssueCheckRepository = new \App\Infrastructure\Persistence\Pdo\MariadbArticlePreIssueCheckRepository($pdo);
+$articleAdImageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbArticleAdImageRepository($pdo);
 $articleChannelListingRepository = new MariadbArticleChannelListingRepository($pdo);
 $inventoryNumberRepository = new MariadbInventoryNumberRepository($pdo);
 $firmwareVersionRepository = new \App\Infrastructure\Persistence\Pdo\MariadbFirmwareVersionRepository($pdo);
@@ -440,6 +441,7 @@ $googleMerchantSettingsRepository = new MariadbGoogleMerchantSettingsRepository(
 $googleBusinessSettingsRepository = new MariadbGoogleBusinessSettingsRepository($pdo);
 $whatsappBusinessSettingsRepository = new MariadbWhatsappBusinessSettingsRepository($pdo);
 $integrationBaseSettingsRepository = new MariadbIntegrationBaseSettingsRepository($pdo);
+$aiAdImageSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbAiAdImageSettingsRepository($pdo);
 $apiSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbApiSettingsRepository($pdo);
 $apiTokenRepository = new \App\Infrastructure\Persistence\Pdo\MariadbApiTokenRepository($pdo);
 $calendarRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCalendarRepository($pdo);
@@ -544,6 +546,17 @@ $commandBus->register(\App\Application\Article\Command\DeleteArticleAccessory::c
 $commandBus->register(\App\Application\Article\Command\AddArticlePreIssueCheck::class, new \App\Application\Article\Command\AddArticlePreIssueCheckHandler($articlePreIssueCheckRepository, $articleRepository));
 $commandBus->register(\App\Application\Article\Command\UpdateArticlePreIssueCheck::class, new \App\Application\Article\Command\UpdateArticlePreIssueCheckHandler($articlePreIssueCheckRepository));
 $commandBus->register(\App\Application\Article\Command\DeleteArticlePreIssueCheck::class, new \App\Application\Article\Command\DeleteArticlePreIssueCheckHandler($articlePreIssueCheckRepository));
+$openAiImageClient = new \App\Infrastructure\Integration\OpenAi\OpenAiImageClient();
+$commandBus->register(\App\Application\Article\Command\GenerateArticleAdImage::class, new \App\Application\Article\Command\GenerateArticleAdImageHandler(
+    $articleRepository,
+    $manufacturerRepository,
+    $categoryRepository,
+    $articleAdImageRepository,
+    $fileStorage,
+    $aiAdImageSettingsRepository,
+    $openAiImageClient,
+));
+$commandBus->register(\App\Application\Article\Command\DeleteArticleAdImage::class, new \App\Application\Article\Command\DeleteArticleAdImageHandler($articleAdImageRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\SetArticleChannelEnabled::class, new \App\Application\Article\Command\SetArticleChannelEnabledHandler($articleRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleChannelUrlBuilder));
 $commandBus->register(\App\Application\Article\Command\SyncArticleChannel::class, new \App\Application\Article\Command\SyncArticleChannelHandler($articleRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleChannelUrlBuilder));
 
@@ -893,6 +906,7 @@ $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageAssi
 
 $commandBus->register(\App\Application\Settings\Command\UpdateIntegrationBaseSettings::class, new \App\Application\Settings\Command\UpdateIntegrationBaseSettingsHandler($integrationBaseSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateGoogleMerchantSettings::class, new \App\Application\Settings\Command\UpdateGoogleMerchantSettingsHandler($googleMerchantSettingsRepository));
+$commandBus->register(\App\Application\Settings\Command\UpdateAiAdImageSettings::class, new \App\Application\Settings\Command\UpdateAiAdImageSettingsHandler($aiAdImageSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UploadGoogleMerchantServiceAccount::class, new \App\Application\Settings\Command\UploadGoogleMerchantServiceAccountHandler($googleMerchantSettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\DeleteGoogleMerchantServiceAccount::class, new \App\Application\Settings\Command\DeleteGoogleMerchantServiceAccountHandler($googleMerchantSettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\UpdateGoogleBusinessClientCredentials::class, new \App\Application\Settings\Command\UpdateGoogleBusinessClientCredentialsHandler($googleBusinessSettingsRepository));
@@ -942,6 +956,7 @@ $queryBus->register(\App\Application\Article\Query\GetArticle::class, new GetArt
     $rmaRepository,
     $articleAccessoryRepository,
     $articlePreIssueCheckRepository,
+    $articleAdImageRepository,
     $articleChannelListingRepository,
     $saleRepository,
     $firmwareVersionRepository,
@@ -1103,6 +1118,7 @@ $queryBus->register(\App\Application\Settings\Query\GetLegalSettings::class, new
 $queryBus->register(\App\Application\Settings\Query\GetOfferPdfSettings::class, new GetOfferPdfSettingsHandler($offerPdfSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetIntegrationBaseSettings::class, new \App\Application\Settings\Query\GetIntegrationBaseSettingsHandler($integrationBaseSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetGoogleMerchantSettings::class, new \App\Application\Settings\Query\GetGoogleMerchantSettingsHandler($googleMerchantSettingsRepository));
+$queryBus->register(\App\Application\Settings\Query\GetAiAdImageSettings::class, new \App\Application\Settings\Query\GetAiAdImageSettingsHandler($aiAdImageSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetGoogleBusinessSettings::class, new \App\Application\Settings\Query\GetGoogleBusinessSettingsHandler($googleBusinessSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetWhatsappBusinessSettings::class, new \App\Application\Settings\Query\GetWhatsappBusinessSettingsHandler($whatsappBusinessSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetApiSettings::class, new \App\Application\Settings\Query\GetApiSettingsHandler($apiSettingsRepository));
@@ -1242,6 +1258,7 @@ $receiptController = new ReceiptController($commandBus, $queryBus, $fileStorage)
 $mailboxSettingsController = new MailboxSettingsController($commandBus, $queryBus);
 $pushSettingsController = new PushSettingsController($commandBus, $queryBus);
 $messagingSettingsController = new \App\Infrastructure\Http\Controllers\MessagingSettingsController($commandBus, $queryBus);
+$aiAdImageSettingsController = new \App\Infrastructure\Http\Controllers\AiAdImageSettingsController($commandBus, $queryBus);
 $messageTemplateSettingsController = new \App\Infrastructure\Http\Controllers\MessageTemplateSettingsController($commandBus, $queryBus);
 $receiptInboxController = new ReceiptInboxController($commandBus, $queryBus, $receiptInboxAttachmentRepository, $fileStorage);
 $calendarController = new CalendarController($queryBus);
@@ -1437,6 +1454,9 @@ $router->post('/zubehoer/{id}/loeschen', $auth->guard(Permission::Artikelverwalt
 $router->post('/artikel/{id}/vor-ausgabe-checks', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'addPreIssueCheck']));
 $router->post('/vor-ausgabe-checks/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'updatePreIssueCheck']));
 $router->post('/vor-ausgabe-checks/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deletePreIssueCheck']));
+$router->post('/artikel/{id}/werbebilder', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'generateAdImage']));
+$router->post('/werbebilder/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteAdImage']));
+$router->get('/artikel-werbebilder/{id}/{filename}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'showAdImage']));
 
 $router->get('/firmware', $auth->guard(Permission::Artikelverwaltung, [$firmwareController, 'overview']));
 
@@ -1734,6 +1754,8 @@ $router->post('/einstellungen/push', $auth->guard(Permission::Administration, [$
 // Messenger-Einstellungen (WhatsApp Business/Telegram/Signal, nur Administration).
 $router->get('/einstellungen/messenger', $auth->guard(Permission::Administration, [$messagingSettingsController, 'edit']));
 $router->post('/einstellungen/messenger', $auth->guard(Permission::Administration, [$messagingSettingsController, 'update']));
+$router->get('/einstellungen/ki-werbebilder', $auth->guard(Permission::Administration, [$aiAdImageSettingsController, 'edit']));
+$router->post('/einstellungen/ki-werbebilder', $auth->guard(Permission::Administration, [$aiAdImageSettingsController, 'update']));
 $router->post('/einstellungen/messenger/test/{channel}', $auth->guard(Permission::Administration, [$messagingSettingsController, 'testConnection']));
 $router->get('/einstellungen/messenger-vorlagen', $auth->guard(Permission::Administration, [$messageTemplateSettingsController, 'index']));
 $router->get('/einstellungen/messenger-vorlagen/{channel}/{key}', $auth->guard(Permission::Administration, [$messageTemplateSettingsController, 'edit']));

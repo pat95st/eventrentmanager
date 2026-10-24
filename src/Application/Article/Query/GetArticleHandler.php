@@ -7,6 +7,7 @@ namespace App\Application\Article\Query;
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleAccessoryRepositoryInterface;
+use App\Domain\Article\ArticleAdImageRepositoryInterface;
 use App\Domain\Article\ArticleChannelListingRepositoryInterface;
 use App\Domain\Article\ArticlePreIssueCheckRepositoryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
@@ -30,6 +31,7 @@ final class GetArticleHandler implements QueryHandlerInterface
         private readonly RmaRepositoryInterface $rmas,
         private readonly ArticleAccessoryRepositoryInterface $accessories,
         private readonly ArticlePreIssueCheckRepositoryInterface $preIssueChecks,
+        private readonly ArticleAdImageRepositoryInterface $adImages,
         private readonly ArticleChannelListingRepositoryInterface $channelListings,
         private readonly SaleRepositoryInterface $sales,
         private readonly FirmwareVersionRepositoryInterface $firmwareVersions,
@@ -93,8 +95,9 @@ final class GetArticleHandler implements QueryHandlerInterface
 
         $accessories = $this->accessories->findByArticle($article->id);
         $preIssueChecks = $this->preIssueChecks->findByArticle($article->id);
+        $adImages = $this->adImages->findByArticle($article->id);
         $channelListings = $this->channelListings->findByArticle($article->id);
 
-        return new ArticleDetail($article, $manufacturer, $category, $inventoryNumbers, $nextInventoryNumberPreview, $accessories, $channelListings, $firmwareVersions, $preIssueChecks);
+        return new ArticleDetail($article, $manufacturer, $category, $inventoryNumbers, $nextInventoryNumberPreview, $accessories, $channelListings, $firmwareVersions, $preIssueChecks, $adImages);
     }
 }

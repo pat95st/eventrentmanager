@@ -76,6 +76,7 @@ final class SettingsSections
                     ['key' => 'settings-speicherziele', 'href' => '/einstellungen/speicherziele', 'label' => t('nav.document_storage')],
                     ['key' => 'settings-erinnerungen', 'href' => '/einstellungen/erinnerungen', 'label' => t('nav.rental_reminder_settings')],
                     ['key' => 'settings-sicherung', 'href' => '/einstellungen/sicherung', 'label' => t('nav.backup_settings')],
+                    ['key' => 'settings-ki-werbebilder', 'href' => '/einstellungen/ki-werbebilder', 'label' => t('nav.ai_ad_image_settings')],
                 ],
             ],
         ];

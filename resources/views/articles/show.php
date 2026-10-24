@@ -233,6 +233,69 @@ $availabilityStatusMeta = [
             </div>
         </div>
 
+        <!-- Werbebilder (KI-generiert) -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.ad_images_title')) ?></h2>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= t('articles.show.ad_images_hint', ['link' => '<a href="/einstellungen/ki-werbebilder" class="underline">' . e(t('articles.show.ad_images_settings_link')) . '</a>']) ?>
+            </p>
+
+            <?php if ($detail->adImages === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_none')) ?></p>
+            <?php else: ?>
+                <div class="mb-4 flex flex-wrap gap-3">
+                    <?php foreach ($detail->adImages as $adImage): ?>
+                        <div class="w-32 space-y-1">
+                            <div class="relative h-32 w-32 overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
+                                <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
+                                <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
+                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                    <button type="submit" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
+                                </form>
+                            </div>
+                            <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?></p>
+                            <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/artikel/<?= e($article->id) ?>/werbebilder" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_format')) ?></label>
+                    <select name="format" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                        <?php foreach (\App\Domain\Article\ArticleAdImageFormat::cases() as $format): ?>
+                            <option value="<?= e($format->value) ?>"><?= e($format->label()) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php if ($article->images !== []): ?>
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_source_photo')) ?></label>
+                        <select name="source_article_image_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                            <option value=""><?= e(t('articles.show.ad_images_source_photo_none')) ?></option>
+                            <?php foreach ($article->images as $image): ?>
+                                <option value="<?= e($image->id) ?>"><?= e(t('articles.show.ad_images_source_photo')) ?> <?= $image->position + 1 ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+                <div class="min-w-[220px] flex-1">
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_additional_instructions')) ?></label>
+                    <input type="text" name="additional_instructions" placeholder="<?= e(t('articles.show.ad_images_additional_instructions_placeholder')) ?>"
+                           class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div>
+                    <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                        <?= e(t('articles.show.ad_images_generate')) ?>
+                    </button>
+                    <p class="mt-1 text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
+                </div>
+            </form>
+        </div>
+
         <!-- Verkaufskanäle -->
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.channels.title')) ?></h2>

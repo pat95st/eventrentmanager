@@ -12,8 +12,10 @@ use App\Application\Article\Command\AddInventoryNumber;
 use App\Application\Article\Command\CreateArticle;
 use App\Application\Article\Command\DeleteArticle;
 use App\Application\Article\Command\DeleteArticleAccessory;
+use App\Application\Article\Command\DeleteArticleAdImage;
 use App\Application\Article\Command\DeleteArticleImage;
 use App\Application\Article\Command\DeleteArticlePreIssueCheck;
+use App\Application\Article\Command\GenerateArticleAdImage;
 use App\Application\Article\Command\DeleteFirmwareVersion;
 use App\Application\Article\Command\DeleteInventoryNumber;
 use App\Application\Article\Command\SetArticleActive;
@@ -742,6 +744,80 @@ final class ArticleController
         }
 
         Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function generateAdImage(Request $request): void
+    {
+        $articleId = $request->param('id');
+        $format = $request->input('format', '') ?? '';
+        $sourceArticleImageId = $request->input('source_article_image_id');
+        $additionalInstructions = $request->input('additional_instructions');
+
+        try {
+            $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions));
+            Flash::success(t('articles.show.ad_images_flash_generated'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function deleteAdImage(Request $request): void
+    {
+        $imageId = $request->param('id');
+        $articleId = $request->input('article_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new DeleteArticleAdImage($imageId));
+            Flash::success(t('articles.show.ad_images_flash_deleted'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    /**
+     * Liefert ein generiertes Werbebild aus, analog zu showImage() (siehe
+     * dort) — authentifiziert über den Controller statt über public/, mit
+     * erneuter Prüfung, dass die Datei tatsächlich zu diesem Artikel gehört.
+     */
+    public function showAdImage(Request $request): void
+    {
+        $articleId = $request->param('id');
+        $filename = $request->param('filename');
+        $imagePath = $articleId . '/' . $filename;
+
+        try {
+            $detail = $this->queries->ask(new GetArticle($articleId));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        $match = null;
+        foreach ($detail->adImages as $adImage) {
+            if ($adImage->filePath === $imagePath) {
+                $match = $adImage;
+            }
+        }
+
+        if ($match === null) {
+            Response::notFound('Werbebild wurde nicht gefunden.');
+
+            return;
+        }
+
+        $absolutePath = $this->fileStorage->absolutePath('article-ad-images', $match->filePath);
+        $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'image/png') : 'image/png';
+
+        Response::file($absolutePath, basename($match->filePath), $mimeType);
     }
 
     /** @param array<string, string> $errors @param array<string, mixed> $old */

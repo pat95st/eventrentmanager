@@ -128,7 +128,29 @@ function checkRequirements(): array
 
     $checks[] = ['label' => 'PHP-Erweiterung pdo_mysql', 'ok' => extension_loaded('pdo_mysql'), 'blocking' => true];
     $checks[] = ['label' => 'PHP-Erweiterung fileinfo', 'ok' => extension_loaded('fileinfo'), 'blocking' => true];
-    $checks[] = ['label' => 'Schreibrecht in storage/ (für database.yaml und Uploads)', 'ok' => is_dir(PROJECT_ROOT . '/storage') && is_writable(PROJECT_ROOT . '/storage'), 'blocking' => true];
+
+    // storage/ selbst fehlt bei einem wirklich frischen Deployment oft komplett
+    // (Git versioniert keine leeren Verzeichnisse, und ein Upload per ZIP/FTP
+    // lässt leere Ordner gerne weg) — statt den Assistenten hier bereits mit
+    // einem Fehler zu blockieren, den der Besucher ohne Server-Dateizugriff gar
+    // nicht beheben könnte, legen wir storage/ (und die beiden unten direkt
+    // benötigten Unterordner) bei Bedarf selbst an. storage/uploads/ würde
+    // zwar auch später von LocalFileStorage lazy angelegt, storage/tmp/ wird
+    // aber schon in Schritt 2 für eine optionale Sicherungs-Wiederherstellung
+    // gebraucht — beide schon hier anzulegen hält diese eine Prüfung
+    // vollständig aussagekräftig für ALLES, was der Installer schreiben muss.
+    $storageDir = PROJECT_ROOT . '/storage';
+    if (!is_dir($storageDir)) {
+        @mkdir($storageDir, 0775, true);
+    }
+    if (is_dir($storageDir)) {
+        foreach ([UPLOADS_DIR, TMP_DIR] as $subDir) {
+            if (!is_dir($subDir)) {
+                @mkdir($subDir, 0775, true);
+            }
+        }
+    }
+    $checks[] = ['label' => 'Schreibrecht in storage/ (für database.yaml und Uploads)', 'ok' => is_dir($storageDir) && is_writable($storageDir), 'blocking' => true];
 
     $checks[] = ['label' => 'PHP-Erweiterung openssl (für WebAuthn/Push-Benachrichtigungen empfohlen)', 'ok' => extension_loaded('openssl'), 'blocking' => false];
     $checks[] = ['label' => 'PHP-Erweiterung gd (für Firmenlogo in PDFs empfohlen)', 'ok' => extension_loaded('gd'), 'blocking' => false];

@@ -518,6 +518,15 @@ $backupArchiveImporter = new \App\Infrastructure\Backup\BackupArchiveImporter($b
 // --- Command-Bus ---------------------------------------------------------
 $commandBus = new CommandBus();
 
+// --- Query-Bus -------------------------------------------------------------
+// Bewusst bereits hier (statt erst unten vor den eigentlichen Query-Registrierungen)
+// instanziiert: einzelne Query-Registrierungen stehen aus historischen Gründen
+// zwischen den Command-Registrierungen weiter oben im Dateiverlauf (z. B.
+// Auftragsbestätigungen, Überzugs-/Fälligkeits-Einstellungen) und würden sonst
+// "Undefined variable $queryBus" auslösen, da $queryBus zum Zeitpunkt ihrer
+// Ausführung noch nicht existierte.
+$queryBus = new QueryBus();
+
 $commandBus->register(\App\Application\Category\Command\CreateCategory::class, new CreateCategoryHandler($categoryRepository));
 $commandBus->register(\App\Application\Category\Command\UpdateCategory::class, new UpdateCategoryHandler($categoryRepository));
 $commandBus->register(\App\Application\Category\Command\DeleteCategory::class, new DeleteCategoryHandler($categoryRepository, $articleRepository));
@@ -933,9 +942,8 @@ $commandBus->register(\App\Application\Settings\Command\DeleteCalDavSigningCerti
 $commandBus->register(\App\Application\AddressBook\Command\CreateCardDavCredential::class, new \App\Application\AddressBook\Command\CreateCardDavCredentialHandler($cardDavCredentialRepository));
 $commandBus->register(\App\Application\AddressBook\Command\DeleteCardDavCredential::class, new \App\Application\AddressBook\Command\DeleteCardDavCredentialHandler($cardDavCredentialRepository));
 
-// --- Query-Bus -------------------------------------------------------------
-$queryBus = new QueryBus();
-
+// --- Weitere Query-Registrierungen ($queryBus wurde bereits weiter oben, neben
+// dem Command-Bus, instanziiert) ---------------------------------------------
 $queryBus->register(\App\Application\Category\Query\ListCategories::class, new ListCategoriesHandler($categoryRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));
 $queryBus->register(\App\Application\LaborTime\Query\ListLaborTimeArticles::class, new ListLaborTimeArticlesHandler($laborTimeArticleRepository));

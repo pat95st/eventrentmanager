@@ -112,6 +112,8 @@ final class OfferController
             discountValue: $request->input('discount_value'),
             laborItems: $this->laborItemsFromRequest($request),
             saleItems: $this->saleItemsFromRequest($request),
+            freeTextItems: $this->freeTextItemsFromRequest($request),
+            sectionTexts: $this->sectionTextsFromRequest($request),
         );
 
         try {
@@ -192,6 +194,8 @@ final class OfferController
             discountValue: $request->input('discount_value'),
             laborItems: $this->laborItemsFromRequest($request),
             saleItems: $this->saleItemsFromRequest($request),
+            freeTextItems: $this->freeTextItemsFromRequest($request),
+            sectionTexts: $this->sectionTextsFromRequest($request),
         );
 
         try {
@@ -390,6 +394,8 @@ final class OfferController
         $existingItems = [];
         $existingLaborItems = [];
         $existingSaleItems = [];
+        $existingFreeTextItems = [];
+        $existingSectionTexts = [];
         $saleItemsFulfilled = false;
         if ($offer !== null) {
             $detail = $this->queries->ask(new GetOffer($offer->id));
@@ -399,6 +405,7 @@ final class OfferController
                     'quantity' => $entry->item->quantity,
                     'unit_price' => $entry->item->unitPricePerDay,
                     'line_note' => $entry->item->lineNote ?? '',
+                    'sort_order' => $entry->item->sortOrder,
                 ];
             }
             foreach ($detail->laborItems as $entry) {
@@ -419,6 +426,20 @@ final class OfferController
                 if ($entry->item->isFulfilled()) {
                     $saleItemsFulfilled = true;
                 }
+            }
+            foreach ($detail->freeTextItems as $item) {
+                $existingFreeTextItems[] = [
+                    'description' => $item->description,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unitPrice,
+                    'sort_order' => $item->sortOrder,
+                ];
+            }
+            foreach ($detail->sectionTexts as $sectionText) {
+                $existingSectionTexts[] = [
+                    'heading' => $sectionText->heading,
+                    'sort_order' => $sectionText->sortOrder,
+                ];
             }
         }
 
@@ -451,19 +472,22 @@ final class OfferController
             'laborArticles' => $laborArticles,
             'existingLaborItems' => $existingLaborItems,
             'existingSaleItems' => $existingSaleItems,
+            'existingFreeTextItems' => $existingFreeTextItems,
+            'existingSectionTexts' => $existingSectionTexts,
             'saleItemsFulfilled' => $saleItemsFulfilled,
             'saleInventoryNumbers' => $saleInventoryNumbersJson,
             'saleStock' => $saleStockJson,
         ], activeNav: 'offers', title: $offer !== null ? t('offers.edit') : t('offers.new'));
     }
 
-    /** @return array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string}> */
+    /** @return array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order: string}> */
     private function itemsFromRequest(Request $request): array
     {
         $articleIds = $request->post['article_id'] ?? [];
         $quantities = $request->post['quantity'] ?? [];
         $unitPrices = $request->post['unit_price'] ?? [];
         $lineNotes = $request->post['line_note'] ?? [];
+        $sortOrders = $request->post['sort_order'] ?? [];
 
         if (!is_array($articleIds)) {
             return [];
@@ -476,6 +500,53 @@ final class OfferController
                 'quantity' => (string) ($quantities[$index] ?? ''),
                 'unit_price' => (string) ($unitPrices[$index] ?? ''),
                 'line_note' => (string) ($lineNotes[$index] ?? ''),
+                'sort_order' => (string) ($sortOrders[$index] ?? $index),
+            ];
+        }
+
+        return $items;
+    }
+
+    /** @return array<int, array{description: string, quantity: string, unit_price: string, sort_order: string}> */
+    private function freeTextItemsFromRequest(Request $request): array
+    {
+        $descriptions = $request->post['free_text_description'] ?? [];
+        $quantities = $request->post['free_text_quantity'] ?? [];
+        $unitPrices = $request->post['free_text_unit_price'] ?? [];
+        $sortOrders = $request->post['free_text_sort_order'] ?? [];
+
+        if (!is_array($descriptions)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($descriptions as $index => $description) {
+            $items[] = [
+                'description' => (string) $description,
+                'quantity' => (string) ($quantities[$index] ?? '1'),
+                'unit_price' => (string) ($unitPrices[$index] ?? '0'),
+                'sort_order' => (string) ($sortOrders[$index] ?? (1000 + $index)),
+            ];
+        }
+
+        return $items;
+    }
+
+    /** @return array<int, array{heading: string, sort_order: string}> */
+    private function sectionTextsFromRequest(Request $request): array
+    {
+        $headings = $request->post['section_heading'] ?? [];
+        $sortOrders = $request->post['section_sort_order'] ?? [];
+
+        if (!is_array($headings)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($headings as $index => $heading) {
+            $items[] = [
+                'heading' => (string) $heading,
+                'sort_order' => (string) ($sortOrders[$index] ?? (2000 + $index)),
             ];
         }
 
@@ -548,6 +619,8 @@ final class OfferController
             'discount_value' => $command->discountValue ?? '',
             'labor_items' => $command->laborItems,
             'sale_items' => $command->saleItems,
+            'free_text_items' => $command->freeTextItems,
+            'section_texts' => $command->sectionTexts,
         ];
     }
 

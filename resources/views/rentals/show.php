@@ -227,6 +227,51 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
 </div>
 
 <div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="mb-3 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Minutenprogramme</h2>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/minutenprogramme/neu" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">+ Neues Minutenprogramm</a>
+    </div>
+    <?php if ($minutePrograms === []): ?>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Noch kein Minutenprogramm für diese Veranstaltung angelegt.</p>
+    <?php else: ?>
+        <ul class="space-y-2">
+            <?php foreach ($minutePrograms as $minuteProgram): ?>
+                <li class="flex items-center justify-between rounded-md border border-slate-200 p-2 text-sm dark:border-slate-800">
+                    <a href="/minutenprogramme/<?= e($minuteProgram->id) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($minuteProgram->name) ?></a>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">
+                        <?php if ($minuteProgram->room !== null): ?><?= e($minuteProgram->room) ?> · <?php endif; ?>
+                        <?= e($minuteProgram->startAt->format('d.m.Y H:i')) ?>
+                    </span>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+</div>
+
+<?php if ($noticeDocuments !== []): ?>
+<div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Hinweisdokumente</h2>
+    <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">Für die gebuchten Artikel dieser Veranstaltung sind folgende Hinweisdokumente hinterlegt:</p>
+    <ul class="mb-4 space-y-1">
+        <?php foreach ($noticeDocuments as $noticeDocument): ?>
+            <li class="text-sm">
+                <a href="/hinweisdokumente/<?= e($noticeDocument->id) ?>/herunterladen" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($noticeDocument->name) ?></a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/hinweisdokumente/senden" class="flex flex-wrap items-end gap-3">
+        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+        <div class="flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400">Empfänger-E-Mail</label>
+            <input type="email" name="recipient_email" required value="<?= e($detail->customer->email ?? '') ?>"
+                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
+        </div>
+        <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">An Kunden senden</button>
+    </form>
+</div>
+<?php endif; ?>
+
+<div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('rentals.show.customer_checklist.title')) ?></h2>
     <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('rentals.show.customer_checklist.hint')) ?></p>
 

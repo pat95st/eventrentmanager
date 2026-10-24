@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Application\Rental\Query\RentalDetail $detail */
 /** @var array<string, \App\Domain\InventoryNumber\InventoryNumber[]> $availableByArticle */
+/** @var string|null $rentalTermsMarkdown */
 
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
@@ -20,6 +21,97 @@ foreach ($detail->issuedItems as $issued) {
         <?= e($detail->customer->displayName()) ?> · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>
     </p>
 </div>
+
+<?php if ($rental->termsSignedAt === null || $detail->customer->idCheckedAt === null): ?>
+    <div class="mb-6 space-y-4 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
+        <h2 class="text-sm font-semibold text-amber-800 dark:text-amber-300"><?= e(t('rentals.checklist.compliance_heading')) ?></h2>
+        <p class="text-xs text-amber-700 dark:text-amber-400"><?= e(t('rentals.checklist.compliance_hint')) ?></p>
+
+        <?php if ($detail->customer->idCheckedAt === null): ?>
+            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/ausweispruefung" class="rounded-md bg-white p-3 dark:bg-slate-900">
+                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <input type="hidden" name="customer_id" value="<?= e($detail->customer->id) ?>">
+                <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" required class="mt-0.5 h-4 w-4 rounded border-slate-300 dark:border-slate-700">
+                    <?= e(t('rentals.checklist.id_check_checkbox')) ?>
+                </label>
+                <button type="submit" class="mt-3 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+                    <?= e(t('rentals.checklist.id_check_confirm')) ?>
+                </button>
+            </form>
+        <?php else: ?>
+            <p class="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700">
+                <?= e(t('rentals.checklist.id_checked_done', ['date' => $detail->customer->idCheckedAt->format('d.m.Y H:i')])) ?>
+            </p>
+        <?php endif; ?>
+
+        <?php if ($rental->termsSignedAt === null): ?>
+            <div class="rounded-md bg-white p-3 dark:bg-slate-900">
+                <?php if ($rentalTermsMarkdown !== null && trim($rentalTermsMarkdown) !== ''): ?>
+                    <div class="mb-3 max-h-40 overflow-y-auto rounded-md border border-slate-200 p-2 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300">
+                        <?= \App\Infrastructure\Http\MarkdownRenderer::toHtml($rentalTermsMarkdown) ?>
+                    </div>
+                <?php endif; ?>
+                <label class="mb-1 block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.checklist.signature_label')) ?></label>
+                <canvas id="terms-signature-pad" class="w-full touch-none rounded-md border border-slate-300 bg-white dark:border-slate-700" height="150"></canvas>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                    <button type="button" id="terms-signature-clear" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                        <?= e(t('rentals.checklist.signature_clear')) ?>
+                    </button>
+                    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/vermietbedingungen-unterschrift" id="terms-signature-form">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <input type="hidden" name="signature_data_url" id="terms-signature-data-url">
+                        <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
+                            <?= e(t('rentals.checklist.signature_submit')) ?>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var canvas = document.getElementById('terms-signature-pad');
+                if (!canvas) { return; }
+                var ctx = canvas.getContext('2d');
+                canvas.width = canvas.offsetWidth;
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1e293b';
+                var drawing = false;
+
+                function pos(e) {
+                    var rect = canvas.getBoundingClientRect();
+                    var point = (e.touches && e.touches[0]) ? e.touches[0] : e;
+                    return { x: point.clientX - rect.left, y: point.clientY - rect.top };
+                }
+                function start(e) { drawing = true; var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }
+                function move(e) { if (!drawing) { return; } var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }
+                function end() { drawing = false; }
+
+                canvas.addEventListener('mousedown', start);
+                canvas.addEventListener('mousemove', move);
+                canvas.addEventListener('mouseup', end);
+                canvas.addEventListener('mouseleave', end);
+                canvas.addEventListener('touchstart', start, { passive: false });
+                canvas.addEventListener('touchmove', move, { passive: false });
+                canvas.addEventListener('touchend', end);
+
+                document.getElementById('terms-signature-clear').addEventListener('click', function () {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                });
+
+                document.getElementById('terms-signature-form').addEventListener('submit', function () {
+                    document.getElementById('terms-signature-data-url').value = canvas.toDataURL('image/png');
+                });
+            });
+            </script>
+        <?php else: ?>
+            <p class="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700">
+                <?= e(t('rentals.checklist.terms_signed_done', ['date' => $rental->termsSignedAt->format('d.m.Y H:i')])) ?>
+            </p>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <?php if ($detail->items === []): ?>
     <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">

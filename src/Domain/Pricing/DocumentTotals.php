@@ -21,6 +21,10 @@ namespace App\Domain\Pricing;
  *   4. laborTimeTotal      = Summe aller Arbeitszeit-Positionen (immer als letzte
  *      Position vor der Steuer, siehe offers/show.php, invoices/show.php,
  *      OfferPdfGenerator/InvoicePdfGenerator).
+ *   4b. freeTextTotal      = Summe aller Freitext-Posten (orderedRows()-Konzept,
+ *      siehe OfferFreeTextItem/InvoiceFreeTextItem) — wie laborTimeTotal/
+ *      saleTotal eine feste Zusatzsumme NACH dem Kombirabatt, da Freitext-
+ *      Posten nicht Teil der Mietpreis-Zwischensumme sind.
  *   5. shippingAmount      = optionale, händisch angegebene Versandkosten
  *      (nur bei Rechnungen aus dem Verkauf-Workflow, siehe
  *      SellInventoryNumberHandler/Invoice::$shippingAmount); bei Angeboten
@@ -47,6 +51,7 @@ final class DocumentTotals
         public readonly float $subtotalAfterDiscount,
         public readonly float $laborTimeTotal,
         public readonly float $saleTotal,
+        public readonly float $freeTextTotal,
         public readonly float $shippingAmount,
         public readonly float $netTotal,
         public readonly float $taxAmount,
@@ -70,6 +75,9 @@ final class DocumentTotals
         // sind und daher auch nicht von der Zubehörpauschale/dem auf
         // Mietpreise bezogenen Rabatt betroffen sein sollen.
         float $saleTotal = 0.0,
+        // Summe aller Freitext-Posten (siehe Klassendoc Punkt 4b) — wie
+        // saleTotal eine optionale, standardmäßig leere Zusatzsumme.
+        float $freeTextTotal = 0.0,
     ): self {
         $accessoryFlatRateAmount = 0.0;
         if ($accessoryFlatRateEnabled && $accessoryFlatRatePercent !== null) {
@@ -89,7 +97,7 @@ final class DocumentTotals
         }
         $subtotalAfterDiscount = $subtotalAfterAccessory - $discountAmount;
 
-        $netTotal = $subtotalAfterDiscount + $laborTimeTotal + $saleTotal + $shippingAmount;
+        $netTotal = $subtotalAfterDiscount + $laborTimeTotal + $saleTotal + $freeTextTotal + $shippingAmount;
 
         $taxAmount = $isSmallBusiness ? 0.0 : round($netTotal * ((float) $vatRatePercent) / 100, 2);
         $grossTotal = $netTotal + $taxAmount;
@@ -102,6 +110,7 @@ final class DocumentTotals
             subtotalAfterDiscount: $subtotalAfterDiscount,
             laborTimeTotal: $laborTimeTotal,
             saleTotal: $saleTotal,
+            freeTextTotal: $freeTextTotal,
             shippingAmount: $shippingAmount,
             netTotal: $netTotal,
             taxAmount: $taxAmount,

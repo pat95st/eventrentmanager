@@ -39,6 +39,14 @@ final class Rental
         public ?string $returnWarehouseId = null,
         public ?DateTimeImmutable $returnAt = null,
         public ?string $transportNote = null,
+        // Vermietbedingungen-Unterschrift (siehe SignRentalTermsHandler):
+        // eine Unterschrift je Vermietung, nicht wiederverwendbar über
+        // mehrere Vermietungen hinweg (siehe „Vermietbedingungen-
+        // Unterschrift & Ausweisprüfung“ in architektur-und-setup.md).
+        // $termsSignatureFile trägt nur den Dateinamen (ohne Pfad) der in
+        // storage/uploads/rental-terms-signatures/ gespeicherten PNG-Datei.
+        public ?DateTimeImmutable $termsSignedAt = null,
+        public ?string $termsSignatureFile = null,
     ) {
     }
 

@@ -22,6 +22,9 @@ final class OfferItem
         public int $quantity,
         public string $unitPricePerDay, // als String geführt, um Rundungsfehler bei DECIMAL zu vermeiden (siehe Article::$dailyRentalPrice)
         public ?string $lineNote,
+        // Gemeinsame Reihenfolge mit OfferFreeTextItem/OfferSectionText
+        // (orderedRows()-Konzept, siehe OfferRow/OfferDetail::orderedRows()).
+        public int $sortOrder = 0,
     ) {
     }
 

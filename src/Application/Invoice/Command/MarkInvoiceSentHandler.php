@@ -11,14 +11,15 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Invoice\InvoiceStatus;
+use App\Domain\Numbering\NumberedDocumentType;
 use App\Domain\Settings\InvoiceSettingsRepositoryInterface;
-use App\Infrastructure\Persistence\Pdo\InvoiceNumberSequence;
+use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
 use DateTimeImmutable;
 use PDO;
 
 /**
  * Entwurf -> Versendet. Der einzige Moment, in dem eine Rechnung eine
- * gesetzlich verbindliche Rechnungsnummer erhält (siehe InvoiceNumberSequence
+ * gesetzlich verbindliche Rechnungsnummer erhält (siehe DocumentNumberSequence
  * für die Race-Condition-sichere Vergabe): invoiceNumber wird vergeben,
  * invoiceDate auf heute gesetzt, dueDate = heute + InvoiceSettings::
  * $paymentTermDays, und der aktuelle Stand von InvoiceSettings::
@@ -32,14 +33,14 @@ use PDO;
  *
  * Nummernvergabe UND Speichern der Rechnung laufen in derselben
  * Transaktion: schlägt das Speichern fehl, wird auch die Nummernvergabe
- * zurückgerollt (siehe InvoiceNumberSequence-Klassen-Doc).
+ * zurückgerollt (siehe DocumentNumberSequence-Klassen-Doc).
  */
 final class MarkInvoiceSentHandler implements CommandHandlerInterface
 {
     public function __construct(
         private readonly InvoiceRepositoryInterface $invoices,
         private readonly InvoiceSettingsRepositoryInterface $invoiceSettings,
-        private readonly InvoiceNumberSequence $numberSequence,
+        private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
     ) {
     }
@@ -72,7 +73,7 @@ final class MarkInvoiceSentHandler implements CommandHandlerInterface
         $this->pdo->beginTransaction();
 
         try {
-            $invoiceNumber = $this->numberSequence->allocateNext();
+            $invoiceNumber = $this->numberSequence->allocateNext(NumberedDocumentType::Invoice);
 
             $invoice->invoiceNumber = $invoiceNumber;
             $invoice->invoiceDate = $now;

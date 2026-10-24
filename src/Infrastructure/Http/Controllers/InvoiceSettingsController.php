@@ -41,7 +41,6 @@ final class InvoiceSettingsController
             vatRatePercent: $request->input('vat_rate_percent', '') ?? '',
             taxNumber: $request->input('tax_number'),
             vatId: $request->input('vat_id'),
-            invoiceNumberPrefix: $request->input('invoice_number_prefix', '') ?? '',
             paymentTermDays: $request->input('payment_term_days', '') ?? '',
             bankName: $request->input('bank_name'),
             iban: $request->input('iban'),

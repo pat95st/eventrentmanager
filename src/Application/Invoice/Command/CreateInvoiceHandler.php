@@ -10,9 +10,11 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\Invoice;
+use App\Domain\Invoice\InvoiceFreeTextItem;
 use App\Domain\Invoice\InvoiceItem;
 use App\Domain\Invoice\InvoiceLaborItem;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
+use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\Invoice\InvoiceStatus;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
@@ -57,6 +59,8 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             $command->note,
             $command->items,
             $command->laborItems,
+            $command->freeTextItems,
+            $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
         );
@@ -109,6 +113,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
                 quantity: $item['quantity'],
                 unitPricePerDay: $item['unitPrice'],
                 lineNote: $item['lineNote'],
+                sortOrder: $item['sortOrder'],
             ),
             $data['items']
         );
@@ -125,6 +130,30 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             $data['laborItems']
         );
         $this->invoices->replaceLaborItems($invoice->id, $laborItems);
+
+        $freeTextItems = array_map(
+            fn (array $item) => new InvoiceFreeTextItem(
+                id: Uuid::v4(),
+                invoiceId: $invoice->id,
+                description: $item['description'],
+                quantity: $item['quantity'],
+                unitPrice: $item['unitPrice'],
+                sortOrder: $item['sortOrder'],
+            ),
+            $data['freeTextItems']
+        );
+        $this->invoices->replaceFreeTextItems($invoice->id, $freeTextItems);
+
+        $sectionTexts = array_map(
+            fn (array $sectionText) => new InvoiceSectionText(
+                id: Uuid::v4(),
+                invoiceId: $invoice->id,
+                heading: $sectionText['heading'],
+                sortOrder: $sectionText['sortOrder'],
+            ),
+            $data['sectionTexts']
+        );
+        $this->invoices->replaceSectionTexts($invoice->id, $sectionTexts);
 
         return $invoice->id;
     }

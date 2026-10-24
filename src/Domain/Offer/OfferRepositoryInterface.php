@@ -61,4 +61,40 @@ interface OfferRepositoryInterface
 
     /** Markiert eine einzelne Verkaufsposition als abgerechnet (siehe CreateInvoiceFromOfferHandler), ohne die übrigen Positionen anzufassen. */
     public function markSaleItemFulfilled(string $saleItemId, string $saleId): void;
+
+    /** @return OfferFreeTextItem[] sortiert nach sortOrder aufsteigend (orderedRows()-Konzept, siehe OfferDetail). */
+    public function findFreeTextItemsByOffer(string $offerId): array;
+
+    /**
+     * Ersetzt sämtliche Freitext-Posten eines Angebots durch die übergebene
+     * Liste (identisches "immer als Ganzes speichern"-Muster wie
+     * replaceItems()).
+     *
+     * @param OfferFreeTextItem[] $items
+     */
+    public function replaceFreeTextItems(string $offerId, array $items): void;
+
+    /** @return OfferSectionText[] sortiert nach sortOrder aufsteigend. */
+    public function findSectionTextsByOffer(string $offerId): array;
+
+    /**
+     * Ersetzt sämtliche Zwischentexte eines Angebots durch die übergebene
+     * Liste (identisches "immer als Ganzes speichern"-Muster wie
+     * replaceItems()).
+     *
+     * @param OfferSectionText[] $sectionTexts
+     */
+    public function replaceSectionTexts(string $offerId, array $sectionTexts): void;
+
+    /**
+     * Alle nicht abgelehnten Angebote (Draft/Sent/Accepted) — Grundlage für
+     * die Umsatzprognose (siehe GetRevenueForecastHandler). Bewusst keine
+     * Einschränkung auf validUntil: ein Angebot gilt für die Prognose als
+     * "offen", bis es explizit abgelehnt wird (siehe OfferStatus-Doc) — der
+     * Status "Expired" wird derzeit nirgends vergeben (siehe
+     * Offer::isExpiredForDisplay()) und spielt daher hier keine Rolle.
+     *
+     * @return Offer[]
+     */
+    public function findOpenForRevenueForecast(): array;
 }

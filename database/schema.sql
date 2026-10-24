@@ -486,6 +486,7 @@ CREATE TABLE customers (
     phone           VARCHAR(50)  NULL,
     email           VARCHAR(255) NULL,
     telegram_chat_id VARCHAR(64) NULL, -- siehe App\Domain\Messaging, Migration 077
+    id_checked_at   DATETIME     NULL, -- einmalig je Kunde gesetzt, siehe Migration 082
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_customers_last_name (last_name),
@@ -579,6 +580,8 @@ CREATE TABLE rentals (
     start_date        DATE         NOT NULL,
     end_date          DATE         NOT NULL,
     deployment_days   INT UNSIGNED NOT NULL,
+    terms_signed_at      DATETIME     NULL, -- siehe App\Domain\Rental\Rental::$termsSignedAt, Migration 082
+    terms_signature_file VARCHAR(255) NULL, -- nur Dateiname in storage/uploads/rental-terms-signatures/
     created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_rentals_customer
@@ -652,6 +655,108 @@ CREATE TABLE rental_issued_items (
     INDEX idx_rental_issued_items_rental (rental_id),
     INDEX idx_rental_issued_items_article (article_id),
     INDEX idx_rental_issued_items_inventory_number (inventory_number_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- Minutenprogramme (Ablaufpläne je Veranstaltung), siehe Migration 081.
+-- ---------------------------------------------------------------------
+CREATE TABLE minute_programs (
+    id                      CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id               CHAR(36)     NOT NULL,
+    name                    VARCHAR(255) NOT NULL,
+    room                    VARCHAR(255) NULL,
+    start_at                DATETIME     NOT NULL,
+    jingle_before           TINYINT(1)   NOT NULL DEFAULT 0,
+    handheld_mic_count      INT UNSIGNED NOT NULL DEFAULT 0,
+    headset_mic_count       INT UNSIGNED NOT NULL DEFAULT 0,
+    current_delay_minutes   INT          NOT NULL DEFAULT 0,
+    created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_minute_programs_rental
+        FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    INDEX idx_minute_programs_rental (rental_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE minute_program_items (
+    id                  CHAR(36)     NOT NULL PRIMARY KEY,
+    minute_program_id   CHAR(36)     NOT NULL,
+    sort_order          INT UNSIGNED NOT NULL,
+    name                VARCHAR(255) NOT NULL,
+    description         TEXT         NULL,
+    note_general        TEXT         NULL,
+    note_sound          TEXT         NULL,
+    note_light          TEXT         NULL,
+    note_video          TEXT         NULL,
+    note_stage          TEXT         NULL,
+    duration_minutes    INT UNSIGNED NULL,
+    CONSTRAINT fk_minute_program_items_program
+        FOREIGN KEY (minute_program_id) REFERENCES minute_programs (id) ON DELETE CASCADE,
+    INDEX idx_minute_program_items_program (minute_program_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE minute_program_templates (
+    id                      CHAR(36)     NOT NULL PRIMARY KEY,
+    name                    VARCHAR(255) NOT NULL,
+    jingle_before           TINYINT(1)   NOT NULL DEFAULT 0,
+    handheld_mic_count      INT UNSIGNED NOT NULL DEFAULT 0,
+    headset_mic_count       INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE minute_program_template_items (
+    id              CHAR(36)     NOT NULL PRIMARY KEY,
+    template_id     CHAR(36)     NOT NULL,
+    sort_order      INT UNSIGNED NOT NULL,
+    name            VARCHAR(255) NOT NULL,
+    description     TEXT         NULL,
+    note_general    TEXT         NULL,
+    note_sound      TEXT         NULL,
+    note_light      TEXT         NULL,
+    note_video      TEXT         NULL,
+    note_stage      TEXT         NULL,
+    duration_minutes INT UNSIGNED NULL,
+    CONSTRAINT fk_minute_program_template_items_template
+        FOREIGN KEY (template_id) REFERENCES minute_program_templates (id) ON DELETE CASCADE,
+    INDEX idx_minute_program_template_items_template (template_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE minute_program_share_links (
+    id                  CHAR(36)     NOT NULL PRIMARY KEY,
+    minute_program_id   CHAR(36)     NOT NULL,
+    token               VARCHAR(64)  NOT NULL,
+    mode                ENUM('read', 'read_write') NOT NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at          DATETIME     NULL,
+    CONSTRAINT fk_minute_program_share_links_program
+        FOREIGN KEY (minute_program_id) REFERENCES minute_programs (id) ON DELETE CASCADE,
+    UNIQUE KEY uq_minute_program_share_links_token (token),
+    INDEX idx_minute_program_share_links_program (minute_program_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- Hinweisdokumente (siehe database/migrations/083_add_notice_documents.sql)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE notice_documents (
+    id                  CHAR(36)     NOT NULL PRIMARY KEY,
+    name                VARCHAR(255) NOT NULL,
+    original_filename   VARCHAR(255) NOT NULL,
+    stored_filename     VARCHAR(255) NOT NULL,
+    mime_type           VARCHAR(127) NOT NULL,
+    size_bytes          INT UNSIGNED NOT NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE notice_document_articles (
+    notice_document_id CHAR(36) NOT NULL,
+    article_id          CHAR(36) NOT NULL,
+    PRIMARY KEY (notice_document_id, article_id),
+    CONSTRAINT fk_notice_document_articles_document
+        FOREIGN KEY (notice_document_id) REFERENCES notice_documents (id) ON DELETE CASCADE,
+    CONSTRAINT fk_notice_document_articles_article
+        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
+    INDEX idx_notice_document_articles_article (article_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -952,9 +1057,11 @@ INSERT INTO offer_pdf_settings (id, intro_html, closing_html) VALUES (1, NULL, N
 -- ---------------------------------------------------------------------
 -- Firmenweite Rechnungseinstellungen (siehe App\Domain\Settings\
 -- InvoiceSettings sowie database/migrations/031_add_invoice_settings_and_
--- sequence.sql) + Sequenz-Tabelle für die fortlaufende, lückenlose
--- Rechnungsnummer (siehe App\Infrastructure\Persistence\Pdo\
--- InvoiceNumberSequence).
+-- sequence.sql). Das Rechnungsnummern-Präfix liegt seit Migration 084 NICHT
+-- mehr hier, sondern generisch für alle Dokumenttypen in
+-- document_numbering_settings/document_number_sequences (siehe
+-- App\Domain\Numbering\* sowie App\Infrastructure\Persistence\Pdo\
+-- DocumentNumberSequence).
 -- ---------------------------------------------------------------------
 CREATE TABLE invoice_settings (
     id                     TINYINT       NOT NULL PRIMARY KEY DEFAULT 1,
@@ -962,7 +1069,6 @@ CREATE TABLE invoice_settings (
     vat_rate_percent       DECIMAL(5, 2) NOT NULL DEFAULT 19.00,
     tax_number             VARCHAR(64)   NULL,
     vat_id                 VARCHAR(32)   NULL,
-    invoice_number_prefix  VARCHAR(16)   NOT NULL DEFAULT 'RE-',
     payment_term_days      INT UNSIGNED  NOT NULL DEFAULT 14,
     bank_name              VARCHAR(255)  NULL,
     iban                   VARCHAR(34)   NULL,
@@ -980,16 +1086,42 @@ CREATE TABLE pricing_settings (
     CONSTRAINT chk_pricing_settings_singleton CHECK (id = 1)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-INSERT INTO invoice_settings (id, is_small_business, vat_rate_percent, tax_number, vat_id, invoice_number_prefix, payment_term_days, bank_name, iban, bic)
-VALUES (1, 0, 19.00, NULL, NULL, 'RE-', 14, NULL, NULL, NULL);
+INSERT INTO invoice_settings (id, is_small_business, vat_rate_percent, tax_number, vat_id, payment_term_days, bank_name, iban, bic)
+VALUES (1, 0, 19.00, NULL, NULL, 14, NULL, NULL, NULL);
 
-CREATE TABLE invoice_sequences (
-    id           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
-    next_number  INT UNSIGNED NOT NULL DEFAULT 1,
-    CONSTRAINT chk_invoice_sequences_singleton CHECK (id = 1)
+-- ---------------------------------------------------------------------
+-- Generisches Nummerierungssystem je Dokumenttyp (Rechnungen, Angebote,
+-- Mahnungen, Auftragsbestätigungen) — siehe Migration 084,
+-- App\Domain\Numbering\*, App\Infrastructure\Persistence\Pdo\
+-- DocumentNumberSequence.
+-- ---------------------------------------------------------------------
+CREATE TABLE document_numbering_settings (
+    document_type  VARCHAR(30)  NOT NULL PRIMARY KEY,
+    scheme         VARCHAR(10)  NOT NULL DEFAULT 'simple',
+    prefix         VARCHAR(16)  NULL,
+    separator      VARCHAR(4)   NOT NULL DEFAULT '-',
+    digit_count    TINYINT UNSIGNED NOT NULL DEFAULT 6,
+    CONSTRAINT chk_document_numbering_settings_scheme CHECK (scheme IN ('simple', 'yearly'))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
-INSERT INTO invoice_sequences (id, next_number) VALUES (1, 1);
+INSERT INTO document_numbering_settings (document_type, scheme, prefix, separator, digit_count) VALUES
+    ('invoice', 'simple', 'RE-', '-', 6),
+    ('offer', 'simple', 'AN-', '-', 6),
+    ('dunning_notice', 'simple', 'MAH-', '-', 6),
+    ('order_confirmation', 'simple', 'AB-', '-', 6);
+
+CREATE TABLE document_number_sequences (
+    document_type  VARCHAR(30)  NOT NULL,
+    sequence_year  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    next_number    INT UNSIGNED NOT NULL DEFAULT 1,
+    PRIMARY KEY (document_type, sequence_year)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO document_number_sequences (document_type, sequence_year, next_number) VALUES
+    ('invoice', 0, 1),
+    ('offer', 0, 1),
+    ('dunning_notice', 0, 1),
+    ('order_confirmation', 0, 1);
 
 -- ---------------------------------------------------------------------
 -- Optionaler Einleitungs-/Schlusstext im Rechnungs-PDF-Dokument selbst
@@ -1125,6 +1257,10 @@ CREATE TABLE label_printers (
 -- ---------------------------------------------------------------------
 CREATE TABLE offers (
     id                    CHAR(36)      NOT NULL PRIMARY KEY,
+    -- Siehe Migration 084 / App\Infrastructure\Persistence\Pdo\
+    -- DocumentNumberSequence — wird beim Anlegen sofort vergeben, anders
+    -- als invoices.invoice_number daher NOT NULL.
+    offer_number          VARCHAR(50)   NOT NULL,
     customer_id           CHAR(36)      NULL,
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
@@ -1148,6 +1284,7 @@ CREATE TABLE offers (
         FOREIGN KEY (venue_id) REFERENCES venues (id) ON DELETE SET NULL,
     CONSTRAINT fk_offers_converted_rental
         FOREIGN KEY (converted_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT uq_offers_offer_number UNIQUE (offer_number),
     INDEX idx_offers_customer (customer_id),
     INDEX idx_offers_venue (venue_id),
     INDEX idx_offers_status (status),
@@ -1161,12 +1298,42 @@ CREATE TABLE offer_items (
     quantity            INT UNSIGNED  NOT NULL,
     unit_price_per_day  DECIMAL(10, 2) NOT NULL,
     line_note           VARCHAR(255)  NULL,
+    -- Gemeinsame Reihenfolge mit offer_free_text_items/offer_section_texts
+    -- (orderedRows()-Konzept, siehe Migration 085/OfferDetail::orderedRows()).
+    sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,
     CONSTRAINT fk_offer_items_offer
         FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
     CONSTRAINT fk_offer_items_article
         FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE RESTRICT,
     INDEX idx_offer_items_offer (offer_id),
     INDEX idx_offer_items_article (article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Freitext-Posten und Zwischentexte (Zwischenüberschriften ohne Preis) —
+-- gemeinsam mit den regulären Mietpositionen frei anordenbar über
+-- sort_order (orderedRows()-Konzept, siehe Migration 085). Arbeitszeit-/
+-- Verkaufspositionen bleiben davon bewusst unberührt (siehe OfferDetail-
+-- Klassendoc).
+CREATE TABLE offer_free_text_items (
+    id                  CHAR(36)      NOT NULL PRIMARY KEY,
+    offer_id            CHAR(36)      NOT NULL,
+    description         VARCHAR(255)  NOT NULL,
+    quantity            DECIMAL(10, 2) NOT NULL DEFAULT 1,
+    unit_price          DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,
+    CONSTRAINT fk_offer_free_text_items_offer
+        FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+    INDEX idx_offer_free_text_items_offer (offer_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE offer_section_texts (
+    id                  CHAR(36)      NOT NULL PRIMARY KEY,
+    offer_id            CHAR(36)      NOT NULL,
+    heading             VARCHAR(255)  NOT NULL,
+    sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,
+    CONSTRAINT fk_offer_section_texts_offer
+        FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+    INDEX idx_offer_section_texts_offer (offer_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- Arbeitszeit-Positionen eines Angebots — strukturell analog zu
@@ -1187,6 +1354,80 @@ CREATE TABLE offer_labor_items (
         FOREIGN KEY (labor_time_article_id) REFERENCES labor_time_articles (id) ON DELETE RESTRICT,
     INDEX idx_offer_labor_items_offer (offer_id),
     INDEX idx_offer_labor_items_labor_time_article (labor_time_article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- Auftragsbestätigungen — vereinfachte Geschwister-Entität zu Offer (siehe
+-- Migration 084 für die ausführliche Begründung des reduzierten
+-- Funktionsumfangs gegenüber Offer: kein validUntil, keine Arbeitszeit-/
+-- Verkaufspositionen, kein E-Mail-Workflow).
+-- ---------------------------------------------------------------------
+CREATE TABLE order_confirmations (
+    id                    CHAR(36)      NOT NULL PRIMARY KEY,
+    order_confirmation_number VARCHAR(50) NOT NULL,
+    customer_id           CHAR(36)      NULL,
+    event_location        VARCHAR(255)  NULL,
+    venue_id              CHAR(36)      NULL,
+    start_date            DATE          NOT NULL,
+    end_date              DATE          NOT NULL,
+    status                VARCHAR(20)   NOT NULL DEFAULT 'draft',
+    note                  TEXT          NULL,
+    accessory_flat_rate_enabled TINYINT(1)    NOT NULL DEFAULT 1,
+    accessory_flat_rate_percent DECIMAL(5, 2) NULL,
+    discount_type         ENUM('percent', 'fixed') NULL,
+    discount_value        DECIMAL(10, 2) NULL,
+    source_offer_id       CHAR(36)      NULL,
+    created_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT uq_order_confirmations_number UNIQUE (order_confirmation_number),
+    CONSTRAINT fk_order_confirmations_customer
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL,
+    CONSTRAINT fk_order_confirmations_venue
+        FOREIGN KEY (venue_id) REFERENCES venues (id) ON DELETE SET NULL,
+    CONSTRAINT fk_order_confirmations_source_offer
+        FOREIGN KEY (source_offer_id) REFERENCES offers (id) ON DELETE SET NULL,
+    INDEX idx_order_confirmations_customer (customer_id),
+    INDEX idx_order_confirmations_venue (venue_id),
+    INDEX idx_order_confirmations_status (status),
+    INDEX idx_order_confirmations_dates (start_date, end_date)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE order_confirmation_items (
+    id                  CHAR(36)      NOT NULL PRIMARY KEY,
+    order_confirmation_id CHAR(36)    NOT NULL,
+    article_id          CHAR(36)      NOT NULL,
+    quantity            INT UNSIGNED  NOT NULL,
+    unit_price_per_day  DECIMAL(10, 2) NOT NULL,
+    line_note           VARCHAR(255)  NULL,
+    sort_order           INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_order_confirmation_items_oc
+        FOREIGN KEY (order_confirmation_id) REFERENCES order_confirmations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_confirmation_items_article
+        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE RESTRICT,
+    INDEX idx_order_confirmation_items_oc (order_confirmation_id),
+    INDEX idx_order_confirmation_items_article (article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE order_confirmation_free_text_items (
+    id                     CHAR(36)      NOT NULL PRIMARY KEY,
+    order_confirmation_id  CHAR(36)      NOT NULL,
+    description            VARCHAR(255)  NOT NULL,
+    quantity                DECIMAL(10, 2) NOT NULL DEFAULT 1,
+    unit_price              DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    sort_order              INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_order_confirmation_free_text_items_oc
+        FOREIGN KEY (order_confirmation_id) REFERENCES order_confirmations (id) ON DELETE CASCADE,
+    INDEX idx_order_confirmation_free_text_items_oc (order_confirmation_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE order_confirmation_section_texts (
+    id                     CHAR(36)      NOT NULL PRIMARY KEY,
+    order_confirmation_id  CHAR(36)      NOT NULL,
+    heading                VARCHAR(255)  NOT NULL,
+    sort_order              INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_order_confirmation_section_texts_oc
+        FOREIGN KEY (order_confirmation_id) REFERENCES order_confirmations (id) ON DELETE CASCADE,
+    INDEX idx_order_confirmation_section_texts_oc (order_confirmation_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -1243,12 +1484,39 @@ CREATE TABLE invoice_items (
     quantity            INT UNSIGNED  NOT NULL,
     unit_price_per_day  DECIMAL(10, 2) NOT NULL,
     line_note           VARCHAR(255)  NULL,
+    -- Gemeinsame Reihenfolge mit invoice_free_text_items/invoice_section_texts
+    -- (orderedRows()-Konzept, siehe Migration 085/InvoiceDetail::orderedRows()).
+    sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,
     CONSTRAINT fk_invoice_items_invoice
         FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE,
     CONSTRAINT fk_invoice_items_article
         FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE RESTRICT,
     INDEX idx_invoice_items_invoice (invoice_id),
     INDEX idx_invoice_items_article (article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Freitext-Posten und Zwischentexte — siehe offer_free_text_items/
+-- offer_section_texts für die identische Begründung.
+CREATE TABLE invoice_free_text_items (
+    id                  CHAR(36)      NOT NULL PRIMARY KEY,
+    invoice_id          CHAR(36)      NOT NULL,
+    description         VARCHAR(255)  NOT NULL,
+    quantity            DECIMAL(10, 2) NOT NULL DEFAULT 1,
+    unit_price          DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,
+    CONSTRAINT fk_invoice_free_text_items_invoice
+        FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE,
+    INDEX idx_invoice_free_text_items_invoice (invoice_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE invoice_section_texts (
+    id                  CHAR(36)      NOT NULL PRIMARY KEY,
+    invoice_id          CHAR(36)      NOT NULL,
+    heading             VARCHAR(255)  NOT NULL,
+    sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,
+    CONSTRAINT fk_invoice_section_texts_invoice
+        FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE,
+    INDEX idx_invoice_section_texts_invoice (invoice_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- Arbeitszeit-Positionen einer Rechnung — strukturell analog zu
@@ -1524,14 +1792,6 @@ CREATE TABLE dunning_settings (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 INSERT INTO dunning_settings (id, auto_send_enabled) VALUES (1, 0);
-
-CREATE TABLE dunning_sequences (
-    id           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
-    next_number  INT UNSIGNED NOT NULL DEFAULT 1,
-    CONSTRAINT chk_dunning_sequences_singleton CHECK (id = 1)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-
-INSERT INTO dunning_sequences (id, next_number) VALUES (1, 1);
 
 CREATE TABLE dunning_notices (
     id                            CHAR(36)       NOT NULL PRIMARY KEY,

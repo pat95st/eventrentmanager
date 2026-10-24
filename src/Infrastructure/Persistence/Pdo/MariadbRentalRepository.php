@@ -21,11 +21,11 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'INSERT INTO rentals (
                 id, customer_id, start_date, end_date, event_name, event_location, venue_id,
                 pickup_warehouse_id, pickup_at, return_warehouse_id, return_at, transport_note,
-                deployment_days, created_at, updated_at
+                deployment_days, terms_signed_at, terms_signature_file, created_at, updated_at
              ) VALUES (
                 :id, :customer_id, :start_date, :end_date, :event_name, :event_location, :venue_id,
                 :pickup_warehouse_id, :pickup_at, :return_warehouse_id, :return_at, :transport_note,
-                :deployment_days, :created_at, :updated_at
+                :deployment_days, :terms_signed_at, :terms_signature_file, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, start_date = :start_date2, end_date = :end_date2,
@@ -33,7 +33,9 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
                 pickup_warehouse_id = :pickup_warehouse_id2, pickup_at = :pickup_at2,
                 return_warehouse_id = :return_warehouse_id2, return_at = :return_at2,
                 transport_note = :transport_note2,
-                deployment_days = :deployment_days2, updated_at = :updated_at2'
+                deployment_days = :deployment_days2,
+                terms_signed_at = :terms_signed_at2, terms_signature_file = :terms_signature_file2,
+                updated_at = :updated_at2'
         );
 
         $stmt->execute([
@@ -50,6 +52,8 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'return_at' => $rental->returnAt?->format('Y-m-d H:i:s'),
             'transport_note' => $rental->transportNote,
             'deployment_days' => $rental->deploymentDays,
+            'terms_signed_at' => $rental->termsSignedAt?->format('Y-m-d H:i:s'),
+            'terms_signature_file' => $rental->termsSignatureFile,
             'created_at' => $rental->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $rental->updatedAt->format('Y-m-d H:i:s'),
             'customer_id2' => $rental->customerId,
@@ -64,6 +68,8 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'return_at2' => $rental->returnAt?->format('Y-m-d H:i:s'),
             'transport_note2' => $rental->transportNote,
             'deployment_days2' => $rental->deploymentDays,
+            'terms_signed_at2' => $rental->termsSignedAt?->format('Y-m-d H:i:s'),
+            'terms_signature_file2' => $rental->termsSignatureFile,
             'updated_at2' => $rental->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -286,6 +292,8 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             returnWarehouseId: $row['return_warehouse_id'],
             returnAt: $row['return_at'] !== null ? new DateTimeImmutable($row['return_at']) : null,
             transportNote: $row['transport_note'],
+            termsSignedAt: $row['terms_signed_at'] !== null ? new DateTimeImmutable($row['terms_signed_at']) : null,
+            termsSignatureFile: $row['terms_signature_file'],
         );
     }
 }

@@ -182,17 +182,20 @@ use App\Infrastructure\Http\Controllers\PasskeyController;
 use App\Infrastructure\Http\Controllers\ProfileController;
 use App\Infrastructure\Http\Controllers\RentalController;
 use App\Infrastructure\Http\Controllers\OfferController;
+use App\Infrastructure\Http\Controllers\OrderConfirmationController;
 use App\Infrastructure\Http\Controllers\SetupPasswordController;
 use App\Infrastructure\Csv\PriceListCsvExporter;
 use App\Infrastructure\Pdf\PackingListPdfGenerator;
 use App\Infrastructure\Pdf\PriceListPdfGenerator;
 use App\Infrastructure\Pdf\OfferPdfGenerator;
+use App\Infrastructure\Pdf\OrderConfirmationPdfGenerator;
 use App\Infrastructure\Pdf\InvoicePdfGenerator;
 use App\Infrastructure\Pdf\RichTextPdfRenderer;
 use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Infrastructure\RichText\HtmlToRichTextParser;
 use App\Infrastructure\EInvoice\XRechnungGenerator;
-use App\Infrastructure\Persistence\Pdo\InvoiceNumberSequence;
+use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
+use App\Infrastructure\Persistence\Pdo\MariadbDocumentNumberingSettingsRepository;
 use App\Application\Invoice\Command\CreateInvoiceHandler;
 use App\Application\Invoice\Command\UpdateInvoiceHandler;
 use App\Application\Invoice\Command\DeleteInvoiceHandler;
@@ -212,6 +215,7 @@ use App\Application\Settings\Query\GetPricingSettingsHandler;
 use App\Application\Settings\Query\GetInvoicePdfSettingsHandler;
 use App\Infrastructure\Http\Controllers\InvoiceController;
 use App\Infrastructure\Http\Controllers\InvoiceSettingsController;
+use App\Infrastructure\Http\Controllers\DocumentNumberingSettingsController;
 use App\Infrastructure\Http\Controllers\PricingSettingsController;
 use App\Infrastructure\Http\Controllers\InvoicePdfTemplateSettingsController;
 use App\Infrastructure\Persistence\Pdo\MariadbInvoiceRepository;
@@ -373,6 +377,14 @@ $databaseConfig = FlatYamlConfig::load($databaseConfigPath);
 $pdo = Connection::fromConfig($databaseConfig);
 $fileStorage = new LocalFileStorage(__DIR__ . '/../storage/uploads');
 
+$minuteProgramRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramRepository($pdo);
+$minuteProgramItemRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramItemRepository($pdo);
+$minuteProgramTemplateRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramTemplateRepository($pdo);
+$minuteProgramTemplateItemRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramTemplateItemRepository($pdo);
+$minuteProgramShareLinkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramShareLinkRepository($pdo);
+$minuteProgramDetailBuilder = new \App\Application\MinuteProgram\Query\MinuteProgramDetailBuilder($minuteProgramItemRepository);
+$noticeDocumentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNoticeDocumentRepository($pdo);
+$noticeDocumentArticleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNoticeDocumentArticleRepository($pdo);
 $categoryRepository = new MariadbCategoryRepository($pdo);
 $manufacturerRepository = new MariadbManufacturerRepository($pdo);
 $laborTimeArticleRepository = new MariadbLaborTimeArticleRepository($pdo);
@@ -460,11 +472,11 @@ $bankImportStaging = new BankImportStaging($fileStorage);
 $invoiceSettingsRepository = new MariadbInvoiceSettingsRepository($pdo);
 $pricingSettingsRepository = new MariadbPricingSettingsRepository($pdo);
 $invoicePdfSettingsRepository = new MariadbInvoicePdfSettingsRepository($pdo);
-$invoiceNumberSequence = new InvoiceNumberSequence($pdo, $invoiceSettingsRepository);
+$documentNumberingSettingsRepository = new MariadbDocumentNumberingSettingsRepository($pdo);
+$documentNumberSequence = new DocumentNumberSequence($pdo, $documentNumberingSettingsRepository);
 $dunningLevelRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningLevelRepository($pdo);
 $dunningNoticeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningNoticeRepository($pdo);
 $dunningSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningSettingsRepository($pdo);
-$dunningNumberSequence = new \App\Infrastructure\Persistence\Pdo\DunningNumberSequence($pdo);
 $dunningPdfGenerator = new \App\Infrastructure\Pdf\DunningPdfGenerator();
 $receiptRepository = new MariadbReceiptRepository($pdo);
 $mailboxSettingsRepository = new MariadbMailboxSettingsRepository($pdo);
@@ -591,7 +603,9 @@ $commandBus->register(\App\Application\Rental\Command\DeleteRental::class, new D
 $commandBus->register(\App\Application\Rental\Command\AddRentalItem::class, new AddRentalItemHandler($rentalItemRepository, $rentalRepository, $articleRepository, $inventoryNumberRepository));
 $commandBus->register(\App\Application\Rental\Command\UpdateRentalItem::class, new UpdateRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository, $inventoryNumberRepository));
 $commandBus->register(\App\Application\Rental\Command\DeleteRentalItem::class, new DeleteRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository));
-$commandBus->register(\App\Application\Rental\Command\IssueRentalItem::class, new IssueRentalItemHandler($rentalIssuedItemRepository, $rentalItemRepository, $rentalRepository, $inventoryNumberRepository, $articleAccessoryRepository, $saleRepository));
+$commandBus->register(\App\Application\Rental\Command\IssueRentalItem::class, new IssueRentalItemHandler($rentalIssuedItemRepository, $rentalItemRepository, $rentalRepository, $inventoryNumberRepository, $articleAccessoryRepository, $saleRepository, $customerRepository));
+$commandBus->register(\App\Application\Rental\Command\SignRentalTerms::class, new \App\Application\Rental\Command\SignRentalTermsHandler($rentalRepository, $fileStorage));
+$commandBus->register(\App\Application\Rental\Command\ConfirmCustomerIdChecked::class, new \App\Application\Rental\Command\ConfirmCustomerIdCheckedHandler($customerRepository));
 $commandBus->register(\App\Application\Sale\Command\SellInventoryNumber::class, new \App\Application\Sale\Command\SellInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $customerRepository, $invoiceRepository, $saleRepository));
 $commandBus->register(\App\Application\Sale\Command\SellArticleFromStock::class, new \App\Application\Sale\Command\SellArticleFromStockHandler($articleRepository, $customerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository));
 $commandBus->register(\App\Application\Purchase\Command\CreatePurchaseOrder::class, new \App\Application\Purchase\Command\CreatePurchaseOrderHandler($purchaseOrderRepository, $supplierRepository, $articleRepository));
@@ -604,6 +618,32 @@ $commandBus->register(\App\Application\Rental\Command\UnissueRentalItem::class, 
 $commandBus->register(\App\Application\Rental\Command\ConfirmRentalItemAccessories::class, new ConfirmRentalItemAccessoriesHandler($rentalItemRepository));
 $commandBus->register(\App\Application\Rental\Command\ReturnRentalItem::class, new ReturnRentalItemHandler($rentalIssuedItemRepository, $rentalRepository, $rmaRepository));
 $commandBus->register(\App\Application\Rental\Command\UndoReturnRentalItem::class, new UndoReturnRentalItemHandler($rentalIssuedItemRepository));
+
+// Minutenprogramme (Ablaufpläne), siehe App\Domain\MinuteProgram\MinuteProgram.
+$commandBus->register(\App\Application\MinuteProgram\Command\CreateMinuteProgram::class, new \App\Application\MinuteProgram\Command\CreateMinuteProgramHandler($minuteProgramRepository, $rentalRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\UpdateMinuteProgram::class, new \App\Application\MinuteProgram\Command\UpdateMinuteProgramHandler($minuteProgramRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\DeleteMinuteProgram::class, new \App\Application\MinuteProgram\Command\DeleteMinuteProgramHandler($minuteProgramRepository, $minuteProgramItemRepository, $minuteProgramShareLinkRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\SetMinuteProgramDelay::class, new \App\Application\MinuteProgram\Command\SetMinuteProgramDelayHandler($minuteProgramRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\AddMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\AddMinuteProgramItemHandler($minuteProgramItemRepository, $minuteProgramRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\UpdateMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\UpdateMinuteProgramItemHandler($minuteProgramItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\DeleteMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\DeleteMinuteProgramItemHandler($minuteProgramItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\MoveMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\MoveMinuteProgramItemHandler($minuteProgramItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\CreateMinuteProgramFromTemplate::class, new \App\Application\MinuteProgram\Command\CreateMinuteProgramFromTemplateHandler($minuteProgramTemplateRepository, $minuteProgramTemplateItemRepository, $minuteProgramRepository, $minuteProgramItemRepository, $rentalRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\CreateMinuteProgramTemplate::class, new \App\Application\MinuteProgram\Command\CreateMinuteProgramTemplateHandler($minuteProgramTemplateRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\CreateMinuteProgramTemplateFromProgram::class, new \App\Application\MinuteProgram\Command\CreateMinuteProgramTemplateFromProgramHandler($minuteProgramRepository, $minuteProgramItemRepository, $minuteProgramTemplateRepository, $minuteProgramTemplateItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\UpdateMinuteProgramTemplate::class, new \App\Application\MinuteProgram\Command\UpdateMinuteProgramTemplateHandler($minuteProgramTemplateRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\DeleteMinuteProgramTemplate::class, new \App\Application\MinuteProgram\Command\DeleteMinuteProgramTemplateHandler($minuteProgramTemplateRepository, $minuteProgramTemplateItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\AddMinuteProgramTemplateItem::class, new \App\Application\MinuteProgram\Command\AddMinuteProgramTemplateItemHandler($minuteProgramTemplateItemRepository, $minuteProgramTemplateRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\UpdateMinuteProgramTemplateItem::class, new \App\Application\MinuteProgram\Command\UpdateMinuteProgramTemplateItemHandler($minuteProgramTemplateItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\DeleteMinuteProgramTemplateItem::class, new \App\Application\MinuteProgram\Command\DeleteMinuteProgramTemplateItemHandler($minuteProgramTemplateItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\MoveMinuteProgramTemplateItem::class, new \App\Application\MinuteProgram\Command\MoveMinuteProgramTemplateItemHandler($minuteProgramTemplateItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\CreateMinuteProgramShareLink::class, new \App\Application\MinuteProgram\Command\CreateMinuteProgramShareLinkHandler($minuteProgramShareLinkRepository, $minuteProgramRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\RevokeMinuteProgramShareLink::class, new \App\Application\MinuteProgram\Command\RevokeMinuteProgramShareLinkHandler($minuteProgramShareLinkRepository));
+
+// Hinweisdokumente, siehe App\Domain\NoticeDocument\NoticeDocument.
+$commandBus->register(\App\Application\NoticeDocument\Command\UploadNoticeDocument::class, new \App\Application\NoticeDocument\Command\UploadNoticeDocumentHandler($noticeDocumentRepository, $noticeDocumentArticleRepository, $fileStorage));
+$commandBus->register(\App\Application\NoticeDocument\Command\UpdateNoticeDocumentAssignment::class, new \App\Application\NoticeDocument\Command\UpdateNoticeDocumentAssignmentHandler($noticeDocumentRepository, $noticeDocumentArticleRepository));
+$commandBus->register(\App\Application\NoticeDocument\Command\DeleteNoticeDocument::class, new \App\Application\NoticeDocument\Command\DeleteNoticeDocumentHandler($noticeDocumentRepository, $noticeDocumentArticleRepository, $fileStorage));
 
 $commandBus->register(\App\Application\User\Command\CreateUser::class, new CreateUserHandler($userRepository, $passwordSetupTokenIssuer));
 $commandBus->register(\App\Application\User\Command\UpdateUser::class, new UpdateUserHandler($userRepository));
@@ -659,7 +699,7 @@ $commandBus->register(\App\Application\Printing\Command\DeleteLabelPrinter::clas
 $commandBus->register(\App\Application\Printing\Command\SendTestPrint::class, new SendTestPrintHandler($labelPrinterRepository, $labelPrinterDrivers));
 $commandBus->register(\App\Application\Printing\Command\PrintInventoryNumberLabel::class, new PrintInventoryNumberLabelHandler($inventoryNumberRepository, $labelPrinterRepository, $labelPrinterDrivers, $printerTransport));
 
-$commandBus->register(\App\Application\Offer\Command\CreateOffer::class, new CreateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository));
+$commandBus->register(\App\Application\Offer\Command\CreateOffer::class, new CreateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $documentNumberSequence, $pdo));
 $commandBus->register(\App\Application\Offer\Command\UpdateOffer::class, new UpdateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferSent::class, new MarkOfferSentHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferAccepted::class, new MarkOfferAcceptedHandler($offerRepository));
@@ -667,6 +707,8 @@ $commandBus->register(\App\Application\Offer\Command\MarkOfferDeclined::class, n
 $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new DeleteOfferHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository));
 $offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer);
+$orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
+$orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage);
 $getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
     $getOfferHandler,
@@ -680,11 +722,41 @@ $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new E
     $documentStoragePusher,
 ));
 
+// --- Auftragsbestätigungen (Order Confirmations) -----------------------
+$commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConfirmation::class, new \App\Application\OrderConfirmation\Command\CreateOrderConfirmationHandler(
+    $orderConfirmationRepository,
+    $customerRepository,
+    $venueRepository,
+    $articleRepository,
+    $pricingSettingsRepository,
+    $documentNumberSequence,
+    $pdo,
+));
+$commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConfirmationFromOffer::class, new \App\Application\OrderConfirmation\Command\CreateOrderConfirmationFromOfferHandler(
+    $offerRepository,
+    $orderConfirmationRepository,
+    $documentNumberSequence,
+    $pdo,
+));
+$commandBus->register(\App\Application\OrderConfirmation\Command\UpdateOrderConfirmation::class, new \App\Application\OrderConfirmation\Command\UpdateOrderConfirmationHandler(
+    $orderConfirmationRepository,
+    $customerRepository,
+    $venueRepository,
+    $articleRepository,
+    $pricingSettingsRepository,
+));
+$commandBus->register(\App\Application\OrderConfirmation\Command\DeleteOrderConfirmation::class, new \App\Application\OrderConfirmation\Command\DeleteOrderConfirmationHandler($orderConfirmationRepository));
+$commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationSent::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationSentHandler($orderConfirmationRepository));
+$commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmed::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmedHandler($orderConfirmationRepository));
+$commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelled::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelledHandler($orderConfirmationRepository));
+$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository));
+$queryBus->register(\App\Application\OrderConfirmation\Query\ListOrderConfirmations::class, new \App\Application\OrderConfirmation\Query\ListOrderConfirmationsHandler($orderConfirmationRepository, $customerRepository));
+
 // --- Rechnungen (Invoices) --------------------------------------------
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoice::class, new CreateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository));
 $commandBus->register(\App\Application\Invoice\Command\UpdateInvoice::class, new UpdateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository));
 $commandBus->register(\App\Application\Invoice\Command\DeleteInvoice::class, new DeleteInvoiceHandler($invoiceRepository));
-$commandBus->register(\App\Application\Invoice\Command\MarkInvoiceSent::class, new MarkInvoiceSentHandler($invoiceRepository, $invoiceSettingsRepository, $invoiceNumberSequence, $pdo));
+$commandBus->register(\App\Application\Invoice\Command\MarkInvoiceSent::class, new MarkInvoiceSentHandler($invoiceRepository, $invoiceSettingsRepository, $documentNumberSequence, $pdo));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoicePaid::class, new MarkInvoicePaidHandler($invoiceRepository));
 // --- Onlinebanking-Import / Zahlungsabgleich (MT940/CAMT.053) ----------
 $commandBus->register(\App\Application\BankImport\Command\ImportBankStatement::class, new ImportBankStatementHandler($invoiceRepository, $bankImportStaging));
@@ -711,6 +783,7 @@ $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, n
 ));
 
 $commandBus->register(\App\Application\Settings\Command\UpdateInvoiceSettings::class, new UpdateInvoiceSettingsHandler($invoiceSettingsRepository));
+$commandBus->register(\App\Application\Numbering\Command\UpdateDocumentNumberingSettings::class, new \App\Application\Numbering\Command\UpdateDocumentNumberingSettingsHandler($documentNumberingSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdatePricingSettings::class, new UpdatePricingSettingsHandler($pricingSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateOverageSettings::class, new \App\Application\Settings\Command\UpdateOverageSettingsHandler($overageSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetOverageSettings::class, new \App\Application\Settings\Query\GetOverageSettingsHandler($overageSettingsRepository));
@@ -727,7 +800,7 @@ $commandBus->register(\App\Application\Dunning\Command\CreateDunningNotice::clas
     $invoiceSettingsRepository,
     $dunningLevelRepository,
     $dunningNoticeRepository,
-    $dunningNumberSequence,
+    $documentNumberSequence,
     $pdo,
 ));
 $getDunningNoticeHandler = new \App\Application\Dunning\Query\GetDunningNoticeHandler($dunningNoticeRepository, $invoiceRepository, $customerRepository);
@@ -916,6 +989,18 @@ $getRentalHandler = new GetRentalHandler(
     $articleAccessoryRepository,
 );
 $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHandler);
+
+$queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramDetailHandler($minuteProgramRepository, $minuteProgramDetailBuilder));
+$queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramsForRental::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramsForRentalHandler($minuteProgramRepository));
+$queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramTemplates::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramTemplatesHandler($minuteProgramTemplateRepository));
+$queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramTemplateDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramTemplateDetailHandler($minuteProgramTemplateRepository, $minuteProgramTemplateItemRepository));
+$queryBus->register(\App\Application\MinuteProgram\Query\ResolveMinuteProgramShareLink::class, new \App\Application\MinuteProgram\Query\ResolveMinuteProgramShareLinkHandler($minuteProgramShareLinkRepository, $minuteProgramRepository, $minuteProgramDetailBuilder));
+
+$getNoticeDocumentsForArticleIdsHandler = new \App\Application\NoticeDocument\Query\GetNoticeDocumentsForArticleIdsHandler($noticeDocumentArticleRepository, $noticeDocumentRepository);
+$queryBus->register(\App\Application\NoticeDocument\Query\GetNoticeDocumentsForArticleIds::class, $getNoticeDocumentsForArticleIdsHandler);
+$queryBus->register(\App\Application\NoticeDocument\Query\ListNoticeDocuments::class, new \App\Application\NoticeDocument\Query\ListNoticeDocumentsHandler($noticeDocumentRepository));
+$queryBus->register(\App\Application\NoticeDocument\Query\GetNoticeDocumentDetail::class, new \App\Application\NoticeDocument\Query\GetNoticeDocumentDetailHandler($noticeDocumentRepository, $noticeDocumentArticleRepository));
+$commandBus->register(\App\Application\Rental\Command\SendNoticeDocumentsToCustomer::class, new \App\Application\Rental\Command\SendNoticeDocumentsToCustomerHandler($getRentalHandler, $getNoticeDocumentsForArticleIdsHandler, $fileStorage, $mailer));
 $queryBus->register(\App\Application\Rental\Query\ListRentalsInRange::class, new ListRentalsInRangeHandler(
     $rentalRepository,
     $customerRepository,
@@ -955,6 +1040,7 @@ $queryBus->register(\App\Application\Sale\Query\ListSales::class, new \App\Appli
 $queryBus->register(\App\Application\Invoice\Query\ListInvoices::class, new ListInvoicesHandler($invoiceRepository, $customerRepository));
 $queryBus->register(\App\Application\Invoice\Query\GetInvoice::class, $getInvoiceHandler);
 $queryBus->register(\App\Application\Settings\Query\GetInvoiceSettings::class, new GetInvoiceSettingsHandler($invoiceSettingsRepository));
+$queryBus->register(\App\Application\Numbering\Query\ListDocumentNumberingSettings::class, new \App\Application\Numbering\Query\ListDocumentNumberingSettingsHandler($documentNumberingSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetPricingSettings::class, new GetPricingSettingsHandler($pricingSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetInvoicePdfSettings::class, new GetInvoicePdfSettingsHandler($invoicePdfSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetPdfDesignSettings::class, new \App\Application\Settings\Query\GetPdfDesignSettingsHandler($pdfDesignSettingsRepository));
@@ -998,6 +1084,7 @@ $queryBus->register(\App\Application\Calendar\Query\ListRentalsForCalendar::clas
 $queryBus->register(\App\Application\Settings\Query\GetCalDavSigningSettings::class, new \App\Application\Settings\Query\GetCalDavSigningSettingsHandler($calDavSigningSettingsRepository));
 $queryBus->register(\App\Application\AddressBook\Query\ListCardDavCredentialsForUser::class, new \App\Application\AddressBook\Query\ListCardDavCredentialsForUserHandler($cardDavCredentialRepository));
 $queryBus->register(\App\Application\Reporting\Query\GetIncomeExpenseOverview::class, new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository));
+$queryBus->register(\App\Application\Reporting\Query\GetRevenueForecast::class, new \App\Application\Reporting\Query\GetRevenueForecastHandler($offerRepository, $orderConfirmationRepository, $invoiceRepository, $invoiceSettingsRepository));
 
 $queryBus->register(\App\Application\Printing\Query\ListLabelPrinters::class, new ListLabelPrintersHandler($labelPrinterRepository));
 
@@ -1101,13 +1188,19 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository);
+$minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
+$minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
+$minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
+$noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
 $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
 $offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository);
+$orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator);
 $invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator);
 $bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository);
 $invoiceSettingsController = new InvoiceSettingsController($commandBus, $queryBus);
+$numberingSettingsController = new DocumentNumberingSettingsController($commandBus, $queryBus);
 $dunningLevelController = new \App\Infrastructure\Http\Controllers\DunningLevelController($commandBus, $queryBus);
 $dunningController = new \App\Infrastructure\Http\Controllers\DunningController($commandBus, $queryBus, $dunningPdfGenerator);
 $pricingSettingsController = new PricingSettingsController($commandBus, $queryBus);
@@ -1310,6 +1403,15 @@ $router->post('/zubehoer/{id}/loeschen', $auth->guard(Permission::Artikelverwalt
 
 $router->get('/firmware', $auth->guard(Permission::Artikelverwaltung, [$firmwareController, 'overview']));
 
+// Hinweisdokumente (generische, Artikeln zuordenbare Dokumente), siehe App\Domain\NoticeDocument.
+$router->get('/hinweisdokumente', $auth->guard(Permission::Artikelverwaltung, [$noticeDocumentController, 'index']));
+$router->get('/hinweisdokumente/neu', $auth->guard(Permission::Artikelverwaltung, [$noticeDocumentController, 'create']));
+$router->post('/hinweisdokumente', $auth->guard(Permission::Artikelverwaltung, [$noticeDocumentController, 'store']));
+$router->get('/hinweisdokumente/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$noticeDocumentController, 'edit']));
+$router->post('/hinweisdokumente/{id}', $auth->guard(Permission::Artikelverwaltung, [$noticeDocumentController, 'update']));
+$router->post('/hinweisdokumente/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$noticeDocumentController, 'destroy']));
+$router->get('/hinweisdokumente/{id}/herunterladen', $auth->guard(null, [$noticeDocumentController, 'download']));
+
 $router->get('/rma', $auth->guard(Permission::Artikelverwaltung, [$rmaController, 'overview']));
 $router->get('/inventurnummern/{inventoryNumberId}/rma', $auth->guard(Permission::Artikelverwaltung, [$rmaController, 'index']));
 $router->post('/inventurnummern/{inventoryNumberId}/rma', $auth->guard(Permission::Artikelverwaltung, [$rmaController, 'store']));
@@ -1427,6 +1529,8 @@ $router->get('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRu
 $router->post('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'issueItem']));
 $router->post('/ausgaben/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'unissueItem']));
 $router->post('/veranstaltungen/{id}/zubehoer-pruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmAccessories']));
+$router->post('/veranstaltungen/{id}/vermietbedingungen-unterschrift', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'signTerms']));
+$router->post('/veranstaltungen/{id}/ausweispruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmIdChecked']));
 
 $router->get('/veranstaltungen/{id}/rueckgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'returnChecklist']));
 $router->post('/veranstaltungen/{id}/rueckgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'returnItem']));
@@ -1442,10 +1546,42 @@ $router->post('/veranstaltungen/{id}/beladung/zugfahrzeug/entfernen', $auth->gua
 
 $router->post('/veranstaltungen/{id}/gutschein', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'redeemVoucher']));
 $router->post('/veranstaltungen/{id}/gutschein/entfernen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'removeVoucherRedemption']));
+$router->post('/veranstaltungen/{id}/hinweisdokumente/senden', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'sendNoticeDocuments']));
 
 $router->post('/veranstaltungen/{id}/kundencheckliste/link', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'issueCustomerChecklistLink']));
 $router->post('/veranstaltungen/{id}/kundencheckliste/link/erneuern', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'regenerateCustomerChecklistLink']));
 $router->post('/veranstaltungen/{id}/kundencheckliste/senden', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'emailCustomerChecklistLink']));
+
+// Minutenprogramme (Ablaufpläne) einer Veranstaltung, siehe App\Domain\MinuteProgram.
+$router->get('/veranstaltungen/{rentalId}/minutenprogramme/neu', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'create']));
+$router->post('/veranstaltungen/{rentalId}/minutenprogramme', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'store']));
+$router->get('/minutenprogramme/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'show']));
+$router->get('/minutenprogramme/{id}/bearbeiten', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'edit']));
+$router->post('/minutenprogramme/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'update']));
+$router->post('/minutenprogramme/{id}/loeschen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'destroy']));
+$router->post('/minutenprogramme/{id}/verzoegerung', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'setDelay']));
+$router->get('/minutenprogramme/{id}/vollbild', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'fullscreen']));
+$router->get('/minutenprogramme/{id}/countdown.json', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'countdown']));
+$router->post('/minutenprogramme/{id}/punkte', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'addItem']));
+$router->post('/minutenprogramm-punkte/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'updateItem']));
+$router->post('/minutenprogramm-punkte/{id}/loeschen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'deleteItem']));
+$router->post('/minutenprogramm-punkte/{id}/verschieben', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'moveItem']));
+$router->post('/minutenprogramme/{id}/als-vorlage-speichern', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'saveAsTemplate']));
+$router->post('/minutenprogramme/{id}/freigabe-links', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'createShareLink']));
+$router->post('/freigabe-links/{id}/widerrufen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'revokeShareLink']));
+
+// Minutenprogramm-Vorlagen (Stammdaten, unabhängig von einer konkreten Veranstaltung).
+$router->get('/minutenprogramm-vorlagen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'index']));
+$router->get('/minutenprogramm-vorlagen/neu', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'create']));
+$router->post('/minutenprogramm-vorlagen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'store']));
+$router->get('/minutenprogramm-vorlagen/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'show']));
+$router->get('/minutenprogramm-vorlagen/{id}/bearbeiten', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'edit']));
+$router->post('/minutenprogramm-vorlagen/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'update']));
+$router->post('/minutenprogramm-vorlagen/{id}/loeschen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'destroy']));
+$router->post('/minutenprogramm-vorlagen/{id}/punkte', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'addItem']));
+$router->post('/minutenprogramm-vorlagen-punkte/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'updateItem']));
+$router->post('/minutenprogramm-vorlagen-punkte/{id}/loeschen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'deleteItem']));
+$router->post('/minutenprogramm-vorlagen-punkte/{id}/verschieben', $auth->guard(Permission::Minutenprogramme, [$minuteProgramTemplateController, 'moveItem']));
 
 $router->get('/angebote', $auth->guard(Permission::AusgabeRuecknahme, [$offerController, 'index']));
 $router->get('/angebote/neu', $auth->guard(Permission::AusgabeRuecknahme, [$offerController, 'create']));
@@ -1461,6 +1597,19 @@ $router->post('/angebote/{id}/umwandeln', $auth->guard(Permission::AusgabeRueckn
 $router->get('/angebote/{id}/angebot.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$offerController, 'exportPdf']));
 $router->post('/angebote/{id}/email', $auth->guard(Permission::AusgabeRuecknahme, [$offerController, 'emailPdf']));
 $router->post('/angebote/{id}/rechnung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$offerController, 'createInvoice']));
+$router->post('/angebote/{id}/auftragsbestaetigung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'createFromOffer']));
+
+$router->get('/auftragsbestaetigungen', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'index']));
+$router->get('/auftragsbestaetigungen/neu', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'create']));
+$router->post('/auftragsbestaetigungen', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'store']));
+$router->get('/auftragsbestaetigungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'show']));
+$router->get('/auftragsbestaetigungen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'edit']));
+$router->post('/auftragsbestaetigungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'update']));
+$router->post('/auftragsbestaetigungen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'destroy']));
+$router->post('/auftragsbestaetigungen/{id}/versendet', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'markSent']));
+$router->post('/auftragsbestaetigungen/{id}/bestaetigt', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'markConfirmed']));
+$router->post('/auftragsbestaetigungen/{id}/storniert', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'markCancelled']));
+$router->get('/auftragsbestaetigungen/{id}/auftragsbestaetigung.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$orderConfirmationController, 'exportPdf']));
 
 $router->get('/rechnungen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'index']));
 $router->get('/rechnungen/neu', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'create']));
@@ -1504,6 +1653,7 @@ $router->get('/kalender', $auth->guard(Permission::AusgabeRuecknahme, [$calendar
 
 // Berichte (nur Administration) — aktuell nur die Einnahmen-/Ausgabenübersicht.
 $router->get('/berichte/einnahmen-ausgaben', $auth->guard(Permission::Administration, [$reportingController, 'incomeExpense']));
+$router->get('/berichte/umsatzprognose', $auth->guard(Permission::Administration, [$reportingController, 'revenueForecast']));
 
 // Benutzerverwaltung (nur Administration).
 $router->get('/benutzer', $auth->guard(Permission::Administration, [$userController, 'index']));
@@ -1592,6 +1742,12 @@ $router->get('/produkte/{id}', [$publicProductController, 'show']);
 $router->get('/kundencheckliste/{token}', [$customerChecklistController, 'show']);
 $router->post('/kundencheckliste/{token}/{item}', [$customerChecklistController, 'toggle']);
 
+// Minutenprogramm-Freigabe-Links: öffentlich, unangemeldet erreichbar (siehe MinuteProgramShareController).
+$router->get('/minutenprogramm/freigabe/{token}', [$minuteProgramShareController, 'show']);
+$router->get('/minutenprogramm/freigabe/{token}/vollbild', [$minuteProgramShareController, 'fullscreen']);
+$router->get('/minutenprogramm/freigabe/{token}/countdown.json', [$minuteProgramShareController, 'countdown']);
+$router->post('/minutenprogramm/freigabe/{token}/verzoegerung', [$minuteProgramShareController, 'setDelay']);
+
 $router->get('/einstellungen/rechtliches', $auth->guard(Permission::Administration, [$legalSettingsController, 'edit']));
 $router->post('/einstellungen/rechtliches', $auth->guard(Permission::Administration, [$legalSettingsController, 'update']));
 
@@ -1601,6 +1757,8 @@ $router->post('/einstellungen/angebotsvorlage', $auth->guard(Permission::Adminis
 
 $router->get('/einstellungen/rechnung', $auth->guard(Permission::Administration, [$invoiceSettingsController, 'edit']));
 $router->post('/einstellungen/rechnung', $auth->guard(Permission::Administration, [$invoiceSettingsController, 'update']));
+$router->get('/einstellungen/nummerierung', $auth->guard(Permission::Administration, [$numberingSettingsController, 'edit']));
+$router->post('/einstellungen/nummerierung', $auth->guard(Permission::Administration, [$numberingSettingsController, 'update']));
 
 $router->get('/einstellungen/mahnwesen', $auth->guard(Permission::Administration, [$dunningLevelController, 'index']));
 $router->get('/einstellungen/mahnwesen/{id}/bearbeiten', $auth->guard(Permission::Administration, [$dunningLevelController, 'edit']));

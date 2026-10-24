@@ -7,6 +7,7 @@ namespace App\Application\Reporting\Query;
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Invoice\Invoice;
+use App\Domain\Invoice\InvoiceFreeTextItem;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Pricing\DocumentTotals;
 use App\Domain\Receipt\Receipt;
@@ -30,6 +31,8 @@ use DateTimeImmutable;
  * App\Domain\Pricing\DocumentTotals::calculate() (dieselbe Berechnung wie
  * in InvoiceDetail::totals()/InvoicePdfGenerator) — Rechnungen führen
  * keinen gespeicherten Gesamtbetrag, er wird aus den Positionen berechnet.
+ * Dabei fließen Mietpreis-, Arbeitszeit- UND Freitext-Posten
+ * (InvoiceFreeTextItem, siehe orderedRows()-Konzept) in die Summe ein.
  * Ausgaben: Summe des Beleg-Betrags (Receipt::$amount), zusätzlich nach
  * Kategorie aufgeschlüsselt (siehe ReceiptCategory).
  */
@@ -90,6 +93,7 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
     {
         $items = $this->invoices->findItemsByInvoice($invoice->id);
         $laborItems = $this->invoices->findLaborItemsByInvoice($invoice->id);
+        $freeTextItems = $this->invoices->findFreeTextItemsByInvoice($invoice->id);
 
         $rentalNetTotal = 0.0;
         foreach ($items as $item) {
@@ -101,6 +105,12 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
             $laborTimeTotal += $laborItem->lineTotal();
         }
 
+        $freeTextTotal = 0.0;
+        foreach ($freeTextItems as $freeTextItem) {
+            assert($freeTextItem instanceof InvoiceFreeTextItem);
+            $freeTextTotal += $freeTextItem->lineTotal();
+        }
+
         $totals = DocumentTotals::calculate(
             rentalNetTotal: $rentalNetTotal,
             accessoryFlatRateEnabled: $invoice->accessoryFlatRateEnabled,
@@ -110,6 +120,7 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
             laborTimeTotal: $laborTimeTotal,
             isSmallBusiness: $invoice->isSmallBusiness ?? $invoiceSettings->isSmallBusiness,
             vatRatePercent: $invoice->vatRatePercent ?? $invoiceSettings->vatRatePercent,
+            freeTextTotal: $freeTextTotal,
         );
 
         return $totals->grossTotal;

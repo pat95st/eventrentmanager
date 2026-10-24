@@ -18,14 +18,16 @@ use function App\Infrastructure\Http\t;
         <div class="overflow-x-auto">
         <table class="w-full min-w-[640px] table-fixed text-left text-sm">
             <colgroup>
-                <col style="width: 24%">
-                <col style="width: 22%">
-                <col style="width: 22%">
-                <col style="width: 16%">
-                <col style="width: 16%">
+                <col style="width: 14%">
+                <col style="width: 20%">
+                <col style="width: 20%">
+                <col style="width: 20%">
+                <col style="width: 13%">
+                <col style="width: 13%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
+                    <th class="break-words px-4 py-2.5"><?= e(t('offers.table.number')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('offers.table.customer')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('offers.table.location')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('offers.table.period')) ?></th>
@@ -37,6 +39,7 @@ use function App\Infrastructure\Http\t;
                 <?php foreach ($offers as $entry): ?>
                     <?php $offer = $entry->offer; ?>
                     <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/angebote/<?= e($offer->id) ?>'">
+                        <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($offer->offerNumber) ?></td>
                         <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                             <?= $entry->customer !== null ? e($entry->customer->displayName()) : e(t('offers.table.no_customer')) ?>
                         </td>

@@ -54,13 +54,6 @@ $checkedSmallBusiness = array_key_exists('is_small_business', $old) ? $old['is_s
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-            <label for="invoice_number_prefix" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.invoice_settings.field.invoice_number_prefix')) ?></label>
-            <input type="text" id="invoice_number_prefix" name="invoice_number_prefix"
-                   value="<?= e($val('invoice_number_prefix', $settings->invoiceNumberPrefix)) ?>"
-                   class="mt-1 w-full rounded-md border <?= isset($errors['invoiceNumberPrefix']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <?php if (isset($errors['invoiceNumberPrefix'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['invoiceNumberPrefix']) ?></p><?php endif; ?>
-        </div>
-        <div>
             <label for="payment_term_days" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.invoice_settings.field.payment_term_days')) ?></label>
             <input type="number" id="payment_term_days" name="payment_term_days" min="1" step="1"
                    value="<?= e($val('payment_term_days', (string) $settings->paymentTermDays)) ?>"
@@ -68,6 +61,8 @@ $checkedSmallBusiness = array_key_exists('is_small_business', $old) ? $old['is_s
             <?php if (isset($errors['paymentTermDays'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['paymentTermDays']) ?></p><?php endif; ?>
         </div>
     </div>
+
+    <p class="text-xs text-slate-400 dark:text-slate-500"><?= t('settings.invoice_settings.numbering_hint', ['link' => '<a href="/einstellungen/nummerierung" class="underline">' . e(t('nav.numbering_settings')) . '</a>']) ?></p>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
         <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.invoice_settings.bank.title')) ?></h2>

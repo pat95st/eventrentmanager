@@ -16,6 +16,12 @@ final class Offer
 {
     public function __construct(
         public readonly string $id,
+        // Wird beim Anlegen sofort und verbindlich vergeben (siehe
+        // CreateOfferHandler + App\Infrastructure\Persistence\Pdo\
+        // DocumentNumberSequence) — anders als Invoice::$invoiceNumber ist
+        // dieses Feld NIE null, weil Angebote (anders als Rechnungs-
+        // Entwürfe) von Anfang an eine Nummer tragen sollen.
+        public string $offerNumber,
         public ?string $customerId,
         public ?string $eventLocation,
         public ?string $venueId,

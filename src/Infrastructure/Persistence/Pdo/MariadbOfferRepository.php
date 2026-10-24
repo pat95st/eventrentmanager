@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Pdo;
 
 use App\Domain\Offer\Offer;
+use App\Domain\Offer\OfferFreeTextItem;
 use App\Domain\Offer\OfferItem;
 use App\Domain\Offer\OfferLaborItem;
 use App\Domain\Offer\OfferRepositoryInterface;
 use App\Domain\Offer\OfferSaleItem;
+use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
 use DateTimeImmutable;
 use PDO;
@@ -23,12 +25,12 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO offers (
-                id, customer_id, event_location, venue_id, start_date, end_date, valid_until,
+                id, offer_number, customer_id, event_location, venue_id, start_date, end_date, valid_until,
                 status, note,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
                 converted_rental_id, created_at, updated_at
              ) VALUES (
-                :id, :customer_id, :event_location, :venue_id, :start_date, :end_date, :valid_until,
+                :id, :offer_number, :customer_id, :event_location, :venue_id, :start_date, :end_date, :valid_until,
                 :status, :note,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
                 :converted_rental_id, :created_at, :updated_at
@@ -48,6 +50,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
         $accessoryFlatRateEnabled = $offer->accessoryFlatRateEnabled ? 1 : 0;
         $stmt->execute([
             'id' => $offer->id,
+            'offer_number' => $offer->offerNumber,
             'customer_id' => $offer->customerId,
             'event_location' => $offer->eventLocation,
             'venue_id' => $offer->venueId,
@@ -125,9 +128,11 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
 
         if ($searchTerm !== null && trim($searchTerm) !== '') {
             $sql .= ' AND (o.event_location LIKE :search
+                OR o.offer_number LIKE :search2b
                 OR c.first_name LIKE :search2 OR c.last_name LIKE :search3 OR c.company_name LIKE :search4)';
             $needle = '%' . $searchTerm . '%';
             $params['search'] = $needle;
+            $params['search2b'] = $needle;
             $params['search2'] = $needle;
             $params['search3'] = $needle;
             $params['search4'] = $needle;
@@ -153,7 +158,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             'SELECT oi.* FROM offer_items oi
              INNER JOIN articles a ON a.id = oi.article_id
              WHERE oi.offer_id = :offer_id
-             ORDER BY a.name ASC'
+             ORDER BY oi.sort_order ASC'
         );
         $stmt->execute(['offer_id' => $offerId]);
 
@@ -169,8 +174,8 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             $delete->execute(['offer_id' => $offerId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO offer_items (id, offer_id, article_id, quantity, unit_price_per_day, line_note)
-                 VALUES (:id, :offer_id, :article_id, :quantity, :unit_price_per_day, :line_note)'
+                'INSERT INTO offer_items (id, offer_id, article_id, quantity, unit_price_per_day, line_note, sort_order)
+                 VALUES (:id, :offer_id, :article_id, :quantity, :unit_price_per_day, :line_note, :sort_order)'
             );
 
             foreach ($items as $item) {
@@ -181,6 +186,89 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
                     'quantity' => $item->quantity,
                     'unit_price_per_day' => $item->unitPricePerDay,
                     'line_note' => $item->lineNote,
+                    'sort_order' => $item->sortOrder,
+                ]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+
+            throw $e;
+        }
+    }
+
+    public function findFreeTextItemsByOffer(string $offerId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM offer_free_text_items WHERE offer_id = :offer_id ORDER BY sort_order ASC'
+        );
+        $stmt->execute(['offer_id' => $offerId]);
+
+        return array_map($this->hydrateFreeTextItem(...), $stmt->fetchAll());
+    }
+
+    public function replaceFreeTextItems(string $offerId, array $items): void
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $delete = $this->pdo->prepare('DELETE FROM offer_free_text_items WHERE offer_id = :offer_id');
+            $delete->execute(['offer_id' => $offerId]);
+
+            $insert = $this->pdo->prepare(
+                'INSERT INTO offer_free_text_items (id, offer_id, description, quantity, unit_price, sort_order)
+                 VALUES (:id, :offer_id, :description, :quantity, :unit_price, :sort_order)'
+            );
+
+            foreach ($items as $item) {
+                $insert->execute([
+                    'id' => $item->id,
+                    'offer_id' => $item->offerId,
+                    'description' => $item->description,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unitPrice,
+                    'sort_order' => $item->sortOrder,
+                ]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+
+            throw $e;
+        }
+    }
+
+    public function findSectionTextsByOffer(string $offerId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM offer_section_texts WHERE offer_id = :offer_id ORDER BY sort_order ASC'
+        );
+        $stmt->execute(['offer_id' => $offerId]);
+
+        return array_map($this->hydrateSectionText(...), $stmt->fetchAll());
+    }
+
+    public function replaceSectionTexts(string $offerId, array $sectionTexts): void
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $delete = $this->pdo->prepare('DELETE FROM offer_section_texts WHERE offer_id = :offer_id');
+            $delete->execute(['offer_id' => $offerId]);
+
+            $insert = $this->pdo->prepare(
+                'INSERT INTO offer_section_texts (id, offer_id, heading, sort_order)
+                 VALUES (:id, :offer_id, :heading, :sort_order)'
+            );
+
+            foreach ($sectionTexts as $sectionText) {
+                $insert->execute([
+                    'id' => $sectionText->id,
+                    'offer_id' => $sectionText->offerId,
+                    'heading' => $sectionText->heading,
+                    'sort_order' => $sectionText->sortOrder,
                 ]);
             }
 
@@ -284,10 +372,21 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
         $stmt->execute(['sale_id' => $saleId, 'id' => $saleItemId]);
     }
 
+    public function findOpenForRevenueForecast(): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT * FROM offers WHERE status != 'declined' ORDER BY start_date ASC"
+        );
+        $stmt->execute();
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     private function hydrate(array $row): Offer
     {
         return new Offer(
             id: $row['id'],
+            offerNumber: $row['offer_number'],
             customerId: $row['customer_id'],
             eventLocation: $row['event_location'],
             venueId: $row['venue_id'],
@@ -315,6 +414,29 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             quantity: (int) $row['quantity'],
             unitPricePerDay: $row['unit_price_per_day'],
             lineNote: $row['line_note'],
+            sortOrder: (int) $row['sort_order'],
+        );
+    }
+
+    private function hydrateFreeTextItem(array $row): OfferFreeTextItem
+    {
+        return new OfferFreeTextItem(
+            id: $row['id'],
+            offerId: $row['offer_id'],
+            description: $row['description'],
+            quantity: $row['quantity'],
+            unitPrice: $row['unit_price'],
+            sortOrder: (int) $row['sort_order'],
+        );
+    }
+
+    private function hydrateSectionText(array $row): OfferSectionText
+    {
+        return new OfferSectionText(
+            id: $row['id'],
+            offerId: $row['offer_id'],
+            heading: $row['heading'],
+            sortOrder: (int) $row['sort_order'],
         );
     }
 

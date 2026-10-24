@@ -7,10 +7,12 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
-/** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string}> $existingItems */
+/** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string, sort_order: int|string}> $existingItems */
 /** @var \App\Domain\LaborTime\LaborTimeArticle[] $laborArticles */
 /** @var array<int, array{labor_article_id: string, hours: string}> $existingLaborItems */
 /** @var array<int, array{article_id: string, source: string, inventory_number_id: string, quantity: int|string, unit_price: string, line_note: string}> $existingSaleItems */
+/** @var array<int, array{description: string, quantity: string, unit_price: string, sort_order: int|string}> $existingFreeTextItems */
+/** @var array<int, array{heading: string, sort_order: int|string}> $existingSectionTexts */
 /** @var bool $saleItemsFulfilled */
 /** @var array<string, array<int, array{id: string, number: string}>> $saleInventoryNumbers Artikel-ID => verkaufbare Exemplare aus dem Vermietpool */
 /** @var array<string, int> $saleStock Artikel-ID => aktueller Lagerbestand des Verkaufsbestands */
@@ -29,6 +31,8 @@ $locked = ($offer !== null && !$offer->isEditable()) || $saleItemsFulfilled;
 $items = $old['items'] ?? $existingItems;
 $laborItems = $old['labor_items'] ?? $existingLaborItems;
 $saleItems = $old['sale_items'] ?? $existingSaleItems;
+$freeTextItems = $old['free_text_items'] ?? $existingFreeTextItems;
+$sectionTexts = $old['section_texts'] ?? $existingSectionTexts;
 
 $articlesJson = [];
 foreach ($articles as $article) {
@@ -238,6 +242,29 @@ foreach ($laborArticles as $laborArticle) {
         <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.sale_items_hint')) ?></p>
     </div>
 
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.free_text_items_title')) ?></h2>
+            <button type="button" id="offer-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('offers.form.free_text_items_add')) ?>
+            </button>
+        </div>
+        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
+        <div id="offer-free-text-items" class="space-y-2"></div>
+        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.free_text_items_hint')) ?></p>
+    </div>
+
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.section_texts_title')) ?></h2>
+            <button type="button" id="offer-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('offers.form.section_texts_add')) ?>
+            </button>
+        </div>
+        <div id="offer-section-texts" class="space-y-2"></div>
+        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.section_texts_hint')) ?></p>
+    </div>
+
     <?php
         // Live-Gesamtsumme (rein clientseitige Vorschau per JavaScript, siehe
         // Script-Block unten): spiegelt App\Domain\Pricing\DocumentTotals
@@ -269,6 +296,10 @@ foreach ($laborArticles as $laborArticle) {
             <div data-total-sale-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt><?= e(t('offers.form.totals_sale')) ?></dt>
                 <dd data-total-sale>0,00 €</dd>
+            </div>
+            <div data-total-free-text-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('offers.form.totals_free_text')) ?></dt>
+                <dd data-total-free-text>0,00 €</dd>
             </div>
             <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
                 <dt><?= e(t('offers.show.grand_total')) ?></dt>
@@ -338,6 +369,7 @@ foreach ($laborArticles as $laborArticle) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_note')) ?></label>
             <input type="text" name="line_note[]" class="offer-item-note mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
+        <input type="hidden" name="sort_order[]" class="offer-item-sort" value="0">
         <button type="button" class="offer-item-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('offers.form.item_remove')) ?>
         </button>
@@ -423,6 +455,40 @@ foreach ($laborArticles as $laborArticle) {
     </div>
 </template>
 
+<template id="offer-free-text-row-template">
+    <div class="offer-free-text-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div class="min-w-[200px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.free_text_description')) ?></label>
+            <input type="text" name="free_text_description[]" class="offer-free-text-description mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <div class="w-20">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_quantity')) ?></label>
+            <input type="text" name="free_text_quantity[]" inputmode="decimal" value="1" class="offer-free-text-quantity mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <div class="w-28">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_price')) ?></label>
+            <input type="text" name="free_text_unit_price[]" inputmode="decimal" value="0" class="offer-free-text-price mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <input type="hidden" name="free_text_sort_order[]" class="offer-free-text-sort" value="1000">
+        <button type="button" class="offer-free-text-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+            <?= e(t('offers.form.item_remove')) ?>
+        </button>
+    </div>
+</template>
+
+<template id="offer-section-row-template">
+    <div class="offer-section-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div class="min-w-[200px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.section_heading')) ?></label>
+            <input type="text" name="section_heading[]" class="offer-section-heading mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <input type="hidden" name="section_sort_order[]" class="offer-section-sort" value="2000">
+        <button type="button" class="offer-section-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+            <?= e(t('offers.form.item_remove')) ?>
+        </button>
+    </div>
+</template>
+
 <script>
 (function () {
     var ARTICLES = <?= json_encode($articlesJson, JSON_THROW_ON_ERROR) ?>;
@@ -434,6 +500,7 @@ foreach ($laborArticles as $laborArticle) {
     var addButton = document.getElementById('offer-item-add');
     var startInput = document.getElementById('start_date');
     var endInput = document.getElementById('end_date');
+    var nextSortOrder = 0;
 
     function dayCount() {
         if (!startInput.value || !endInput.value) {
@@ -465,6 +532,7 @@ foreach ($laborArticles as $laborArticle) {
         var quantityInput = row.querySelector('.offer-item-quantity');
         var priceInput = row.querySelector('.offer-item-price');
         var noteInput = row.querySelector('.offer-item-note');
+        var sortInput = row.querySelector('.offer-item-sort');
         var removeButton = row.querySelector('.offer-item-remove');
         var pickButton = row.querySelector('.offer-item-pick');
 
@@ -472,6 +540,7 @@ foreach ($laborArticles as $laborArticle) {
         if (data.article_id) { articleSelect.value = data.article_id; }
         if (data.quantity) { quantityInput.value = data.quantity; }
         if (data.line_note) { noteInput.value = data.line_note; }
+        sortInput.value = data.sort_order !== undefined ? data.sort_order : nextSortOrder++;
 
         if (data.unit_price !== undefined && data.unit_price !== '') {
             priceInput.value = data.unit_price;
@@ -751,6 +820,54 @@ foreach ($laborArticles as $laborArticle) {
         }
     }
 
+    // --- Freitext-Posten/Zwischentexte (orderedRows()-Konzept) -------------
+    // Siehe order-confirmations/form.php für die identische Begründung
+    // dieses Musters (dort zuerst eingeführt).
+    var EXISTING_FREE_TEXT_ITEMS = <?= json_encode(array_values($freeTextItems), JSON_THROW_ON_ERROR) ?>;
+    var EXISTING_SECTION_TEXTS = <?= json_encode(array_values($sectionTexts), JSON_THROW_ON_ERROR) ?>;
+
+    var freeTextContainer = document.getElementById('offer-free-text-items');
+    var freeTextTemplate = document.getElementById('offer-free-text-row-template');
+    var freeTextAddButton = document.getElementById('offer-free-text-add');
+    var nextFreeTextSort = 1000;
+
+    function addFreeTextRow(data) {
+        var fragment = freeTextTemplate.content.cloneNode(true);
+        var row = fragment.querySelector('.offer-free-text-row');
+        data = data || {};
+        if (data.description) { row.querySelector('.offer-free-text-description').value = data.description; }
+        if (data.quantity) { row.querySelector('.offer-free-text-quantity').value = data.quantity; }
+        if (data.unit_price !== undefined) { row.querySelector('.offer-free-text-price').value = data.unit_price; }
+        row.querySelector('.offer-free-text-sort').value = data.sort_order !== undefined ? data.sort_order : nextFreeTextSort++;
+        row.querySelector('.offer-free-text-remove').addEventListener('click', function () { row.remove(); });
+        freeTextContainer.appendChild(row);
+    }
+
+    if (freeTextAddButton) {
+        freeTextAddButton.addEventListener('click', function () { addFreeTextRow(); });
+    }
+    EXISTING_FREE_TEXT_ITEMS.forEach(function (item) { addFreeTextRow(item); });
+
+    var sectionContainer = document.getElementById('offer-section-texts');
+    var sectionTemplate = document.getElementById('offer-section-row-template');
+    var sectionAddButton = document.getElementById('offer-section-add');
+    var nextSectionSort = 2000;
+
+    function addSectionRow(data) {
+        var fragment = sectionTemplate.content.cloneNode(true);
+        var row = fragment.querySelector('.offer-section-row');
+        data = data || {};
+        if (data.heading) { row.querySelector('.offer-section-heading').value = data.heading; }
+        row.querySelector('.offer-section-sort').value = data.sort_order !== undefined ? data.sort_order : nextSectionSort++;
+        row.querySelector('.offer-section-remove').addEventListener('click', function () { row.remove(); });
+        sectionContainer.appendChild(row);
+    }
+
+    if (sectionAddButton) {
+        sectionAddButton.addEventListener('click', function () { addSectionRow(); });
+    }
+    EXISTING_SECTION_TEXTS.forEach(function (item) { addSectionRow(item); });
+
     // --- Live-Gesamtsumme -------------------------------------------------
     // Rein clientseitige Vorschau (siehe Aufgabenstellung: die Summe soll
     // sich direkt in der Ansicht aktualisieren, nicht erst nach dem
@@ -789,6 +906,8 @@ foreach ($laborArticles as $laborArticle) {
     var totalLaborEl = document.querySelector('[data-total-labor]');
     var totalSaleRow = document.querySelector('[data-total-sale-row]');
     var totalSaleEl = document.querySelector('[data-total-sale]');
+    var totalFreeTextRow = document.querySelector('[data-total-free-text-row]');
+    var totalFreeTextEl = document.querySelector('[data-total-free-text]');
     var totalGrandEl = document.querySelector('[data-total-grand]');
 
     function parseAmount(value) {
@@ -859,7 +978,16 @@ foreach ($laborArticles as $laborArticle) {
             });
         }
 
-        var netTotal = subtotalAfterDiscount + laborTotal + saleTotal;
+        var freeTextTotal = 0;
+        if (freeTextContainer) {
+            freeTextContainer.querySelectorAll('.offer-free-text-row').forEach(function (row) {
+                var qty = parseAmount(row.querySelector('.offer-free-text-quantity').value);
+                var price = parseAmount(row.querySelector('.offer-free-text-price').value);
+                freeTextTotal += qty * price;
+            });
+        }
+
+        var netTotal = subtotalAfterDiscount + laborTotal + saleTotal + freeTextTotal;
 
         totalRentalEl.textContent = formatEuro(rentalTotal);
 
@@ -885,6 +1013,11 @@ foreach ($laborArticles as $laborArticle) {
         toggleRow(totalSaleRow, saleTotal > 0);
         if (saleTotal > 0) {
             totalSaleEl.textContent = '+' + formatEuro(saleTotal);
+        }
+
+        toggleRow(totalFreeTextRow, freeTextTotal > 0);
+        if (freeTextTotal > 0) {
+            totalFreeTextEl.textContent = '+' + formatEuro(freeTextTotal);
         }
 
         totalGrandEl.textContent = formatEuro(netTotal);

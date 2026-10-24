@@ -18,6 +18,9 @@ final class InvoiceItem
         public int $quantity,
         public string $unitPricePerDay,
         public ?string $lineNote,
+        // Gemeinsame Reihenfolge mit InvoiceFreeTextItem/InvoiceSectionText
+        // (orderedRows()-Konzept, siehe InvoiceRow/InvoiceDetail::orderedRows()).
+        public int $sortOrder = 0,
     ) {
     }
 

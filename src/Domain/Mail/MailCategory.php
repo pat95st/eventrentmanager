@@ -26,6 +26,7 @@ enum MailCategory: string
     case RentalPickupReminder = 'rental_pickup_reminder';
     case RentalReturnReminder = 'rental_return_reminder';
     case RentalCustomerChecklist = 'rental_customer_checklist';
+    case NoticeDocuments = 'notice_documents';
 
     public function label(): string
     {
@@ -42,6 +43,7 @@ enum MailCategory: string
             self::RentalPickupReminder => 'Erinnerung: Abholung',
             self::RentalReturnReminder => 'Erinnerung: Rückgabe',
             self::RentalCustomerChecklist => 'Kunden-Checkliste (Vollständigkeitsprüfung)',
+            self::NoticeDocuments => 'Hinweisdokumente per E-Mail',
         };
     }
 }

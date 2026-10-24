@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Infrastructure\Persistence\Pdo;
 
 use App\Domain\Invoice\Invoice;
+use App\Domain\Invoice\InvoiceFreeTextItem;
 use App\Domain\Invoice\InvoiceItem;
 use App\Domain\Invoice\InvoiceLaborItem;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
+use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\Invoice\InvoiceStatus;
 use DateTimeImmutable;
 use PDO;
@@ -200,7 +202,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'SELECT ii.* FROM invoice_items ii
              INNER JOIN articles a ON a.id = ii.article_id
              WHERE ii.invoice_id = :invoice_id
-             ORDER BY a.name ASC'
+             ORDER BY ii.sort_order ASC'
         );
         $stmt->execute(['invoice_id' => $invoiceId]);
 
@@ -216,8 +218,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             $delete->execute(['invoice_id' => $invoiceId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO invoice_items (id, invoice_id, article_id, quantity, unit_price_per_day, line_note)
-                 VALUES (:id, :invoice_id, :article_id, :quantity, :unit_price_per_day, :line_note)'
+                'INSERT INTO invoice_items (id, invoice_id, article_id, quantity, unit_price_per_day, line_note, sort_order)
+                 VALUES (:id, :invoice_id, :article_id, :quantity, :unit_price_per_day, :line_note, :sort_order)'
             );
 
             foreach ($items as $item) {
@@ -228,6 +230,89 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                     'quantity' => $item->quantity,
                     'unit_price_per_day' => $item->unitPricePerDay,
                     'line_note' => $item->lineNote,
+                    'sort_order' => $item->sortOrder,
+                ]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+
+            throw $e;
+        }
+    }
+
+    public function findFreeTextItemsByInvoice(string $invoiceId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM invoice_free_text_items WHERE invoice_id = :invoice_id ORDER BY sort_order ASC'
+        );
+        $stmt->execute(['invoice_id' => $invoiceId]);
+
+        return array_map($this->hydrateFreeTextItem(...), $stmt->fetchAll());
+    }
+
+    public function replaceFreeTextItems(string $invoiceId, array $items): void
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $delete = $this->pdo->prepare('DELETE FROM invoice_free_text_items WHERE invoice_id = :invoice_id');
+            $delete->execute(['invoice_id' => $invoiceId]);
+
+            $insert = $this->pdo->prepare(
+                'INSERT INTO invoice_free_text_items (id, invoice_id, description, quantity, unit_price, sort_order)
+                 VALUES (:id, :invoice_id, :description, :quantity, :unit_price, :sort_order)'
+            );
+
+            foreach ($items as $item) {
+                $insert->execute([
+                    'id' => $item->id,
+                    'invoice_id' => $item->invoiceId,
+                    'description' => $item->description,
+                    'quantity' => $item->quantity,
+                    'unit_price' => $item->unitPrice,
+                    'sort_order' => $item->sortOrder,
+                ]);
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+
+            throw $e;
+        }
+    }
+
+    public function findSectionTextsByInvoice(string $invoiceId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM invoice_section_texts WHERE invoice_id = :invoice_id ORDER BY sort_order ASC'
+        );
+        $stmt->execute(['invoice_id' => $invoiceId]);
+
+        return array_map($this->hydrateSectionText(...), $stmt->fetchAll());
+    }
+
+    public function replaceSectionTexts(string $invoiceId, array $sectionTexts): void
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $delete = $this->pdo->prepare('DELETE FROM invoice_section_texts WHERE invoice_id = :invoice_id');
+            $delete->execute(['invoice_id' => $invoiceId]);
+
+            $insert = $this->pdo->prepare(
+                'INSERT INTO invoice_section_texts (id, invoice_id, heading, sort_order)
+                 VALUES (:id, :invoice_id, :heading, :sort_order)'
+            );
+
+            foreach ($sectionTexts as $sectionText) {
+                $insert->execute([
+                    'id' => $sectionText->id,
+                    'invoice_id' => $sectionText->invoiceId,
+                    'heading' => $sectionText->heading,
+                    'sort_order' => $sectionText->sortOrder,
                 ]);
             }
 
@@ -302,6 +387,24 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
 
+    public function findNotCancelledForRevenueForecast(): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT * FROM invoices WHERE status != 'cancelled' ORDER BY start_date ASC"
+        );
+        $stmt->execute();
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
+    public function findSourceOfferIds(): array
+    {
+        $stmt = $this->pdo->prepare('SELECT DISTINCT source_offer_id FROM invoices WHERE source_offer_id IS NOT NULL');
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
     private function hydrate(array $row): Invoice
     {
         return new Invoice(
@@ -341,6 +444,29 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             quantity: (int) $row['quantity'],
             unitPricePerDay: $row['unit_price_per_day'],
             lineNote: $row['line_note'],
+            sortOrder: (int) $row['sort_order'],
+        );
+    }
+
+    private function hydrateFreeTextItem(array $row): InvoiceFreeTextItem
+    {
+        return new InvoiceFreeTextItem(
+            id: $row['id'],
+            invoiceId: $row['invoice_id'],
+            description: $row['description'],
+            quantity: $row['quantity'],
+            unitPrice: $row['unit_price'],
+            sortOrder: (int) $row['sort_order'],
+        );
+    }
+
+    private function hydrateSectionText(array $row): InvoiceSectionText
+    {
+        return new InvoiceSectionText(
+            id: $row['id'],
+            invoiceId: $row['invoice_id'],
+            heading: $row['heading'],
+            sortOrder: (int) $row['sort_order'],
         );
     }
 

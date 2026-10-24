@@ -70,6 +70,9 @@ final class GetOfferHandler implements QueryHandlerInterface
             $rawSaleItems
         )));
 
-        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems);
+        $freeTextItems = $this->offers->findFreeTextItemsByOffer($offer->id);
+        $sectionTexts = $this->offers->findSectionTextsByOffer($offer->id);
+
+        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts);
     }
 }

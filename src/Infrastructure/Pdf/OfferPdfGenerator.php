@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Infrastructure\Pdf;
 
 use App\Application\Offer\Query\OfferDetail;
+use App\Application\Offer\Query\OfferRow;
 use App\Domain\Customer\Customer;
+use App\Domain\Offer\OfferFreeTextItem;
+use App\Domain\Offer\OfferSectionText;
 use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\LegalSettings;
 use App\Domain\Settings\OfferPdfSettings;
@@ -170,6 +173,23 @@ final class OfferPdfGenerator
             $y -= 14;
         }
 
+        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
+        // oben zusammen mit den Mietpositionen, hier im Summenblock aber wie
+        // Arbeitszeit-/Verkaufspositionen als eigene Zeile NACH dem
+        // Kombirabatt (siehe DocumentTotals::$freeTextTotal).
+        if ($detail->freeTextTotal() > 0) {
+            if ($y - 14 < self::MARGIN + 40) {
+                $pageNumber++;
+                $writer->addPage();
+                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                $y -= 20;
+            }
+
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
+            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
+            $y -= 14;
+        }
+
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtsumme (netto):', 10, true);
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->grossTotal, 2, ',', '.') . ' EUR', 10, true);
         $y -= 30;
@@ -201,18 +221,48 @@ final class OfferPdfGenerator
         return $writer->output();
     }
 
-    /** @return array<int, array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string}> */
+    /** @return array<int, array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}> */
     private function buildRows(OfferDetail $detail): array
     {
         $columns = $this->columnLayout();
         $rows = [];
 
-        foreach ($detail->items as $entry) {
+        foreach ($detail->orderedRows() as $row) {
+            if ($row->type === OfferRow::TYPE_SECTION) {
+                /** @var OfferSectionText $sectionText */
+                $sectionText = $row->data;
+                $rows[] = [
+                    'nameLines' => $this->wrapText($sectionText->heading, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                    'quantity' => '',
+                    'unitPrice' => '',
+                    'lineTotal' => '',
+                    'isSection' => true,
+                ];
+
+                continue;
+            }
+
+            if ($row->type === OfferRow::TYPE_FREE_TEXT) {
+                /** @var OfferFreeTextItem $item */
+                $item = $row->data;
+                $rows[] = [
+                    'nameLines' => $this->wrapText($item->description, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                    'quantity' => rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ','),
+                    'unitPrice' => number_format((float) $item->unitPrice, 2, ',', '.') . ' EUR',
+                    'lineTotal' => number_format($item->lineTotal(), 2, ',', '.') . ' EUR',
+                    'isSection' => false,
+                ];
+
+                continue;
+            }
+
+            $entry = $row->data;
             $rows[] = [
                 'nameLines' => $this->wrapText($entry->article->name, $columns['article']['width'], self::TABLE_FONT_SIZE),
                 'quantity' => (string) $entry->item->quantity,
                 'unitPrice' => number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR',
                 'lineTotal' => number_format($entry->lineTotal(), 2, ',', '.') . ' EUR',
+                'isSection' => false,
             ];
         }
 
@@ -422,19 +472,21 @@ final class OfferPdfGenerator
         return $y - 22;
     }
 
-    /** @param array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string} $row */
+    /** @param array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool} $row */
     private function drawRow(SimplePdfWriter $writer, float $topY, array $row): void
     {
         $columns = $this->columnLayout();
         $baseline = $topY - self::TABLE_LINE_HEIGHT + 2;
 
         foreach ($row['nameLines'] as $i => $line) {
-            $writer->text($columns['article']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE);
+            $writer->text($columns['article']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE, $row['isSection']);
         }
 
-        $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
-        $writer->text($columns['unitPrice']['x'] + 2, $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
-        $writer->text($columns['lineTotal']['x'] + 2, $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
+        if (!$row['isSection']) {
+            $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
+            $writer->text($columns['unitPrice']['x'] + 2, $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
+            $writer->text($columns['lineTotal']['x'] + 2, $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
+        }
     }
 
     private function drawTerms(SimplePdfWriter $writer, OfferDetail $detail, string $termsText, float $y, float $pageWidth, float $pageHeight, int $pageNumber, ?PdfDesignSettings $pdfDesignSettings = null): float

@@ -79,4 +79,48 @@ interface InvoiceRepositoryInterface
      * @return Invoice[]
      */
     public function findPaidBetween(DateTimeImmutable $from, DateTimeImmutable $to): array;
+
+    /** @return InvoiceFreeTextItem[] sortiert nach sortOrder aufsteigend (orderedRows()-Konzept, siehe InvoiceDetail). */
+    public function findFreeTextItemsByInvoice(string $invoiceId): array;
+
+    /**
+     * Ersetzt sämtliche Freitext-Posten einer Rechnung durch die übergebene
+     * Liste (analog OfferRepositoryInterface::replaceFreeTextItems()).
+     *
+     * @param InvoiceFreeTextItem[] $items
+     */
+    public function replaceFreeTextItems(string $invoiceId, array $items): void;
+
+    /** @return InvoiceSectionText[] sortiert nach sortOrder aufsteigend. */
+    public function findSectionTextsByInvoice(string $invoiceId): array;
+
+    /**
+     * Ersetzt sämtliche Zwischentexte einer Rechnung durch die übergebene
+     * Liste (analog OfferRepositoryInterface::replaceSectionTexts()).
+     *
+     * @param InvoiceSectionText[] $sectionTexts
+     */
+    public function replaceSectionTexts(string $invoiceId, array $sectionTexts): void;
+
+    /**
+     * Alle nicht stornierten Rechnungen (Draft/Sent/Paid) — Grundlage für
+     * die Umsatzprognose (siehe GetRevenueForecastHandler): anders als
+     * findPaidBetween() (Zufluss-/Abfluss-Prinzip nach Zahlungsdatum) zählt
+     * hier jede nicht stornierte Rechnung unabhängig vom Zahlungsstatus,
+     * eingeordnet nach ihrem Veranstaltungszeitraum (Invoice::$startDate).
+     *
+     * @return Invoice[]
+     */
+    public function findNotCancelledForRevenueForecast(): array;
+
+    /**
+     * IDs aller Angebote, die bereits in eine Rechnung übernommen wurden
+     * (Invoice::$sourceOfferId, siehe CreateInvoiceFromOfferHandler) —
+     * verhindert bei der Umsatzprognose eine Doppelzählung desselben
+     * Geschäfts (einmal als offenes Angebot, einmal als daraus entstandene
+     * Rechnung).
+     *
+     * @return string[]
+     */
+    public function findSourceOfferIds(): array;
 }

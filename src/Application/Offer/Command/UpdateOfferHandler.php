@@ -13,10 +13,12 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\Offer\OfferFreeTextItem;
 use App\Domain\Offer\OfferItem;
 use App\Domain\Offer\OfferLaborItem;
 use App\Domain\Offer\OfferRepositoryInterface;
 use App\Domain\Offer\OfferSaleItem;
+use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
 use App\Domain\Sale\SaleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
@@ -74,6 +76,8 @@ final class UpdateOfferHandler implements CommandHandlerInterface
             $command->items,
             $command->laborItems,
             $command->saleItems,
+            $command->freeTextItems,
+            $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
         );
@@ -141,6 +145,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
                 quantity: $item['quantity'],
                 unitPricePerDay: $item['unitPrice'],
                 lineNote: $item['lineNote'],
+                sortOrder: $item['sortOrder'],
             ),
             $data['items']
         );
@@ -171,6 +176,30 @@ final class UpdateOfferHandler implements CommandHandlerInterface
             $data['saleItems']
         );
         $this->offers->replaceSaleItems($offer->id, $saleItems);
+
+        $freeTextItems = array_map(
+            fn (array $item) => new OfferFreeTextItem(
+                id: Uuid::v4(),
+                offerId: $offer->id,
+                description: $item['description'],
+                quantity: $item['quantity'],
+                unitPrice: $item['unitPrice'],
+                sortOrder: $item['sortOrder'],
+            ),
+            $data['freeTextItems']
+        );
+        $this->offers->replaceFreeTextItems($offer->id, $freeTextItems);
+
+        $sectionTexts = array_map(
+            fn (array $sectionText) => new OfferSectionText(
+                id: Uuid::v4(),
+                offerId: $offer->id,
+                heading: $sectionText['heading'],
+                sortOrder: $sectionText['sortOrder'],
+            ),
+            $data['sectionTexts']
+        );
+        $this->offers->replaceSectionTexts($offer->id, $sectionTexts);
 
         return $offer->id;
     }

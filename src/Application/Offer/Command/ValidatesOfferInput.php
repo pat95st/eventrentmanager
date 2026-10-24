@@ -23,15 +23,19 @@ use DateTimeImmutable;
 trait ValidatesOfferInput
 {
     /**
-     * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string}> $rawItems
+     * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order?: string}> $rawItems
      * @param array<int, array{labor_article_id: string, hours: string}> $rawLaborItems
      * @param array<int, array{article_id: string, source: string, inventory_number_id: string, quantity: string, unit_price: string, line_note: string}> $rawSaleItems
+     * @param array<int, array{description: string, quantity: string, unit_price: string, sort_order?: string}> $rawFreeTextItems
+     * @param array<int, array{heading: string, sort_order?: string}> $rawSectionTexts
      * @return array{0: array<string, string>, 1: array{
      *     customerId: ?string, startDate: ?DateTimeImmutable, endDate: ?DateTimeImmutable,
      *     eventLocation: ?string, venueId: ?string, validUntil: ?DateTimeImmutable, note: ?string,
-     *     items: array<int, array{articleId: string, quantity: int, unitPrice: string, lineNote: ?string}>,
+     *     items: array<int, array{articleId: string, quantity: int, unitPrice: string, lineNote: ?string, sortOrder: int}>,
      *     laborItems: array<int, array{laborTimeArticleId: string, hours: string, unitRatePerHour: string}>,
      *     saleItems: array<int, array{articleId: string, inventoryNumberId: ?string, quantity: int, unitPrice: string, lineNote: ?string}>,
+     *     freeTextItems: array<int, array{description: string, quantity: string, unitPrice: string, sortOrder: int}>,
+     *     sectionTexts: array<int, array{heading: string, sortOrder: int}>,
      *     discountType: ?string, discountValue: ?string,
      * }}
      */
@@ -51,6 +55,8 @@ trait ValidatesOfferInput
         array $rawItems,
         array $rawLaborItems,
         array $rawSaleItems,
+        array $rawFreeTextItems = [],
+        array $rawSectionTexts = [],
         ?string $rawDiscountType = null,
         ?string $rawDiscountValue = null,
     ): array {
@@ -123,6 +129,7 @@ trait ValidatesOfferInput
                 'quantity' => $quantity,
                 'unitPrice' => number_format($unitPrice, 2, '.', ''),
                 'lineNote' => $lineNote !== '' ? $lineNote : null,
+                'sortOrder' => (int) ($rawItem['sort_order'] ?? $index),
             ];
         }
 
@@ -243,6 +250,54 @@ trait ValidatesOfferInput
             ];
         }
 
+        // Freitext-Posten/Zwischentexte: siehe
+        // ValidatesOrderConfirmationInput::validateOrderConfirmationInput()
+        // für die identische Begründung (orderedRows()-Konzept, zuerst für
+        // Auftragsbestätigungen eingeführt und hier auf Angebote übertragen).
+        $freeTextItems = [];
+        foreach ($rawFreeTextItems as $index => $rawFreeTextItem) {
+            $description = trim((string) ($rawFreeTextItem['description'] ?? ''));
+            if ($description === '') {
+                continue;
+            }
+
+            $rawQuantity = trim((string) ($rawFreeTextItem['quantity'] ?? '1'));
+            $freeTextQuantity = filter_var(str_replace(',', '.', $rawQuantity), FILTER_VALIDATE_FLOAT);
+            if ($rawQuantity === '' || $freeTextQuantity === false) {
+                $errors['freeTextItems'] = 'Bitte für jeden Freitext-Posten eine gültige Menge angeben.';
+
+                continue;
+            }
+
+            $rawUnitPrice = trim((string) ($rawFreeTextItem['unit_price'] ?? '0'));
+            $freeTextUnitPrice = filter_var(str_replace(',', '.', $rawUnitPrice), FILTER_VALIDATE_FLOAT);
+            if ($freeTextUnitPrice === false) {
+                $errors['freeTextItems'] = 'Bitte für jeden Freitext-Posten einen gültigen Preis angeben.';
+
+                continue;
+            }
+
+            $freeTextItems[] = [
+                'description' => $description,
+                'quantity' => number_format($freeTextQuantity, 2, '.', ''),
+                'unitPrice' => number_format($freeTextUnitPrice, 2, '.', ''),
+                'sortOrder' => (int) ($rawFreeTextItem['sort_order'] ?? (1000 + $index)),
+            ];
+        }
+
+        $sectionTexts = [];
+        foreach ($rawSectionTexts as $index => $rawSectionText) {
+            $heading = trim((string) ($rawSectionText['heading'] ?? ''));
+            if ($heading === '') {
+                continue;
+            }
+
+            $sectionTexts[] = [
+                'heading' => $heading,
+                'sortOrder' => (int) ($rawSectionText['sort_order'] ?? (2000 + $index)),
+            ];
+        }
+
         return [$errors, [
             'customerId' => $customerId !== '' ? $customerId : null,
             'startDate' => $startDate,
@@ -254,6 +309,8 @@ trait ValidatesOfferInput
             'items' => $items,
             'laborItems' => $laborItems,
             'saleItems' => $saleItems,
+            'freeTextItems' => $freeTextItems,
+            'sectionTexts' => $sectionTexts,
             'discountType' => $discountType,
             'discountValue' => $discountValue,
         ]];

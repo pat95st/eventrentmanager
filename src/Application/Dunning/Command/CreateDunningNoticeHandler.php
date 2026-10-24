@@ -14,8 +14,9 @@ use App\Domain\Dunning\DunningNotice;
 use App\Domain\Dunning\DunningNoticeRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\InvoiceStatus;
+use App\Domain\Numbering\NumberedDocumentType;
 use App\Domain\Settings\InvoiceSettingsRepositoryInterface;
-use App\Infrastructure\Persistence\Pdo\DunningNumberSequence;
+use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 use PDO;
@@ -23,7 +24,7 @@ use Throwable;
 
 /**
  * Erstellt eine konkrete Mahnung für eine überfällige Rechnung — analog
- * MarkInvoiceSentHandler: Nummernvergabe (DunningNumberSequence) und
+ * MarkInvoiceSentHandler: Nummernvergabe (DocumentNumberSequence) und
  * Speichern laufen in derselben Transaktion. Rechnungsbetrag und
  * Stufen-Angaben (Name/Fristtage/Gebühr) werden zum Zeitpunkt der Erstellung
  * vollständig auf die Mahnung gesnapshotet (Snapshot-Prinzip, siehe
@@ -42,7 +43,7 @@ final class CreateDunningNoticeHandler implements CommandHandlerInterface
         private readonly InvoiceSettingsRepositoryInterface $invoiceSettings,
         private readonly DunningLevelRepositoryInterface $dunningLevels,
         private readonly DunningNoticeRepositoryInterface $dunningNotices,
-        private readonly DunningNumberSequence $numberSequence,
+        private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
     ) {
     }
@@ -82,7 +83,7 @@ final class CreateDunningNoticeHandler implements CommandHandlerInterface
         $this->pdo->beginTransaction();
 
         try {
-            $dunningNumber = $this->numberSequence->allocateNext();
+            $dunningNumber = $this->numberSequence->allocateNext(NumberedDocumentType::DunningNotice);
 
             $notice = new DunningNotice(
                 id: Uuid::v4(),

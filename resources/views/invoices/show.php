@@ -5,6 +5,8 @@
 /** @var \App\Domain\Dunning\DunningNotice[] $dunningNotices */
 /** @var \App\Domain\Dunning\DunningLevel[] $dunningLevels */
 
+use App\Application\Invoice\Query\InvoiceRow;
+
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
@@ -17,6 +19,11 @@ $vatRatePercent = $invoice->vatRatePercent ?? $invoiceSettings->vatRatePercent;
 // Vollständige Summenberechnung (Mietpreise -> Zubehörpauschale ->
 // Kombirabatt -> Netto/USt/Brutto), siehe App\Domain\Pricing\DocumentTotals.
 $totals = $detail->totals($invoiceSettings);
+// Reguläre Mietpositionen + Freitext-Posten + Zwischentexte, gemeinsam nach
+// sortOrder sortiert (orderedRows()-Konzept, siehe InvoiceDetail).
+// Arbeitszeitpositionen bleiben davon bewusst unberührt und werden weiterhin
+// separat gerendert.
+$rows = $detail->orderedRows();
 ?>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -182,7 +189,7 @@ $totals = $detail->totals($invoiceSettings);
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.show.items_title')) ?></h2>
 
-    <?php if ($detail->items === []): ?>
+    <?php if ($rows === []): ?>
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('invoices.show.no_items')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
@@ -196,18 +203,33 @@ $totals = $detail->totals($invoiceSettings);
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                <?php foreach ($detail->items as $entry): ?>
-                    <tr>
-                        <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
-                            <?= e($entry->article->name) ?>
-                            <?php if ($entry->item->lineNote !== null && trim($entry->item->lineNote) !== ''): ?>
-                                <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->item->lineNote) ?></span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= $entry->item->quantity ?></td>
-                        <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') ?> €</td>
-                        <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($entry->lineTotal(), 2, ',', '.') ?> €</td>
-                    </tr>
+                <?php foreach ($rows as $row): ?>
+                    <?php if ($row->type === InvoiceRow::TYPE_SECTION): ?>
+                        <tr class="bg-slate-50 dark:bg-slate-800/60">
+                            <td class="px-2 py-2 font-semibold text-slate-700 dark:text-slate-300" colspan="4"><?= e($row->data->heading) ?></td>
+                        </tr>
+                    <?php elseif ($row->type === InvoiceRow::TYPE_FREE_TEXT): ?>
+                        <?php $item = $row->data; ?>
+                        <tr>
+                            <td class="px-2 py-2 text-slate-800 dark:text-slate-200"><?= e($item->description) ?></td>
+                            <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= e(rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ',')) ?></td>
+                            <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= number_format((float) $item->unitPrice, 2, ',', '.') ?> €</td>
+                            <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($item->lineTotal(), 2, ',', '.') ?> €</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php $entry = $row->data; ?>
+                        <tr>
+                            <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
+                                <?= e($entry->article->name) ?>
+                                <?php if ($entry->item->lineNote !== null && trim($entry->item->lineNote) !== ''): ?>
+                                    <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->item->lineNote) ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= $entry->item->quantity ?></td>
+                            <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') ?> €</td>
+                            <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($entry->lineTotal(), 2, ',', '.') ?> €</td>
+                        </tr>
+                    <?php endif; ?>
                 <?php endforeach; ?>
             </tbody>
             <tfoot>
@@ -243,6 +265,12 @@ $totals = $detail->totals($invoiceSettings);
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($laborEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if ($detail->freeTextTotal() > 0): ?>
+                    <tr>
+                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.free_text_total')) ?></td>
+                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->freeTextTotal(), 2, ',', '.') ?> €</td>
+                    </tr>
+                <?php endif; ?>
                 <?php if ($invoice->shippingAmount !== null): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.shipping')) ?></td>

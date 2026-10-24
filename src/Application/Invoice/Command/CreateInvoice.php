@@ -9,8 +9,10 @@ use App\Application\Command\CommandInterface;
 final class CreateInvoice implements CommandInterface
 {
     /**
-     * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string}> $items
+     * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order?: string}> $items
      * @param array<int, array{labor_article_id: string, hours: string}> $laborItems
+     * @param array<int, array{description: string, quantity: string, unit_price: string, sort_order?: string}> $freeTextItems
+     * @param array<int, array{heading: string, sort_order?: string}> $sectionTexts
      */
     public function __construct(
         public readonly string $customerId,
@@ -24,6 +26,8 @@ final class CreateInvoice implements CommandInterface
         public readonly ?string $discountType = null, // 'percent'|'fixed'|null
         public readonly ?string $discountValue = null,
         public readonly array $laborItems = [],
+        public readonly array $freeTextItems = [],
+        public readonly array $sectionTexts = [],
     ) {
     }
 }

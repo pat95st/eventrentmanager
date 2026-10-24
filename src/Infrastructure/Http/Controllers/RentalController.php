@@ -8,8 +8,12 @@ use App\Application\Article\Query\ListArticles;
 use App\Application\Command\CommandBus;
 use App\Application\Customer\Query\ListCustomers;
 use App\Application\Invoice\Command\CreateInvoiceFromRental;
+use App\Application\MinuteProgram\Query\ListMinuteProgramsForRental;
+use App\Application\NoticeDocument\Query\GetNoticeDocumentsForArticleIds;
 use App\Application\Query\QueryBus;
+use App\Application\Rental\Command\SendNoticeDocumentsToCustomer;
 use App\Application\Rental\Command\AddRentalItem;
+use App\Application\Rental\Command\ConfirmCustomerIdChecked;
 use App\Application\Rental\Command\ConfirmRentalItemAccessories;
 use App\Application\Rental\Command\CreateRental;
 use App\Application\Rental\Command\DeleteRental;
@@ -19,6 +23,7 @@ use App\Application\Rental\Command\EmailRentalCustomerChecklist;
 use App\Application\Rental\Command\IssueRentalCustomerChecklistToken;
 use App\Application\Rental\Command\IssueRentalItem;
 use App\Application\Rental\Command\ReturnRentalItem;
+use App\Application\Rental\Command\SignRentalTerms;
 use App\Application\Rental\Command\UndoReturnRentalItem;
 use App\Application\Rental\Command\UnissueRentalItem;
 use App\Application\Rental\Command\UpdateRental;
@@ -45,6 +50,7 @@ use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Rental\Rental;
 use App\Domain\Rental\RentalCustomerChecklistTokenRepositoryInterface;
 use App\Domain\Rental\RentalIssuedItemRepositoryInterface;
+use App\Domain\Settings\LegalSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Domain\Voucher\VoucherRedemptionRepositoryInterface;
 use App\Domain\Warehouse\WarehouseRepositoryInterface;
@@ -72,6 +78,7 @@ final class RentalController
         private readonly RentalCustomerChecklistTokenRepositoryInterface $customerChecklistTokens,
         private readonly RentalCustomerChecklistUrlBuilder $customerChecklistUrlBuilder,
         private readonly VoucherRedemptionRepositoryInterface $voucherRedemptions,
+        private readonly LegalSettingsRepositoryInterface $legalSettings,
     ) {
     }
 
@@ -174,6 +181,13 @@ final class RentalController
 
         $voucherRedemption = $this->voucherRedemptions->findByRentalId($id);
         $voucher = $voucherRedemption !== null ? $this->queries->ask(new GetVoucher($voucherRedemption->voucherId)) : null;
+        $minutePrograms = $this->queries->ask(new ListMinuteProgramsForRental($id));
+
+        $bookedArticleIds = array_values(array_unique(array_map(
+            static fn ($entry) => $entry->article->id,
+            $detail->items,
+        )));
+        $noticeDocuments = $this->queries->ask(new GetNoticeDocumentsForArticleIds($bookedArticleIds));
 
         echo View::page('rentals/show', [
             'detail' => $detail,
@@ -185,6 +199,8 @@ final class RentalController
             'customerChecklistUrlError' => $customerChecklistUrlError,
             'voucherRedemption' => $voucherRedemption,
             'voucher' => $voucher,
+            'minutePrograms' => $minutePrograms,
+            'noticeDocuments' => $noticeDocuments,
         ], activeNav: 'rentals', title: t('rentals.page_title.detail', ['event' => $detail->rental->eventName]));
     }
 
@@ -280,6 +296,28 @@ final class RentalController
             Flash::error(implode(' ', $e->errors()));
         } catch (MailerException $e) {
             Flash::error(t('rentals.flash.email_failed', ['error' => $e->getMessage()]));
+        }
+
+        Response::redirect('/veranstaltungen/' . $id);
+    }
+
+    /** Verschickt alle für die gebuchten Artikel hinterlegten Hinweisdokumente (siehe SendNoticeDocumentsToCustomerHandler) an eine frei wählbare Adresse. */
+    public function sendNoticeDocuments(Request $request): void
+    {
+        $id = $request->param('id');
+        $recipient = $request->input('recipient_email', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new SendNoticeDocumentsToCustomer($id, $recipient));
+            Flash::success(t('rentals.flash.notice_documents_sent', ['recipient' => $recipient]));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (MailerException $e) {
+            Flash::error(t('rentals.flash.email_failed', ['error' => $e->getMessage()]));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
         }
 
         Response::redirect('/veranstaltungen/' . $id);
@@ -606,7 +644,46 @@ final class RentalController
         echo View::page('rentals/checklist', [
             'detail' => $detail,
             'availableByArticle' => $availableByArticle,
+            'rentalTermsMarkdown' => $this->legalSettings->get()->rentalTermsMarkdown,
         ], activeNav: 'rentals', title: t('rentals.page_title.checklist', ['event' => $detail->rental->eventName]));
+    }
+
+    /** Vermietbedingungen-Unterschrift (iPad) auf der Ausgabe-Checkliste. */
+    public function signTerms(Request $request): void
+    {
+        $rentalId = $request->param('id');
+        $signatureDataUrl = $request->input('signature_data_url', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new SignRentalTerms($rentalId, $signatureDataUrl));
+            Flash::success(t('rentals.flash.terms_signed_full'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungen/' . $rentalId . '/ausgabe');
+    }
+
+    /** Ausweisprüfung (einmalig je Kunde) auf der Ausgabe-Checkliste. */
+    public function confirmIdChecked(Request $request): void
+    {
+        $rentalId = $request->param('id');
+        $customerId = $request->input('customer_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new ConfirmCustomerIdChecked($customerId));
+            Flash::success(t('rentals.flash.id_checked_full'));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungen/' . $rentalId . '/ausgabe');
     }
 
     public function issueItem(Request $request): void

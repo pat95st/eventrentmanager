@@ -13,7 +13,6 @@ final class UpdateInvoiceSettings implements CommandInterface
         public readonly string $vatRatePercent,
         public readonly ?string $taxNumber,
         public readonly ?string $vatId,
-        public readonly string $invoiceNumberPrefix,
         public readonly string $paymentTermDays, // als String, wird im Handler validiert/geparst (siehe UpdateInvoiceSettingsHandler)
         public readonly ?string $bankName,
         public readonly ?string $iban,

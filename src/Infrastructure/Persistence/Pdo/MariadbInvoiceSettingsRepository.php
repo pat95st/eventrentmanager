@@ -32,7 +32,6 @@ final class MariadbInvoiceSettingsRepository implements InvoiceSettingsRepositor
             vatRatePercent: $row['vat_rate_percent'],
             taxNumber: $row['tax_number'],
             vatId: $row['vat_id'],
-            invoiceNumberPrefix: $row['invoice_number_prefix'],
             paymentTermDays: (int) $row['payment_term_days'],
             bankName: $row['bank_name'],
             iban: $row['iban'],
@@ -45,7 +44,7 @@ final class MariadbInvoiceSettingsRepository implements InvoiceSettingsRepositor
         $stmt = $this->pdo->prepare(
             'UPDATE invoice_settings SET
                 is_small_business = :is_small_business, vat_rate_percent = :vat_rate_percent,
-                tax_number = :tax_number, vat_id = :vat_id, invoice_number_prefix = :invoice_number_prefix,
+                tax_number = :tax_number, vat_id = :vat_id,
                 payment_term_days = :payment_term_days, bank_name = :bank_name, iban = :iban, bic = :bic
              WHERE id = 1'
         );
@@ -55,7 +54,6 @@ final class MariadbInvoiceSettingsRepository implements InvoiceSettingsRepositor
             'vat_rate_percent' => $settings->vatRatePercent,
             'tax_number' => $settings->taxNumber,
             'vat_id' => $settings->vatId,
-            'invoice_number_prefix' => $settings->invoiceNumberPrefix,
             'payment_term_days' => $settings->paymentTermDays,
             'bank_name' => $settings->bankName,
             'iban' => $settings->iban,

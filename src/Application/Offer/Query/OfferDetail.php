@@ -14,6 +14,8 @@ final class OfferDetail
      * @param OfferItemWithArticle[] $items
      * @param OfferLaborItemWithArticle[] $laborItems
      * @param OfferSaleItemWithArticle[] $saleItems
+     * @param \App\Domain\Offer\OfferFreeTextItem[] $freeTextItems
+     * @param \App\Domain\Offer\OfferSectionText[] $sectionTexts
      */
     public function __construct(
         public readonly Offer $offer,
@@ -21,6 +23,8 @@ final class OfferDetail
         public readonly array $items,
         public readonly array $laborItems,
         public readonly array $saleItems = [],
+        public readonly array $freeTextItems = [],
+        public readonly array $sectionTexts = [],
     ) {
     }
 
@@ -57,6 +61,17 @@ final class OfferDetail
         return $total;
     }
 
+    /** Summe aller Freitext-Posten (orderedRows()-Konzept) — erscheint wie laborTimeTotal()/saleTotal() immer NACH dem Kombirabatt, siehe totals(). */
+    public function freeTextTotal(): float
+    {
+        $total = 0.0;
+        foreach ($this->freeTextItems as $entry) {
+            $total += $entry->lineTotal();
+        }
+
+        return $total;
+    }
+
     /**
      * Vollständige Summenberechnung (Mietpreise -> Zubehörpauschale ->
      * Kombirabatt -> Nettosumme), siehe App\Domain\Pricing\DocumentTotals.
@@ -79,6 +94,35 @@ final class OfferDetail
             isSmallBusiness: true,
             vatRatePercent: '0',
             saleTotal: $this->saleTotal(),
+            freeTextTotal: $this->freeTextTotal(),
         );
+    }
+
+    /**
+     * Mischt reguläre Mietpositionen, Freitext-Posten und Zwischentexte in
+     * EINE, nach sortOrder sortierte Reihenfolge (orderedRows()-Konzept,
+     * siehe OfferRow) — für offers/show.php und OfferPdfGenerator.
+     * Arbeitszeit-/Verkaufspositionen bleiben davon bewusst unberührt (siehe
+     * Klassendoc) und werden weiterhin separat über $laborItems/$saleItems
+     * gerendert.
+     *
+     * @return OfferRow[]
+     */
+    public function orderedRows(): array
+    {
+        $rows = [];
+        foreach ($this->items as $item) {
+            $rows[] = OfferRow::forItem($item);
+        }
+        foreach ($this->freeTextItems as $item) {
+            $rows[] = OfferRow::forFreeTextItem($item);
+        }
+        foreach ($this->sectionTexts as $sectionText) {
+            $rows[] = OfferRow::forSectionText($sectionText);
+        }
+
+        usort($rows, static fn (OfferRow $a, OfferRow $b) => $a->sortOrder <=> $b->sortOrder);
+
+        return $rows;
     }
 }

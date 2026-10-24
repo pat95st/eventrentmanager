@@ -53,6 +53,9 @@ final class GetInvoiceHandler implements QueryHandlerInterface
             $rawLaborItems
         )));
 
-        return new InvoiceDetail($invoice, $customer, $items, $laborItems);
+        $freeTextItems = $this->invoices->findFreeTextItemsByInvoice($invoice->id);
+        $sectionTexts = $this->invoices->findSectionTextsByInvoice($invoice->id);
+
+        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts);
     }
 }

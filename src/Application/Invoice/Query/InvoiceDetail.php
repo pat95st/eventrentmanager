@@ -14,12 +14,16 @@ final class InvoiceDetail
     /**
      * @param InvoiceItemWithArticle[] $items
      * @param InvoiceLaborItemWithArticle[] $laborItems
+     * @param \App\Domain\Invoice\InvoiceFreeTextItem[] $freeTextItems
+     * @param \App\Domain\Invoice\InvoiceSectionText[] $sectionTexts
      */
     public function __construct(
         public readonly Invoice $invoice,
         public readonly ?Customer $customer,
         public readonly array $items,
         public readonly array $laborItems,
+        public readonly array $freeTextItems = [],
+        public readonly array $sectionTexts = [],
     ) {
     }
 
@@ -51,6 +55,17 @@ final class InvoiceDetail
         return $total;
     }
 
+    /** Summe aller Freitext-Posten (orderedRows()-Konzept) — erscheint wie laborTimeTotal() immer NACH dem Kombirabatt, siehe totals(). */
+    public function freeTextTotal(): float
+    {
+        $total = 0.0;
+        foreach ($this->freeTextItems as $entry) {
+            $total += $entry->lineTotal();
+        }
+
+        return $total;
+    }
+
     /**
      * Vollständige Summenberechnung (Mietpreise -> Zubehörpauschale ->
      * Kombirabatt -> Netto/USt/Brutto), siehe App\Domain\Pricing\DocumentTotals.
@@ -70,6 +85,34 @@ final class InvoiceDetail
             isSmallBusiness: $this->invoice->isSmallBusiness ?? $invoiceSettings->isSmallBusiness,
             vatRatePercent: $this->invoice->vatRatePercent ?? $invoiceSettings->vatRatePercent,
             shippingAmount: $this->invoice->shippingAmount !== null ? (float) $this->invoice->shippingAmount : 0.0,
+            freeTextTotal: $this->freeTextTotal(),
         );
+    }
+
+    /**
+     * Mischt reguläre Positionen, Freitext-Posten und Zwischentexte in EINE,
+     * nach sortOrder sortierte Reihenfolge (orderedRows()-Konzept, siehe
+     * InvoiceRow) — für invoices/show.php und InvoicePdfGenerator.
+     * Arbeitszeit-Positionen bleiben davon bewusst unberührt und werden
+     * weiterhin separat über $laborItems gerendert.
+     *
+     * @return InvoiceRow[]
+     */
+    public function orderedRows(): array
+    {
+        $rows = [];
+        foreach ($this->items as $item) {
+            $rows[] = InvoiceRow::forItem($item);
+        }
+        foreach ($this->freeTextItems as $item) {
+            $rows[] = InvoiceRow::forFreeTextItem($item);
+        }
+        foreach ($this->sectionTexts as $sectionText) {
+            $rows[] = InvoiceRow::forSectionText($sectionText);
+        }
+
+        usort($rows, static fn (InvoiceRow $a, InvoiceRow $b) => $a->sortOrder <=> $b->sortOrder);
+
+        return $rows;
     }
 }

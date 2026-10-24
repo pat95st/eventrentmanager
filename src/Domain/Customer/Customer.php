@@ -27,6 +27,13 @@ final class Customer
         public ?string $telegramChatId,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Gesetzt, sobald bei einer Materialausgabe erstmals ein
+        // Ausweisdokument dieses Kunden geprüft wurde (siehe
+        // ConfirmCustomerIdCheckedHandler) — einmalig je Kunde, nicht je
+        // Vermietung (siehe „Vermietbedingungen-Unterschrift & Ausweisprüfung“
+        // in architektur-und-setup.md). Nullable, trailing, damit bestehende
+        // new Customer(...)-Aufrufstellen unverändert bleiben.
+        public ?DateTimeImmutable $idCheckedAt = null,
     ) {
     }
 

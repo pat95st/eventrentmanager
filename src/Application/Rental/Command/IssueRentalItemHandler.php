@@ -7,6 +7,7 @@ namespace App\Application\Rental\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleAccessoryRepositoryInterface;
+use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
@@ -33,6 +34,7 @@ final class IssueRentalItemHandler implements CommandHandlerInterface
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ArticleAccessoryRepositoryInterface $accessories,
         private readonly SaleRepositoryInterface $sales,
+        private readonly CustomerRepositoryInterface $customers,
     ) {
     }
 
@@ -48,6 +50,28 @@ final class IssueRentalItemHandler implements CommandHandlerInterface
         $inventoryNumber = $this->inventoryNumbers->findById($command->inventoryNumberId);
         if ($inventoryNumber === null) {
             throw new NotFoundException("Inventurnummer \"{$command->inventoryNumberId}\" wurde nicht gefunden.");
+        }
+
+        // Blockierende Durchsetzung (exaktes Vorbild: die Zubehör-
+        // Vollständigkeitsprüfung unten) — siehe „Vermietbedingungen-
+        // Unterschrift & Ausweisprüfung“ in architektur-und-setup.md.
+        // Beide Prüfungen gelten für die gesamte Vermietung bzw. den
+        // gesamten Kunden, nicht nur für den aktuell ausgegebenen Posten.
+        if ($rental->termsSignedAt === null) {
+            throw new ValidationException([
+                'inventoryNumberId' => 'Die Vermietbedingungen müssen zuerst auf dieser Seite unterschrieben werden, bevor Material ausgegeben werden kann.',
+            ]);
+        }
+
+        $customer = $this->customers->findById($rental->customerId);
+        if ($customer === null) {
+            throw new NotFoundException("Kunde \"{$rental->customerId}\" wurde nicht gefunden.");
+        }
+
+        if ($customer->idCheckedAt === null) {
+            throw new ValidationException([
+                'inventoryNumberId' => 'Bei diesem Kunden muss zuerst ein Ausweisdokument geprüft und bestätigt werden, bevor Material ausgegeben werden kann.',
+            ]);
         }
 
         // Harte Sperre, unabhängig vom Ausgabeweg (Dropdown ODER

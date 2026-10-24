@@ -8,8 +8,8 @@ use DateTimeImmutable;
 
 /**
  * Eine konkrete, für eine überfällige Rechnung erstellte Mahnung. Analog zur
- * Rechnungsnummer (siehe InvoiceNumberSequence) erhält jede Mahnung beim
- * Erstellen eine fortlaufende Mahnungsnummer (siehe DunningNumberSequence).
+ * Rechnungsnummer (siehe DocumentNumberSequence) erhält jede Mahnung beim
+ * Erstellen eine fortlaufende Mahnungsnummer (ebenfalls über DocumentNumberSequence).
  *
  * Die Stufen-Angaben ($levelName/$daysAfterDueSnapshot/$feeType/$feeValue)
  * UND der zum Erstellungszeitpunkt offene Rechnungsbetrag ($invoiceGrossTotal)

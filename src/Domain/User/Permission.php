@@ -18,6 +18,11 @@ enum Permission: string
     case Artikelverwaltung = 'artikelverwaltung';
     case Kundenverwaltung = 'kundenverwaltung';
     case AusgabeRuecknahme = 'ausgabe_ruecknahme';
+    // Eigenständiges, fünftes Recht (nicht unter AusgabeRuecknahme oder
+    // Artikelverwaltung eingeordnet, da Minutenprogramme inhaltlich eher
+    // zur Veranstaltungsplanung als zur Material-Logistik gehören, siehe
+    // architektur-und-setup.md Abschnitt „Minutenprogramme“).
+    case Minutenprogramme = 'minutenprogramme';
 
     public function label(): string
     {
@@ -26,12 +31,13 @@ enum Permission: string
             self::Artikelverwaltung => 'Artikelverwaltung',
             self::Kundenverwaltung => 'Kundenverwaltung',
             self::AusgabeRuecknahme => 'Ausgabe und Rücknahme',
+            self::Minutenprogramme => 'Minutenprogramme',
         };
     }
 
     /** @return Permission[] Alle Rechte in fester Anzeigereihenfolge. */
     public static function all(): array
     {
-        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme];
+        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme];
     }
 }

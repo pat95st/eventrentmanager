@@ -34,11 +34,6 @@ final class UpdateInvoiceSettingsHandler implements CommandHandlerInterface
             $errors['paymentTermDays'] = 'Bitte ein Zahlungsziel von mindestens 1 Tag angeben.';
         }
 
-        $invoiceNumberPrefix = trim($command->invoiceNumberPrefix);
-        if ($invoiceNumberPrefix === '') {
-            $errors['invoiceNumberPrefix'] = 'Bitte ein Präfix für Rechnungsnummern angeben.';
-        }
-
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -48,7 +43,6 @@ final class UpdateInvoiceSettingsHandler implements CommandHandlerInterface
             vatRatePercent: number_format((float) $vatRateValue, 2, '.', ''),
             taxNumber: $this->nullIfEmpty($command->taxNumber),
             vatId: $this->nullIfEmpty($command->vatId),
-            invoiceNumberPrefix: $invoiceNumberPrefix,
             paymentTermDays: (int) $paymentTermDays,
             bankName: $this->nullIfEmpty($command->bankName),
             iban: $this->nullIfEmpty($command->iban),

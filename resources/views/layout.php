@@ -48,7 +48,7 @@ $backgroundImageUrl = CompanyBranding::backgroundImageUrl();
 // dem Artikelstamm untergeordnet); RMA ist ein eigener, gleichrangiger
 // Menüpunkt. Jeder Menüpunkt wird nur angezeigt, wenn der angemeldete
 // Benutzer das zugehörige Recht besitzt (siehe Zuordnung in bootstrap.php).
-$articlesGroupKeys = ['articles', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware'];
+$articlesGroupKeys = ['articles', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents'];
 $articlesChildren = [
     ['key' => 'articles', 'label' => t('nav.articles_all'), 'href' => '/artikel'],
     ['key' => 'cases', 'label' => t('nav.cases'), 'href' => '/cases'],
@@ -57,21 +57,24 @@ $articlesChildren = [
     ['key' => 'categories', 'label' => t('nav.categories'), 'href' => '/kategorien'],
     ['key' => 'rma', 'label' => t('nav.rma'), 'href' => '/rma'],
     ['key' => 'firmware', 'label' => t('nav.firmware'), 'href' => '/firmware'],
+    ['key' => 'notice_documents', 'label' => t('nav.notice_documents'), 'href' => '/hinweisdokumente'],
 ];
 $isArticlesGroupActive = in_array($activeNav, $articlesGroupKeys, true);
 
 // "Veranstaltung" ist analog zu "Artikel" ein Menüpunkt mit Untermenü
 // (Veranstaltungsorte und Kalender sind der Veranstaltungsverwaltung
 // untergeordnet).
-$rentalsGroupKeys = ['rentals', 'offers', 'invoices', 'bank_import', 'venues', 'warehouses', 'calendar'];
+$rentalsGroupKeys = ['rentals', 'offers', 'order_confirmations', 'invoices', 'bank_import', 'venues', 'warehouses', 'calendar', 'minute_program_templates'];
 $rentalsChildren = [
     ['key' => 'rentals', 'label' => t('nav.rentals_all'), 'href' => '/veranstaltungen'],
     ['key' => 'offers', 'label' => t('nav.offers'), 'href' => '/angebote'],
+    ['key' => 'order_confirmations', 'label' => t('nav.order_confirmations'), 'href' => '/auftragsbestaetigungen'],
     ['key' => 'invoices', 'label' => t('nav.invoices'), 'href' => '/rechnungen'],
     ['key' => 'bank_import', 'label' => t('nav.bank_import'), 'href' => '/zahlungsabgleich'],
     ['key' => 'venues', 'label' => t('nav.venues'), 'href' => '/veranstaltungsorte'],
     ['key' => 'warehouses', 'label' => t('nav.warehouses'), 'href' => '/lagerorte'],
     ['key' => 'calendar', 'label' => t('nav.calendar'), 'href' => '/kalender'],
+    ['key' => 'minute_program_templates', 'label' => t('nav.minute_program_templates'), 'href' => '/minutenprogramm-vorlagen'],
 ];
 $isRentalsGroupActive = in_array($activeNav, $rentalsGroupKeys, true);
 
@@ -372,6 +375,7 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
             <?php if ($isAdmin): ?>
               <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
               <a href="/berichte/einnahmen-ausgaben" class="block px-3 py-2 text-sm <?= $activeNav === 'reports' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.reports')) ?></a>
+              <a href="/berichte/umsatzprognose" class="block px-3 py-2 text-sm <?= $activeNav === 'revenue-forecast' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.revenue_forecast')) ?></a>
               <a href="/benutzer" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.user_management')) ?></a>
 
               <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
@@ -485,6 +489,7 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
         <a href="/profil/darstellung" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
         <?php if ($isAdmin): ?>
           <a href="/berichte/einnahmen-ausgaben" class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'reports' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.reports')) ?></a>
+          <a href="/berichte/umsatzprognose" class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'revenue-forecast' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.revenue_forecast')) ?></a>
           <a href="/benutzer" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.user_management')) ?></a>
 
           <div class="my-1 border-t border-slate-200 dark:border-slate-800"></div>

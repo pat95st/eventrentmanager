@@ -20,7 +20,7 @@ final class MoveMinuteProgramItemHandler implements CommandHandlerInterface
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof MoveMinuteProgramItem);
 
@@ -39,12 +39,12 @@ final class MoveMinuteProgramItemHandler implements CommandHandlerInterface
         }
 
         if ($position === null) {
-            return;
+            return null;
         }
 
         $neighborPosition = $command->direction === 'up' ? $position - 1 : $position + 1;
         if (!isset($siblings[$neighborPosition])) {
-            return;
+            return null;
         }
 
         $neighbor = $siblings[$neighborPosition];
@@ -52,5 +52,7 @@ final class MoveMinuteProgramItemHandler implements CommandHandlerInterface
 
         $this->items->save($item);
         $this->items->save($neighbor);
+
+        return null;
     }
 }

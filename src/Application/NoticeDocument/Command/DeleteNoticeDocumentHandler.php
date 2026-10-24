@@ -20,7 +20,7 @@ final class DeleteNoticeDocumentHandler implements CommandHandlerInterface
     ) {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof DeleteNoticeDocument);
 
@@ -32,5 +32,7 @@ final class DeleteNoticeDocumentHandler implements CommandHandlerInterface
         $this->documentArticles->deleteByDocument($document->id);
         $this->documents->delete($document->id);
         $this->fileStorage->delete('hinweisdokumente', $document->storedFilename);
+
+        return null;
     }
 }

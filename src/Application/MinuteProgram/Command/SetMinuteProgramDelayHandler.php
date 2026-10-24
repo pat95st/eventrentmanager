@@ -22,7 +22,7 @@ final class SetMinuteProgramDelayHandler implements CommandHandlerInterface
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof SetMinuteProgramDelay);
 
@@ -35,5 +35,7 @@ final class SetMinuteProgramDelayHandler implements CommandHandlerInterface
         $program->updatedAt = new DateTimeImmutable();
 
         $this->programs->save($program);
+
+        return null;
     }
 }

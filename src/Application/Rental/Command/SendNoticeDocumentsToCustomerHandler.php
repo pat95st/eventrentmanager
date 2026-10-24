@@ -36,7 +36,7 @@ final class SendNoticeDocumentsToCustomerHandler implements CommandHandlerInterf
     ) {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof SendNoticeDocumentsToCustomer);
 
@@ -77,5 +77,7 @@ final class SendNoticeDocumentsToCustomerHandler implements CommandHandlerInterf
             . "Mit freundlichen Grüßen";
 
         $this->mailer->send($recipient, $subject, $textBody, $attachments, null, MailCategory::NoticeDocuments);
+
+        return null;
     }
 }

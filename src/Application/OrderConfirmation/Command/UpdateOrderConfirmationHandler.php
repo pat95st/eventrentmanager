@@ -33,7 +33,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
     ) {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof UpdateOrderConfirmation);
 
@@ -119,5 +119,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
             $data['sectionTexts']
         );
         $this->orderConfirmations->replaceSectionTexts($orderConfirmation->id, $sectionTexts);
+
+        return null;
     }
 }

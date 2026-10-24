@@ -18,7 +18,7 @@ final class MarkOrderConfirmationCancelledHandler implements CommandHandlerInter
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof MarkOrderConfirmationCancelled);
 
@@ -35,5 +35,7 @@ final class MarkOrderConfirmationCancelledHandler implements CommandHandlerInter
         $orderConfirmation->updatedAt = new DateTimeImmutable();
 
         $this->orderConfirmations->save($orderConfirmation);
+
+        return null;
     }
 }

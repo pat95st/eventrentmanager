@@ -18,7 +18,7 @@ final class DeleteMinuteProgramTemplateHandler implements CommandHandlerInterfac
     ) {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof DeleteMinuteProgramTemplate);
 
@@ -32,5 +32,7 @@ final class DeleteMinuteProgramTemplateHandler implements CommandHandlerInterfac
         }
 
         $this->templates->delete($template->id);
+
+        return null;
     }
 }

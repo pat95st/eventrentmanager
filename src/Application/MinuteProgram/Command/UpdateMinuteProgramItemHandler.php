@@ -16,7 +16,7 @@ final class UpdateMinuteProgramItemHandler implements CommandHandlerInterface
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof UpdateMinuteProgramItem);
 
@@ -40,6 +40,8 @@ final class UpdateMinuteProgramItemHandler implements CommandHandlerInterface
         $item->durationMinutes = $command->durationMinutes !== null ? max(0, $command->durationMinutes) : null;
 
         $this->items->save($item);
+
+        return null;
     }
 
     private static function normalize(?string $value): ?string

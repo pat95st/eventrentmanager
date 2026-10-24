@@ -17,7 +17,7 @@ final class UpdateMinuteProgramHandler implements CommandHandlerInterface
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof UpdateMinuteProgram);
 
@@ -52,5 +52,7 @@ final class UpdateMinuteProgramHandler implements CommandHandlerInterface
         $program->updatedAt = new DateTimeImmutable();
 
         $this->programs->save($program);
+
+        return null;
     }
 }

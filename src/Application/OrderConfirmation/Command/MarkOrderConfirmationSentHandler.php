@@ -18,7 +18,7 @@ final class MarkOrderConfirmationSentHandler implements CommandHandlerInterface
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof MarkOrderConfirmationSent);
 
@@ -35,5 +35,7 @@ final class MarkOrderConfirmationSentHandler implements CommandHandlerInterface
         $orderConfirmation->updatedAt = new DateTimeImmutable();
 
         $this->orderConfirmations->save($orderConfirmation);
+
+        return null;
     }
 }

@@ -19,7 +19,7 @@ final class UpdateDocumentNumberingSettingsHandler implements CommandHandlerInte
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof UpdateDocumentNumberingSettings);
 
@@ -85,5 +85,7 @@ final class UpdateDocumentNumberingSettingsHandler implements CommandHandlerInte
         foreach ($nextNumberOverrides as [$type, $year, $next]) {
             $this->numberingSettings->setNextNumber($type, $year, $next);
         }
+
+        return null;
     }
 }

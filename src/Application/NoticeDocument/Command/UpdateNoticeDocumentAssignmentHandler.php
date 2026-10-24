@@ -19,7 +19,7 @@ final class UpdateNoticeDocumentAssignmentHandler implements CommandHandlerInter
     ) {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof UpdateNoticeDocumentAssignment);
 
@@ -36,5 +36,7 @@ final class UpdateNoticeDocumentAssignmentHandler implements CommandHandlerInter
         $document->name = $name;
         $this->documents->save($document);
         $this->documentArticles->replaceAssignments($document->id, $command->articleIds);
+
+        return null;
     }
 }

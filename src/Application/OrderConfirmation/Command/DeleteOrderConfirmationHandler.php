@@ -16,7 +16,7 @@ final class DeleteOrderConfirmationHandler implements CommandHandlerInterface
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof DeleteOrderConfirmation);
 
@@ -30,5 +30,7 @@ final class DeleteOrderConfirmationHandler implements CommandHandlerInterface
         }
 
         $this->orderConfirmations->delete($command->id);
+
+        return null;
     }
 }

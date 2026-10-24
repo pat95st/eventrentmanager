@@ -16,7 +16,7 @@ final class RevokeMinuteProgramShareLinkHandler implements CommandHandlerInterfa
     {
     }
 
-    public function handle(CommandInterface $command): void
+    public function handle(CommandInterface $command): mixed
     {
         assert($command instanceof RevokeMinuteProgramShareLink);
 
@@ -28,5 +28,7 @@ final class RevokeMinuteProgramShareLinkHandler implements CommandHandlerInterfa
         $link->revokedAt ??= new DateTimeImmutable();
 
         $this->shareLinks->save($link);
+
+        return null;
     }
 }

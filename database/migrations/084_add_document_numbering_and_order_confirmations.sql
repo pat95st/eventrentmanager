@@ -16,11 +16,15 @@
 -- ---------------------------------------------------------------------
 -- 1) Generische Nummerierungseinstellungen je Dokumenttyp
 -- ---------------------------------------------------------------------
+-- "separator" ist in MySQL/MariaDB ein reserviertes Schlüsselwort (wegen
+-- GROUP_CONCAT(... SEPARATOR ...)) und muss daher als Spaltenname IMMER mit
+-- Backticks gequotet werden — sowohl hier als auch in jeder SQL-Abfrage, die
+-- die Spalte referenziert (siehe MariadbDocumentNumberingSettingsRepository).
 CREATE TABLE document_numbering_settings (
     document_type  VARCHAR(30)  NOT NULL PRIMARY KEY,
     scheme         VARCHAR(10)  NOT NULL DEFAULT 'simple',
     prefix         VARCHAR(16)  NULL,
-    separator      VARCHAR(4)   NOT NULL DEFAULT '-',
+    `separator`    VARCHAR(4)   NOT NULL DEFAULT '-',
     digit_count    TINYINT UNSIGNED NOT NULL DEFAULT 6,
     CONSTRAINT chk_document_numbering_settings_scheme CHECK (scheme IN ('simple', 'yearly'))
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
@@ -28,7 +32,7 @@ CREATE TABLE document_numbering_settings (
 -- Startwerte: Rechnungen/Mahnungen behalten exakt ihr bisheriges Format
 -- (Präfix inkl. Bindestrich + 6-stellige, nie zurückgesetzte Ziffernfolge),
 -- Angebote/Auftragsbestätigungen erhalten ein analoges neues Format.
-INSERT INTO document_numbering_settings (document_type, scheme, prefix, separator, digit_count) VALUES
+INSERT INTO document_numbering_settings (document_type, scheme, prefix, `separator`, digit_count) VALUES
     ('invoice', 'simple', 'RE-', '-', 6),
     ('offer', 'simple', 'AN-', '-', 6),
     ('dunning_notice', 'simple', 'MAH-', '-', 6),

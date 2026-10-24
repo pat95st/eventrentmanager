@@ -45,9 +45,12 @@ final class MariadbDocumentNumberingSettingsRepository implements DocumentNumber
 
     public function save(DocumentNumberingSettings $settings): void
     {
+        // "separator" ist ein reserviertes MySQL/MariaDB-Schlüsselwort (siehe
+        // Kommentar bei der Tabellendefinition in database/migrations/084_...sql)
+        // und muss daher auch hier mit Backticks gequotet werden.
         $stmt = $this->pdo->prepare(
             'UPDATE document_numbering_settings SET
-                scheme = :scheme, prefix = :prefix, separator = :separator, digit_count = :digit_count
+                scheme = :scheme, prefix = :prefix, `separator` = :separator, digit_count = :digit_count
              WHERE document_type = :document_type'
         );
         $stmt->execute([

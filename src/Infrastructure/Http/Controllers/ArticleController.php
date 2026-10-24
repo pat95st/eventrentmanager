@@ -6,12 +6,14 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Article\Command\AddArticleAccessory;
 use App\Application\Article\Command\AddArticleImage;
+use App\Application\Article\Command\AddArticlePreIssueCheck;
 use App\Application\Article\Command\AddFirmwareVersion;
 use App\Application\Article\Command\AddInventoryNumber;
 use App\Application\Article\Command\CreateArticle;
 use App\Application\Article\Command\DeleteArticle;
 use App\Application\Article\Command\DeleteArticleAccessory;
 use App\Application\Article\Command\DeleteArticleImage;
+use App\Application\Article\Command\DeleteArticlePreIssueCheck;
 use App\Application\Article\Command\DeleteFirmwareVersion;
 use App\Application\Article\Command\DeleteInventoryNumber;
 use App\Application\Article\Command\SetArticleActive;
@@ -19,6 +21,7 @@ use App\Application\Article\Command\SetArticleChannelEnabled;
 use App\Application\Article\Command\SyncArticleChannel;
 use App\Application\Article\Command\UpdateArticle;
 use App\Application\Article\Command\UpdateArticleAccessory;
+use App\Application\Article\Command\UpdateArticlePreIssueCheck;
 use App\Application\Article\Command\UpdateInventoryNumber;
 use App\Application\Article\Query\GetArticle;
 use App\Application\Article\Query\ListArticles;
@@ -230,6 +233,7 @@ final class ArticleController
 
         $editInventoryId = $this->nullIfEmpty($request->query('edit_inventory'));
         $editAccessoryId = $this->nullIfEmpty($request->query('edit_accessory'));
+        $editPreIssueCheckId = $this->nullIfEmpty($request->query('edit_pre_issue_check'));
         $suppliers = $this->queries->ask(new ListSuppliers())->items;
         // Für die Beleg-Auswahl beim Anlegen/Bearbeiten einer Inventurnummer werden
         // bewusst alle Belege geladen (kein Filter nötig; die Liste ist für den
@@ -273,6 +277,7 @@ final class ArticleController
             'detail' => $detail,
             'editInventoryId' => $editInventoryId,
             'editAccessoryId' => $editAccessoryId,
+            'editPreIssueCheckId' => $editPreIssueCheckId,
             'suppliers' => $suppliers,
             'receipts' => $receipts,
             'upcomingRentals' => $upcomingRentals,
@@ -675,6 +680,63 @@ final class ArticleController
         try {
             $this->commands->dispatch(new DeleteArticleAccessory($accessoryId));
             Flash::success('Zubehör wurde gelöscht.');
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function addPreIssueCheck(Request $request): void
+    {
+        $articleId = $request->param('id');
+        $description = $request->input('description', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new AddArticlePreIssueCheck($articleId, $description));
+            Flash::success('Vor-Ausgabe-Check wurde hinzugefügt.');
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function updatePreIssueCheck(Request $request): void
+    {
+        $checkId = $request->param('id');
+        $articleId = $request->input('article_id', '') ?? '';
+        $description = $request->input('description', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new UpdateArticlePreIssueCheck($checkId, $description));
+            Flash::success('Vor-Ausgabe-Check wurde aktualisiert.');
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+            Response::redirect('/artikel/' . $articleId . '?edit_pre_issue_check=' . $checkId);
+
+            return;
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function deletePreIssueCheck(Request $request): void
+    {
+        $checkId = $request->param('id');
+        $articleId = $request->input('article_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new DeleteArticlePreIssueCheck($checkId));
+            Flash::success('Vor-Ausgabe-Check wurde gelöscht.');
         } catch (NotFoundException $e) {
             Flash::error($e->getMessage());
         }

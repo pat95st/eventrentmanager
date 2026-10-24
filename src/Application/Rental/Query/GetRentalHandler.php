@@ -7,6 +7,7 @@ namespace App\Application\Rental\Query;
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleAccessoryRepositoryInterface;
+use App\Domain\Article\ArticlePreIssueCheckRepositoryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
@@ -25,6 +26,7 @@ final class GetRentalHandler implements QueryHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ArticleAccessoryRepositoryInterface $accessories,
+        private readonly ArticlePreIssueCheckRepositoryInterface $preIssueChecks,
     ) {
     }
 
@@ -52,8 +54,9 @@ final class GetRentalHandler implements QueryHandlerInterface
 
                 $issuedCount = $this->issuedItems->countByRentalAndArticle($rental->id, $item->articleId);
                 $accessories = $this->accessories->findByArticle($item->articleId);
+                $preIssueChecks = $this->preIssueChecks->findByArticle($item->articleId);
 
-                return new RentalItemWithArticle($item, $article, $issuedCount, $accessories);
+                return new RentalItemWithArticle($item, $article, $issuedCount, $accessories, $preIssueChecks);
             },
             $rawItems
         )));

@@ -6,6 +6,7 @@ namespace App\Application\Article\Query;
 
 use App\Domain\Article\Article;
 use App\Domain\Article\ArticleAccessory;
+use App\Domain\Article\ArticlePreIssueCheck;
 use App\Domain\Article\FirmwareVersion;
 use App\Domain\Category\Category;
 use App\Domain\Manufacturer\Manufacturer;
@@ -21,6 +22,7 @@ final class ArticleDetail
      * @param ArticleAccessory[] $accessories
      * @param \App\Domain\Article\ArticleChannelListing[] $channelListings indiziert nach Channel-Value
      * @param FirmwareVersion[] $firmwareVersions nur relevant, wenn article->hasFirmware; neueste zuerst
+     * @param ArticlePreIssueCheck[] $preIssueChecks
      */
     public function __construct(
         public readonly Article $article,
@@ -33,6 +35,7 @@ final class ArticleDetail
         public readonly array $accessories,
         public readonly array $channelListings = [],
         public readonly array $firmwareVersions = [],
+        public readonly array $preIssueChecks = [],
     ) {
     }
 }

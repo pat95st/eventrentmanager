@@ -390,6 +390,7 @@ $manufacturerRepository = new MariadbManufacturerRepository($pdo);
 $laborTimeArticleRepository = new MariadbLaborTimeArticleRepository($pdo);
 $articleRepository = new MariadbArticleRepository($pdo);
 $articleAccessoryRepository = new MariadbArticleAccessoryRepository($pdo);
+$articlePreIssueCheckRepository = new \App\Infrastructure\Persistence\Pdo\MariadbArticlePreIssueCheckRepository($pdo);
 $articleChannelListingRepository = new MariadbArticleChannelListingRepository($pdo);
 $inventoryNumberRepository = new MariadbInventoryNumberRepository($pdo);
 $firmwareVersionRepository = new \App\Infrastructure\Persistence\Pdo\MariadbFirmwareVersionRepository($pdo);
@@ -540,6 +541,9 @@ $commandBus->register(\App\Application\Article\Command\DeleteInventoryNumber::cl
 $commandBus->register(\App\Application\Article\Command\AddArticleAccessory::class, new AddArticleAccessoryHandler($articleAccessoryRepository, $articleRepository));
 $commandBus->register(\App\Application\Article\Command\UpdateArticleAccessory::class, new UpdateArticleAccessoryHandler($articleAccessoryRepository));
 $commandBus->register(\App\Application\Article\Command\DeleteArticleAccessory::class, new DeleteArticleAccessoryHandler($articleAccessoryRepository));
+$commandBus->register(\App\Application\Article\Command\AddArticlePreIssueCheck::class, new \App\Application\Article\Command\AddArticlePreIssueCheckHandler($articlePreIssueCheckRepository, $articleRepository));
+$commandBus->register(\App\Application\Article\Command\UpdateArticlePreIssueCheck::class, new \App\Application\Article\Command\UpdateArticlePreIssueCheckHandler($articlePreIssueCheckRepository));
+$commandBus->register(\App\Application\Article\Command\DeleteArticlePreIssueCheck::class, new \App\Application\Article\Command\DeleteArticlePreIssueCheckHandler($articlePreIssueCheckRepository));
 $commandBus->register(\App\Application\Article\Command\SetArticleChannelEnabled::class, new \App\Application\Article\Command\SetArticleChannelEnabledHandler($articleRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleChannelUrlBuilder));
 $commandBus->register(\App\Application\Article\Command\SyncArticleChannel::class, new \App\Application\Article\Command\SyncArticleChannelHandler($articleRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleChannelUrlBuilder));
 
@@ -605,7 +609,7 @@ $commandBus->register(\App\Application\Rental\Command\DeleteRental::class, new D
 $commandBus->register(\App\Application\Rental\Command\AddRentalItem::class, new AddRentalItemHandler($rentalItemRepository, $rentalRepository, $articleRepository, $inventoryNumberRepository));
 $commandBus->register(\App\Application\Rental\Command\UpdateRentalItem::class, new UpdateRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository, $inventoryNumberRepository));
 $commandBus->register(\App\Application\Rental\Command\DeleteRentalItem::class, new DeleteRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository));
-$commandBus->register(\App\Application\Rental\Command\IssueRentalItem::class, new IssueRentalItemHandler($rentalIssuedItemRepository, $rentalItemRepository, $rentalRepository, $inventoryNumberRepository, $articleAccessoryRepository, $saleRepository, $customerRepository));
+$commandBus->register(\App\Application\Rental\Command\IssueRentalItem::class, new IssueRentalItemHandler($rentalIssuedItemRepository, $rentalItemRepository, $rentalRepository, $inventoryNumberRepository, $articleAccessoryRepository, $articlePreIssueCheckRepository, $saleRepository, $customerRepository));
 $commandBus->register(\App\Application\Rental\Command\SignRentalTerms::class, new \App\Application\Rental\Command\SignRentalTermsHandler($rentalRepository, $fileStorage));
 $commandBus->register(\App\Application\Rental\Command\ConfirmCustomerIdChecked::class, new \App\Application\Rental\Command\ConfirmCustomerIdCheckedHandler($customerRepository));
 $commandBus->register(\App\Application\Sale\Command\SellInventoryNumber::class, new \App\Application\Sale\Command\SellInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $customerRepository, $invoiceRepository, $saleRepository));
@@ -618,6 +622,7 @@ $commandBus->register(\App\Application\Purchase\Command\MarkPurchaseOrderCancell
 $commandBus->register(\App\Application\Purchase\Command\ReceivePurchaseOrderItem::class, new \App\Application\Purchase\Command\ReceivePurchaseOrderItemHandler($purchaseOrderRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository, $saleStockLotRepository));
 $commandBus->register(\App\Application\Rental\Command\UnissueRentalItem::class, new UnissueRentalItemHandler($rentalIssuedItemRepository));
 $commandBus->register(\App\Application\Rental\Command\ConfirmRentalItemAccessories::class, new ConfirmRentalItemAccessoriesHandler($rentalItemRepository));
+$commandBus->register(\App\Application\Rental\Command\ConfirmRentalItemPreIssueChecks::class, new \App\Application\Rental\Command\ConfirmRentalItemPreIssueChecksHandler($rentalItemRepository));
 $commandBus->register(\App\Application\Rental\Command\ReturnRentalItem::class, new ReturnRentalItemHandler($rentalIssuedItemRepository, $rentalRepository, $rmaRepository));
 $commandBus->register(\App\Application\Rental\Command\UndoReturnRentalItem::class, new UndoReturnRentalItemHandler($rentalIssuedItemRepository));
 
@@ -936,6 +941,7 @@ $queryBus->register(\App\Application\Article\Query\GetArticle::class, new GetArt
     $inventoryNumberRepository,
     $rmaRepository,
     $articleAccessoryRepository,
+    $articlePreIssueCheckRepository,
     $articleChannelListingRepository,
     $saleRepository,
     $firmwareVersionRepository,
@@ -1013,6 +1019,7 @@ $getRentalHandler = new GetRentalHandler(
     $articleRepository,
     $inventoryNumberRepository,
     $articleAccessoryRepository,
+    $articlePreIssueCheckRepository,
 );
 $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHandler);
 
@@ -1427,6 +1434,9 @@ $router->post('/firmware-versionen/{id}/loeschen', $auth->guard(Permission::Arti
 $router->post('/artikel/{id}/zubehoer', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'addAccessory']));
 $router->post('/zubehoer/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'updateAccessory']));
 $router->post('/zubehoer/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteAccessory']));
+$router->post('/artikel/{id}/vor-ausgabe-checks', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'addPreIssueCheck']));
+$router->post('/vor-ausgabe-checks/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'updatePreIssueCheck']));
+$router->post('/vor-ausgabe-checks/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deletePreIssueCheck']));
 
 $router->get('/firmware', $auth->guard(Permission::Artikelverwaltung, [$firmwareController, 'overview']));
 
@@ -1556,6 +1566,7 @@ $router->get('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRu
 $router->post('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'issueItem']));
 $router->post('/ausgaben/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'unissueItem']));
 $router->post('/veranstaltungen/{id}/zubehoer-pruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmAccessories']));
+$router->post('/veranstaltungen/{id}/vor-ausgabe-pruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmPreIssueChecks']));
 $router->post('/veranstaltungen/{id}/vermietbedingungen-unterschrift', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'signTerms']));
 $router->post('/veranstaltungen/{id}/ausweispruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmIdChecked']));
 

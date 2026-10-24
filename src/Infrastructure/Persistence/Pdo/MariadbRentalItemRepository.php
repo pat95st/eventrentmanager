@@ -18,9 +18,9 @@ final class MariadbRentalItemRepository implements RentalItemRepositoryInterface
     public function save(RentalItem $item): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO rental_items (id, rental_id, article_id, quantity, accessory_checked, created_at, updated_at)
-             VALUES (:id, :rental_id, :article_id, :quantity, :accessory_checked, :created_at, :updated_at)
-             ON DUPLICATE KEY UPDATE quantity = :quantity2, accessory_checked = :accessory_checked2, updated_at = :updated_at2'
+            'INSERT INTO rental_items (id, rental_id, article_id, quantity, accessory_checked, pre_issue_checks_confirmed, created_at, updated_at)
+             VALUES (:id, :rental_id, :article_id, :quantity, :accessory_checked, :pre_issue_checks_confirmed, :created_at, :updated_at)
+             ON DUPLICATE KEY UPDATE quantity = :quantity2, accessory_checked = :accessory_checked2, pre_issue_checks_confirmed = :pre_issue_checks_confirmed2, updated_at = :updated_at2'
         );
 
         $stmt->execute([
@@ -29,10 +29,12 @@ final class MariadbRentalItemRepository implements RentalItemRepositoryInterface
             'article_id' => $item->articleId,
             'quantity' => $item->quantity,
             'accessory_checked' => (int) $item->accessoryChecked,
+            'pre_issue_checks_confirmed' => (int) $item->preIssueChecksConfirmed,
             'created_at' => $item->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $item->updatedAt->format('Y-m-d H:i:s'),
             'quantity2' => $item->quantity,
             'accessory_checked2' => (int) $item->accessoryChecked,
+            'pre_issue_checks_confirmed2' => (int) $item->preIssueChecksConfirmed,
             'updated_at2' => $item->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -107,6 +109,7 @@ final class MariadbRentalItemRepository implements RentalItemRepositoryInterface
             accessoryChecked: (bool) $row['accessory_checked'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            preIssueChecksConfirmed: (bool) $row['pre_issue_checks_confirmed'],
         );
     }
 }

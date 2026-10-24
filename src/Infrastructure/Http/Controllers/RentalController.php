@@ -15,6 +15,7 @@ use App\Application\Rental\Command\SendNoticeDocumentsToCustomer;
 use App\Application\Rental\Command\AddRentalItem;
 use App\Application\Rental\Command\ConfirmCustomerIdChecked;
 use App\Application\Rental\Command\ConfirmRentalItemAccessories;
+use App\Application\Rental\Command\ConfirmRentalItemPreIssueChecks;
 use App\Application\Rental\Command\CreateRental;
 use App\Application\Rental\Command\DeleteRental;
 use App\Application\Rental\Command\DeleteRentalItem;
@@ -747,6 +748,24 @@ final class RentalController
         try {
             $this->commands->dispatch(new ConfirmRentalItemAccessories($rentalItemId));
             Flash::success(t('rentals.flash.accessories_confirmed_full'));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungen/' . $rentalId . '/ausgabe');
+    }
+
+    /** Bestätigt im Vor-Ausgabe-Check-Modal die Prüfung für einen Posten (z. B. "Default Show bei Digitalpult geladen"). */
+    public function confirmPreIssueChecks(Request $request): void
+    {
+        $rentalId = $request->param('id');
+        $rentalItemId = $request->input('rental_item_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new ConfirmRentalItemPreIssueChecks($rentalItemId));
+            Flash::success(t('rentals.flash.pre_issue_checks_confirmed_full'));
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
 

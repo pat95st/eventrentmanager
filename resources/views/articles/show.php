@@ -2,6 +2,7 @@
 /** @var \App\Application\Article\Query\ArticleDetail $detail */
 /** @var string|null $editInventoryId */
 /** @var string|null $editAccessoryId */
+/** @var string|null $editPreIssueCheckId */
 /** @var \App\Domain\Supplier\Supplier[] $suppliers */
 /** @var \App\Application\Receipt\Query\ReceiptListEntry[] $receipts */
 /** @var array<string, string> $errors */
@@ -669,6 +670,59 @@ $availabilityStatusMeta = [
                 <div>
                     <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_description')) ?></label>
                     <input type="text" name="description" placeholder="z. B. Netzkabel" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('articles.show.add')) ?>
+                </button>
+            </form>
+        </div>
+
+        <!-- Vor-Ausgabe-Checks -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.pre_issue_checks_title')) ?></h2>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('articles.show.pre_issue_checks_hint')) ?>
+            </p>
+
+            <?php if ($detail->preIssueChecks === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_checks_none')) ?></p>
+            <?php else: ?>
+                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->preIssueChecks as $preIssueCheck): ?>
+                        <?php if ($editPreIssueCheckId === $preIssueCheck->id): ?>
+                            <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>" class="flex flex-wrap items-end gap-3 py-3">
+                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_check_description')) ?></label>
+                                    <input type="text" name="description" value="<?= e($preIssueCheck->description) ?>" required
+                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
+                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
+                            </form>
+                        <?php else: ?>
+                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                                <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($preIssueCheck->description) ?></p>
+                                <div class="flex items-center gap-3">
+                                    <a href="/artikel/<?= e($article->id) ?>?edit_pre_issue_check=<?= e($preIssueCheck->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
+                                    <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_pre_issue_check')) ?>" data-confirm-style="danger">
+                                      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/artikel/<?= e($article->id) ?>/vor-ausgabe-checks" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_check_description')) ?></label>
+                    <input type="text" name="description" placeholder="z. B. Default Show geladen" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 </div>
                 <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     <?= e(t('articles.show.add')) ?>

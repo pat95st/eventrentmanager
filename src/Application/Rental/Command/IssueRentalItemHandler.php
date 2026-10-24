@@ -7,6 +7,7 @@ namespace App\Application\Rental\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleAccessoryRepositoryInterface;
+use App\Domain\Article\ArticlePreIssueCheckRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -33,6 +34,7 @@ final class IssueRentalItemHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ArticleAccessoryRepositoryInterface $accessories,
+        private readonly ArticlePreIssueCheckRepositoryInterface $preIssueChecks,
         private readonly SaleRepositoryInterface $sales,
         private readonly CustomerRepositoryInterface $customers,
     ) {
@@ -96,6 +98,17 @@ final class IssueRentalItemHandler implements CommandHandlerInterface
         if (!$rentalItem->accessoryChecked && $this->accessories->findByArticle($inventoryNumber->articleId) !== []) {
             throw new ValidationException([
                 'inventoryNumberId' => 'Bitte zuerst die Vollständigkeit des Zubehörs für diesen Artikel prüfen und bestätigen.',
+            ]);
+        }
+
+        // Hat der Artikel Vor-Ausgabe-Checks (siehe ArticlePreIssueCheck, z. B.
+        // "Default Show bei Digitalpult geladen"), müssen diese erst per Modal
+        // bestätigt worden sein — exakt analoge, unabhängige Durchsetzung zur
+        // Zubehör-Vollständigkeitsprüfung oben (siehe
+        // ConfirmRentalItemPreIssueChecksHandler).
+        if (!$rentalItem->preIssueChecksConfirmed && $this->preIssueChecks->findByArticle($inventoryNumber->articleId) !== []) {
+            throw new ValidationException([
+                'inventoryNumberId' => 'Bitte zuerst die Vor-Ausgabe-Checks für diesen Artikel prüfen und bestätigen.',
             ]);
         }
 

@@ -193,6 +193,7 @@ foreach ($detail->issuedItems as $issued) {
             $complete = count($issued) >= $entry->item->quantity;
             ?>
             <?php $hasAccessories = $entry->accessories !== []; ?>
+            <?php $hasPreIssueChecks = $entry->preIssueChecks !== []; ?>
             <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e($entry->article->name) ?></h2>
@@ -239,6 +240,44 @@ foreach ($detail->issuedItems as $issued) {
                     </dialog>
                 <?php endif; ?>
 
+                <?php if ($hasPreIssueChecks): ?>
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-md <?= $entry->item->preIssueChecksConfirmed ? 'bg-emerald-50 dark:bg-emerald-950/40' : 'bg-amber-50 dark:bg-amber-950/40' ?> px-3 py-2 text-sm">
+                        <span class="<?= $entry->item->preIssueChecksConfirmed ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300' ?>">
+                            <?= $entry->item->preIssueChecksConfirmed ? e(t('rentals.checklist.pre_issue_checks_checked')) : e(t('rentals.checklist.pre_issue_checks_pending')) ?>
+                        </span>
+                        <button type="button" onclick="document.getElementById('pre-issue-check-modal-<?= e($entry->item->id) ?>').showModal()"
+                                class="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <?= $entry->item->preIssueChecksConfirmed ? e(t('rentals.checklist.recheck_pre_issue_checks')) : e(t('rentals.checklist.check_pre_issue_checks')) ?>
+                        </button>
+                    </div>
+
+                    <dialog id="pre-issue-check-modal-<?= e($entry->item->id) ?>" class="w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+                        <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/vor-ausgabe-pruefung" class="p-4">
+                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <input type="hidden" name="rental_item_id" value="<?= e($entry->item->id) ?>">
+                            <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.checklist.pre_issue_checks_modal_title', ['article' => $entry->article->name])) ?></h3>
+                            <ul class="mb-4 space-y-1 text-sm text-slate-700 dark:text-slate-300">
+                                <?php foreach ($entry->preIssueChecks as $preIssueCheck): ?>
+                                    <li><?= e($preIssueCheck->description) ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                            <label class="mb-4 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                <input type="checkbox" required class="h-4 w-4 rounded border-slate-300 dark:border-slate-700">
+                                <?= e(t('rentals.checklist.pre_issue_checks_confirm_checkbox')) ?>
+                            </label>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" onclick="document.getElementById('pre-issue-check-modal-<?= e($entry->item->id) ?>').close()"
+                                        class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                    <?= e(t('common.cancel')) ?>
+                                </button>
+                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+                                    <?= e(t('rentals.checklist.confirm')) ?>
+                                </button>
+                            </div>
+                        </form>
+                    </dialog>
+                <?php endif; ?>
+
                 <?php if ($issued !== []): ?>
                     <div class="mb-3 divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($issued as $issuedEntry): ?>
@@ -258,6 +297,10 @@ foreach ($detail->issuedItems as $issued) {
                     <?php if ($hasAccessories && !$entry->item->accessoryChecked): ?>
                         <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
                             <?= e(t('rentals.checklist.check_accessories_first')) ?>
+                        </p>
+                    <?php elseif ($hasPreIssueChecks && !$entry->item->preIssueChecksConfirmed): ?>
+                        <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
+                            <?= e(t('rentals.checklist.check_pre_issue_checks_first')) ?>
                         </p>
                     <?php elseif ($available === []): ?>
                         <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">

@@ -296,6 +296,51 @@ $availabilityStatusMeta = [
             </form>
         </div>
 
+        <!-- Bedienungsanleitungen & Hinweisdokumente -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.notice_documents_title')) ?></h2>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= t('articles.show.notice_documents_hint', ['link' => '<a href="/hinweisdokumente" class="underline">' . e(t('articles.show.notice_documents_settings_link')) . '</a>']) ?>
+            </p>
+
+            <?php if ($detail->noticeDocuments === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_none')) ?></p>
+            <?php else: ?>
+                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->noticeDocuments as $noticeDocument): ?>
+                        <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                            <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($noticeDocument->name) ?></p>
+                            <div class="flex items-center gap-3">
+                                <a href="/hinweisdokumente/<?= e($noticeDocument->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
+                                <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente/<?= e($noticeDocument->id) ?>/entfernen" data-confirm="<?= e(t('articles.show.confirm_remove_notice_document')) ?>" data-confirm-style="danger">
+                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.notice_document_remove')) ?></button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_document_name')) ?></label>
+                    <input type="text" name="name" placeholder="<?= e(t('articles.show.notice_document_name_placeholder')) ?>" required
+                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_document_file')) ?></label>
+                    <input type="file" name="document" accept="application/pdf,image/jpeg,image/png,image/webp" required
+                           class="mt-1 block text-sm text-slate-700 dark:text-slate-300">
+                </div>
+                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('articles.show.notice_document_upload')) ?>
+                </button>
+            </form>
+            <p class="mt-1 text-[11px] text-slate-400"><?= e(t('articles.show.notice_document_file_hint')) ?></p>
+        </div>
+
         <!-- Verkaufskanäle -->
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.channels.title')) ?></h2>

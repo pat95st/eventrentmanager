@@ -17,6 +17,8 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberGenerator;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
+use App\Domain\NoticeDocument\NoticeDocumentArticleRepositoryInterface;
+use App\Domain\NoticeDocument\NoticeDocumentRepositoryInterface;
 use App\Domain\Rma\RmaRepositoryInterface;
 use App\Domain\Rma\RmaStatus;
 use App\Domain\Sale\SaleRepositoryInterface;
@@ -32,6 +34,8 @@ final class GetArticleHandler implements QueryHandlerInterface
         private readonly ArticleAccessoryRepositoryInterface $accessories,
         private readonly ArticlePreIssueCheckRepositoryInterface $preIssueChecks,
         private readonly ArticleAdImageRepositoryInterface $adImages,
+        private readonly NoticeDocumentArticleRepositoryInterface $noticeDocumentArticles,
+        private readonly NoticeDocumentRepositoryInterface $noticeDocuments,
         private readonly ArticleChannelListingRepositoryInterface $channelListings,
         private readonly SaleRepositoryInterface $sales,
         private readonly FirmwareVersionRepositoryInterface $firmwareVersions,
@@ -96,8 +100,10 @@ final class GetArticleHandler implements QueryHandlerInterface
         $accessories = $this->accessories->findByArticle($article->id);
         $preIssueChecks = $this->preIssueChecks->findByArticle($article->id);
         $adImages = $this->adImages->findByArticle($article->id);
+        $noticeDocumentIds = $this->noticeDocumentArticles->findDocumentIdsByArticleIds([$article->id]);
+        $noticeDocuments = $this->noticeDocuments->findByIds($noticeDocumentIds);
         $channelListings = $this->channelListings->findByArticle($article->id);
 
-        return new ArticleDetail($article, $manufacturer, $category, $inventoryNumbers, $nextInventoryNumberPreview, $accessories, $channelListings, $firmwareVersions, $preIssueChecks, $adImages);
+        return new ArticleDetail($article, $manufacturer, $category, $inventoryNumbers, $nextInventoryNumberPreview, $accessories, $channelListings, $firmwareVersions, $preIssueChecks, $adImages, $noticeDocuments);
     }
 }

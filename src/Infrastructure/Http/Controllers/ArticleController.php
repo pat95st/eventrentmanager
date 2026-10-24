@@ -16,6 +16,8 @@ use App\Application\Article\Command\DeleteArticleAdImage;
 use App\Application\Article\Command\DeleteArticleImage;
 use App\Application\Article\Command\DeleteArticlePreIssueCheck;
 use App\Application\Article\Command\GenerateArticleAdImage;
+use App\Application\NoticeDocument\Command\RemoveNoticeDocumentFromArticle;
+use App\Application\NoticeDocument\Command\UploadNoticeDocument;
 use App\Application\Article\Command\DeleteFirmwareVersion;
 use App\Application\Article\Command\DeleteInventoryNumber;
 use App\Application\Article\Command\SetArticleActive;
@@ -818,6 +820,46 @@ final class ArticleController
         $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'image/png') : 'image/png';
 
         Response::file($absolutePath, basename($match->filePath), $mimeType);
+    }
+
+    /**
+     * Lädt direkt von der Artikelseite aus ein neues Hinweisdokument (z. B.
+     * Bedienungsanleitung) hoch und ordnet es sofort diesem Artikel zu —
+     * nutzt denselben Command wie die zentrale Hinweisdokumente-Verwaltung
+     * (siehe NoticeDocumentController), nur mit articleIds = [diesem Artikel].
+     */
+    public function uploadNoticeDocument(Request $request): void
+    {
+        $articleId = $request->param('id');
+        $file = $request->file('document');
+
+        try {
+            $this->commands->dispatch(new UploadNoticeDocument(
+                name: $request->input('name', '') ?? '',
+                uploadedFile: $file ?? ['name' => '', 'type' => '', 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0],
+                articleIds: [$articleId],
+            ));
+            Flash::success(t('articles.show.notice_documents_flash_uploaded'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function removeNoticeDocument(Request $request): void
+    {
+        $articleId = $request->param('id');
+        $documentId = $request->param('documentId');
+
+        try {
+            $this->commands->dispatch(new RemoveNoticeDocumentFromArticle($documentId, $articleId));
+            Flash::success(t('articles.show.notice_documents_flash_removed'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/artikel/' . $articleId);
     }
 
     /** @param array<string, string> $errors @param array<string, mixed> $old */

@@ -11,6 +11,7 @@ use App\Domain\Article\ArticlePreIssueCheck;
 use App\Domain\Article\FirmwareVersion;
 use App\Domain\Category\Category;
 use App\Domain\Manufacturer\Manufacturer;
+use App\Domain\NoticeDocument\NoticeDocument;
 
 /**
  * Schreibgeschütztes Lesemodell für die Artikel-Detailseite — bündelt den
@@ -25,6 +26,7 @@ final class ArticleDetail
      * @param FirmwareVersion[] $firmwareVersions nur relevant, wenn article->hasFirmware; neueste zuerst
      * @param ArticlePreIssueCheck[] $preIssueChecks
      * @param ArticleAdImage[] $adImages neueste zuerst
+     * @param NoticeDocument[] $noticeDocuments zugeordnete Hinweisdokumente (z. B. Bedienungsanleitungen), sortiert nach Name
      */
     public function __construct(
         public readonly Article $article,
@@ -39,6 +41,7 @@ final class ArticleDetail
         public readonly array $firmwareVersions = [],
         public readonly array $preIssueChecks = [],
         public readonly array $adImages = [],
+        public readonly array $noticeDocuments = [],
     ) {
     }
 }

@@ -53,4 +53,12 @@ final class MariadbNoticeDocumentArticleRepository implements NoticeDocumentArti
         $stmt = $this->pdo->prepare('DELETE FROM notice_document_articles WHERE notice_document_id = :notice_document_id');
         $stmt->execute(['notice_document_id' => $noticeDocumentId]);
     }
+
+    public function removeAssignment(string $noticeDocumentId, string $articleId): void
+    {
+        $stmt = $this->pdo->prepare(
+            'DELETE FROM notice_document_articles WHERE notice_document_id = :notice_document_id AND article_id = :article_id'
+        );
+        $stmt->execute(['notice_document_id' => $noticeDocumentId, 'article_id' => $articleId]);
+    }
 }

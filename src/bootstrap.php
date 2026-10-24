@@ -662,6 +662,7 @@ $commandBus->register(\App\Application\MinuteProgram\Command\RevokeMinuteProgram
 
 // Hinweisdokumente, siehe App\Domain\NoticeDocument\NoticeDocument.
 $commandBus->register(\App\Application\NoticeDocument\Command\UploadNoticeDocument::class, new \App\Application\NoticeDocument\Command\UploadNoticeDocumentHandler($noticeDocumentRepository, $noticeDocumentArticleRepository, $fileStorage));
+$commandBus->register(\App\Application\NoticeDocument\Command\RemoveNoticeDocumentFromArticle::class, new \App\Application\NoticeDocument\Command\RemoveNoticeDocumentFromArticleHandler($noticeDocumentRepository, $noticeDocumentArticleRepository));
 $commandBus->register(\App\Application\NoticeDocument\Command\UpdateNoticeDocumentAssignment::class, new \App\Application\NoticeDocument\Command\UpdateNoticeDocumentAssignmentHandler($noticeDocumentRepository, $noticeDocumentArticleRepository));
 $commandBus->register(\App\Application\NoticeDocument\Command\DeleteNoticeDocument::class, new \App\Application\NoticeDocument\Command\DeleteNoticeDocumentHandler($noticeDocumentRepository, $noticeDocumentArticleRepository, $fileStorage));
 
@@ -957,6 +958,8 @@ $queryBus->register(\App\Application\Article\Query\GetArticle::class, new GetArt
     $articleAccessoryRepository,
     $articlePreIssueCheckRepository,
     $articleAdImageRepository,
+    $noticeDocumentArticleRepository,
+    $noticeDocumentRepository,
     $articleChannelListingRepository,
     $saleRepository,
     $firmwareVersionRepository,
@@ -1457,6 +1460,8 @@ $router->post('/vor-ausgabe-checks/{id}/loeschen', $auth->guard(Permission::Arti
 $router->post('/artikel/{id}/werbebilder', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'generateAdImage']));
 $router->post('/werbebilder/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteAdImage']));
 $router->get('/artikel-werbebilder/{id}/{filename}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'showAdImage']));
+$router->post('/artikel/{id}/hinweisdokumente', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'uploadNoticeDocument']));
+$router->post('/artikel/{id}/hinweisdokumente/{documentId}/entfernen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'removeNoticeDocument']));
 
 $router->get('/firmware', $auth->guard(Permission::Artikelverwaltung, [$firmwareController, 'overview']));
 

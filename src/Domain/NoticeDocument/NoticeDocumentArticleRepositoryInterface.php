@@ -26,4 +26,11 @@ interface NoticeDocumentArticleRepositoryInterface
 
     /** Entfernt alle Zuordnungen dieses Dokuments (z. B. vor dem Löschen des Dokuments selbst). */
     public function deleteByDocument(string $noticeDocumentId): void;
+
+    /**
+     * Entfernt NUR die Zuordnung zu einem einzelnen Artikel (z. B. "von diesem
+     * Artikel entfernen" direkt auf der Artikel-Detailseite) — das Dokument
+     * selbst und etwaige Zuordnungen zu anderen Artikeln bleiben erhalten.
+     */
+    public function removeAssignment(string $noticeDocumentId, string $articleId): void;
 }

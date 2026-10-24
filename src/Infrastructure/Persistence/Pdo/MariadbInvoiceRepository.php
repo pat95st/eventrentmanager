@@ -118,6 +118,23 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
         return $row ? $this->hydrate($row) : null;
     }
 
+    public function findByInvoiceNumber(string $invoiceNumber): ?Invoice
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM invoices WHERE invoice_number = :invoice_number');
+        $stmt->execute(['invoice_number' => $invoiceNumber]);
+        $row = $stmt->fetch();
+
+        return $row ? $this->hydrate($row) : null;
+    }
+
+    public function findSentUnpaid(): array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM invoices WHERE status = :status ORDER BY created_at ASC');
+        $stmt->execute(['status' => InvoiceStatus::Sent->value]);
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     public function search(?string $searchTerm, ?InvoiceStatus $status, int $limit, int $offset): array
     {
         [$where, $params] = $this->buildSearchWhere($searchTerm, $status);

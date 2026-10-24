@@ -1,0 +1,10 @@
+# Unit-Tests: reine Domain-/Application-Logik (Entities, CQRS-Handler,
+# CalDAV-/mobileconfig-Bausteine). Laufen KOMPLETT ohne Datenbank und ohne
+# laufenden Webserver — Application-Handler werden gegen selbst geschriebene
+# In-Memory-Fakes der jeweiligen Repository-Interfaces getestet (siehe
+# tests/_support/Fakes), nicht gegen die echten Mariadb*Repository-Klassen.
+actor: UnitTester
+modules:
+    enabled:
+        - Asserts
+        - \Tests\Support\Helper\Unit

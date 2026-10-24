@@ -13,6 +13,22 @@ interface InvoiceRepositoryInterface
     public function findById(string $id): ?Invoice;
 
     /**
+     * Exakte Suche nach der Rechnungsnummer selbst (für den
+     * Onlinebanking-Import/Zahlungsabgleich). Ohne explizites COLLATE —
+     * die Standard-Tabellenkollation utf8mb4_unicode_ci ist bereits
+     * case-insensitiv.
+     */
+    public function findByInvoiceNumber(string $invoiceNumber): ?Invoice;
+
+    /**
+     * Alle versendeten, noch nicht bezahlten Rechnungen (Grundlage für den
+     * automatischen Zahlungsabgleich beim Onlinebanking-Import).
+     *
+     * @return Invoice[]
+     */
+    public function findSentUnpaid(): array;
+
+    /**
      * @return Invoice[] sortiert nach Erstellungsdatum absteigend (neueste zuerst), höchstens $limit Zeilen ab $offset
      */
     public function search(?string $searchTerm, ?InvoiceStatus $status, int $limit, int $offset): array;

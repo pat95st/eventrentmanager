@@ -1,0 +1,25 @@
+# Acceptance-Tests: prüfen die Anwendung als Ganzes über echtes HTTP (wie ein
+# Browser, ohne JavaScript auszuführen) gegen eine laufende Instanz + eine
+# eigene TEST-Datenbank. Voraussetzungen und Zugangsdaten siehe
+# tests/README.md und tests/.env.testing.dist.
+#
+# Das Db-Modul leert die konfigurierte Datenbank vor JEDEM Test und lädt sie
+# aus database/schema.sql neu (inkl. Seed-Daten wie dem Standard-Administrator
+# admin@materialverleih.local — siehe dort) — dieselbe Datei, die auch für
+# den Produktivbetrieb verwendet wird, es gibt also keine separate,
+# potenziell veraltete Test-Fixture-Kopie des Schemas.
+actor: AcceptanceTester
+modules:
+    enabled:
+        - Asserts
+        - PhpBrowser:
+            url: '%APP_URL%'
+        - Db:
+            dsn: '%TEST_DB_DSN%'
+            user: '%TEST_DB_USER%'
+            password: '%TEST_DB_PASSWORD%'
+            dump: 'database/schema.sql'
+            populate: true
+            cleanup: true
+            reconnect: true
+        - \Tests\Support\Helper\Acceptance

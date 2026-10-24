@@ -799,6 +799,7 @@ return [
 
     // --- Rechnungen -------------------------------------------------------------
     'nav.invoices' => 'Rechnungen',
+    'nav.bank_import' => 'Zahlungsabgleich',
     'nav.invoice_settings' => 'Rechnungseinstellungen',
     'nav.invoice_pdf_template' => 'Rechnungsvorlage (PDF)',
     'nav.pdf_design_settings' => 'PDF-Design',
@@ -1004,6 +1005,33 @@ return [
     'settings.backup.flash.import_succeeded' => 'Die Sicherung wurde eingespielt — alle vorherigen Daten wurden ersetzt.',
     'settings.backup.flash.import_summary' => '(%d Tabelle(n), %d Datensatz/Datensätze, %d Datei(en))',
     'settings.backup.flash.import_migrations_caught_up' => 'Anschließend wurden %d neuere Migration(en) nachgezogen, die zum Zeitpunkt dieser Sicherung noch nicht existierten.',
+
+    // --- Zahlungsabgleich (Onlinebanking-Import MT940/CAMT.053) -----------------
+    'bank_import.title' => 'Zahlungsabgleich',
+    'bank_import.intro' => 'Kontoauszug (MT940 oder CAMT.053) hochladen — enthaltene Gutschriften werden automatisch gegen offene Rechnungen abgeglichen.',
+    'bank_import.form.file' => 'Kontoauszug-Datei',
+    'bank_import.form.file_hint' => 'MT940 (.sta/.txt) oder CAMT.053 (.xml), max. 10 MB. Das Format wird automatisch am Dateiinhalt erkannt.',
+    'bank_import.form.submit' => 'Hochladen und abgleichen',
+    'bank_import.flash.no_file' => 'Bitte eine Datei auswählen.',
+    'bank_import.flash.confirmed' => '{count} Rechnung(en) wurden als bezahlt markiert.',
+    'bank_import.flash.not_found' => 'Keine Rechnung gefunden für: {numbers}',
+    'bank_import.flash.not_payable' => 'Nicht zahlbar (bereits bezahlt/storniert/noch nicht versendet): {numbers}',
+    'bank_import.flash.cancelled' => 'Der Zahlungsabgleich wurde abgebrochen.',
+    'bank_import.review.title' => 'Zahlungsabgleich — Prüfung',
+    'bank_import.review.intro' => 'Format erkannt: {format}. Bitte die automatischen Zuordnungen prüfen, bei Bedarf korrigieren und dann bestätigen.',
+    'bank_import.review.empty' => 'Die Datei enthält keine Buchungen.',
+    'bank_import.review.table.date' => 'Datum',
+    'bank_import.review.table.amount' => 'Betrag',
+    'bank_import.review.table.purpose' => 'Verwendungszweck',
+    'bank_import.review.table.counterparty' => 'Von/An',
+    'bank_import.review.table.invoice_number' => 'Rechnungsnummer',
+    'bank_import.review.table.status' => 'Status',
+    'bank_import.review.amount_mismatch' => 'Abweichung zur Rechnung ({invoice_amount} €)',
+    'bank_import.review.status.debit' => 'Abbuchung',
+    'bank_import.review.status.matched' => 'Zugeordnet',
+    'bank_import.review.status.no_match' => 'Kein Treffer',
+    'bank_import.review.confirm' => 'Ausgewählte als bezahlt markieren',
+    'bank_import.review.cancel' => 'Abbrechen',
 
     // --- Belege (eingehende Lieferantenrechnungen/-quittungen) -------------------
     'nav.receipts' => 'Belege',

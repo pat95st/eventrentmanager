@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<ruleset name="Materialverleih">
+    <description>
+        Code-Style-Vorgabe dieses Projekts: PSR-12, zusätzlich
+        declare(strict_types=1) in jeder PHP-Klassen-/Logikdatei (siehe
+        Regel Generic.PHP.RequireStrictTypes). Prüfung: vendor/bin/phpcs
+        (nach "composer install" mit Netzwerkzugriff auf packagist.org,
+        in dieser Sandbox nicht möglich). Automatisches Beheben
+        einfacher Verstöße: vendor/bin/phpcbf.
+    </description>
+
+    <!-- Nur die eigentliche Anwendungslogik, keine HTML/PHP-Templates
+         (resources/views/**) — Templates mischen bewusst HTML und PHP
+         und folgen nicht derselben Datei-weiten Stilform wie reine
+         PHP-Klassen (ebenso ohne declare(strict_types=1), siehe
+         architektur-und-setup.md, Abschnitt "Code-Style"). -->
+    <file>src</file>
+    <file>bin</file>
+    <file>public</file>
+
+    <!-- public/install.php mischt wie die Views HTML und PHP (Web-
+         Installer-Assistent) und wird deshalb wie resources/views/**
+         ausgenommen. -->
+    <exclude-pattern>public/install.php</exclude-pattern>
+
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <rule ref="PSR12"/>
+    <rule ref="Generic.PHP.RequireStrictTypes"/>
+</ruleset>

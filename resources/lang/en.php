@@ -799,6 +799,7 @@ return [
 
     // --- Invoices -------------------------------------------------------------
     'nav.invoices' => 'Invoices',
+    'nav.bank_import' => 'Bank reconciliation',
     'nav.invoice_settings' => 'Invoice settings',
     'nav.invoice_pdf_template' => 'Invoice PDF template',
     'nav.pdf_design_settings' => 'PDF design',
@@ -1004,6 +1005,33 @@ return [
     'settings.backup.flash.import_succeeded' => 'The backup was restored — all previous data has been replaced.',
     'settings.backup.flash.import_summary' => '(%d table(s), %d row(s), %d file(s))',
     'settings.backup.flash.import_migrations_caught_up' => 'Afterwards, %d newer migration(s) that did not yet exist at the time of this backup were applied.',
+
+    // --- Bank reconciliation (online banking import MT940/CAMT.053) ------------
+    'bank_import.title' => 'Bank reconciliation',
+    'bank_import.intro' => 'Upload a bank statement (MT940 or CAMT.053) — incoming payments are automatically matched against open invoices.',
+    'bank_import.form.file' => 'Statement file',
+    'bank_import.form.file_hint' => 'MT940 (.sta/.txt) or CAMT.053 (.xml), max. 10 MB. The format is detected automatically from the file content.',
+    'bank_import.form.submit' => 'Upload and match',
+    'bank_import.flash.no_file' => 'Please select a file.',
+    'bank_import.flash.confirmed' => '{count} invoice(s) were marked as paid.',
+    'bank_import.flash.not_found' => 'No invoice found for: {numbers}',
+    'bank_import.flash.not_payable' => 'Not payable (already paid/cancelled/not yet sent): {numbers}',
+    'bank_import.flash.cancelled' => 'The bank reconciliation was cancelled.',
+    'bank_import.review.title' => 'Bank reconciliation — review',
+    'bank_import.review.intro' => 'Detected format: {format}. Please review the automatic matches, correct them if needed, then confirm.',
+    'bank_import.review.empty' => 'The file contains no transactions.',
+    'bank_import.review.table.date' => 'Date',
+    'bank_import.review.table.amount' => 'Amount',
+    'bank_import.review.table.purpose' => 'Purpose',
+    'bank_import.review.table.counterparty' => 'From/To',
+    'bank_import.review.table.invoice_number' => 'Invoice number',
+    'bank_import.review.table.status' => 'Status',
+    'bank_import.review.amount_mismatch' => 'Differs from invoice ({invoice_amount} €)',
+    'bank_import.review.status.debit' => 'Debit',
+    'bank_import.review.status.matched' => 'Matched',
+    'bank_import.review.status.no_match' => 'No match',
+    'bank_import.review.confirm' => 'Mark selected as paid',
+    'bank_import.review.cancel' => 'Cancel',
 
     // --- Receipts (incoming supplier invoices/receipts) -------------------------
     'nav.receipts' => 'Receipts',

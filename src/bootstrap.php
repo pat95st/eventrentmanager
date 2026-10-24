@@ -215,6 +215,11 @@ use App\Infrastructure\Http\Controllers\InvoiceSettingsController;
 use App\Infrastructure\Http\Controllers\PricingSettingsController;
 use App\Infrastructure\Http\Controllers\InvoicePdfTemplateSettingsController;
 use App\Infrastructure\Persistence\Pdo\MariadbInvoiceRepository;
+use App\Application\BankImport\Command\CancelBankImportHandler;
+use App\Application\BankImport\Command\ConfirmBankImportHandler;
+use App\Application\BankImport\Command\ImportBankStatementHandler;
+use App\Infrastructure\BankImport\BankImportStaging;
+use App\Infrastructure\Http\Controllers\BankImportController;
 use App\Infrastructure\Persistence\Pdo\MariadbInvoiceSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbPricingSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbInvoicePdfSettingsRepository;
@@ -451,6 +456,7 @@ $labelPrinterDrivers = new LabelPrinterDriverRegistry();
 $printerTransport = new TcpPrinterTransport();
 $offerRepository = new MariadbOfferRepository($pdo);
 $invoiceRepository = new MariadbInvoiceRepository($pdo);
+$bankImportStaging = new BankImportStaging($fileStorage);
 $invoiceSettingsRepository = new MariadbInvoiceSettingsRepository($pdo);
 $pricingSettingsRepository = new MariadbPricingSettingsRepository($pdo);
 $invoicePdfSettingsRepository = new MariadbInvoicePdfSettingsRepository($pdo);
@@ -680,6 +686,10 @@ $commandBus->register(\App\Application\Invoice\Command\UpdateInvoice::class, new
 $commandBus->register(\App\Application\Invoice\Command\DeleteInvoice::class, new DeleteInvoiceHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceSent::class, new MarkInvoiceSentHandler($invoiceRepository, $invoiceSettingsRepository, $invoiceNumberSequence, $pdo));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoicePaid::class, new MarkInvoicePaidHandler($invoiceRepository));
+// --- Onlinebanking-Import / Zahlungsabgleich (MT940/CAMT.053) ----------
+$commandBus->register(\App\Application\BankImport\Command\ImportBankStatement::class, new ImportBankStatementHandler($invoiceRepository, $bankImportStaging));
+$commandBus->register(\App\Application\BankImport\Command\ConfirmBankImport::class, new ConfirmBankImportHandler($invoiceRepository, $bankImportStaging));
+$commandBus->register(\App\Application\BankImport\Command\CancelBankImport::class, new CancelBankImportHandler($bankImportStaging));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceCancelled::class, new MarkInvoiceCancelledHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository));
@@ -1096,6 +1106,7 @@ $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedem
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
 $offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository);
 $invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator);
+$bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository);
 $invoiceSettingsController = new InvoiceSettingsController($commandBus, $queryBus);
 $dunningLevelController = new \App\Infrastructure\Http\Controllers\DunningLevelController($commandBus, $queryBus);
 $dunningController = new \App\Infrastructure\Http\Controllers\DunningController($commandBus, $queryBus, $dunningPdfGenerator);
@@ -1464,6 +1475,10 @@ $router->post('/rechnungen/{id}/stornieren', $auth->guard(Permission::AusgabeRue
 $router->get('/rechnungen/{id}/pdf', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'exportPdf']));
 $router->get('/rechnungen/{id}/xrechnung', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'exportXRechnung']));
 $router->post('/rechnungen/{id}/email', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'emailPdf']));
+$router->get('/zahlungsabgleich', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'index']));
+$router->post('/zahlungsabgleich/importieren', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'import']));
+$router->post('/zahlungsabgleich/bestaetigen', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'confirm']));
+$router->post('/zahlungsabgleich/abbrechen', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'cancel']));
 
 $router->post('/rechnungen/{id}/mahnungen', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'store']));
 $router->get('/mahnungen/{dunningId}/pdf', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'exportPdf']));

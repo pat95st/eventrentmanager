@@ -1,0 +1,20 @@
+# Zentrale Codeception-Konfiguration. Die eigentlichen Suiten (Unit/
+# Acceptance) werden in tests/unit.suite.yml bzw. tests/acceptance.suite.yml
+# konfiguriert — siehe dort für Details und tests/README.md für die
+# Kurzanleitung zum Ausführen.
+paths:
+    tests: tests
+    output: tests/_output
+    data: tests/_data
+    support: tests/_support
+    envs: tests/_envs
+actor_suffix: Tester
+extensions:
+    enabled:
+        - Codeception\Extension\RunFailed
+# Zugangsdaten/URL für die Acceptance-Suite kommen NICHT hier rein (siehe
+# database.yaml-Begründung in bootstrap.php: keine Zugangsdaten im
+# Projektordner), sondern aus tests/.env.testing (siehe
+# tests/.env.testing.dist zum Kopieren, Datei selbst ist gitignored).
+params:
+    - tests/.env.testing

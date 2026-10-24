@@ -63,11 +63,12 @@ $isArticlesGroupActive = in_array($activeNav, $articlesGroupKeys, true);
 // "Veranstaltung" ist analog zu "Artikel" ein Menüpunkt mit Untermenü
 // (Veranstaltungsorte und Kalender sind der Veranstaltungsverwaltung
 // untergeordnet).
-$rentalsGroupKeys = ['rentals', 'offers', 'invoices', 'venues', 'warehouses', 'calendar'];
+$rentalsGroupKeys = ['rentals', 'offers', 'invoices', 'bank_import', 'venues', 'warehouses', 'calendar'];
 $rentalsChildren = [
     ['key' => 'rentals', 'label' => t('nav.rentals_all'), 'href' => '/veranstaltungen'],
     ['key' => 'offers', 'label' => t('nav.offers'), 'href' => '/angebote'],
     ['key' => 'invoices', 'label' => t('nav.invoices'), 'href' => '/rechnungen'],
+    ['key' => 'bank_import', 'label' => t('nav.bank_import'), 'href' => '/zahlungsabgleich'],
     ['key' => 'venues', 'label' => t('nav.venues'), 'href' => '/veranstaltungsorte'],
     ['key' => 'warehouses', 'label' => t('nav.warehouses'), 'href' => '/lagerorte'],
     ['key' => 'calendar', 'label' => t('nav.calendar'), 'href' => '/kalender'],

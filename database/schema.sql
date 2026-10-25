@@ -1089,6 +1089,15 @@ CREATE TABLE pricing_settings (
 INSERT INTO invoice_settings (id, is_small_business, vat_rate_percent, tax_number, vat_id, payment_term_days, bank_name, iban, bic)
 VALUES (1, 0, 19.00, NULL, NULL, 14, NULL, NULL, NULL);
 
+-- Singleton-Zeile für pricing_settings fehlte hier bislang (siehe
+-- database/migrations/037_add_pricing_settings_and_invoice_discounts.sql,
+-- wo sie korrekt enthalten ist) — ohne sie wirft
+-- MariadbPricingSettingsRepository::get() auf JEDER frischen Installation
+-- eine RuntimeException, sobald eine Rechnung oder ein Angebot angelegt
+-- wird (GetPricingSettingsHandler -> InvoiceController::renderForm()/
+-- OfferController::renderForm()), weil die Tabelle sonst komplett leer ist.
+INSERT INTO pricing_settings (id, accessory_flat_rate_percent) VALUES (1, 0);
+
 -- ---------------------------------------------------------------------
 -- Generisches Nummerierungssystem je Dokumenttyp (Rechnungen, Angebote,
 -- Mahnungen, Auftragsbestätigungen) — siehe Migration 084,

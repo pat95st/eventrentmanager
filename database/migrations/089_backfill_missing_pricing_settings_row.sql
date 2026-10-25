@@ -1,0 +1,25 @@
+-- Backfill für installationen, bei denen die Singleton-Zeile in
+-- pricing_settings fehlt.
+--
+-- Hintergrund: database/migrations/037_add_pricing_settings_and_invoice_
+-- discounts.sql legt die Tabelle UND die Startzeile (id=1) an. Beim
+-- Zusammenführen aller Migrationen in database/schema.sql (für den
+-- Installer-Pfad bei komplett frischen Datenbanken, siehe public/
+-- install.php::applyFreshSchema()) wurde das CREATE TABLE übernommen, das
+-- INSERT jedoch versehentlich vergessen. Jede Installation, die über
+-- diesen Fresh-Install-Pfad entstanden ist (schema.sql direkt geladen,
+-- alle Migrationen anschließend nur als "bereits angewendet" markiert,
+-- OHNE ihr SQL tatsächlich auszuführen), hat dadurch eine leere
+-- pricing_settings-Tabelle.
+--
+-- Auswirkung: MariadbPricingSettingsRepository::get() wirft dann eine
+-- RuntimeException, sobald GetPricingSettingsHandler aufgerufen wird —
+-- u. a. in InvoiceController::renderForm() und OfferController::
+-- renderForm() — und damit schlägt sowohl das Anzeigen des
+-- Rechnungs-/Angebotsformulars als auch das Anlegen einer neuen Rechnung/
+-- eines neuen Angebots mit einem 500-Fehler fehl.
+--
+-- INSERT IGNORE statt einfachem INSERT, damit diese Migration auch auf
+-- Installationen ohne das Problem (Zeile bereits vorhanden) gefahrlos
+-- angewendet werden kann.
+INSERT IGNORE INTO pricing_settings (id, accessory_flat_rate_percent) VALUES (1, 0);

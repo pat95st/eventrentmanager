@@ -28,6 +28,9 @@ final class CreateInvoice implements CommandInterface
         public readonly array $laborItems = [],
         public readonly array $freeTextItems = [],
         public readonly array $sectionTexts = [],
+        // Rohes Rich-Text-HTML aus dem Formular, wird vom Handler über
+        // HtmlSanitizer bereinigt (siehe Invoice::$closingText).
+        public readonly ?string $closingText = null,
     ) {
     }
 }

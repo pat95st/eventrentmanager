@@ -21,6 +21,58 @@
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
+/**
+ * Rich-Text-Editorfeld für den dokumenteigenen Schlusstext (siehe
+ * Offer::$closingText) — identisches Muster (contenteditable + execCommand
+ * + verstecktes Speicherfeld) wie der globale Einleitungs-/Schlusstext in
+ * resources/views/settings/offer-pdf-template.php, bewusst erneut
+ * dupliziert statt per Include geteilt (siehe dortiger Kommentar zum
+ * selben Muster; identisch zu renderDocumentClosingTextField() in
+ * resources/views/invoices/form.php). Das `submit`-Sync-Skript hängt sich
+ * hier generisch über `closest('form')` ein statt an eine feste Formular-
+ * Action zu koppeln, da dieses Formular je nach Neuanlage/Bearbeitung
+ * unterschiedliche `action`-URLs hat.
+ */
+if (!function_exists('renderDocumentClosingTextField')) {
+    function renderDocumentClosingTextField(string $name, string $value, ?string $error): void
+    {
+        ?>
+    <div data-rt-field class="rt-field">
+        <div data-rt-toolbar class="mb-0 hidden flex-wrap gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 p-1.5 dark:border-slate-700 dark:bg-slate-800">
+            <button type="button" data-cmd="bold" title="<?= e(t('rich_text.toolbar.bold')) ?>" class="rounded px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">F</button>
+            <button type="button" data-cmd="italic" title="<?= e(t('rich_text.toolbar.italic')) ?>" class="rounded px-2 py-1 text-xs italic text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">K</button>
+            <button type="button" data-cmd="underline" title="<?= e(t('rich_text.toolbar.underline')) ?>" class="rounded px-2 py-1 text-xs underline text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">U</button>
+            <select data-heading-select title="<?= e(t('rich_text.toolbar.heading')) ?>" class="rounded border border-slate-300 bg-white px-1.5 py-1 text-xs text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <option value=""><?= e(t('rich_text.toolbar.heading_placeholder')) ?></option>
+                <option value="H1"><?= e(t('rich_text.toolbar.heading1')) ?></option>
+                <option value="H2"><?= e(t('rich_text.toolbar.heading2')) ?></option>
+                <option value="H3"><?= e(t('rich_text.toolbar.heading3')) ?></option>
+                <option value="P"><?= e(t('rich_text.toolbar.paragraph')) ?></option>
+            </select>
+            <button type="button" data-cmd="insertUnorderedList" title="<?= e(t('rich_text.toolbar.bullet_list')) ?>" class="rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"><?= e(t('rich_text.toolbar.bullet_list')) ?></button>
+            <button type="button" data-cmd="insertOrderedList" title="<?= e(t('rich_text.toolbar.numbered_list')) ?>" class="rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700"><?= e(t('rich_text.toolbar.numbered_list')) ?></button>
+            <span class="mx-0.5 w-px self-stretch bg-slate-300 dark:bg-slate-600"></span>
+            <button type="button" data-cmd="justifyLeft" title="<?= e(t('rich_text.toolbar.align_left')) ?>" class="rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">⇤</button>
+            <button type="button" data-cmd="justifyCenter" title="<?= e(t('rich_text.toolbar.align_center')) ?>" class="rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">⇔</button>
+            <button type="button" data-cmd="justifyRight" title="<?= e(t('rich_text.toolbar.align_right')) ?>" class="rounded px-2 py-1 text-xs text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">⇥</button>
+        </div>
+        <div
+            data-rt-editable
+            contenteditable="true"
+            class="hidden min-h-[8rem] rounded-b-md border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950"
+        ></div>
+        <textarea
+            data-rt-source
+            name="<?= e($name) ?>"
+            rows="6"
+            class="w-full rounded-md border <?= $error !== null ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        ><?= e($value) ?></textarea>
+        <?php if ($error !== null): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($error) ?></p><?php endif; ?>
+    </div>
+        <?php
+    }
+}
+
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
 // Ein Entwurf mit bereits abgerechneten Verkaufspositionen wird hier
 // vorsorglich ebenfalls als gesperrt behandelt (OfferController::edit()
@@ -310,6 +362,12 @@ foreach ($laborArticles as $laborArticle) {
             </div>
         </dl>
         <p class="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('offers.form.totals_hint')) ?></p>
+    </div>
+
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.closing_text')) ?></label>
+        <p class="mb-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.closing_text_hint')) ?></p>
+        <?php renderDocumentClosingTextField('closing_text', $val('closing_text', $offer?->closingText), $errors['closingText'] ?? null); ?>
     </div>
 
     <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -1135,6 +1193,73 @@ foreach ($laborArticles as $laborArticle) {
 
     updateTotals();
 })();
+</script>
+
+<script>
+  // WYSIWYG-Editor für den dokumenteigenen Schlusstext (siehe
+  // renderDocumentClosingTextField() oben in dieser Datei). Identisches
+  // Muster wie das Skript in resources/views/invoices/form.php (bewusst
+  // dupliziert, siehe dortiger Kommentar). Der Submit-Sync hängt sich
+  // hier ebenfalls über `closest('form')` ein statt an eine feste
+  // `form[action="..."]`-Auswahl, da dieses Formular je nach
+  // Neuanlage/Bearbeitung unterschiedliche `action`-URLs hat.
+  (function () {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch (e) { /* ältere Browser: einfach ignorieren, <div> wird ebenfalls verstanden */ }
+
+    document.querySelectorAll('[data-rt-field]').forEach(function (field) {
+      var toolbar = field.querySelector('[data-rt-toolbar]');
+      var editable = field.querySelector('[data-rt-editable]');
+      var textarea = field.querySelector('[data-rt-source]');
+
+      if (!toolbar || !editable || !textarea) {
+        return;
+      }
+
+      editable.innerHTML = textarea.value || '<p></p>';
+      toolbar.classList.remove('hidden');
+      toolbar.classList.add('flex');
+      editable.classList.remove('hidden');
+      textarea.classList.add('hidden');
+
+      function sync() {
+        textarea.value = editable.innerHTML;
+      }
+
+      editable.addEventListener('input', sync);
+      editable.addEventListener('blur', sync);
+
+      toolbar.querySelectorAll('[data-cmd]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          editable.focus();
+          document.execCommand(btn.getAttribute('data-cmd'), false, undefined);
+          sync();
+        });
+      });
+
+      var headingSelect = toolbar.querySelector('[data-heading-select]');
+      if (headingSelect) {
+        headingSelect.addEventListener('change', function () {
+          editable.focus();
+          if (headingSelect.value) {
+            document.execCommand('formatBlock', false, headingSelect.value);
+          }
+          headingSelect.value = '';
+          sync();
+        });
+      }
+
+      var ownForm = field.closest('form');
+      if (ownForm) {
+        ownForm.addEventListener('submit', function () {
+          if (!editable.classList.contains('hidden')) {
+            textarea.value = editable.innerHTML;
+          }
+        });
+      }
+    });
+  })();
 </script>
 
 <?php endif; ?>

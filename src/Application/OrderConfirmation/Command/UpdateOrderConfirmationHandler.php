@@ -17,6 +17,7 @@ use App\Domain\OrderConfirmation\OrderConfirmationRepositoryInterface;
 use App\Domain\OrderConfirmation\OrderConfirmationSectionText;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
+use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -30,6 +31,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly VenueRepositoryInterface $venues,
         private readonly ArticleRepositoryInterface $articles,
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
+        private readonly HtmlSanitizer $htmlSanitizer,
     ) {
     }
 
@@ -78,6 +80,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
             : null;
         $orderConfirmation->discountType = $data['discountType'];
         $orderConfirmation->discountValue = $data['discountValue'];
+        $orderConfirmation->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $orderConfirmation->updatedAt = new DateTimeImmutable();
 
         $this->orderConfirmations->save($orderConfirmation);

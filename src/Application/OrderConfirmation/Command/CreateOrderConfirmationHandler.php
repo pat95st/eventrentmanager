@@ -19,6 +19,7 @@ use App\Domain\OrderConfirmation\OrderConfirmationStatus;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
+use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 use PDO;
@@ -36,6 +37,7 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
+        private readonly HtmlSanitizer $htmlSanitizer,
     ) {
     }
 
@@ -91,6 +93,7 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
                 accessoryFlatRatePercent: $accessoryFlatRatePercent,
                 discountType: $data['discountType'],
                 discountValue: $data['discountValue'],
+                closingText: $this->htmlSanitizer->sanitize($command->closingText),
             );
 
             $this->orderConfirmations->save($orderConfirmation);

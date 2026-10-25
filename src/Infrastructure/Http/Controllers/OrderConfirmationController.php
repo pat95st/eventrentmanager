@@ -103,6 +103,7 @@ final class OrderConfirmationController
             discountValue: $request->input('discount_value'),
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
+            closingText: $request->input('closing_text'),
         );
 
         try {
@@ -180,6 +181,7 @@ final class OrderConfirmationController
             discountValue: $request->input('discount_value'),
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
+            closingText: $request->input('closing_text'),
         );
 
         try {
@@ -447,6 +449,7 @@ final class OrderConfirmationController
             'discount_value' => $command->discountValue ?? '',
             'free_text_items' => $command->freeTextItems,
             'section_texts' => $command->sectionTexts,
+            'closing_text' => $command->closingText ?? '',
         ];
     }
 

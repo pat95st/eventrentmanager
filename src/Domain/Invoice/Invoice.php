@@ -63,6 +63,14 @@ final class Invoice
         // fasst UpdateInvoiceHandler dieses Feld nicht an, bleibt also bei
         // späteren Bearbeitungen unverändert erhalten.
         public ?string $shippingAmount = null,
+        // Freitext ("Schlusstext"), erscheint in der Detailansicht und im
+        // PDF-Export jeweils NACH der Positionsliste/Summenzeile — anders
+        // als $note (siehe oben), das im Kopfbereich VOR der Positionsliste
+        // steht. Bereits als bereinigtes Rich-Text-HTML gespeichert (siehe
+        // App\Infrastructure\RichText\HtmlSanitizer, identisches Format wie
+        // InvoicePdfSettings::$closingHtml, hier aber pro Rechnung statt
+        // global).
+        public ?string $closingText = null,
     ) {
     }
 

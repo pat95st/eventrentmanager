@@ -153,3 +153,19 @@ $rows = $detail->orderedRows();
         </div>
     <?php endif; ?>
 </div>
+
+<?php if ($orderConfirmation->closingText !== null && trim($orderConfirmation->closingText) !== ''): ?>
+<div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <div class="max-w-none text-sm leading-relaxed text-slate-700 dark:text-slate-300
+                [&_h1]:mb-3 [&_h1]:mt-6 [&_h1]:text-lg [&_h1]:font-semibold [&_h1]:text-slate-900 dark:[&_h1]:text-slate-100
+                [&_h2]:mb-2 [&_h2]:mt-5 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-slate-900 dark:[&_h2]:text-slate-100
+                [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-slate-900 dark:[&_h3]:text-slate-100
+                [&_p]:mb-3
+                [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:pl-5
+                [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5
+                [&_li]:mb-1
+                [&_strong]:font-semibold">
+        <?= $orderConfirmation->closingText ?>
+    </div>
+</div>
+<?php endif; ?>

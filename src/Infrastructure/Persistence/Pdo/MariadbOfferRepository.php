@@ -26,19 +26,19 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
         $stmt = $this->pdo->prepare(
             'INSERT INTO offers (
                 id, offer_number, customer_id, event_location, venue_id, start_date, end_date, valid_until,
-                status, note,
+                status, note, closing_text,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
                 converted_rental_id, created_at, updated_at
              ) VALUES (
                 :id, :offer_number, :customer_id, :event_location, :venue_id, :start_date, :end_date, :valid_until,
-                :status, :note,
+                :status, :note, :closing_text,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
                 :converted_rental_id, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, event_location = :event_location2, venue_id = :venue_id2,
                 start_date = :start_date2, end_date = :end_date2, valid_until = :valid_until2,
-                status = :status2, note = :note2,
+                status = :status2, note = :note2, closing_text = :closing_text2,
                 accessory_flat_rate_enabled = :accessory_flat_rate_enabled2,
                 accessory_flat_rate_percent = :accessory_flat_rate_percent2,
                 discount_type = :discount_type2, discount_value = :discount_value2,
@@ -59,6 +59,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             'valid_until' => $validUntil,
             'status' => $offer->status->value,
             'note' => $offer->note,
+            'closing_text' => $offer->closingText,
             'accessory_flat_rate_enabled' => $accessoryFlatRateEnabled,
             'accessory_flat_rate_percent' => $offer->accessoryFlatRatePercent,
             'discount_type' => $offer->discountType,
@@ -74,6 +75,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             'valid_until2' => $validUntil,
             'status2' => $offer->status->value,
             'note2' => $offer->note,
+            'closing_text2' => $offer->closingText,
             'accessory_flat_rate_enabled2' => $accessoryFlatRateEnabled,
             'accessory_flat_rate_percent2' => $offer->accessoryFlatRatePercent,
             'discount_type2' => $offer->discountType,
@@ -395,6 +397,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             validUntil: $row['valid_until'] !== null ? new DateTimeImmutable($row['valid_until']) : null,
             status: OfferStatus::from($row['status']),
             note: $row['note'],
+            closingText: $row['closing_text'] ?? null,
             convertedRentalId: $row['converted_rental_id'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),

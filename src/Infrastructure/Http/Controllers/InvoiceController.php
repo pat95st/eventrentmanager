@@ -115,6 +115,7 @@ final class InvoiceController
             laborItems: $this->laborItemsFromRequest($request),
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
+            closingText: $request->input('closing_text'),
         );
 
         try {
@@ -186,6 +187,7 @@ final class InvoiceController
             laborItems: $this->laborItemsFromRequest($request),
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
+            closingText: $request->input('closing_text'),
         );
 
         try {
@@ -582,6 +584,7 @@ final class InvoiceController
             'labor_items' => $command->laborItems,
             'free_text_items' => $command->freeTextItems,
             'section_texts' => $command->sectionTexts,
+            'closing_text' => $command->closingText ?? '',
         ];
     }
 

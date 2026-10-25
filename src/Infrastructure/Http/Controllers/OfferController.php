@@ -116,6 +116,7 @@ final class OfferController
             saleItems: $this->saleItemsFromRequest($request),
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
+            closingText: $request->input('closing_text'),
         );
 
         try {
@@ -198,6 +199,7 @@ final class OfferController
             saleItems: $this->saleItemsFromRequest($request),
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
+            closingText: $request->input('closing_text'),
         );
 
         try {
@@ -640,6 +642,7 @@ final class OfferController
             'sale_items' => $command->saleItems,
             'free_text_items' => $command->freeTextItems,
             'section_texts' => $command->sectionTexts,
+            'closing_text' => $command->closingText ?? '',
         ];
     }
 

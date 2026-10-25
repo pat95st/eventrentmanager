@@ -250,6 +250,35 @@ final class InvoicePdfGenerator
             );
         }
 
+        // Dokumenteigener Schlusstext (Invoice::$closingText, Kundenwunsch
+        // "Schlusstext" — siehe Aufgabenstellung), bewusst NACH dem globalen
+        // Schlusstext (InvoicePdfSettings::$closingHtml, oben) gerendert:
+        // Letzterer ist ein für ALLE Rechnungen fester Textbaustein, dieser
+        // hier eine individuelle Ergänzung je Rechnung, daher als
+        // "letztes Wort" direkt vor den Vermietbedingungen platziert.
+        // Identisches Rendering-Muster wie der globale Schlusstext oben
+        // (RichTextPdfRenderer, Seitenumbruch-Callback mit neu gezeichnetem
+        // Kopfbereich).
+        $documentClosingBlocks = $this->richTextRenderer->parse($detail->invoice->closingText);
+        if ($documentClosingBlocks !== []) {
+            $documentClosingPageNumber = $pageNumber;
+            $y = $this->richTextRenderer->render(
+                $writer,
+                $documentClosingBlocks,
+                self::MARGIN,
+                $y - 10.0,
+                $pageWidth - 2 * self::MARGIN,
+                self::MARGIN + 20,
+                function () use ($writer, $detail, $companySettings, $invoiceSettings, $pageWidth, $pageHeight, $pdfDesignSettings, &$documentClosingPageNumber): float {
+                    $documentClosingPageNumber++;
+                    $writer->addPage();
+
+                    return $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, null, null, $pageWidth, $pageHeight, $documentClosingPageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                }
+            );
+            $pageNumber = $documentClosingPageNumber;
+        }
+
         $termsText = $this->plainTextFromMarkdown($legalSettings?->rentalTermsMarkdown);
         if ($termsText !== null) {
             $y = $this->drawTerms($writer, $detail, $companySettings, $invoiceSettings, $termsText, $y, $pageWidth, $pageHeight, $pageNumber, $pdfDesignSettings);

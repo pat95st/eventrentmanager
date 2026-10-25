@@ -40,6 +40,11 @@ final class Offer
         public ?string $accessoryFlatRatePercent = null,
         public ?string $discountType = null,
         public ?string $discountValue = null,
+        // Freitext ("Schlusstext"), erscheint in der Detailansicht und im
+        // PDF-Export jeweils NACH der Positionsliste/Summenzeile — anders
+        // als $note (siehe oben), das im Kopfbereich VOR der Positionsliste
+        // steht. Siehe Invoice::$closingText für die identische Begründung.
+        public ?string $closingText = null,
     ) {
     }
 

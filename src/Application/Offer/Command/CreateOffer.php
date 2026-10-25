@@ -30,6 +30,9 @@ final class CreateOffer implements CommandInterface
         public readonly array $saleItems = [],
         public readonly array $freeTextItems = [],
         public readonly array $sectionTexts = [],
+        // Rohes Rich-Text-HTML aus dem Formular, wird vom Handler über
+        // HtmlSanitizer bereinigt (siehe Offer::$closingText).
+        public readonly ?string $closingText = null,
     ) {
     }
 }

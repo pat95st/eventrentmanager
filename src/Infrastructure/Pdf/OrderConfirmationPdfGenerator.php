@@ -17,12 +17,20 @@ use App\Infrastructure\FileStorage\LocalFileStorage;
 /**
  * Vereinfachter Klon von OfferPdfGenerator für Auftragsbestätigungen:
  * gleicher Aufbau (Logo, Fensterkuvert-Adresszone, Kopfdaten, Tabelle,
- * Summenblock), aber bewusst OHNE Einleitungs-/Schlusstext-Rich-Text (keine
- * eigenen PDF-Settings für Auftragsbestätigungen, siehe OrderConfirmation-
- * Klassen-Doc) und ohne angehängte Vermietbedingungen — nur PDF-Download,
- * kein E-Mail-Workflow. Die Tabelle rendert orderedRows() (reguläre
- * Positionen, Freitext-Posten UND Zwischenüberschriften in einer
- * gemeinsamen Reihenfolge), nicht nur reine Artikelpositionen.
+ * Summenblock), aber bewusst OHNE globale Einleitungs-/Schlusstext-
+ * Rich-Text-Einstellungen (keine eigenen PDF-Settings für
+ * Auftragsbestätigungen, siehe OrderConfirmation-Klassen-Doc) und ohne
+ * angehängte Vermietbedingungen — nur PDF-Download, kein E-Mail-Workflow.
+ * Die Tabelle rendert orderedRows() (reguläre Positionen, Freitext-Posten
+ * UND Zwischenüberschriften in einer gemeinsamen Reihenfolge), nicht nur
+ * reine Artikelpositionen.
+ *
+ * Seit dem dokumenteigenen "Schlusstext" (OrderConfirmation::$closingText,
+ * Kundenwunsch — siehe Invoice-/OfferPdfGenerator für die identische
+ * Begründung) bekommt diese Klasse als EINZIGE Rich-Text-Abhängigkeit
+ * $richTextRenderer injiziert, rein für dieses Feld — es gibt (anders als
+ * bei Rechnung/Angebot) keinen globalen Einleitungs-/Schlusstext, der
+ * dieselbe Infrastruktur bereits mitgebracht hätte.
  */
 final class OrderConfirmationPdfGenerator
 {
@@ -41,8 +49,10 @@ final class OrderConfirmationPdfGenerator
     private const WINDOW_ZONE_WIDTH_MM = 85.0;
     private const WINDOW_ZONE_BOTTOM_MM = 90.0;
 
-    public function __construct(private readonly LocalFileStorage $fileStorage)
-    {
+    public function __construct(
+        private readonly LocalFileStorage $fileStorage,
+        private readonly RichTextPdfRenderer $richTextRenderer,
+    ) {
     }
 
     public function generate(OrderConfirmationDetail $detail, CompanySettings $companySettings, ?PdfDesignSettings $pdfDesignSettings = null, ?PdfLayoutSettings $layout = null): string
@@ -115,6 +125,30 @@ final class OrderConfirmationPdfGenerator
 
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtsumme (netto):', 10, true);
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->grossTotal, 2, ',', '.') . ' EUR', 10, true);
+        $y -= 30;
+
+        // Dokumenteigener Schlusstext (OrderConfirmation::$closingText) —
+        // siehe Klassen-Doc oben: einziger Rich-Text-Anwendungsfall dieser
+        // Klasse, identisches Rendering-Muster wie in Invoice-/
+        // OfferPdfGenerator::generate().
+        $documentClosingBlocks = $this->richTextRenderer->parse($orderConfirmation->closingText);
+        if ($documentClosingBlocks !== []) {
+            $documentClosingPageNumber = $pageNumber;
+            $y = $this->richTextRenderer->render(
+                $writer,
+                $documentClosingBlocks,
+                self::MARGIN,
+                $y - 10.0,
+                $pageWidth - 2 * self::MARGIN,
+                self::MARGIN + 20,
+                function () use ($writer, $detail, $companySettings, $pageWidth, $pageHeight, $pdfDesignSettings, &$documentClosingPageNumber): float {
+                    $documentClosingPageNumber++;
+                    $writer->addPage();
+
+                    return $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $documentClosingPageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                }
+            );
+        }
 
         return $writer->output();
     }

@@ -224,6 +224,30 @@ final class OfferPdfGenerator
             );
         }
 
+        // Dokumenteigener Schlusstext (Offer::$closingText, Kundenwunsch
+        // "Schlusstext" — siehe Aufgabenstellung), bewusst NACH dem globalen
+        // Schlusstext (OfferPdfSettings::$closingHtml, oben) gerendert — siehe
+        // identische Begründung in InvoicePdfGenerator::generate().
+        $documentClosingBlocks = $this->richTextRenderer->parse($detail->offer->closingText);
+        if ($documentClosingBlocks !== []) {
+            $documentClosingPageNumber = $pageNumber;
+            $y = $this->richTextRenderer->render(
+                $writer,
+                $documentClosingBlocks,
+                self::MARGIN,
+                $y - 10.0,
+                $pageWidth - 2 * self::MARGIN,
+                self::MARGIN + 20,
+                function () use ($writer, $detail, $pageWidth, $pageHeight, $pdfDesignSettings, &$documentClosingPageNumber): float {
+                    $documentClosingPageNumber++;
+                    $writer->addPage();
+
+                    return $this->drawHeader($writer, $detail, null, null, null, $pageWidth, $pageHeight, $documentClosingPageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                }
+            );
+            $pageNumber = $documentClosingPageNumber;
+        }
+
         $termsText = $this->plainTextFromMarkdown($legalSettings?->rentalTermsMarkdown);
         if ($termsText !== null) {
             $y = $this->drawTerms($writer, $detail, $termsText, $y, $pageWidth, $pageHeight, $pageNumber, $pdfDesignSettings);

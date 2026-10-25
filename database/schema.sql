@@ -1289,6 +1289,9 @@ CREATE TABLE offers (
     valid_until           DATE          NULL,
     status                VARCHAR(20)   NOT NULL DEFAULT 'draft',
     note                  TEXT          NULL,
+    -- Freitext ("Schlusstext"), erscheint NACH der Positionsliste/Summe
+    -- (anders als note oben, siehe Migration 092).
+    closing_text          MEDIUMTEXT    NULL,
     -- Zubehörpauschale (Snapshot) + optionaler Kombirabatt, siehe Migration
     -- 038 / App\Domain\Pricing\DocumentTotals.
     accessory_flat_rate_enabled TINYINT(1)    NOT NULL DEFAULT 1,
@@ -1392,6 +1395,9 @@ CREATE TABLE order_confirmations (
     end_date              DATE          NOT NULL,
     status                VARCHAR(20)   NOT NULL DEFAULT 'draft',
     note                  TEXT          NULL,
+    -- Freitext ("Schlusstext"), erscheint NACH der Positionsliste/Summe
+    -- (anders als note oben, siehe Migration 092).
+    closing_text          MEDIUMTEXT    NULL,
     accessory_flat_rate_enabled TINYINT(1)    NOT NULL DEFAULT 1,
     accessory_flat_rate_percent DECIMAL(5, 2) NULL,
     discount_type         ENUM('percent', 'fixed') NULL,
@@ -1478,6 +1484,9 @@ CREATE TABLE invoices (
     shipping_amount     DECIMAL(10, 2) NULL, -- optionale Versandkosten, siehe database/migrations/072_add_inventory_number_sales.sql
     paid_at             DATETIME       NULL,
     note                TEXT           NULL,
+    -- Freitext ("Schlusstext"), erscheint NACH der Positionsliste/Summe
+    -- (anders als note oben, siehe Migration 092).
+    closing_text        MEDIUMTEXT     NULL,
     source_offer_id     CHAR(36)       NULL,
     source_rental_id    CHAR(36)       NULL,
     created_at          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,

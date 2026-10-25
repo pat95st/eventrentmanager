@@ -19,6 +19,7 @@ use App\Domain\Invoice\InvoiceStatus;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
+use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -39,6 +40,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
+        private readonly HtmlSanitizer $htmlSanitizer,
     ) {
     }
 
@@ -109,6 +111,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             accessoryFlatRatePercent: $accessoryFlatRatePercent,
             discountType: $data['discountType'],
             discountValue: $data['discountValue'],
+            closingText: $this->htmlSanitizer->sanitize($command->closingText),
         );
 
         $this->invoices->save($invoice);

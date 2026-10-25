@@ -19,6 +19,7 @@ use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
+use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -43,6 +44,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
+        private readonly HtmlSanitizer $htmlSanitizer,
     ) {
     }
 
@@ -91,6 +93,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         $invoice->note = $data['note'];
         $invoice->discountType = $data['discountType'];
         $invoice->discountValue = $data['discountValue'];
+        $invoice->closingText = $this->htmlSanitizer->sanitize($command->closingText);
 
         // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
         // für die identische Begründung (dort bereits für den Kombirabatt

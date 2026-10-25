@@ -26,6 +26,9 @@ final class UpdateOrderConfirmation implements CommandInterface
         public readonly ?string $discountValue = null,
         public readonly array $freeTextItems = [],
         public readonly array $sectionTexts = [],
+        // Rohes Rich-Text-HTML aus dem Formular, wird vom Handler über
+        // HtmlSanitizer bereinigt (siehe OrderConfirmation::$closingText).
+        public readonly ?string $closingText = null,
     ) {
     }
 }

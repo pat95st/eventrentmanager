@@ -25,19 +25,19 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
         $stmt = $this->pdo->prepare(
             'INSERT INTO order_confirmations (
                 id, order_confirmation_number, customer_id, event_location, venue_id, start_date, end_date,
-                status, note,
+                status, note, closing_text,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
                 source_offer_id, created_at, updated_at
              ) VALUES (
                 :id, :order_confirmation_number, :customer_id, :event_location, :venue_id, :start_date, :end_date,
-                :status, :note,
+                :status, :note, :closing_text,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
                 :source_offer_id, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, event_location = :event_location2, venue_id = :venue_id2,
                 start_date = :start_date2, end_date = :end_date2,
-                status = :status2, note = :note2,
+                status = :status2, note = :note2, closing_text = :closing_text2,
                 accessory_flat_rate_enabled = :accessory_flat_rate_enabled2,
                 accessory_flat_rate_percent = :accessory_flat_rate_percent2,
                 discount_type = :discount_type2, discount_value = :discount_value2,
@@ -55,6 +55,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             'end_date' => $orderConfirmation->endDate->format('Y-m-d'),
             'status' => $orderConfirmation->status->value,
             'note' => $orderConfirmation->note,
+            'closing_text' => $orderConfirmation->closingText,
             'accessory_flat_rate_enabled' => $accessoryFlatRateEnabled,
             'accessory_flat_rate_percent' => $orderConfirmation->accessoryFlatRatePercent,
             'discount_type' => $orderConfirmation->discountType,
@@ -69,6 +70,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             'end_date2' => $orderConfirmation->endDate->format('Y-m-d'),
             'status2' => $orderConfirmation->status->value,
             'note2' => $orderConfirmation->note,
+            'closing_text2' => $orderConfirmation->closingText,
             'accessory_flat_rate_enabled2' => $accessoryFlatRateEnabled,
             'accessory_flat_rate_percent2' => $orderConfirmation->accessoryFlatRatePercent,
             'discount_type2' => $orderConfirmation->discountType,
@@ -300,6 +302,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             endDate: new DateTimeImmutable($row['end_date']),
             status: OrderConfirmationStatus::from($row['status']),
             note: $row['note'],
+            closingText: $row['closing_text'] ?? null,
             sourceOfferId: $row['source_offer_id'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),

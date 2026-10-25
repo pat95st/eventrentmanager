@@ -23,6 +23,7 @@ use App\Domain\Offer\OfferStatus;
 use App\Domain\Sale\SaleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
+use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -48,6 +49,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly SaleRepositoryInterface $sales,
+        private readonly HtmlSanitizer $htmlSanitizer,
     ) {
     }
 
@@ -122,6 +124,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         $offer->note = $data['note'];
         $offer->discountType = $data['discountType'];
         $offer->discountValue = $data['discountValue'];
+        $offer->closingText = $this->htmlSanitizer->sanitize($command->closingText);
 
         // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
         // für die identische Begründung (dort bereits für den Kombirabatt

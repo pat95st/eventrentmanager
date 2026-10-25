@@ -29,7 +29,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 status, is_small_business, vat_rate_percent,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
                 shipping_amount,
-                paid_at, note,
+                paid_at, note, closing_text,
                 source_offer_id, source_rental_id, created_at, updated_at
              ) VALUES (
                 :id, :customer_id, :event_location, :venue_id, :start_date, :end_date,
@@ -37,7 +37,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 :status, :is_small_business, :vat_rate_percent,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
                 :shipping_amount,
-                :paid_at, :note,
+                :paid_at, :note, :closing_text,
                 :source_offer_id, :source_rental_id, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
@@ -50,7 +50,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 accessory_flat_rate_percent = :accessory_flat_rate_percent2,
                 discount_type = :discount_type2, discount_value = :discount_value2,
                 shipping_amount = :shipping_amount2,
-                paid_at = :paid_at2, note = :note2,
+                paid_at = :paid_at2, note = :note2, closing_text = :closing_text2,
                 source_offer_id = :source_offer_id2, source_rental_id = :source_rental_id2,
                 updated_at = :updated_at2'
         );
@@ -82,6 +82,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'shipping_amount' => $invoice->shippingAmount,
             'paid_at' => $paidAt,
             'note' => $invoice->note,
+            'closing_text' => $invoice->closingText,
             'source_offer_id' => $invoice->sourceOfferId,
             'source_rental_id' => $invoice->sourceRentalId,
             'created_at' => $invoice->createdAt->format('Y-m-d H:i:s'),
@@ -105,6 +106,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'shipping_amount2' => $invoice->shippingAmount,
             'paid_at2' => $paidAt,
             'note2' => $invoice->note,
+            'closing_text2' => $invoice->closingText,
             'source_offer_id2' => $invoice->sourceOfferId,
             'source_rental_id2' => $invoice->sourceRentalId,
             'updated_at2' => $invoice->updatedAt->format('Y-m-d H:i:s'),
@@ -445,6 +447,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             paidAt: $row['paid_at'] !== null ? new DateTimeImmutable($row['paid_at']) : null,
             note: $row['note'],
             sourceOfferId: $row['source_offer_id'],
+            closingText: $row['closing_text'] ?? null,
             sourceRentalId: $row['source_rental_id'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),

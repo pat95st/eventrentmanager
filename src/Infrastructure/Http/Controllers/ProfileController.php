@@ -28,10 +28,12 @@ use App\Application\User\Command\ChangeOwnPassword;
 use App\Application\User\Command\DisableTwoFactor;
 use App\Application\User\Command\EnableEmailOtp;
 use App\Application\User\Command\EnableTotp;
+use App\Application\User\Command\UpdateDashboardWidgets;
 use App\Application\User\Command\UpdateDefaultPageSize;
 use App\Application\User\Command\UpdateLocale;
 use App\Application\User\Command\UpdateNotifyOnNewReceiptEmail;
 use App\Domain\AddressBook\AddressBook;
+use App\Domain\Dashboard\DashboardWidget;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Push\PushSettings;
@@ -248,6 +250,38 @@ final class ProfileController
 
         Flash::success(t('profile.display.flash.saved'));
         Response::redirect('/profil/darstellung');
+    }
+
+    public function showDashboardSettings(Request $request): void
+    {
+        $user = CurrentUser::get();
+
+        echo View::page('profile/dashboard', [
+            'allWidgets' => DashboardWidget::all(),
+            'enabledKeys' => array_map(fn (DashboardWidget $w) => $w->value, $user->enabledDashboardWidgets()),
+            'permittedKeys' => array_map(
+                fn (DashboardWidget $w) => $w->value,
+                array_values(array_filter(DashboardWidget::all(), fn (DashboardWidget $w) => $user->has($w->requiredPermission()))),
+            ),
+        ], activeNav: 'profile', title: t('profile.dashboard.title'));
+    }
+
+    public function updateDashboardSettings(Request $request): void
+    {
+        $user = CurrentUser::get();
+
+        $widgets = $request->post['widgets'] ?? [];
+        if (!is_array($widgets)) {
+            $widgets = [];
+        }
+
+        $this->commands->dispatch(new UpdateDashboardWidgets(
+            userId: $user->id,
+            widgets: array_map('strval', $widgets),
+        ));
+
+        Flash::success(t('profile.dashboard.flash.saved'));
+        Response::redirect('/profil/dashboard');
     }
 
     /**

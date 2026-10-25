@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\User;
 
+use App\Domain\Dashboard\DashboardWidget;
 use DateTimeImmutable;
 
 final class User
@@ -51,7 +52,38 @@ final class User
         // ImportReceiptEmailsHandler::notifyAdministrators()), einstellbar
         // unter /profil/darstellung.
         public bool $notifyOnNewReceiptEmail = false,
+        // Explizit vom Benutzer unter /profil/dashboard ausgewählte
+        // Dashboard-Bereiche (Schlüssel von DashboardWidget). NULL
+        // bedeutet "noch nicht angepasst" — siehe enabledDashboardWidgets()
+        // für die daraus resultierende "alle berechtigten Bereiche"-
+        // Standardauswahl. Ein (ggf. leeres) Array bedeutet "explizit
+        // konfiguriert", auch wenn der Benutzer dabei ALLE abgewählt hat.
+        public ?array $dashboardWidgets = null,
     ) {
+    }
+
+    /**
+     * Die für DIESEN Benutzer tatsächlich anzuzeigenden Dashboard-Bereiche:
+     * seine explizite Auswahl (sofern vorhanden), andernfalls alle Bereiche
+     * — in beiden Fällen zusätzlich auf die Bereiche eingeschränkt, für die
+     * er das jeweils nötige Recht besitzt (siehe DashboardWidget::
+     * requiredPermission()). Ein fehlendes Recht blendet einen Bereich IMMER
+     * aus, unabhängig von der gespeicherten Auswahl.
+     *
+     * @return DashboardWidget[]
+     */
+    public function enabledDashboardWidgets(): array
+    {
+        if ($this->dashboardWidgets === null) {
+            $selected = DashboardWidget::all();
+        } else {
+            $selected = array_values(array_filter(array_map(
+                static fn (string $value) => DashboardWidget::tryFrom($value),
+                $this->dashboardWidgets,
+            )));
+        }
+
+        return array_values(array_filter($selected, fn (DashboardWidget $widget) => $this->has($widget->requiredPermission())));
     }
 
     /**

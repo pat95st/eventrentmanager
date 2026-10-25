@@ -684,6 +684,7 @@ $commandBus->register(\App\Application\User\Command\EnableTotp::class, new Enabl
 $commandBus->register(\App\Application\User\Command\EnableEmailOtp::class, new EnableEmailOtpHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\DisableTwoFactor::class, new DisableTwoFactorHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\UpdateDefaultPageSize::class, new UpdateDefaultPageSizeHandler($userRepository));
+$commandBus->register(\App\Application\User\Command\UpdateDashboardWidgets::class, new \App\Application\User\Command\UpdateDashboardWidgetsHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new UpdateLocaleHandler($userRepository));
 
 $commandBus->register(\App\Application\Auth\Command\AuthenticatePassword::class, new AuthenticatePasswordHandler($userRepository));
@@ -1157,7 +1158,7 @@ $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageAssignment
 $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageUploadLog::class, new \App\Application\DocumentStorage\Query\ListStorageUploadLogHandler($documentStorageUploadLogRepository));
 
 // --- Controller --------------------------------------------------------
-$dashboardController = new DashboardController();
+$dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository, $supplierRepository);
 $reportingController = new \App\Infrastructure\Http\Controllers\ReportingController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
@@ -1385,6 +1386,8 @@ $router->post('/profil/sicherheit/email', $auth->guard(null, [$profileController
 $router->post('/profil/sicherheit/deaktivieren', $auth->guard(null, [$profileController, 'disableTwoFactor']));
 $router->get('/profil/darstellung', $auth->guard(null, [$profileController, 'showDisplaySettings']));
 $router->post('/profil/darstellung', $auth->guard(null, [$profileController, 'updateDisplaySettings']));
+$router->get('/profil/dashboard', $auth->guard(null, [$profileController, 'showDashboardSettings']));
+$router->post('/profil/dashboard', $auth->guard(null, [$profileController, 'updateDashboardSettings']));
 $router->post('/profil/push-abo', $auth->guard(null, [$profileController, 'storePushSubscription']));
 $router->post('/profil/push-abo/{id}/loeschen', $auth->guard(null, [$profileController, 'deletePushSubscription']));
 

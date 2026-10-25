@@ -22,19 +22,23 @@ final class MariadbUserRepository implements UserRepositoryInterface
         $stmt = $this->pdo->prepare(
             'INSERT INTO users (
                 id, email, first_name, last_name, password_hash, permissions, two_factor_method, totp_secret,
-                must_change_password, must_setup_two_factor, is_active, default_page_size, locale, notify_on_new_receipt_email, created_at, updated_at
+                must_change_password, must_setup_two_factor, is_active, default_page_size, locale, notify_on_new_receipt_email, dashboard_widgets, created_at, updated_at
              ) VALUES (
                 :id, :email, :first_name, :last_name, :password_hash, :permissions, :two_factor_method, :totp_secret,
-                :must_change_password, :must_setup_two_factor, :is_active, :default_page_size, :locale, :notify_on_new_receipt_email, :created_at, :updated_at
+                :must_change_password, :must_setup_two_factor, :is_active, :default_page_size, :locale, :notify_on_new_receipt_email, :dashboard_widgets, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 email = :email2, first_name = :first_name2, last_name = :last_name2, password_hash = :password_hash2, permissions = :permissions2,
                 two_factor_method = :two_factor_method2, totp_secret = :totp_secret2,
                 must_change_password = :must_change_password2, must_setup_two_factor = :must_setup_two_factor2, is_active = :is_active2,
-                default_page_size = :default_page_size2, locale = :locale2, notify_on_new_receipt_email = :notify_on_new_receipt_email2, updated_at = :updated_at2'
+                default_page_size = :default_page_size2, locale = :locale2, notify_on_new_receipt_email = :notify_on_new_receipt_email2,
+                dashboard_widgets = :dashboard_widgets2, updated_at = :updated_at2'
         );
 
         $permissions = implode(',', array_map(static fn (Permission $p) => $p->value, $user->permissions));
+        // NULL bleibt NULL ("noch nicht angepasst", siehe User::$dashboardWidgets-Doc),
+        // ein (ggf. leeres) Array wird kommasepariert gespeichert — analog zu $permissions.
+        $dashboardWidgets = $user->dashboardWidgets === null ? null : implode(',', $user->dashboardWidgets);
 
         $params = [
             'id' => $user->id,
@@ -51,6 +55,7 @@ final class MariadbUserRepository implements UserRepositoryInterface
             'default_page_size' => $user->defaultPageSize,
             'locale' => $user->locale,
             'notify_on_new_receipt_email' => $user->notifyOnNewReceiptEmail ? 1 : 0,
+            'dashboard_widgets' => $dashboardWidgets,
             'created_at' => $user->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $user->updatedAt->format('Y-m-d H:i:s'),
         ];
@@ -70,6 +75,7 @@ final class MariadbUserRepository implements UserRepositoryInterface
             'default_page_size2' => $user->defaultPageSize,
             'locale2' => $user->locale,
             'notify_on_new_receipt_email2' => $user->notifyOnNewReceiptEmail ? 1 : 0,
+            'dashboard_widgets2' => $dashboardWidgets,
             'updated_at2' => $user->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -177,6 +183,9 @@ final class MariadbUserRepository implements UserRepositoryInterface
             defaultPageSize: isset($row['default_page_size']) ? (int) $row['default_page_size'] : 25,
             locale: isset($row['locale']) && $row['locale'] !== '' ? (string) $row['locale'] : 'de',
             notifyOnNewReceiptEmail: (bool) ($row['notify_on_new_receipt_email'] ?? false),
+            dashboardWidgets: isset($row['dashboard_widgets']) && $row['dashboard_widgets'] !== null
+                ? ($row['dashboard_widgets'] === '' ? [] : explode(',', $row['dashboard_widgets']))
+                : null,
         );
     }
 }

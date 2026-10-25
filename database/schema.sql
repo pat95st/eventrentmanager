@@ -795,6 +795,13 @@ CREATE TABLE users (
     -- /profil/darstellung änderbar; siehe
     -- App\Application\ReceiptInbox\Command\ImportReceiptEmailsHandler.
     notify_on_new_receipt_email TINYINT(1) NOT NULL DEFAULT 0,
+    -- Kommaseparierte Liste aktivierter Dashboard-Bereiche (siehe
+    -- App\Domain\Dashboard\DashboardWidget), vom Benutzer selbst unter
+    -- /profil/dashboard änderbar. NULL = noch nicht angepasst -> es werden
+    -- alle Bereiche angezeigt, für die der Benutzer ohnehin ein Recht hat
+    -- (siehe DashboardController). Ein (ggf. leerer) String bedeutet
+    -- "explizit konfiguriert".
+    dashboard_widgets       TEXT         NULL,
     created_at             DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at             DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_users_email (email)

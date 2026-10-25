@@ -261,7 +261,7 @@ $canDocuments = $canRentals;
         </svg>
       </button>
 
-      <a href="/artikel" class="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
+      <a href="/" class="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
         <?php if ($companyLogoUrl !== null): ?>
           <img
             src="<?= e($companyLogoUrl) ?>"
@@ -448,6 +448,7 @@ $canDocuments = $canRentals;
             <a href="/profil/carddav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.carddav')) ?></a>
             <a href="/profil/passwort" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.change_password')) ?></a>
             <a href="/profil/darstellung" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
+            <a href="/profil/dashboard" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.dashboard_settings')) ?></a>
             <?php if ($isAdmin): ?>
               <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
               <a href="/berichte/einnahmen-ausgaben" class="block px-3 py-2 text-sm <?= $activeNav === 'reports' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.reports')) ?></a>
@@ -578,6 +579,7 @@ $canDocuments = $canRentals;
         <a href="/profil/carddav" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.carddav')) ?></a>
         <a href="/profil/passwort" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.change_password')) ?></a>
         <a href="/profil/darstellung" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
+        <a href="/profil/dashboard" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.dashboard_settings')) ?></a>
         <?php if ($isAdmin): ?>
           <a href="/berichte/einnahmen-ausgaben" class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'reports' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.reports')) ?></a>
           <a href="/berichte/umsatzprognose" class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'revenue-forecast' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.revenue_forecast')) ?></a>

@@ -2,6 +2,7 @@
 /** @var \App\Domain\Purchase\PurchaseOrder|null $order */
 /** @var \App\Domain\Supplier\Supplier[] $suppliers */
 /** @var \App\Domain\Article\Article[] $articles */
+/** @var array<string, string> $articleDisplayNames Artikel-ID => "Hersteller Artikelbezeichnung" */
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
@@ -71,7 +72,7 @@ $items = $old['items'] ?? $existingItems;
             <select name="article_id[]" class="purchase-order-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 <option value=""><?= e(t('offers.show.article_placeholder')) ?></option>
                 <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($article->name) ?></option>
+                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

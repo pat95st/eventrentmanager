@@ -2,6 +2,7 @@
 /** @var \App\Application\Firmware\Query\FirmwareUpdateEntry[] $entries */
 /** @var string $search */
 
+use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
 ?>
 
@@ -41,8 +42,7 @@ use function App\Infrastructure\Http\e;
                 <?php foreach ($entries as $entry): ?>
                     <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/inventurnummern/<?= e($entry->inventoryNumber->id) ?>'">
                         <td class="px-4 py-3">
-                            <span class="font-medium text-slate-900 dark:text-slate-100"><?= e($entry->article->name) ?></span>
-                            <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->manufacturer->name) ?></span>
+                            <span class="font-medium text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($entry->article, $entry->manufacturer)) ?></span>
                         </td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($entry->inventoryNumber->number) ?></td>
                         <td class="px-4 py-3">

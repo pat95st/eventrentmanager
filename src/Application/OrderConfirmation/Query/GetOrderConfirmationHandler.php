@@ -9,6 +9,7 @@ use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
+use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\OrderConfirmation\OrderConfirmationRepositoryInterface;
 
 final class GetOrderConfirmationHandler implements QueryHandlerInterface
@@ -17,6 +18,7 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
         private readonly OrderConfirmationRepositoryInterface $orderConfirmations,
         private readonly CustomerRepositoryInterface $customers,
         private readonly ArticleRepositoryInterface $articles,
+        private readonly ManufacturerRepositoryInterface $manufacturers,
     ) {
     }
 
@@ -31,12 +33,23 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
 
         $customer = $orderConfirmation->customerId !== null ? $this->customers->findById($orderConfirmation->customerId) : null;
 
+        // Siehe GetInvoiceHandler für die identische Begründung des
+        // kleinen Hersteller-Caches.
+        $manufacturerCache = [];
+        $manufacturerFor = function (string $manufacturerId) use (&$manufacturerCache) {
+            if (!array_key_exists($manufacturerId, $manufacturerCache)) {
+                $manufacturerCache[$manufacturerId] = $this->manufacturers->findById($manufacturerId);
+            }
+
+            return $manufacturerCache[$manufacturerId];
+        };
+
         $rawItems = $this->orderConfirmations->findItemsByOrderConfirmation($orderConfirmation->id);
         $items = array_values(array_filter(array_map(
-            function ($item) {
+            function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
 
-                return $article !== null ? new OrderConfirmationItemWithArticle($item, $article) : null;
+                return $article !== null ? new OrderConfirmationItemWithArticle($item, $article, $manufacturerFor($article->manufacturerId)) : null;
             },
             $rawItems
         )));

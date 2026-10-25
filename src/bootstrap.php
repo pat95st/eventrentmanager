@@ -744,7 +744,7 @@ $commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class
 $offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
 $orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage);
-$getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository);
+$getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
     $getOfferHandler,
     $companySettingsRepository,
@@ -785,7 +785,7 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\DeleteOrderConf
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationSent::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationSentHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmed::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmedHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelled::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelledHandler($orderConfirmationRepository));
-$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository));
+$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository, $manufacturerRepository));
 $queryBus->register(\App\Application\OrderConfirmation\Query\ListOrderConfirmations::class, new \App\Application\OrderConfirmation\Query\ListOrderConfirmationsHandler($orderConfirmationRepository, $customerRepository));
 
 // --- Rechnungen (Invoices) --------------------------------------------
@@ -803,7 +803,7 @@ $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::c
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository));
 $invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer);
 $xRechnungGenerator = new XRechnungGenerator();
-$getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository);
+$getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository);
 $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, new EmailInvoicePdfHandler(
     $getInvoiceHandler,
     $companySettingsRepository,
@@ -1031,6 +1031,7 @@ $queryBus->register(\App\Application\Vehicle\Query\GetRentalLoadingList::class, 
     $vehicleRepository,
     $rentalVehicleLoadRepository,
     $rentalVehicleTowRepository,
+    $manufacturerRepository,
 ));
 
 $queryBus->register(\App\Application\Voucher\Query\ListVouchers::class, new \App\Application\Voucher\Query\ListVouchersHandler($voucherRepository));
@@ -1054,6 +1055,7 @@ $getRentalHandler = new GetRentalHandler(
     $inventoryNumberRepository,
     $articleAccessoryRepository,
     $articlePreIssueCheckRepository,
+    $manufacturerRepository,
 );
 $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHandler);
 
@@ -1075,6 +1077,7 @@ $queryBus->register(\App\Application\Rental\Query\ListRentalsInRange::class, new
     $rentalIssuedItemRepository,
     $articleRepository,
     $inventoryNumberRepository,
+    $manufacturerRepository,
 ));
 $queryBus->register(\App\Application\Rental\Query\ListRentalHistoryForInventoryNumber::class, new ListRentalHistoryForInventoryNumberHandler(
     $rentalIssuedItemRepository,
@@ -1101,8 +1104,8 @@ $queryBus->register(\App\Application\Offer\Query\ListOffers::class, new ListOffe
 $queryBus->register(\App\Application\Offer\Query\GetOffer::class, $getOfferHandler);
 
 $queryBus->register(\App\Application\Purchase\Query\ListPurchaseOrders::class, new \App\Application\Purchase\Query\ListPurchaseOrdersHandler($purchaseOrderRepository, $supplierRepository));
-$queryBus->register(\App\Application\Purchase\Query\GetPurchaseOrder::class, new \App\Application\Purchase\Query\GetPurchaseOrderHandler($purchaseOrderRepository, $supplierRepository, $articleRepository));
-$queryBus->register(\App\Application\Sale\Query\ListSales::class, new \App\Application\Sale\Query\ListSalesHandler($saleRepository, $articleRepository, $customerRepository));
+$queryBus->register(\App\Application\Purchase\Query\GetPurchaseOrder::class, new \App\Application\Purchase\Query\GetPurchaseOrderHandler($purchaseOrderRepository, $supplierRepository, $articleRepository, $manufacturerRepository));
+$queryBus->register(\App\Application\Sale\Query\ListSales::class, new \App\Application\Sale\Query\ListSalesHandler($saleRepository, $articleRepository, $customerRepository, $manufacturerRepository));
 
 $queryBus->register(\App\Application\Invoice\Query\ListInvoices::class, new ListInvoicesHandler($invoiceRepository, $customerRepository));
 $queryBus->register(\App\Application\Invoice\Query\GetInvoice::class, $getInvoiceHandler);
@@ -1118,7 +1121,7 @@ $queryBus->register(\App\Application\Dunning\Query\ListDunningNoticesForInvoice:
 $queryBus->register(\App\Application\Dunning\Query\GetDunningNotice::class, $getDunningNoticeHandler);
 
 $queryBus->register(\App\Application\Receipt\Query\ListReceipts::class, new ListReceiptsHandler($receiptRepository, $supplierRepository));
-$queryBus->register(\App\Application\Receipt\Query\GetReceipt::class, new GetReceiptHandler($receiptRepository, $supplierRepository, $inventoryNumberRepository, $articleRepository));
+$queryBus->register(\App\Application\Receipt\Query\GetReceipt::class, new GetReceiptHandler($receiptRepository, $supplierRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository));
 
 $queryBus->register(\App\Application\Settings\Query\GetMailboxSettings::class, new GetMailboxSettingsHandler($mailboxSettingsRepository));
 $queryBus->register(\App\Application\ReceiptInbox\Query\ListAllowedSenders::class, new ListAllowedSendersHandler($receiptInboxAllowedSenderRepository));
@@ -1249,6 +1252,7 @@ $queryBus->register(\App\Application\Rental\Query\GetRentalCustomerChecklist::cl
     $rentalIssuedItemRepository,
     $articleRepository,
     $inventoryNumberRepository,
+    $manufacturerRepository,
 ));
 $customerChecklistController = new \App\Infrastructure\Http\Controllers\CustomerChecklistController($queryBus, $commandBus);
 

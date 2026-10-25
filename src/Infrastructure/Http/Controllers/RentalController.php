@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Article\Query\ListArticles;
+use App\Application\Manufacturer\Query\ListManufacturers;
 use App\Application\Command\CommandBus;
 use App\Application\Customer\Query\ListCustomers;
 use App\Application\Invoice\Command\CreateInvoiceFromRental;
@@ -44,6 +45,7 @@ use App\Application\Voucher\Command\RedeemVoucherForRental;
 use App\Application\Voucher\Command\RemoveVoucherRedemption;
 use App\Application\Voucher\Query\GetVoucher;
 use App\Application\Warehouse\Query\ListWarehouses;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -190,9 +192,22 @@ final class RentalController
         )));
         $noticeDocuments = $this->queries->ask(new GetNoticeDocumentsForArticleIds($bookedArticleIds));
 
+        // Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
+        // (Nutzerwunsch). Siehe OfferController::renderForm() für die
+        // identische Begründung, warum $articles selbst unverändert bleibt.
+        $manufacturersById = [];
+        foreach ($this->queries->ask(new ListManufacturers()) as $manufacturer) {
+            $manufacturersById[$manufacturer->id] = $manufacturer;
+        }
+        $articleDisplayNames = [];
+        foreach ($articles as $article) {
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+        }
+
         echo View::page('rentals/show', [
             'detail' => $detail,
             'articles' => $articles,
+            'articleDisplayNames' => $articleDisplayNames,
             'venue' => $venue,
             'warehouses' => $warehouses,
             'companyAddress' => $companyAddress,

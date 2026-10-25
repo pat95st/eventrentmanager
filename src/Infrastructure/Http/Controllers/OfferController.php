@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Controllers;
 use App\Application\Article\Query\ListArticles;
 use App\Application\Command\CommandBus;
 use App\Application\Customer\Query\ListCustomers;
+use App\Application\Manufacturer\Query\ListManufacturers;
 use App\Application\Invoice\Command\CreateInvoiceFromOffer;
 use App\Application\LaborTime\Query\ListLaborTimeArticles;
 use App\Application\Offer\Command\ConvertOfferToRental;
@@ -26,6 +27,7 @@ use App\Application\Settings\Query\GetOfferPdfSettings;
 use App\Application\Settings\Query\GetPdfDesignSettings;
 use App\Application\Settings\Query\GetPriceTiers;
 use App\Application\Settings\Query\GetPricingSettings;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -459,11 +461,27 @@ final class OfferController
             $saleStockJson[$article->id] = $this->stockLots->sumRemainingByArticle($article->id);
         }
 
+        // Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
+        // (Nutzerwunsch), zusätzlich zur unveränderten $articles-Liste
+        // selbst — die bleibt bewusst eine reine Article[]-Liste, da sie an
+        // mehreren Stellen oben (z. B. $saleInventoryNumbersJson) über
+        // $article->id/->... weiterverwendet wird (siehe
+        // ListArticlesForDisplayHandler für die Begründung dieser Trennung).
+        $manufacturersById = [];
+        foreach ($this->queries->ask(new ListManufacturers()) as $manufacturer) {
+            $manufacturersById[$manufacturer->id] = $manufacturer;
+        }
+        $articleDisplayNames = [];
+        foreach ($articles as $article) {
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+        }
+
         echo View::page('offers/form', [
             'offer' => $offer,
             'customers' => $customers,
             'venues' => $venues,
             'articles' => $articles,
+            'articleDisplayNames' => $articleDisplayNames,
             'tierMultipliers' => $priceSuggestions, // Tag => Faktor (auf Basis von Tagesmietsatz "1")
             'errors' => $errors,
             'old' => $old,

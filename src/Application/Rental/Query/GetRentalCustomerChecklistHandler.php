@@ -10,6 +10,7 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
+use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Rental\RentalCustomerChecklistTokenRepositoryInterface;
 use App\Domain\Rental\RentalIssuedItemRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -33,6 +34,7 @@ final class GetRentalCustomerChecklistHandler implements QueryHandlerInterface
         private readonly RentalIssuedItemRepositoryInterface $issuedItems,
         private readonly ArticleRepositoryInterface $articles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
+        private readonly ManufacturerRepositoryInterface $manufacturers,
     ) {
     }
 
@@ -68,15 +70,23 @@ final class GetRentalCustomerChecklistHandler implements QueryHandlerInterface
             throw new NotFoundException('Diese Checkliste ist nicht (mehr) verfügbar.');
         }
 
+        // Siehe GetInvoiceHandler für die identische Begründung des
+        // kleinen Hersteller-Caches.
+        $manufacturerCache = [];
+
         $items = array_values(array_filter(array_map(
-            function ($issuedItem) {
+            function ($issuedItem) use (&$manufacturerCache) {
                 $inventoryNumber = $this->inventoryNumbers->findById($issuedItem->inventoryNumberId);
                 $article = $this->articles->findById($issuedItem->articleId);
                 if ($inventoryNumber === null || $article === null) {
                     return null;
                 }
 
-                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article);
+                if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
+                    $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+                }
+
+                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerCache[$article->manufacturerId]);
             },
             $activeIssuedItems
         )));

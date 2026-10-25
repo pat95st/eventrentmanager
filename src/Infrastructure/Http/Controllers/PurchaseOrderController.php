@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Article\Query\ListArticles;
+use App\Application\Manufacturer\Query\ListManufacturers;
 use App\Application\Command\CommandBus;
 use App\Application\Purchase\Command\CreatePurchaseOrder;
 use App\Application\Purchase\Command\DeletePurchaseOrder;
@@ -15,6 +16,7 @@ use App\Application\Purchase\Command\UpdatePurchaseOrder;
 use App\Application\Purchase\Query\GetPurchaseOrder;
 use App\Application\Purchase\Query\ListPurchaseOrders;
 use App\Application\Query\QueryBus;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -256,10 +258,23 @@ final class PurchaseOrderController
             }
         }
 
+        // Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
+        // (Nutzerwunsch). Siehe OfferController::renderForm() für die
+        // identische Begründung, warum $articles selbst unverändert bleibt.
+        $manufacturersById = [];
+        foreach ($this->queries->ask(new ListManufacturers()) as $manufacturer) {
+            $manufacturersById[$manufacturer->id] = $manufacturer;
+        }
+        $articleDisplayNames = [];
+        foreach ($articles as $article) {
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+        }
+
         echo View::page('purchase_orders/form', [
             'order' => $order,
             'suppliers' => $suppliers,
             'articles' => $articles,
+            'articleDisplayNames' => $articleDisplayNames,
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,

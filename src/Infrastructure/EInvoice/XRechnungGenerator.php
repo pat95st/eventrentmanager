@@ -249,7 +249,7 @@ final class XRechnungGenerator
             $this->append($dom, $line, $cbc, 'cbc:LineExtensionAmount', $this->money($entry->lineTotal()), ['currencyID' => 'EUR']); // BT-131
 
             $item = $this->appendEl($dom, $line, $cac, 'cac:Item');
-            $this->append($dom, $item, $cbc, 'cbc:Name', $entry->article->name); // BT-153
+            $this->append($dom, $item, $cbc, 'cbc:Name', $entry->displayName()); // BT-153
             $classifiedTaxCategory = $this->appendEl($dom, $item, $cac, 'cac:ClassifiedTaxCategory');
             $this->append($dom, $classifiedTaxCategory, $cbc, 'cbc:ID', $taxCategoryId);
             $this->append($dom, $classifiedTaxCategory, $cbc, 'cbc:Percent', $taxPercent);

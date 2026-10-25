@@ -96,13 +96,17 @@ final class ArticleController
         Response::download($csv, 'Preisliste.csv', 'text/csv; charset=UTF-8');
     }
 
-    /** @return \App\Domain\Article\Article[] alphabetisch sortierte, aktive, abrechenbare Artikel */
+    /**
+     * @return \App\Application\Article\Query\ArticleListItem[] alphabetisch (nach
+     *         "Hersteller Artikelbezeichnung", siehe ArticleDisplayName) sortierte,
+     *         aktive, abrechenbare Artikel mit aufgelöstem Hersteller
+     */
     private function billableArticlesForPriceList(): array
     {
-        $articles = $this->queries->ask(new ListArticles(onlyActive: true))->items;
+        $items = $this->queries->ask(new ListArticlesForDisplay(onlyActive: true))->items;
 
-        $billable = array_values(array_filter($articles, static fn ($article) => $article->isBillable));
-        usort($billable, static fn ($a, $b) => $a->name <=> $b->name);
+        $billable = array_values(array_filter($items, static fn ($item) => $item->article->isBillable));
+        usort($billable, static fn ($a, $b) => \App\Domain\Article\ArticleDisplayName::of($a->article, $a->manufacturer) <=> \App\Domain\Article\ArticleDisplayName::of($b->article, $b->manufacturer));
 
         return $billable;
     }
@@ -299,7 +303,7 @@ final class ArticleController
             'saleStockErrors' => [],
             'errors' => [],
             'old' => [],
-        ], activeNav: 'articles', title: t('articles.title') . ': ' . $detail->article->name);
+        ], activeNav: 'articles', title: t('articles.title') . ': ' . \App\Domain\Article\ArticleDisplayName::of($detail->article, $detail->manufacturer));
     }
 
     /** Verkauft eine Menge aus dem reinen Verkaufsbestand dieses Artikels (siehe SellArticleFromStockHandler) — legt dabei automatisch eine Rechnung (Entwurf) an. */

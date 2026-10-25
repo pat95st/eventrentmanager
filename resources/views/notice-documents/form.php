@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Application\NoticeDocument\Query\NoticeDocumentDetail|null $detail */
 /** @var \App\Domain\Article\Article[] $articles */
+/** @var array<string, string> $articleDisplayNames Artikel-ID => "Hersteller Artikelbezeichnung" */
 /** @var array<string, string> $errors */
 
 use App\Infrastructure\Http\Csrf;
@@ -47,7 +48,7 @@ $selectedArticleIds = $detail?->articleIds ?? [];
                 <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input type="checkbox" name="article_ids[]" value="<?= e($article->id) ?>" <?= in_array($article->id, $selectedArticleIds, true) ? 'checked' : '' ?>
                            class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
-                    <?= e($article->name) ?>
+                    <?= e($articleDisplayNames[$article->id] ?? $article->name) ?>
                 </label>
             <?php endforeach; ?>
         </div>

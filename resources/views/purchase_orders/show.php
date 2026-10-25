@@ -73,7 +73,7 @@ $status = $order->status;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($detail->items as $entry): ?>
                     <tr>
-                        <td class="px-2 py-2 text-slate-800 dark:text-slate-200"><?= e($entry->article->name) ?></td>
+                        <td class="px-2 py-2 text-slate-800 dark:text-slate-200"><?= e($entry->displayName()) ?></td>
                         <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= e($entry->item->targetType->label()) ?></td>
                         <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= $entry->item->orderedQuantity ?></td>
                         <td class="px-2 py-2 text-slate-600 dark:text-slate-400">

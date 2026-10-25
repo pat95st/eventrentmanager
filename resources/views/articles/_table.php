@@ -9,6 +9,7 @@
 /** @var string $paginationBaseUrl */
 /** @var array<string, string> $paginationQuery */
 
+use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 ?>
@@ -23,7 +24,6 @@ use function App\Infrastructure\Http\t;
                 <tr>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.product_name')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.prefix')) ?></th>
-                    <th class="px-4 py-2.5"><?= e(t('articles.table.manufacturer')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.category')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.dimensions')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.weight')) ?></th>
@@ -45,7 +45,7 @@ use function App\Infrastructure\Http\t;
                                 <?php if ($thumb !== null): ?>
                                     <img src="/artikel-bilder/<?= e($thumb->filePath) ?>" alt="" class="h-9 w-9 rounded object-cover ring-1 ring-slate-200 dark:ring-slate-700">
                                 <?php endif; ?>
-                                <span class="font-medium text-slate-900 dark:text-slate-100"><?= e($article->name) ?></span>
+                                <span class="font-medium text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($article, $manufacturer)) ?></span>
                                 <?php if (!$article->isActive): ?>
                                     <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-300 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-700"><?= e(t('articles.table.inactive_badge')) ?></span>
                                 <?php endif; ?>
@@ -54,7 +54,6 @@ use function App\Infrastructure\Http\t;
                         <td class="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">
                             <?= ($manufacturer?->prefix !== null && $article->prefix !== null) ? e($manufacturer->prefix . '-' . $article->prefix) : '–' ?>
                         </td>
-                        <td class="px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($manufacturer?->name ?? '–') ?></td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($category?->name ?? '–') ?></td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($article->dimensions ?? '–') ?></td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">

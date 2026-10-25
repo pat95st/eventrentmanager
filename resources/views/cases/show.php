@@ -2,6 +2,7 @@
 /** @var \App\Application\CaseItem\Query\CaseItemDetail $detail */
 /** @var string|null $editInventoryId */
 /** @var \App\Domain\Article\Article[] $articles */
+/** @var array<string, string> $articleDisplayNames Artikel-ID => "Hersteller Artikelbezeichnung" */
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 
@@ -101,7 +102,7 @@ $case = $detail->case;
                                     <div class="mb-2 divide-y divide-slate-200 dark:divide-slate-700">
                                         <?php foreach ($entry->content as $contentEntry): ?>
                                             <div class="flex flex-wrap items-center justify-between gap-2 py-1.5 text-sm">
-                                                <span class="text-slate-700 dark:text-slate-300"><?= e($contentEntry->article->name) ?></span>
+                                                <span class="text-slate-700 dark:text-slate-300"><?= e($contentEntry->displayName()) ?></span>
                                                 <div class="flex items-center gap-3">
                                                     <form method="post" action="/case-inhalt/<?= e($contentEntry->item->id) ?>" class="flex items-center gap-1">
                                                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
@@ -129,7 +130,7 @@ $case = $detail->case;
                                         <select name="article_id" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700">
                                             <option value="">Bitte wählen…</option>
                                             <?php foreach ($articles as $article): ?>
-                                                <option value="<?= e($article->id) ?>"><?= e($article->name) ?></option>
+                                                <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
                                             <?php endforeach; ?>
                                         </select>
                                     </div>

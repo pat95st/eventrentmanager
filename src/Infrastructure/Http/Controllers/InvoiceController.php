@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Article\Query\ListArticles;
+use App\Application\Manufacturer\Query\ListManufacturers;
 use App\Application\Command\CommandBus;
 use App\Application\Customer\Query\ListCustomers;
 use App\Application\Dunning\Query\ListDunningLevels;
@@ -28,6 +29,7 @@ use App\Application\Settings\Query\GetLegalSettings;
 use App\Application\Settings\Query\GetPdfDesignSettings;
 use App\Application\Settings\Query\GetPriceTiers;
 use App\Application\Settings\Query\GetPricingSettings;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -436,11 +438,24 @@ final class InvoiceController
             }
         }
 
+        // Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
+        // (Nutzerwunsch). Siehe OfferController::renderForm() für die
+        // identische Begründung, warum $articles selbst unverändert bleibt.
+        $manufacturersById = [];
+        foreach ($this->queries->ask(new ListManufacturers()) as $manufacturer) {
+            $manufacturersById[$manufacturer->id] = $manufacturer;
+        }
+        $articleDisplayNames = [];
+        foreach ($articles as $article) {
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+        }
+
         echo View::page('invoices/form', [
             'invoice' => $invoice,
             'customers' => $customers,
             'venues' => $venues,
             'articles' => $articles,
+            'articleDisplayNames' => $articleDisplayNames,
             'tierMultipliers' => $priceSuggestions,
             'errors' => $errors,
             'old' => $old,

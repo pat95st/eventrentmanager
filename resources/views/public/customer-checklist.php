@@ -59,7 +59,7 @@ $totalCount = count($checklist->items);
                                 <?= $entry->issuedItem->confirmedByCustomerAt !== null ? 'checked' : '' ?>
                             >
                             <span class="flex-1 text-sm text-slate-800">
-                                <?= e($entry->article->name) ?>
+                                <?= e($entry->displayName()) ?>
                                 <span class="ml-1 font-mono text-xs text-slate-400"><?= e($entry->inventoryNumber->number) ?></span>
                             </span>
                         </li>

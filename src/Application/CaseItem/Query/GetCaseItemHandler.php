@@ -41,17 +41,30 @@ final class GetCaseItemHandler implements QueryHandlerInterface
 
         $rawInventoryNumbers = $this->caseInventoryNumbers->findByCase($caseItem->id);
 
+        // Siehe GetInvoiceHandler für die identische Begründung des
+        // kleinen Hersteller-Caches. Der Hersteller eines im Case
+        // enthaltenen Artikels ist unabhängig vom Hersteller des Case
+        // selbst (siehe $manufacturer oben), daher ein eigener Cache.
+        $articleManufacturerCache = [];
+        $articleManufacturerFor = function (string $manufacturerId) use (&$articleManufacturerCache) {
+            if (!array_key_exists($manufacturerId, $articleManufacturerCache)) {
+                $articleManufacturerCache[$manufacturerId] = $this->manufacturers->findById($manufacturerId);
+            }
+
+            return $articleManufacturerCache[$manufacturerId];
+        };
+
         $inventoryNumbers = array_map(
-            function ($caseInventoryNumber) {
+            function ($caseInventoryNumber) use ($articleManufacturerFor) {
                 $contentItems = $this->contentItems->findByCaseInventoryNumber($caseInventoryNumber->id);
 
                 $content = array_values(array_filter(array_map(
-                    function ($item) {
+                    function ($item) use ($articleManufacturerFor) {
                         $article = $this->articles->findById($item->articleId);
 
                         // Artikel könnte theoretisch parallel gelöscht worden sein;
                         // dann blenden wir die Zeile einfach aus statt zu crashen.
-                        return $article !== null ? new CaseContentItemWithArticle($item, $article) : null;
+                        return $article !== null ? new CaseContentItemWithArticle($item, $article, $articleManufacturerFor($article->manufacturerId)) : null;
                     },
                     $contentItems
                 )));

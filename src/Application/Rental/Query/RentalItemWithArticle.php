@@ -6,7 +6,9 @@ namespace App\Application\Rental\Query;
 
 use App\Domain\Article\Article;
 use App\Domain\Article\ArticleAccessory;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Article\ArticlePreIssueCheck;
+use App\Domain\Manufacturer\Manufacturer;
 use App\Domain\Rental\RentalItem;
 
 final class RentalItemWithArticle
@@ -21,6 +23,14 @@ final class RentalItemWithArticle
         public readonly int $issuedCount,
         public readonly array $accessories,
         public readonly array $preIssueChecks = [],
+        public readonly ?Manufacturer $manufacturer = null,
     ) {
+    }
+
+    // "Hersteller Artikelbezeichnung" (Nutzerwunsch: Hersteller immer vor
+    // der Artikelbezeichnung) für die Positionsliste der Veranstaltung.
+    public function displayName(): string
+    {
+        return ArticleDisplayName::of($this->article, $this->manufacturer);
     }
 }

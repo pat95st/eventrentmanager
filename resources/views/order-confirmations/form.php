@@ -3,6 +3,7 @@
 /** @var \App\Domain\Customer\Customer[] $customers */
 /** @var \App\Domain\Venue\Venue[] $venues */
 /** @var \App\Domain\Article\Article[] $articles */
+/** @var array<string, string> $articleDisplayNames Artikel-ID => "Hersteller Artikelbezeichnung" */
 /** @var array<int, string> $tierMultipliers */
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
@@ -23,7 +24,7 @@ $sectionTexts = $old['section_texts'] ?? $existingSectionTexts;
 $articlesJson = [];
 foreach ($articles as $article) {
     $articlesJson[$article->id] = [
-        'name' => $article->name,
+        'name' => $articleDisplayNames[$article->id] ?? $article->name,
         'price' => $article->isBillable && $article->dailyRentalPrice !== null ? $article->dailyRentalPrice : null,
     ];
 }
@@ -204,7 +205,7 @@ foreach ($articles as $article) {
             <select name="article_id[]" class="oc-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 <option value=""><?= e(t('order_confirmations.form.item_article_placeholder')) ?></option>
                 <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($article->name) ?></option>
+                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

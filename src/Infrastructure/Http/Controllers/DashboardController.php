@@ -204,7 +204,7 @@ final class DashboardController
         $items = [];
         foreach (array_slice($entries, 0, self::MAX_ITEMS_PER_WIDGET) as $entry) {
             $items[] = [
-                'label' => $entry->manufacturer->name . ' ' . $entry->article->name,
+                'label' => \App\Domain\Article\ArticleDisplayName::of($entry->article, $entry->manufacturer),
                 'sub' => $entry->inventoryNumber->number . ' · ' . $entry->rma->status()->label(),
                 'href' => '/rma',
             ];

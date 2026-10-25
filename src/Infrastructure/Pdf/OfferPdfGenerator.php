@@ -168,7 +168,7 @@ final class OfferPdfGenerator
                 $y -= 20;
             }
 
-            $saleLabel = $saleEntry->article->name . ' (' . (string) $saleEntry->item->quantity . 'x, Verkauf):';
+            $saleLabel = $saleEntry->displayName() . ' (' . (string) $saleEntry->item->quantity . 'x, Verkauf):';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $saleLabel, 9);
             $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($saleEntry->lineTotal(), 2, ',', '.') . ' EUR', 9);
             $y -= 14;
@@ -269,7 +269,7 @@ final class OfferPdfGenerator
 
             $entry = $row->data;
             $rows[] = [
-                'nameLines' => $this->wrapText($entry->article->name, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                'nameLines' => $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
                 'quantity' => (string) $entry->item->quantity,
                 'unitPrice' => number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR',
                 'lineTotal' => number_format($entry->lineTotal(), 2, ',', '.') . ' EUR',

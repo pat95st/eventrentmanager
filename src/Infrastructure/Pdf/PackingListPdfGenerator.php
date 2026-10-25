@@ -87,7 +87,7 @@ final class PackingListPdfGenerator
             ));
 
             $rows[] = [
-                'nameLines' => $this->wrapText($entry->article->name, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                'nameLines' => $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
                 'numbersLines' => $this->wrapText(implode(', ', $issuedNumbers), $columns['numbers']['width'], self::TABLE_FONT_SIZE),
                 'quantity' => (string) $entry->item->quantity,
                 'issued' => (string) $entry->issuedCount,

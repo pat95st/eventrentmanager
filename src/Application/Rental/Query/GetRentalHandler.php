@@ -12,6 +12,7 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
+use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Rental\RentalIssuedItemRepositoryInterface;
 use App\Domain\Rental\RentalItemRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -27,6 +28,7 @@ final class GetRentalHandler implements QueryHandlerInterface
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ArticleAccessoryRepositoryInterface $accessories,
         private readonly ArticlePreIssueCheckRepositoryInterface $preIssueChecks,
+        private readonly ManufacturerRepositoryInterface $manufacturers,
     ) {
     }
 
@@ -44,9 +46,20 @@ final class GetRentalHandler implements QueryHandlerInterface
             throw new NotFoundException('Kunde der Vermietung wurde nicht gefunden.');
         }
 
+        // Siehe GetInvoiceHandler für die identische Begründung des
+        // kleinen Hersteller-Caches.
+        $manufacturerCache = [];
+        $manufacturerFor = function (string $manufacturerId) use (&$manufacturerCache) {
+            if (!array_key_exists($manufacturerId, $manufacturerCache)) {
+                $manufacturerCache[$manufacturerId] = $this->manufacturers->findById($manufacturerId);
+            }
+
+            return $manufacturerCache[$manufacturerId];
+        };
+
         $rawItems = $this->items->findByRental($rental->id);
         $items = array_values(array_filter(array_map(
-            function ($item) use ($rental) {
+            function ($item) use ($rental, $manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
                 if ($article === null) {
                     return null;
@@ -56,21 +69,21 @@ final class GetRentalHandler implements QueryHandlerInterface
                 $accessories = $this->accessories->findByArticle($item->articleId);
                 $preIssueChecks = $this->preIssueChecks->findByArticle($item->articleId);
 
-                return new RentalItemWithArticle($item, $article, $issuedCount, $accessories, $preIssueChecks);
+                return new RentalItemWithArticle($item, $article, $issuedCount, $accessories, $preIssueChecks, $manufacturerFor($article->manufacturerId));
             },
             $rawItems
         )));
 
         $rawIssuedItems = $this->issuedItems->findByRental($rental->id);
         $issuedItems = array_values(array_filter(array_map(
-            function ($issuedItem) {
+            function ($issuedItem) use ($manufacturerFor) {
                 $inventoryNumber = $this->inventoryNumbers->findById($issuedItem->inventoryNumberId);
                 $article = $this->articles->findById($issuedItem->articleId);
                 if ($inventoryNumber === null || $article === null) {
                     return null;
                 }
 
-                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article);
+                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerFor($article->manufacturerId));
             },
             $rawIssuedItems
         )));

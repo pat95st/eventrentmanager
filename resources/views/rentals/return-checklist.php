@@ -121,7 +121,7 @@ foreach ($detail->issuedItems as $issued) {
             ?>
             <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e($entry->article->name) ?></h2>
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e($entry->displayName()) ?></h2>
                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $complete ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700' : 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' ?>">
                         <?= e(t('rentals.return_checklist.returned_of', ['returned' => (string) count($returned), 'total' => (string) (count($returned) + count($pending))])) ?>
                     </span>

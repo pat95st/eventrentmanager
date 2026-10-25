@@ -11,6 +11,7 @@
 /** @var \App\Domain\Customer\Customer[] $customers */
 /** @var array<string, string> $saleErrors */
 
+use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
 
 $inv = $context->inventoryNumber;
@@ -20,7 +21,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
 ?>
 
 <div class="mb-6">
-    <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e($article->name) ?></a>
+    <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e(ArticleDisplayName::of($article, $context->manufacturer)) ?></a>
     <h1 class="mt-1 font-mono text-xl font-semibold text-slate-900 dark:text-slate-100">
         <?= e($inv->number) ?>
         <?php if ($sale !== null): ?>
@@ -30,7 +31,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
         <?php endif; ?>
     </h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
-        <?= e($article->name) ?> · <?= e($context->manufacturer->name) ?>
+        <?= e(ArticleDisplayName::of($article, $context->manufacturer)) ?>
     </p>
 </div>
 

@@ -19,6 +19,7 @@ use App\Application\Article\Query\ListArticles;
 use App\Application\Command\CommandBus;
 use App\Application\Manufacturer\Query\ListManufacturers;
 use App\Application\Query\QueryBus;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\CaseItem\CaseItem;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -111,10 +112,23 @@ final class CaseController
         $editInventoryId = $this->nullIfEmpty($request->query('edit_inventory'));
         $articles = $this->queries->ask(new ListArticles(onlyActive: true))->items;
 
+        // Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
+        // (Nutzerwunsch). Siehe OfferController::renderForm() für die
+        // identische Begründung, warum $articles selbst unverändert bleibt.
+        $manufacturersById = [];
+        foreach ($this->queries->ask(new ListManufacturers()) as $manufacturer) {
+            $manufacturersById[$manufacturer->id] = $manufacturer;
+        }
+        $articleDisplayNames = [];
+        foreach ($articles as $article) {
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+        }
+
         echo View::page('cases/show', [
             'detail' => $detail,
             'editInventoryId' => $editInventoryId,
             'articles' => $articles,
+            'articleDisplayNames' => $articleDisplayNames,
             'errors' => [],
             'old' => [],
         ], activeNav: 'cases', title: 'Case: ' . $detail->case->name);

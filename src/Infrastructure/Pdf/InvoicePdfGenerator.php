@@ -295,7 +295,7 @@ final class InvoicePdfGenerator
 
             $entry = $row->data;
             $rows[] = [
-                'nameLines' => $this->wrapText($entry->article->name, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                'nameLines' => $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
                 'quantity' => (string) $entry->item->quantity,
                 'unitPrice' => number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR',
                 'lineTotal' => number_format($entry->lineTotal(), 2, ',', '.') . ' EUR',

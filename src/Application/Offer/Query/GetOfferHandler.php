@@ -11,6 +11,7 @@ use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Offer\OfferRepositoryInterface;
 
 final class GetOfferHandler implements QueryHandlerInterface
@@ -21,6 +22,7 @@ final class GetOfferHandler implements QueryHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
+        private readonly ManufacturerRepositoryInterface $manufacturers,
     ) {
     }
 
@@ -35,12 +37,24 @@ final class GetOfferHandler implements QueryHandlerInterface
 
         $customer = $offer->customerId !== null ? $this->customers->findById($offer->customerId) : null;
 
+        // Siehe GetInvoiceHandler für die identische Begründung des
+        // kleinen Herstellen-Caches (mehrfach vorkommende Artikel in
+        // einem Angebot lösen so nicht wiederholt dieselbe Abfrage aus).
+        $manufacturerCache = [];
+        $manufacturerFor = function (string $manufacturerId) use (&$manufacturerCache) {
+            if (!array_key_exists($manufacturerId, $manufacturerCache)) {
+                $manufacturerCache[$manufacturerId] = $this->manufacturers->findById($manufacturerId);
+            }
+
+            return $manufacturerCache[$manufacturerId];
+        };
+
         $rawItems = $this->offers->findItemsByOffer($offer->id);
         $items = array_values(array_filter(array_map(
-            function ($item) {
+            function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
 
-                return $article !== null ? new OfferItemWithArticle($item, $article) : null;
+                return $article !== null ? new OfferItemWithArticle($item, $article, $manufacturerFor($article->manufacturerId)) : null;
             },
             $rawItems
         )));
@@ -57,7 +71,7 @@ final class GetOfferHandler implements QueryHandlerInterface
 
         $rawSaleItems = $this->offers->findSaleItemsByOffer($offer->id);
         $saleItems = array_values(array_filter(array_map(
-            function ($item) {
+            function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
                 if ($article === null) {
                     return null;
@@ -65,7 +79,7 @@ final class GetOfferHandler implements QueryHandlerInterface
 
                 $inventoryNumber = $item->inventoryNumberId !== null ? $this->inventoryNumbers->findById($item->inventoryNumberId) : null;
 
-                return new OfferSaleItemWithArticle($item, $article, $inventoryNumber);
+                return new OfferSaleItemWithArticle($item, $article, $inventoryNumber, $manufacturerFor($article->manufacturerId));
             },
             $rawSaleItems
         )));

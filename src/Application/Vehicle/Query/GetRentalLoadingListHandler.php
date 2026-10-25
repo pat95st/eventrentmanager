@@ -11,6 +11,7 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Article\WeightConverter;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
+use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Rental\RentalIssuedItemRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Vehicle\RentalVehicleLoadRepositoryInterface;
@@ -29,6 +30,7 @@ final class GetRentalLoadingListHandler implements QueryHandlerInterface
         private readonly VehicleRepositoryInterface $vehicles,
         private readonly RentalVehicleLoadRepositoryInterface $vehicleLoads,
         private readonly RentalVehicleTowRepositoryInterface $vehicleTows,
+        private readonly ManufacturerRepositoryInterface $manufacturers,
     ) {
     }
 
@@ -45,6 +47,10 @@ final class GetRentalLoadingListHandler implements QueryHandlerInterface
         // in der Beladungsliste einem Fahrzeug zugeordnet werden (siehe
         // Projekt-Entscheidung "pro einzelner Inventarnummer") — rein
         // geplante Posten (RentalItem, Artikel+Menge) erscheinen hier nicht.
+        // Siehe GetInvoiceHandler für die identische Begründung des
+        // kleinen Hersteller-Caches.
+        $manufacturerCache = [];
+
         $rawIssuedItems = $this->issuedItems->findByRental($rental->id);
         $issuedItemsWithDetails = [];
         foreach ($rawIssuedItems as $issuedItem) {
@@ -53,7 +59,10 @@ final class GetRentalLoadingListHandler implements QueryHandlerInterface
             if ($article === null || $inventoryNumber === null) {
                 continue;
             }
-            $issuedItemsWithDetails[$issuedItem->id] = new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article);
+            if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
+                $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+            }
+            $issuedItemsWithDetails[$issuedItem->id] = new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerCache[$article->manufacturerId]);
         }
 
         $loads = $this->vehicleLoads->findByRental($rental->id);

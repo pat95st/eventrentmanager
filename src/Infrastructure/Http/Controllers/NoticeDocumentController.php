@@ -6,12 +6,14 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Article\Query\ListArticles;
 use App\Application\Command\CommandBus;
+use App\Application\Manufacturer\Query\ListManufacturers;
 use App\Application\NoticeDocument\Command\DeleteNoticeDocument;
 use App\Application\NoticeDocument\Command\UpdateNoticeDocumentAssignment;
 use App\Application\NoticeDocument\Command\UploadNoticeDocument;
 use App\Application\NoticeDocument\Query\GetNoticeDocumentDetail;
 use App\Application\NoticeDocument\Query\ListNoticeDocuments;
 use App\Application\Query\QueryBus;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Infrastructure\FileStorage\LocalFileStorage;
@@ -52,6 +54,7 @@ final class NoticeDocumentController
         echo View::page('notice-documents/form', [
             'detail' => null,
             'articles' => $articles,
+            'articleDisplayNames' => $this->articleDisplayNames($articles),
             'errors' => [],
         ], activeNav: 'notice_documents', title: t('notice_documents.new'));
     }
@@ -73,6 +76,7 @@ final class NoticeDocumentController
             echo View::page('notice-documents/form', [
                 'detail' => null,
                 'articles' => $articles,
+                'articleDisplayNames' => $this->articleDisplayNames($articles),
                 'errors' => $e->errors(),
             ], activeNav: 'notice_documents', title: t('notice_documents.new'));
         }
@@ -95,6 +99,7 @@ final class NoticeDocumentController
         echo View::page('notice-documents/form', [
             'detail' => $detail,
             'articles' => $articles,
+            'articleDisplayNames' => $this->articleDisplayNames($articles),
             'errors' => [],
         ], activeNav: 'notice_documents', title: t('notice_documents.edit'));
     }
@@ -117,11 +122,36 @@ final class NoticeDocumentController
             echo View::page('notice-documents/form', [
                 'detail' => $detail,
                 'articles' => $articles,
+                'articleDisplayNames' => $this->articleDisplayNames($articles),
                 'errors' => $e->errors(),
             ], activeNav: 'notice_documents', title: t('notice_documents.edit'));
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }
+    }
+
+    /**
+     * Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
+     * (Nutzerwunsch). Siehe OfferController::renderForm() für die
+     * identische Begründung, warum $articles selbst unverändert bleibt.
+     *
+     * @param \App\Domain\Article\Article[] $articles
+     *
+     * @return array<string, string>
+     */
+    private function articleDisplayNames(array $articles): array
+    {
+        $manufacturersById = [];
+        foreach ($this->queries->ask(new ListManufacturers()) as $manufacturer) {
+            $manufacturersById[$manufacturer->id] = $manufacturer;
+        }
+
+        $displayNames = [];
+        foreach ($articles as $article) {
+            $displayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+        }
+
+        return $displayNames;
     }
 
     public function destroy(Request $request): void

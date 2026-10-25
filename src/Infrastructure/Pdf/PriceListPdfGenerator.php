@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Pdf;
 
-use App\Domain\Article\Article;
+use App\Application\Article\Query\ArticleListItem;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 use App\Domain\Settings\PriceTier;
 use App\Domain\Settings\RentalPriceCalculator;
@@ -29,8 +30,8 @@ final class PriceListPdfGenerator
     private const NAME_COLUMN_WIDTH = 200.0;
 
     /**
-     * @param Article[]   $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert
-     * @param PriceTier[] $tiers
+     * @param ArticleListItem[] $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert, mit aufgelöstem Hersteller
+     * @param PriceTier[]       $tiers
      */
     public function generate(array $articles, array $tiers, ?PdfLayoutSettings $layout = null): string
     {
@@ -49,7 +50,7 @@ final class PriceListPdfGenerator
             $writer->text(self::MARGIN, $y - self::TABLE_LINE_HEIGHT, 'Keine abrechenbaren Artikel vorhanden.', 10);
         }
 
-        foreach ($articles as $article) {
+        foreach ($articles as $item) {
             if ($y - self::TABLE_LINE_HEIGHT < self::MARGIN + 20) {
                 $pageNumber++;
                 $writer->addPage();
@@ -57,7 +58,7 @@ final class PriceListPdfGenerator
                 $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns, $tiers);
             }
 
-            $this->drawRow($writer, $y, $article, $columns, $tiers);
+            $this->drawRow($writer, $y, $item, $columns, $tiers);
             $y -= self::TABLE_LINE_HEIGHT;
         }
 
@@ -138,22 +139,22 @@ final class PriceListPdfGenerator
      * @param array{name: array{x: float, width: float}, tiers: array<int, array{x: float, width: float}>} $columns
      * @param PriceTier[] $tiers
      */
-    private function drawRow(SimplePdfWriter $writer, float $y, Article $article, array $columns, array $tiers): void
+    private function drawRow(SimplePdfWriter $writer, float $y, ArticleListItem $item, array $columns, array $tiers): void
     {
         $baseline = $y - self::TABLE_LINE_HEIGHT + 3;
 
-        $name = $article->name;
+        $name = ArticleDisplayName::of($item->article, $item->manufacturer);
         $maxChars = (int) floor($columns['name']['width'] / (self::TABLE_FONT_SIZE * 0.52));
         if (mb_strlen($name) > $maxChars) {
             $name = mb_substr($name, 0, max(1, $maxChars - 1)) . '…';
         }
         $writer->text($columns['name']['x'] + 2, $baseline, $name, self::TABLE_FONT_SIZE);
 
-        if ($article->dailyRentalPrice === null) {
+        if ($item->article->dailyRentalPrice === null) {
             return;
         }
 
-        $prices = RentalPriceCalculator::calculate($article->dailyRentalPrice, $tiers);
+        $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers);
         foreach ($prices as $dayCount => $price) {
             $writer->text($columns['tiers'][$dayCount]['x'] + 2, $baseline, number_format((float) $price, 2, ',', '.') . ' €', self::TABLE_FONT_SIZE);
         }

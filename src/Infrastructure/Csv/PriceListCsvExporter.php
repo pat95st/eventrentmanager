@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Csv;
 
-use App\Domain\Article\Article;
+use App\Application\Article\Query\ArticleListItem;
+use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Settings\PriceTier;
 use App\Domain\Settings\RentalPriceCalculator;
 
@@ -19,8 +20,8 @@ use App\Domain\Settings\RentalPriceCalculator;
 final class PriceListCsvExporter
 {
     /**
-     * @param Article[]   $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert
-     * @param PriceTier[] $tiers
+     * @param ArticleListItem[] $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert, mit aufgelöstem Hersteller
+     * @param PriceTier[]       $tiers
      */
     public function generate(array $articles, array $tiers): string
     {
@@ -38,15 +39,15 @@ final class PriceListCsvExporter
         }
         fputcsv($handle, $header, ';');
 
-        foreach ($articles as $article) {
-            $row = [$article->name];
+        foreach ($articles as $item) {
+            $row = [ArticleDisplayName::of($item->article, $item->manufacturer)];
 
-            if ($article->dailyRentalPrice === null) {
+            if ($item->article->dailyRentalPrice === null) {
                 foreach ($tiers as $tier) {
                     $row[] = '';
                 }
             } else {
-                $prices = RentalPriceCalculator::calculate($article->dailyRentalPrice, $tiers);
+                $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers);
                 foreach ($tiers as $tier) {
                     $price = $prices[$tier->dayCount] ?? null;
                     $row[] = $price !== null ? str_replace('.', ',', $price) : '';

@@ -196,7 +196,7 @@ foreach ($detail->issuedItems as $issued) {
             <?php $hasPreIssueChecks = $entry->preIssueChecks !== []; ?>
             <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e($entry->article->name) ?></h2>
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e($entry->displayName()) ?></h2>
                     <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $complete ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700' : 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' ?>">
                         <?= e(t('rentals.checklist.issued_of', ['issued' => (string) count($issued), 'planned' => (string) $entry->item->quantity])) ?>
                     </span>
@@ -217,7 +217,7 @@ foreach ($detail->issuedItems as $issued) {
                         <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/zubehoer-pruefung" class="p-4">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_item_id" value="<?= e($entry->item->id) ?>">
-                            <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.checklist.accessories_modal_title', ['article' => $entry->article->name])) ?></h3>
+                            <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.checklist.accessories_modal_title', ['article' => $entry->displayName()])) ?></h3>
                             <ul class="mb-4 space-y-1 text-sm text-slate-700 dark:text-slate-300">
                                 <?php foreach ($entry->accessories as $accessory): ?>
                                     <li><span class="font-mono text-slate-500 dark:text-slate-400"><?= $accessory->quantity ?>×</span> <?= e($accessory->description) ?></li>
@@ -255,7 +255,7 @@ foreach ($detail->issuedItems as $issued) {
                         <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/vor-ausgabe-pruefung" class="p-4">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_item_id" value="<?= e($entry->item->id) ?>">
-                            <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.checklist.pre_issue_checks_modal_title', ['article' => $entry->article->name])) ?></h3>
+                            <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.checklist.pre_issue_checks_modal_title', ['article' => $entry->displayName()])) ?></h3>
                             <ul class="mb-4 space-y-1 text-sm text-slate-700 dark:text-slate-300">
                                 <?php foreach ($entry->preIssueChecks as $preIssueCheck): ?>
                                     <li><?= e($preIssueCheck->description) ?></li>

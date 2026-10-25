@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Application\Rental\Query\RentalDetail $detail */
 /** @var \App\Domain\Article\Article[] $articles */
+/** @var array<string, string> $articleDisplayNames Artikel-ID => "Hersteller Artikelbezeichnung" */
 /** @var \App\Domain\Venue\Venue|null $venue */
 /** @var \App\Domain\Warehouse\Warehouse[] $warehouses */
 /** @var string $companyAddress */
@@ -311,7 +312,7 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
             <?php foreach ($detail->items as $entry): ?>
                 <div class="flex flex-wrap items-center justify-between gap-2 py-3">
                     <div>
-                        <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($entry->article->name) ?></p>
+                        <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($entry->displayName()) ?></p>
                         <p class="text-xs text-slate-400 dark:text-slate-500">
                             <?= e(t('rentals.show.planned_label')) ?>: <?= $entry->item->quantity ?> · <?= e(t('rentals.show.issued_label')) ?>: <?= $entry->issuedCount ?>
                         </p>
@@ -342,7 +343,7 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
             <select name="article_id" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 <option value=""><?= e(t('rentals.show.article_placeholder')) ?></option>
                 <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($article->name) ?></option>
+                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

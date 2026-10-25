@@ -105,7 +105,7 @@ $autoVehicles = array_values(array_filter($loadingList->allVehicles, static fn (
                         <div class="flex flex-wrap items-center justify-between gap-2 py-2">
                             <div>
                                 <p class="text-sm text-slate-700 dark:text-slate-300">
-                                    <?= e($entry->issuedItem->article->name) ?>
+                                    <?= e($entry->issuedItem->displayName()) ?>
                                     <span class="text-xs text-slate-400 dark:text-slate-500">(<?= e($entry->issuedItem->inventoryNumber->number) ?>)</span>
                                 </p>
                             </div>
@@ -136,7 +136,7 @@ $autoVehicles = array_values(array_filter($loadingList->allVehicles, static fn (
                 <div class="flex flex-wrap items-center justify-between gap-2 py-2">
                     <div>
                         <p class="text-sm text-slate-700 dark:text-slate-300">
-                            <?= e($entry->issuedItem->article->name) ?>
+                            <?= e($entry->issuedItem->displayName()) ?>
                             <span class="text-xs text-slate-400 dark:text-slate-500">(<?= e($entry->issuedItem->inventoryNumber->number) ?>)</span>
                         </p>
                         <p class="text-xs text-slate-400 dark:text-slate-500">Gewicht: <?= $fmtKg($entry->weightKg) ?></p>

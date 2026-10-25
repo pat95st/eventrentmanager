@@ -44,7 +44,7 @@ use function App\Infrastructure\Http\t;
                     <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/rechnungen/<?= e($sale->invoiceId) ?>'">
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($sale->soldAt->format('d.m.Y')) ?></td>
                         <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                            <?= $entry->article !== null ? e($entry->article->name) : '–' ?>
+                            <?= e($entry->displayName()) ?>
                             <?php if ($sale->quantity > 1): ?>
                                 <span class="text-xs text-slate-400 dark:text-slate-500">(<?= $sale->quantity ?>×)</span>
                             <?php endif; ?>

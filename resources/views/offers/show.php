@@ -159,7 +159,7 @@ $rows = $detail->orderedRows();
                         <?php $entry = $row->data; ?>
                         <tr>
                             <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
-                                <?= e($entry->article->name) ?>
+                                <?= e($entry->displayName()) ?>
                                 <?php if ($entry->item->lineNote !== null && trim($entry->item->lineNote) !== ''): ?>
                                     <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->item->lineNote) ?></span>
                                 <?php endif; ?>
@@ -207,7 +207,7 @@ $rows = $detail->orderedRows();
                 <?php foreach ($detail->saleItems as $saleEntry): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3">
-                            <?= e($saleEntry->article->name) ?>
+                            <?= e($saleEntry->displayName()) ?>
                             <span class="text-xs text-slate-400 dark:text-slate-500">
                                 (<?= $saleEntry->item->inventoryNumberId !== null
                                     ? e(t('offers.show.sale_item_source_pool', ['number' => $saleEntry->inventoryNumber?->number ?? '?']))

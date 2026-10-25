@@ -86,7 +86,7 @@ $status = $receipt->status;
                 <div class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                     <a href="/inventurnummern/<?= e($entry->inventoryNumber->id) ?>" class="font-mono text-brand-700 hover:underline dark:text-brand-400"><?= e($entry->inventoryNumber->number) ?></a>
                     <?php if ($entry->article !== null): ?>
-                        <a href="/artikel/<?= e($entry->article->id) ?>" class="text-slate-600 hover:underline dark:text-slate-400"><?= e($entry->article->name) ?></a>
+                        <a href="/artikel/<?= e($entry->article->id) ?>" class="text-slate-600 hover:underline dark:text-slate-400"><?= e($entry->displayName()) ?></a>
                     <?php else: ?>
                         <span class="text-slate-400 dark:text-slate-500"><?= e(t('receipts.show.linked_inventory_number_article_deleted')) ?></span>
                     <?php endif; ?>

@@ -5,6 +5,7 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 
+use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
 
 $inv = $context->inventoryNumber;
@@ -18,10 +19,9 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
 ?>
 
 <div class="mb-6">
-    <a href="/artikel/<?= e($context->article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e($context->article->name) ?></a>
+    <a href="/artikel/<?= e($context->article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e(ArticleDisplayName::of($context->article, $context->manufacturer)) ?></a>
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">Elektroprüfungen (DGUV V3)</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
-        <?= e($context->manufacturer->name) ?> · <?= e($context->article->name) ?> ·
         Inventurnummer <span class="font-mono"><?= e($inv->number) ?></span>
     </p>
     <?php if (!$context->article->requiresElectricalInspection): ?>

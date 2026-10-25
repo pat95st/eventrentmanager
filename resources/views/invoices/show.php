@@ -220,7 +220,7 @@ $rows = $detail->orderedRows();
                         <?php $entry = $row->data; ?>
                         <tr>
                             <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
-                                <?= e($entry->article->name) ?>
+                                <?= e($entry->displayName()) ?>
                                 <?php if ($entry->item->lineNote !== null && trim($entry->item->lineNote) !== ''): ?>
                                     <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->item->lineNote) ?></span>
                                 <?php endif; ?>

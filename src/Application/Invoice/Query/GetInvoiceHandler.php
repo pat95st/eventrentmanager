@@ -11,6 +11,7 @@ use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 
 final class GetInvoiceHandler implements QueryHandlerInterface
 {
@@ -19,6 +20,7 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         private readonly CustomerRepositoryInterface $customers,
         private readonly ArticleRepositoryInterface $articles,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
+        private readonly ManufacturerRepositoryInterface $manufacturers,
     ) {
     }
 
@@ -33,12 +35,26 @@ final class GetInvoiceHandler implements QueryHandlerInterface
 
         $customer = $invoice->customerId !== null ? $this->customers->findById($invoice->customerId) : null;
 
+        // Hersteller je Artikel wird über einen kleinen Cache (statt pro
+        // Position neu) aufgelöst, damit mehrfach vorkommende Artikel in
+        // einer Rechnung nicht wiederholt dieselbe Abfrage auslösen (siehe
+        // ListArticlesForDisplayHandler für dasselbe, dort bereits
+        // etablierte Muster).
+        $manufacturerCache = [];
+        $manufacturerFor = function (string $manufacturerId) use (&$manufacturerCache) {
+            if (!array_key_exists($manufacturerId, $manufacturerCache)) {
+                $manufacturerCache[$manufacturerId] = $this->manufacturers->findById($manufacturerId);
+            }
+
+            return $manufacturerCache[$manufacturerId];
+        };
+
         $rawItems = $this->invoices->findItemsByInvoice($invoice->id);
         $items = array_values(array_filter(array_map(
-            function ($item) {
+            function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
 
-                return $article !== null ? new InvoiceItemWithArticle($item, $article) : null;
+                return $article !== null ? new InvoiceItemWithArticle($item, $article, $manufacturerFor($article->manufacturerId)) : null;
             },
             $rawItems
         )));

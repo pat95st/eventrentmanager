@@ -18,6 +18,7 @@
 /** @var \App\Domain\Customer\Customer[] $saleCustomers */
 /** @var array<string, string> $saleStockErrors */
 
+use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
@@ -69,10 +70,9 @@ $availabilityStatusMeta = [
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
     <div>
         <a href="/artikel" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.show.back')) ?></a>
-        <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($article->name) ?></h1>
+        <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($article, $detail->manufacturer)) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            <?= e($detail->manufacturer->name) ?>
-            <?php if ($detail->category !== null): ?> · <?= e($detail->category->name) ?><?php endif; ?>
+            <?php if ($detail->category !== null): ?><?= e($detail->category->name) ?><?php endif; ?>
             <?php if ($detail->manufacturer->prefix !== null && $article->prefix !== null): ?>
                 · <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->manufacturer->prefix) ?>-<?= e($article->prefix) ?>-…</span>
             <?php endif; ?>

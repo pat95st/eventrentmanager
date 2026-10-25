@@ -77,10 +77,18 @@ final class CreateOfferHandler implements CommandHandlerInterface
             throw new ValidationException($errors);
         }
 
+        // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
+        // für die identische Begründung (dort bereits für den Kombirabatt
+        // erzwungen) — die Zubehörpauschale ist kein Teil des Traits
+        // (accessoryFlatRateEnabled kommt direkt vom Command), daher hier
+        // zusätzlich anhand derselben Bedingung erzwungen.
+        $onlyLaborItems = $data['items'] === [] && $data['freeTextItems'] === [] && $data['laborItems'] !== [];
+        $accessoryFlatRateEnabled = $onlyLaborItems ? false : $command->accessoryFlatRateEnabled;
+
         // Zubehörpauschale wird beim Anlegen — sofern aktiv — vom aktuellen
         // Stand der PricingSettings auf das Angebot SELBST gesnapshotet
         // (Snapshot-Prinzip, siehe Offer-/Invoice-Klassen-Doc).
-        $accessoryFlatRatePercent = $command->accessoryFlatRateEnabled
+        $accessoryFlatRatePercent = $accessoryFlatRateEnabled
             ? $this->pricingSettings->get()->accessoryFlatRatePercent
             : null;
 
@@ -112,7 +120,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
                 convertedRentalId: null,
                 createdAt: $now,
                 updatedAt: $now,
-                accessoryFlatRateEnabled: $command->accessoryFlatRateEnabled,
+                accessoryFlatRateEnabled: $accessoryFlatRateEnabled,
                 accessoryFlatRatePercent: $accessoryFlatRatePercent,
                 discountType: $data['discountType'],
                 discountValue: $data['discountValue'],

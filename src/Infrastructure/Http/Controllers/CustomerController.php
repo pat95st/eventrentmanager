@@ -14,6 +14,7 @@ use App\Application\Messaging\Command\SendAdHocMessageToCustomer;
 use App\Application\Messaging\Query\GetMessagingSettings;
 use App\Application\Query\QueryBus;
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerType;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Messaging\MessagingChannel;
@@ -86,10 +87,33 @@ final class CustomerController
         );
 
         try {
-            $this->commands->dispatch($command);
+            $id = $this->commands->dispatch($command);
+
+            // AJAX-Fall: das "+ Neuer Kunde"-Modal auf den Rechnungs-/
+            // Angebots-/Auftragsbestätigungs-Formularen legt den Kunden per
+            // fetch() an, statt die Seite zu verlassen (siehe
+            // invoices/form.php & Geschwister-Views) — dafür wird hier
+            // JSON mit der neu angelegten ID + dem Anzeigenamen
+            // zurückgegeben, anstatt wie beim klassischen Formular-Post auf
+            // /kunden umzuleiten.
+            if (Pagination::isAjax($request)) {
+                Response::json([
+                    'id' => $id,
+                    'displayName' => $this->displayNameFromCommand($command),
+                ], 201);
+
+                return;
+            }
+
             Flash::success(t('customers.flash.created'));
             Response::redirect('/kunden');
         } catch (ValidationException $e) {
+            if (Pagination::isAjax($request)) {
+                Response::json(['errors' => $e->errors()], 422);
+
+                return;
+            }
+
             $this->renderForm(null, $e->errors(), $this->oldFromCommand($command));
         }
     }
@@ -221,5 +245,21 @@ final class CustomerController
     private function nullIfEmpty(?string $value): ?string
     {
         return $value === null || $value === '' ? null : $value;
+    }
+
+    /**
+     * Spiegelt Customer::displayName() wider, aber auf Basis der (noch nicht
+     * in eine Customer-Entität validierten) Command-Rohdaten — für die
+     * JSON-Antwort des AJAX-Kundenanlage-Modals braucht es keinen erneuten
+     * GetCustomer-Roundtrip, da alle benötigten Felder bereits im Command
+     * vorliegen.
+     */
+    private function displayNameFromCommand(CreateCustomer $command): string
+    {
+        if ($command->type === CustomerType::Geschaeftlich->value && $command->companyName !== null && trim($command->companyName) !== '') {
+            return $command->companyName;
+        }
+
+        return trim($command->firstName . ' ' . $command->lastName);
     }
 }

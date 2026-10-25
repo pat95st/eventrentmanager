@@ -89,14 +89,19 @@ foreach ($laborArticles as $laborArticle) {
 
     <div>
         <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.customer')) ?></label>
-        <select id="customer_id" name="customer_id"
-                class="mt-1 w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value=""><?= e(t('offers.form.customer_placeholder')) ?></option>
-            <?php $selectedCustomer = $val('customer_id', $offer?->customerId); ?>
-            <?php foreach ($customers as $customer): ?>
-                <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <div class="mt-1 flex gap-2">
+            <select id="customer_id" name="customer_id"
+                    class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e(t('offers.form.customer_placeholder')) ?></option>
+                <?php $selectedCustomer = $val('customer_id', $offer?->customerId); ?>
+                <?php foreach ($customers as $customer): ?>
+                    <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('customers.quick_create.title')) ?>
+            </button>
+        </div>
         <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.customer_hint')) ?></p>
     </div>
@@ -153,65 +158,32 @@ foreach ($laborArticles as $laborArticle) {
         $discountType = $val('discount_type', $offer?->discountType);
         $discountValue = $val('discount_value', $offer?->discountValue);
     ?>
+
+    <?php
+        // Positionen/Freitext-Posten/Zwischentexte: siehe invoices/form.php
+        // für die identische Begründung (ein gemeinsamer, sortierbarer
+        // Bereich statt dreier getrennter Blöcke — orderedRows()-Konzept).
+    ?>
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="flex items-start gap-2">
-            <input type="checkbox" id="accessory_flat_rate_enabled" name="accessory_flat_rate_enabled" value="1" <?= $accessoryChecked ? 'checked' : '' ?>
-                   class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
-            <div>
-                <label for="accessory_flat_rate_enabled" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    <?= e(t('offers.form.accessory_flat_rate', ['percent' => e($pricingSettings->accessoryFlatRatePercent)])) ?>
-                </label>
-                <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.accessory_flat_rate_hint')) ?></p>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.items_title')) ?></h2>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" id="offer-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('offers.form.items_add')) ?>
+                </button>
+                <button type="button" id="offer-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('offers.form.free_text_items_add')) ?>
+                </button>
+                <button type="button" id="offer-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('offers.form.section_texts_add')) ?>
+                </button>
             </div>
         </div>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.discount_title')) ?></h2>
-        <div class="flex flex-wrap items-center gap-4">
-            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
-                <input type="radio" name="discount_type" value="" data-discount-option <?= $discountType === '' || $discountType === null ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
-                <?= e(t('offers.form.discount_none')) ?>
-            </label>
-            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
-                <input type="radio" name="discount_type" value="percent" data-discount-option <?= $discountType === 'percent' ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
-                <?= e(t('offers.form.discount_percent')) ?>
-            </label>
-            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
-                <input type="radio" name="discount_type" value="fixed" data-discount-option <?= $discountType === 'fixed' ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
-                <?= e(t('offers.form.discount_fixed')) ?>
-            </label>
-        </div>
-        <div id="discount-value-wrapper" class="mt-2 <?= $discountType === '' || $discountType === null ? 'hidden' : '' ?>">
-            <label for="discount_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.discount_value')) ?></label>
-            <input type="text" id="discount_value" name="discount_value" inputmode="decimal"
-                   value="<?= e((string) ($discountValue ?? '')) ?>"
-                   class="mt-1 w-full max-w-[10rem] rounded-md border <?= isset($errors['discountValue']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <?php if (isset($errors['discountValue'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['discountValue']) ?></p><?php endif; ?>
-        </div>
-        <script>
-            (function () {
-                var wrapper = document.getElementById('discount-value-wrapper');
-                var options = document.querySelectorAll('[data-discount-option]');
-                options.forEach(function (option) {
-                    option.addEventListener('change', function () {
-                        wrapper.classList.toggle('hidden', option.value === '' && option.checked);
-                    });
-                });
-            })();
-        </script>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.items_title')) ?></h2>
-            <button type="button" id="offer-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('offers.form.items_add')) ?>
-            </button>
-        </div>
         <?php if (isset($errors['items'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['items']) ?></p><?php endif; ?>
-        <div id="offer-items" class="space-y-2"></div>
+        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
+        <div id="offer-rows" class="space-y-2"></div>
         <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.items_hint')) ?></p>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.rows_drag_hint')) ?></p>
     </div>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -243,26 +215,54 @@ foreach ($laborArticles as $laborArticle) {
     </div>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.free_text_items_title')) ?></h2>
-            <button type="button" id="offer-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('offers.form.free_text_items_add')) ?>
-            </button>
+        <div class="flex items-start gap-2">
+            <input type="checkbox" id="accessory_flat_rate_enabled" name="accessory_flat_rate_enabled" value="1" <?= $accessoryChecked ? 'checked' : '' ?>
+                   class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+            <div>
+                <label for="accessory_flat_rate_enabled" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <?= e(t('offers.form.accessory_flat_rate', ['percent' => e($pricingSettings->accessoryFlatRatePercent)])) ?>
+                </label>
+                <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.accessory_flat_rate_hint')) ?></p>
+                <p id="offer-accessory-labor-only-hint" class="mt-1 hidden text-xs text-amber-600 dark:text-amber-400"><?= e(t('offers.form.labor_only_hint')) ?></p>
+            </div>
         </div>
-        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
-        <div id="offer-free-text-items" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.free_text_items_hint')) ?></p>
     </div>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.section_texts_title')) ?></h2>
-            <button type="button" id="offer-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('offers.form.section_texts_add')) ?>
-            </button>
+        <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.discount_title')) ?></h2>
+        <div class="flex flex-wrap items-center gap-4">
+            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+                <input type="radio" name="discount_type" value="" data-discount-option <?= $discountType === '' || $discountType === null ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+                <?= e(t('offers.form.discount_none')) ?>
+            </label>
+            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+                <input type="radio" name="discount_type" value="percent" data-discount-option <?= $discountType === 'percent' ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+                <?= e(t('offers.form.discount_percent')) ?>
+            </label>
+            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+                <input type="radio" name="discount_type" value="fixed" data-discount-option <?= $discountType === 'fixed' ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+                <?= e(t('offers.form.discount_fixed')) ?>
+            </label>
         </div>
-        <div id="offer-section-texts" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.section_texts_hint')) ?></p>
+        <div id="discount-value-wrapper" class="mt-2 <?= $discountType === '' || $discountType === null ? 'hidden' : '' ?>">
+            <label for="discount_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.discount_value')) ?></label>
+            <input type="text" id="discount_value" name="discount_value" inputmode="decimal"
+                   value="<?= e((string) ($discountValue ?? '')) ?>"
+                   class="mt-1 w-full max-w-[10rem] rounded-md border <?= isset($errors['discountValue']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['discountValue'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['discountValue']) ?></p><?php endif; ?>
+        </div>
+        <p id="offer-discount-labor-only-hint" class="mt-1 hidden text-xs text-amber-600 dark:text-amber-400"><?= e(t('offers.form.labor_only_hint')) ?></p>
+        <script>
+            (function () {
+                var wrapper = document.getElementById('discount-value-wrapper');
+                var options = document.querySelectorAll('[data-discount-option]');
+                options.forEach(function (option) {
+                    option.addEventListener('change', function () {
+                        wrapper.classList.toggle('hidden', option.value === '' && option.checked);
+                    });
+                });
+            })();
+        </script>
     </div>
 
     <?php
@@ -317,6 +317,8 @@ foreach ($laborArticles as $laborArticle) {
     </div>
 </form>
 
+<?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
+
 <?php
     // Artikel-Auswahl-Modal: durchsuchbare Alternative zum <select> je
     // Positionszeile, damit man sich bei vielen Artikeln leichter das
@@ -342,7 +344,8 @@ foreach ($laborArticles as $laborArticle) {
 </div>
 
 <template id="offer-item-row-template">
-    <div class="offer-item-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="offer-item-row offer-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="offer-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('offers.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_article')) ?></label>
             <div class="mt-1 flex gap-1">
@@ -369,7 +372,7 @@ foreach ($laborArticles as $laborArticle) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_note')) ?></label>
             <input type="text" name="line_note[]" class="offer-item-note mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="sort_order[]" class="offer-item-sort" value="0">
+        <input type="hidden" name="sort_order[]" class="offer-item-sort" data-row-sort value="0">
         <button type="button" class="offer-item-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('offers.form.item_remove')) ?>
         </button>
@@ -456,7 +459,8 @@ foreach ($laborArticles as $laborArticle) {
 </template>
 
 <template id="offer-free-text-row-template">
-    <div class="offer-free-text-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="offer-free-text-row offer-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="offer-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('offers.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.free_text_description')) ?></label>
             <input type="text" name="free_text_description[]" class="offer-free-text-description mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -469,7 +473,7 @@ foreach ($laborArticles as $laborArticle) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_price')) ?></label>
             <input type="text" name="free_text_unit_price[]" inputmode="decimal" value="0" class="offer-free-text-price mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="free_text_sort_order[]" class="offer-free-text-sort" value="1000">
+        <input type="hidden" name="free_text_sort_order[]" class="offer-free-text-sort" data-row-sort value="1000">
         <button type="button" class="offer-free-text-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('offers.form.item_remove')) ?>
         </button>
@@ -477,12 +481,13 @@ foreach ($laborArticles as $laborArticle) {
 </template>
 
 <template id="offer-section-row-template">
-    <div class="offer-section-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="offer-section-row offer-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="offer-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('offers.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.section_heading')) ?></label>
             <input type="text" name="section_heading[]" class="offer-section-heading mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="section_sort_order[]" class="offer-section-sort" value="2000">
+        <input type="hidden" name="section_sort_order[]" class="offer-section-sort" data-row-sort value="2000">
         <button type="button" class="offer-section-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('offers.form.item_remove')) ?>
         </button>
@@ -495,7 +500,12 @@ foreach ($laborArticles as $laborArticle) {
     var TIER_MULTIPLIERS = <?= json_encode($tierMultipliers, JSON_THROW_ON_ERROR) ?>;
     var EXISTING_ITEMS = <?= json_encode(array_values($items), JSON_THROW_ON_ERROR) ?>;
 
-    var container = document.getElementById('offer-items');
+    // Früh deklariert — siehe invoices/form.php für die identische
+    // Begründung (Submit-Handler für die sort_order-Festschreibung weiter
+    // unten braucht bereits beim ersten Durchlauf einen gültigen Wert).
+    var offerForm = document.getElementById('offer-form');
+
+    var container = document.getElementById('offer-rows');
     var template = document.getElementById('offer-item-row-template');
     var addButton = document.getElementById('offer-item-add');
     var startInput = document.getElementById('start_date');
@@ -554,13 +564,15 @@ foreach ($laborArticles as $laborArticle) {
             if (suggested !== null) { priceInput.value = suggested; }
         });
 
-        removeButton.addEventListener('click', function () { row.remove(); });
+        removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
         if (pickButton) {
             pickButton.addEventListener('click', function () { openArticlePicker(articleSelect); });
         }
 
+        enableRowDrag(row);
         container.appendChild(row);
+        updateOnlyLaborState();
         return articleSelect;
     }
 
@@ -584,12 +596,6 @@ foreach ($laborArticles as $laborArticle) {
     addButton.addEventListener('click', function () { openArticlePicker(addRow()); });
     startInput.addEventListener('change', refreshAllSuggestions);
     endInput.addEventListener('change', refreshAllSuggestions);
-
-    if (EXISTING_ITEMS.length > 0) {
-        EXISTING_ITEMS.forEach(function (item) { addRow(item); });
-    } else {
-        addRow();
-    }
 
     // --- Artikel-Auswahl-Modal ---------------------------------------------
     // Durchsuchbare Alternative zum <select> je Zeile (siehe Kommentar beim
@@ -713,9 +719,10 @@ foreach ($laborArticles as $laborArticle) {
             function refreshTotal() { totalInput.value = computeLaborTotal(articleSelect.value, hoursInput.value); }
             articleSelect.addEventListener('change', refreshTotal);
             hoursInput.addEventListener('input', refreshTotal);
-            removeButton.addEventListener('click', function () { row.remove(); });
+            removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
             laborContainer.appendChild(row);
+            updateOnlyLaborState();
         };
 
         if (laborAddButton) {
@@ -826,10 +833,16 @@ foreach ($laborArticles as $laborArticle) {
     var EXISTING_FREE_TEXT_ITEMS = <?= json_encode(array_values($freeTextItems), JSON_THROW_ON_ERROR) ?>;
     var EXISTING_SECTION_TEXTS = <?= json_encode(array_values($sectionTexts), JSON_THROW_ON_ERROR) ?>;
 
-    var freeTextContainer = document.getElementById('offer-free-text-items');
+    // freeTextContainer/sectionContainer sind bewusst DASSELBE Element wie
+    // "container" (= #offer-rows) — siehe invoices/form.php für die
+    // identische Begründung (gemeinsamer, per Drag-and-Drop sortierbarer
+    // Bereich für Positionen/Freitext-Posten/Zwischentexte).
+    var freeTextContainer = container;
+    var sectionContainer = container;
     var freeTextTemplate = document.getElementById('offer-free-text-row-template');
     var freeTextAddButton = document.getElementById('offer-free-text-add');
-    var nextFreeTextSort = 1000;
+    var sectionTemplate = document.getElementById('offer-section-row-template');
+    var sectionAddButton = document.getElementById('offer-section-add');
 
     function addFreeTextRow(data) {
         var fragment = freeTextTemplate.content.cloneNode(true);
@@ -838,35 +851,88 @@ foreach ($laborArticles as $laborArticle) {
         if (data.description) { row.querySelector('.offer-free-text-description').value = data.description; }
         if (data.quantity) { row.querySelector('.offer-free-text-quantity').value = data.quantity; }
         if (data.unit_price !== undefined) { row.querySelector('.offer-free-text-price').value = data.unit_price; }
-        row.querySelector('.offer-free-text-sort').value = data.sort_order !== undefined ? data.sort_order : nextFreeTextSort++;
-        row.querySelector('.offer-free-text-remove').addEventListener('click', function () { row.remove(); });
+        row.querySelector('.offer-free-text-sort').value = 0;
+        row.querySelector('.offer-free-text-remove').addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
+        enableRowDrag(row);
         freeTextContainer.appendChild(row);
+        updateOnlyLaborState();
     }
 
     if (freeTextAddButton) {
         freeTextAddButton.addEventListener('click', function () { addFreeTextRow(); });
     }
-    EXISTING_FREE_TEXT_ITEMS.forEach(function (item) { addFreeTextRow(item); });
-
-    var sectionContainer = document.getElementById('offer-section-texts');
-    var sectionTemplate = document.getElementById('offer-section-row-template');
-    var sectionAddButton = document.getElementById('offer-section-add');
-    var nextSectionSort = 2000;
 
     function addSectionRow(data) {
         var fragment = sectionTemplate.content.cloneNode(true);
         var row = fragment.querySelector('.offer-section-row');
         data = data || {};
         if (data.heading) { row.querySelector('.offer-section-heading').value = data.heading; }
-        row.querySelector('.offer-section-sort').value = data.sort_order !== undefined ? data.sort_order : nextSectionSort++;
+        row.querySelector('.offer-section-sort').value = 0;
         row.querySelector('.offer-section-remove').addEventListener('click', function () { row.remove(); });
+        enableRowDrag(row);
         sectionContainer.appendChild(row);
     }
 
     if (sectionAddButton) {
         sectionAddButton.addEventListener('click', function () { addSectionRow(); });
     }
-    EXISTING_SECTION_TEXTS.forEach(function (item) { addSectionRow(item); });
+
+    // --- Drag-and-Drop-Umsortierung -----------------------------------------
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    var draggingRow = null;
+
+    function enableRowDrag(row) {
+        var handle = row.querySelector('.offer-row-handle');
+        if (!handle) { return; }
+        handle.addEventListener('mousedown', function () { row.draggable = true; });
+        row.addEventListener('dragend', function () { row.draggable = false; draggingRow = null; });
+    }
+
+    container.addEventListener('dragstart', function (e) {
+        var row = e.target.closest('.offer-row');
+        if (!row) { return; }
+        draggingRow = row;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    container.addEventListener('dragover', function (e) {
+        if (!draggingRow) { return; }
+        e.preventDefault();
+        var row = e.target.closest('.offer-row');
+        if (!row || row === draggingRow) { return; }
+        var rect = row.getBoundingClientRect();
+        var placeBefore = (e.clientY - rect.top) < rect.height / 2;
+        container.insertBefore(draggingRow, placeBefore ? row : row.nextSibling);
+    });
+
+    // --- Reihenfolge beim Absenden festschreiben ----------------------------
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    if (offerForm) {
+        offerForm.addEventListener('submit', function () {
+            var order = 0;
+            container.querySelectorAll('[data-row-sort]').forEach(function (input) {
+                input.value = order++;
+            });
+        });
+    }
+
+    // --- Vorhandene Zeilen in der tatsächlichen Dokumentreihenfolge rendern -
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    var mergedRows = []
+        .concat(EXISTING_ITEMS.map(function (item) { return { type: 'item', sort: Number(item.sort_order || 0), data: item }; }))
+        .concat(EXISTING_FREE_TEXT_ITEMS.map(function (item) { return { type: 'free_text', sort: Number(item.sort_order || 0), data: item }; }))
+        .concat(EXISTING_SECTION_TEXTS.map(function (item) { return { type: 'section', sort: Number(item.sort_order || 0), data: item }; }))
+        .sort(function (a, b) { return a.sort - b.sort; });
+
+    if (mergedRows.length > 0) {
+        mergedRows.forEach(function (row) {
+            if (row.type === 'item') { addRow(row.data); }
+            else if (row.type === 'free_text') { addFreeTextRow(row.data); }
+            else { addSectionRow(row.data); }
+        });
+    } else {
+        addRow();
+    }
 
     // --- Live-Gesamtsumme -------------------------------------------------
     // Rein clientseitige Vorschau (siehe Aufgabenstellung: die Summe soll
@@ -936,7 +1002,42 @@ foreach ($laborArticles as $laborArticle) {
         rowEl.classList.toggle('flex', visible);
     }
 
+    // --- "Nur Arbeitszeit"-Regel --------------------------------------------
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    // Verkaufspositionen (saleContainer) bleiben hier bewusst unberücksichtigt
+    // — siehe ValidatesOfferInput::validateOfferInput() für die serverseitige
+    // Entsprechung.
+    function updateOnlyLaborState() {
+        var hasRentalOrFreeText = container.querySelectorAll('.offer-item-row, .offer-free-text-row').length > 0;
+        var hasLabor = typeof laborContainer !== 'undefined' && laborContainer
+            ? laborContainer.querySelectorAll('.offer-labor-item-row').length > 0
+            : false;
+        var onlyLabor = !hasRentalOrFreeText && hasLabor;
+
+        if (accessoryCheckbox) {
+            accessoryCheckbox.disabled = onlyLabor;
+            if (onlyLabor) { accessoryCheckbox.checked = false; }
+        }
+
+        document.querySelectorAll('[data-discount-option]').forEach(function (option) {
+            option.disabled = onlyLabor;
+            if (onlyLabor) { option.checked = option.value === ''; }
+        });
+
+        if (onlyLabor) {
+            var wrapper = document.getElementById('discount-value-wrapper');
+            if (wrapper) { wrapper.classList.add('hidden'); }
+        }
+
+        var accessoryHint = document.getElementById('offer-accessory-labor-only-hint');
+        var discountHint = document.getElementById('offer-discount-labor-only-hint');
+        if (accessoryHint) { accessoryHint.classList.toggle('hidden', !onlyLabor); }
+        if (discountHint) { discountHint.classList.toggle('hidden', !onlyLabor); }
+    }
+
     function updateTotals() {
+        updateOnlyLaborState();
+
         if (!totalRentalEl || !offerForm) { return; }
 
         var rentalTotal = 0;

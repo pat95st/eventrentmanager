@@ -69,10 +69,18 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             throw new ValidationException($errors);
         }
 
+        // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
+        // für die identische Begründung (dort bereits für den Kombirabatt
+        // erzwungen) — die Zubehörpauschale ist kein Teil des Traits
+        // (accessoryFlatRateEnabled kommt direkt vom Command), daher hier
+        // zusätzlich anhand derselben Bedingung erzwungen.
+        $onlyLaborItems = $data['items'] === [] && $data['freeTextItems'] === [] && $data['laborItems'] !== [];
+        $accessoryFlatRateEnabled = $onlyLaborItems ? false : $command->accessoryFlatRateEnabled;
+
         // Zubehörpauschale wird beim Anlegen — sofern aktiv — vom aktuellen
         // Stand der PricingSettings auf die Rechnung SELBST gesnapshotet
         // (Snapshot-Prinzip, siehe Invoice-Klassen-Doc).
-        $accessoryFlatRatePercent = $command->accessoryFlatRateEnabled
+        $accessoryFlatRatePercent = $accessoryFlatRateEnabled
             ? $this->pricingSettings->get()->accessoryFlatRatePercent
             : null;
 
@@ -97,7 +105,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             sourceRentalId: null,
             createdAt: $now,
             updatedAt: $now,
-            accessoryFlatRateEnabled: $command->accessoryFlatRateEnabled,
+            accessoryFlatRateEnabled: $accessoryFlatRateEnabled,
             accessoryFlatRatePercent: $accessoryFlatRatePercent,
             discountType: $data['discountType'],
             discountValue: $data['discountValue'],

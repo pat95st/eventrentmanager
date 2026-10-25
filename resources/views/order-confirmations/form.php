@@ -51,14 +51,19 @@ foreach ($articles as $article) {
 
     <div>
         <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.customer')) ?></label>
-        <select id="customer_id" name="customer_id"
-                class="mt-1 w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value=""><?= e(t('order_confirmations.form.customer_placeholder')) ?></option>
-            <?php $selectedCustomer = $val('customer_id', $orderConfirmation?->customerId); ?>
-            <?php foreach ($customers as $customer): ?>
-                <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <div class="mt-1 flex gap-2">
+            <select id="customer_id" name="customer_id"
+                    class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e(t('order_confirmations.form.customer_placeholder')) ?></option>
+                <?php $selectedCustomer = $val('customer_id', $orderConfirmation?->customerId); ?>
+                <?php foreach ($customers as $customer): ?>
+                    <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('customers.quick_create.title')) ?>
+            </button>
+        </div>
         <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
     </div>
 
@@ -104,6 +109,34 @@ foreach ($articles as $article) {
         $discountType = $val('discount_type', $orderConfirmation?->discountType);
         $discountValue = $val('discount_value', $orderConfirmation?->discountValue);
     ?>
+    <?php
+        // Positionen/Freitext-Posten/Zwischentexte: siehe invoices/form.php
+        // für die identische Begründung (ein gemeinsamer, sortierbarer
+        // Bereich statt dreier getrennter Blöcke — orderedRows()-Konzept).
+        // Zubehörpauschale/Kombirabatt erscheinen hier bewusst erst danach
+        // (siehe Aufgabenstellung: diese Posten stehen immer zuletzt).
+    ?>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.form.items_title')) ?></h2>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" id="oc-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('order_confirmations.form.items_add')) ?>
+                </button>
+                <button type="button" id="oc-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('order_confirmations.form.free_text_items_add')) ?>
+                </button>
+                <button type="button" id="oc-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('order_confirmations.form.section_texts_add')) ?>
+                </button>
+            </div>
+        </div>
+        <?php if (isset($errors['items'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['items']) ?></p><?php endif; ?>
+        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
+        <div id="oc-rows" class="space-y-2"></div>
+        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('order_confirmations.form.rows_drag_hint')) ?></p>
+    </div>
+
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
         <div class="flex items-start gap-2">
             <input type="checkbox" id="accessory_flat_rate_enabled" name="accessory_flat_rate_enabled" value="1" <?= $accessoryChecked ? 'checked' : '' ?>
@@ -151,40 +184,6 @@ foreach ($articles as $article) {
         </script>
     </div>
 
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.form.items_title')) ?></h2>
-            <button type="button" id="oc-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('order_confirmations.form.items_add')) ?>
-            </button>
-        </div>
-        <?php if (isset($errors['items'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['items']) ?></p><?php endif; ?>
-        <div id="oc-items" class="space-y-2"></div>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.form.free_text_items_title')) ?></h2>
-            <button type="button" id="oc-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('order_confirmations.form.free_text_items_add')) ?>
-            </button>
-        </div>
-        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
-        <div id="oc-free-text-items" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('order_confirmations.form.free_text_items_hint')) ?></p>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.form.section_texts_title')) ?></h2>
-            <button type="button" id="oc-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('order_confirmations.form.section_texts_add')) ?>
-            </button>
-        </div>
-        <div id="oc-section-texts" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('order_confirmations.form.section_texts_hint')) ?></p>
-    </div>
-
     <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
@@ -193,8 +192,11 @@ foreach ($articles as $article) {
     </div>
 </form>
 
+<?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
+
 <template id="oc-item-row-template">
-    <div class="oc-item-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="oc-item-row oc-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="oc-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('order_confirmations.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.item_article')) ?></label>
             <select name="article_id[]" class="oc-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -216,7 +218,7 @@ foreach ($articles as $article) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.item_note')) ?></label>
             <input type="text" name="line_note[]" class="oc-item-note mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="sort_order[]" class="oc-item-sort" value="0">
+        <input type="hidden" name="sort_order[]" class="oc-item-sort" data-row-sort value="0">
         <button type="button" class="oc-item-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('order_confirmations.form.item_remove')) ?>
         </button>
@@ -224,7 +226,8 @@ foreach ($articles as $article) {
 </template>
 
 <template id="oc-free-text-row-template">
-    <div class="oc-free-text-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="oc-free-text-row oc-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="oc-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('order_confirmations.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.free_text_description')) ?></label>
             <input type="text" name="free_text_description[]" class="oc-free-text-description mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -237,7 +240,7 @@ foreach ($articles as $article) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.item_price')) ?></label>
             <input type="text" name="free_text_unit_price[]" inputmode="decimal" value="0" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="free_text_sort_order[]" class="oc-free-text-sort" value="1000">
+        <input type="hidden" name="free_text_sort_order[]" class="oc-free-text-sort" data-row-sort value="1000">
         <button type="button" class="oc-free-text-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('order_confirmations.form.item_remove')) ?>
         </button>
@@ -245,12 +248,13 @@ foreach ($articles as $article) {
 </template>
 
 <template id="oc-section-row-template">
-    <div class="oc-section-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="oc-section-row oc-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="oc-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('order_confirmations.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.section_heading')) ?></label>
             <input type="text" name="section_heading[]" class="oc-section-heading mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="section_sort_order[]" class="oc-section-sort" value="2000">
+        <input type="hidden" name="section_sort_order[]" class="oc-section-sort" data-row-sort value="2000">
         <button type="button" class="oc-section-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('order_confirmations.form.item_remove')) ?>
         </button>
@@ -265,7 +269,8 @@ foreach ($articles as $article) {
     var EXISTING_FREE_TEXT_ITEMS = <?= json_encode(array_values($freeTextItems), JSON_THROW_ON_ERROR) ?>;
     var EXISTING_SECTION_TEXTS = <?= json_encode(array_values($sectionTexts), JSON_THROW_ON_ERROR) ?>;
 
-    var container = document.getElementById('oc-items');
+    var ocForm = document.getElementById('order-confirmation-form');
+    var container = document.getElementById('oc-rows');
     var template = document.getElementById('oc-item-row-template');
     var addButton = document.getElementById('oc-item-add');
     var startInput = document.getElementById('start_date');
@@ -315,21 +320,20 @@ foreach ($articles as $article) {
         });
         removeButton.addEventListener('click', function () { row.remove(); });
 
+        enableRowDrag(row);
         container.appendChild(row);
     }
 
     addButton.addEventListener('click', function () { addRow(); });
-    if (EXISTING_ITEMS.length > 0) {
-        EXISTING_ITEMS.forEach(function (item) { addRow(item); });
-    } else {
-        addRow();
-    }
 
     // --- Freitext-Posten -----------------------------------------------
-    var freeTextContainer = document.getElementById('oc-free-text-items');
+    // freeTextContainer/sectionContainer sind bewusst DASSELBE Element wie
+    // "container" (= #oc-rows) — siehe invoices/form.php für die identische
+    // Begründung (gemeinsamer, per Drag-and-Drop sortierbarer Bereich).
+    var freeTextContainer = container;
+    var sectionContainer = container;
     var freeTextTemplate = document.getElementById('oc-free-text-row-template');
     var freeTextAddButton = document.getElementById('oc-free-text-add');
-    var nextFreeTextSort = 1000;
 
     function addFreeTextRow(data) {
         var fragment = freeTextTemplate.content.cloneNode(true);
@@ -338,32 +342,87 @@ foreach ($articles as $article) {
         if (data.description) { row.querySelector('.oc-free-text-description').value = data.description; }
         if (data.quantity) { row.querySelector('input[name="free_text_quantity[]"]').value = data.quantity; }
         if (data.unit_price !== undefined) { row.querySelector('input[name="free_text_unit_price[]"]').value = data.unit_price; }
-        row.querySelector('.oc-free-text-sort').value = data.sort_order !== undefined ? data.sort_order : nextFreeTextSort++;
+        row.querySelector('.oc-free-text-sort').value = 0;
         row.querySelector('.oc-free-text-remove').addEventListener('click', function () { row.remove(); });
+        enableRowDrag(row);
         freeTextContainer.appendChild(row);
     }
 
     freeTextAddButton.addEventListener('click', function () { addFreeTextRow(); });
-    EXISTING_FREE_TEXT_ITEMS.forEach(function (item) { addFreeTextRow(item); });
 
     // --- Zwischentexte ---------------------------------------------------
-    var sectionContainer = document.getElementById('oc-section-texts');
     var sectionTemplate = document.getElementById('oc-section-row-template');
     var sectionAddButton = document.getElementById('oc-section-add');
-    var nextSectionSort = 2000;
 
     function addSectionRow(data) {
         var fragment = sectionTemplate.content.cloneNode(true);
         var row = fragment.querySelector('.oc-section-row');
         data = data || {};
         if (data.heading) { row.querySelector('.oc-section-heading').value = data.heading; }
-        row.querySelector('.oc-section-sort').value = data.sort_order !== undefined ? data.sort_order : nextSectionSort++;
+        row.querySelector('.oc-section-sort').value = 0;
         row.querySelector('.oc-section-remove').addEventListener('click', function () { row.remove(); });
+        enableRowDrag(row);
         sectionContainer.appendChild(row);
     }
 
     sectionAddButton.addEventListener('click', function () { addSectionRow(); });
-    EXISTING_SECTION_TEXTS.forEach(function (item) { addSectionRow(item); });
+
+    // --- Drag-and-Drop-Umsortierung -----------------------------------------
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    var draggingRow = null;
+
+    function enableRowDrag(row) {
+        var handle = row.querySelector('.oc-row-handle');
+        if (!handle) { return; }
+        handle.addEventListener('mousedown', function () { row.draggable = true; });
+        row.addEventListener('dragend', function () { row.draggable = false; draggingRow = null; });
+    }
+
+    container.addEventListener('dragstart', function (e) {
+        var row = e.target.closest('.oc-row');
+        if (!row) { return; }
+        draggingRow = row;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    container.addEventListener('dragover', function (e) {
+        if (!draggingRow) { return; }
+        e.preventDefault();
+        var row = e.target.closest('.oc-row');
+        if (!row || row === draggingRow) { return; }
+        var rect = row.getBoundingClientRect();
+        var placeBefore = (e.clientY - rect.top) < rect.height / 2;
+        container.insertBefore(draggingRow, placeBefore ? row : row.nextSibling);
+    });
+
+    // --- Reihenfolge beim Absenden festschreiben ----------------------------
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    if (ocForm) {
+        ocForm.addEventListener('submit', function () {
+            var order = 0;
+            container.querySelectorAll('[data-row-sort]').forEach(function (input) {
+                input.value = order++;
+            });
+        });
+    }
+
+    // --- Vorhandene Zeilen in der tatsächlichen Dokumentreihenfolge rendern -
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise.
+    var mergedRows = []
+        .concat(EXISTING_ITEMS.map(function (item) { return { type: 'item', sort: Number(item.sort_order || 0), data: item }; }))
+        .concat(EXISTING_FREE_TEXT_ITEMS.map(function (item) { return { type: 'free_text', sort: Number(item.sort_order || 0), data: item }; }))
+        .concat(EXISTING_SECTION_TEXTS.map(function (item) { return { type: 'section', sort: Number(item.sort_order || 0), data: item }; }))
+        .sort(function (a, b) { return a.sort - b.sort; });
+
+    if (mergedRows.length > 0) {
+        mergedRows.forEach(function (row) {
+            if (row.type === 'item') { addRow(row.data); }
+            else if (row.type === 'free_text') { addFreeTextRow(row.data); }
+            else { addSectionRow(row.data); }
+        });
+    } else {
+        addRow();
+    }
 })();
 </script>
 

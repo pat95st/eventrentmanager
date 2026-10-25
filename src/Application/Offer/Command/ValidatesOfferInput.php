@@ -298,6 +298,17 @@ trait ValidatesOfferInput
             ];
         }
 
+        // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
+        // für die identische Begründung (bewusst dupliziert, gleiches Muster
+        // wie der restliche Code dieser beiden Traits). Verkaufspositionen
+        // bleiben bei dieser Prüfung bewusst unberücksichtigt — sie haben
+        // kein Verhältnis zu Kombirabatt/Zubehörpauschale, die sich nur auf
+        // die Mietpreise/Freitext-Summe beziehen.
+        if ($items === [] && $freeTextItems === [] && $laborItems !== []) {
+            $discountType = null;
+            $discountValue = null;
+        }
+
         return [$errors, [
             'customerId' => $customerId !== '' ? $customerId : null,
             'startDate' => $startDate,

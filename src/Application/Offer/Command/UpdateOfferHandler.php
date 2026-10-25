@@ -123,9 +123,17 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         $offer->discountType = $data['discountType'];
         $offer->discountValue = $data['discountValue'];
 
+        // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
+        // für die identische Begründung (dort bereits für den Kombirabatt
+        // erzwungen) — hier zusätzlich für die Zubehörpauschale, die kein
+        // Teil des Traits ist (accessoryFlatRateEnabled kommt direkt vom
+        // Command).
+        $onlyLaborItems = $data['items'] === [] && $data['freeTextItems'] === [] && $data['laborItems'] !== [];
+        $accessoryFlatRateEnabled = $onlyLaborItems ? false : $command->accessoryFlatRateEnabled;
+
         // Zubehörpauschale: siehe UpdateInvoiceHandler für die identische
         // Begründung (Snapshot bleibt erhalten, außer bei Reaktivierung).
-        if (!$command->accessoryFlatRateEnabled) {
+        if (!$accessoryFlatRateEnabled) {
             $offer->accessoryFlatRateEnabled = false;
             $offer->accessoryFlatRatePercent = null;
         } elseif (!$offer->accessoryFlatRateEnabled) {

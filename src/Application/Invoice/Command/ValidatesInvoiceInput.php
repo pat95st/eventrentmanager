@@ -221,6 +221,21 @@ trait ValidatesInvoiceInput
             ];
         }
 
+        // Geschäftsregel: Enthält die Rechnung AUSSCHLIESSLICH
+        // Arbeitszeit-Positionen (keine Mietpositionen, keine Freitext-
+        // Posten), dürfen Kombirabatt und Zubehörpauschale nicht verrechnet
+        // werden (siehe Aufgabenstellung — beide würden sich fachlich auf die
+        // Mietpreise/Freitext-Summe beziehen, die es in diesem Fall gar nicht
+        // gibt). Der Kombirabatt wird dafür hier als Teil der Validierung
+        // zurückgesetzt; die Zubehörpauschale ist kein Teil dieses Traits
+        // (sie wird separat je Handler übergeben) und daher dort anhand
+        // derselben Bedingung erzwungen — siehe CreateInvoiceHandler/
+        // UpdateInvoiceHandler.
+        if ($items === [] && $freeTextItems === [] && $laborItems !== []) {
+            $discountType = null;
+            $discountValue = null;
+        }
+
         return [$errors, [
             'customerId' => $customerId !== '' ? $customerId : null,
             'startDate' => $startDate,

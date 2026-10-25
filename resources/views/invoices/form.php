@@ -64,14 +64,19 @@ foreach ($laborArticles as $laborArticle) {
 
     <div>
         <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.customer')) ?></label>
-        <select id="customer_id" name="customer_id"
-                class="mt-1 w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value=""><?= e(t('invoices.form.customer_placeholder')) ?></option>
-            <?php $selectedCustomer = $val('customer_id', $invoice?->customerId); ?>
-            <?php foreach ($customers as $customer): ?>
-                <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <div class="mt-1 flex gap-2">
+            <select id="customer_id" name="customer_id"
+                    class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e(t('invoices.form.customer_placeholder')) ?></option>
+                <?php $selectedCustomer = $val('customer_id', $invoice?->customerId); ?>
+                <?php foreach ($customers as $customer): ?>
+                    <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('customers.quick_create.title')) ?>
+            </button>
+        </div>
         <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.customer_hint')) ?></p>
     </div>
@@ -129,6 +134,58 @@ foreach ($laborArticles as $laborArticle) {
         $discountType = $val('discount_type', $invoice?->discountType);
         $discountValue = $val('discount_value', $invoice?->discountValue);
     ?>
+
+    <?php
+        // Positionen/Freitext-Posten/Zwischentexte: EIN gemeinsamer,
+        // sortierbarer Bereich statt dreier getrennter Blöcke — die
+        // Eingabereihenfolge (bzw. die per Drag-and-Drop hergestellte
+        // Reihenfolge) wird beim Absenden 1:1 als sort_order übernommen und
+        // bestimmt damit auch die Reihenfolge auf der Rechnung
+        // (orderedRows()-Konzept, siehe InvoiceDetail::orderedRows()).
+        // Arbeitszeit, Zubehörpauschale und Kombirabatt sind bewusst NICHT
+        // Teil dieser Liste: sie erscheinen laut Aufgabenstellung immer als
+        // letzte Posten auf dem Dokument und entsprechend auch hier ganz
+        // unten, unterhalb dieses Bereichs (siehe DocumentTotals::calculate()
+        // für die serverseitige Entsprechung).
+    ?>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.items_title')) ?></h2>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" id="invoice-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('invoices.form.items_add')) ?>
+                </button>
+                <button type="button" id="invoice-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('invoices.form.free_text_items_add')) ?>
+                </button>
+                <button type="button" id="invoice-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('invoices.form.section_texts_add')) ?>
+                </button>
+            </div>
+        </div>
+        <?php if (isset($errors['items'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['items']) ?></p><?php endif; ?>
+        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
+        <div id="invoice-rows" class="space-y-2"></div>
+        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.items_hint')) ?></p>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.rows_drag_hint')) ?></p>
+    </div>
+
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.labor_items_title')) ?></h2>
+            <button type="button" id="invoice-labor-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('invoices.form.labor_items_add')) ?>
+            </button>
+        </div>
+        <?php if (isset($errors['laborItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['laborItems']) ?></p><?php endif; ?>
+        <?php if ($laborArticles === []): ?>
+            <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.labor_items_none_defined')) ?> <a href="/arbeitszeit-artikel" class="text-brand-700 hover:underline dark:text-brand-400"><?= e(t('invoices.form.labor_items_manage_link')) ?></a></p>
+        <?php else: ?>
+            <div id="invoice-labor-items" class="space-y-2"></div>
+            <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.labor_items_hint')) ?></p>
+        <?php endif; ?>
+    </div>
+
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
         <div class="flex items-start gap-2">
             <input type="checkbox" id="accessory_flat_rate_enabled" name="accessory_flat_rate_enabled" value="1" <?= $accessoryChecked ? 'checked' : '' ?>
@@ -138,6 +195,7 @@ foreach ($laborArticles as $laborArticle) {
                     <?= e(t('invoices.form.accessory_flat_rate', ['percent' => e($pricingSettings->accessoryFlatRatePercent)])) ?>
                 </label>
                 <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.accessory_flat_rate_hint')) ?></p>
+                <p id="invoice-accessory-labor-only-hint" class="mt-1 hidden text-xs text-amber-600 dark:text-amber-400"><?= e(t('invoices.form.labor_only_hint')) ?></p>
             </div>
         </div>
     </div>
@@ -165,6 +223,7 @@ foreach ($laborArticles as $laborArticle) {
                    class="mt-1 w-full max-w-[10rem] rounded-md border <?= isset($errors['discountValue']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
             <?php if (isset($errors['discountValue'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['discountValue']) ?></p><?php endif; ?>
         </div>
+        <p id="invoice-discount-labor-only-hint" class="mt-1 hidden text-xs text-amber-600 dark:text-amber-400"><?= e(t('invoices.form.labor_only_hint')) ?></p>
         <script>
             (function () {
                 var wrapper = document.getElementById('discount-value-wrapper');
@@ -176,57 +235,6 @@ foreach ($laborArticles as $laborArticle) {
                 });
             })();
         </script>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.items_title')) ?></h2>
-            <button type="button" id="invoice-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('invoices.form.items_add')) ?>
-            </button>
-        </div>
-        <?php if (isset($errors['items'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['items']) ?></p><?php endif; ?>
-        <div id="invoice-items" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.items_hint')) ?></p>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.labor_items_title')) ?></h2>
-            <button type="button" id="invoice-labor-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('invoices.form.labor_items_add')) ?>
-            </button>
-        </div>
-        <?php if (isset($errors['laborItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['laborItems']) ?></p><?php endif; ?>
-        <?php if ($laborArticles === []): ?>
-            <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.labor_items_none_defined')) ?> <a href="/arbeitszeit-artikel" class="text-brand-700 hover:underline dark:text-brand-400"><?= e(t('invoices.form.labor_items_manage_link')) ?></a></p>
-        <?php else: ?>
-            <div id="invoice-labor-items" class="space-y-2"></div>
-            <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.labor_items_hint')) ?></p>
-        <?php endif; ?>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.free_text_items_title')) ?></h2>
-            <button type="button" id="invoice-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('invoices.form.free_text_items_add')) ?>
-            </button>
-        </div>
-        <?php if (isset($errors['freeTextItems'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['freeTextItems']) ?></p><?php endif; ?>
-        <div id="invoice-free-text-items" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.free_text_items_hint')) ?></p>
-    </div>
-
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.section_texts_title')) ?></h2>
-            <button type="button" id="invoice-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('invoices.form.section_texts_add')) ?>
-            </button>
-        </div>
-        <div id="invoice-section-texts" class="space-y-2"></div>
-        <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.section_texts_hint')) ?></p>
     </div>
 
     <?php
@@ -297,6 +305,8 @@ foreach ($laborArticles as $laborArticle) {
     </div>
 </form>
 
+<?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
+
 <?php
     // Artikel-Auswahl-Modal: siehe offers/form.php für die identische
     // Begründung/Funktionsweise (bewusst dupliziert, gleiches Muster wie der
@@ -318,7 +328,8 @@ foreach ($laborArticles as $laborArticle) {
 </div>
 
 <template id="invoice-item-row-template">
-    <div class="invoice-item-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="invoice-item-row invoice-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="invoice-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('invoices.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_article')) ?></label>
             <div class="mt-1 flex gap-1">
@@ -345,7 +356,7 @@ foreach ($laborArticles as $laborArticle) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_note')) ?></label>
             <input type="text" name="line_note[]" class="invoice-item-note mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="sort_order[]" class="invoice-item-sort" value="0">
+        <input type="hidden" name="sort_order[]" class="invoice-item-sort" data-row-sort value="0">
         <button type="button" class="invoice-item-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('invoices.form.item_remove')) ?>
         </button>
@@ -382,7 +393,8 @@ foreach ($laborArticles as $laborArticle) {
 <?php endif; ?>
 
 <template id="invoice-free-text-row-template">
-    <div class="invoice-free-text-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="invoice-free-text-row invoice-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="invoice-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('invoices.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.free_text_description')) ?></label>
             <input type="text" name="free_text_description[]" class="invoice-free-text-description mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -395,7 +407,7 @@ foreach ($laborArticles as $laborArticle) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_price')) ?></label>
             <input type="text" name="free_text_unit_price[]" inputmode="decimal" value="0" class="invoice-free-text-price mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="free_text_sort_order[]" class="invoice-free-text-sort" value="1000">
+        <input type="hidden" name="free_text_sort_order[]" class="invoice-free-text-sort" data-row-sort value="1000">
         <button type="button" class="invoice-free-text-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('invoices.form.item_remove')) ?>
         </button>
@@ -403,12 +415,13 @@ foreach ($laborArticles as $laborArticle) {
 </template>
 
 <template id="invoice-section-row-template">
-    <div class="invoice-section-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+    <div class="invoice-section-row invoice-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <span class="invoice-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('invoices.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.section_heading')) ?></label>
             <input type="text" name="section_heading[]" class="invoice-section-heading mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
-        <input type="hidden" name="section_sort_order[]" class="invoice-section-sort" value="2000">
+        <input type="hidden" name="section_sort_order[]" class="invoice-section-sort" data-row-sort value="2000">
         <button type="button" class="invoice-section-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('invoices.form.item_remove')) ?>
         </button>
@@ -421,7 +434,14 @@ foreach ($laborArticles as $laborArticle) {
     var TIER_MULTIPLIERS = <?= json_encode($tierMultipliers, JSON_THROW_ON_ERROR) ?>;
     var EXISTING_ITEMS = <?= json_encode(array_values($items), JSON_THROW_ON_ERROR) ?>;
 
-    var container = document.getElementById('invoice-items');
+    // Früh deklariert (statt erst im Block "Live-Gesamtsumme" weiter unten),
+    // damit der Submit-Handler für die sort_order-Festschreibung (siehe
+    // weiter unten im Freitext-/Zwischentext-Block) bereits beim ersten
+    // Durchlauf des Skripts einen gültigen Wert sieht — "var" würde sonst
+    // erst zum Zeitpunkt der (textuell späteren) Zuweisung befüllt.
+    var invoiceForm = document.getElementById('invoice-form');
+
+    var container = document.getElementById('invoice-rows');
     var template = document.getElementById('invoice-item-row-template');
     var addButton = document.getElementById('invoice-item-add');
     var startInput = document.getElementById('start_date');
@@ -480,13 +500,15 @@ foreach ($laborArticles as $laborArticle) {
             if (suggested !== null) { priceInput.value = suggested; }
         });
 
-        removeButton.addEventListener('click', function () { row.remove(); });
+        removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
         if (pickButton) {
             pickButton.addEventListener('click', function () { openArticlePicker(articleSelect); });
         }
 
+        enableRowDrag(row);
         container.appendChild(row);
+        updateOnlyLaborState();
         return articleSelect;
     }
 
@@ -510,12 +532,6 @@ foreach ($laborArticles as $laborArticle) {
     addButton.addEventListener('click', function () { openArticlePicker(addRow()); });
     startInput.addEventListener('change', refreshAllSuggestions);
     endInput.addEventListener('change', refreshAllSuggestions);
-
-    if (EXISTING_ITEMS.length > 0) {
-        EXISTING_ITEMS.forEach(function (item) { addRow(item); });
-    } else {
-        addRow();
-    }
 
     // --- Artikel-Auswahl-Modal ---------------------------------------------
     // Siehe offers/form.php für die identische Begründung/Funktionsweise
@@ -638,9 +654,10 @@ foreach ($laborArticles as $laborArticle) {
             function refreshTotal() { totalInput.value = computeLaborTotal(articleSelect.value, hoursInput.value); }
             articleSelect.addEventListener('change', refreshTotal);
             hoursInput.addEventListener('input', refreshTotal);
-            removeButton.addEventListener('click', function () { row.remove(); });
+            removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
             laborContainer.appendChild(row);
+            updateOnlyLaborState();
         };
 
         if (laborAddButton) {
@@ -657,10 +674,19 @@ foreach ($laborArticles as $laborArticle) {
     var EXISTING_FREE_TEXT_ITEMS = <?= json_encode(array_values($freeTextItems), JSON_THROW_ON_ERROR) ?>;
     var EXISTING_SECTION_TEXTS = <?= json_encode(array_values($sectionTexts), JSON_THROW_ON_ERROR) ?>;
 
-    var freeTextContainer = document.getElementById('invoice-free-text-items');
+    // freeTextContainer/sectionContainer sind bewusst DASSELBE Element wie
+    // "container" (= #invoice-rows): Positionen, Freitext-Posten und
+    // Zwischentexte leben seit der Umstellung auf einen gemeinsamen,
+    // sortierbaren Bereich im selben Container, damit sie sich per
+    // Drag-and-Drop gegenseitig umsortieren lassen. Die bestehenden, nach
+    // Zeilentyp gefilterten querySelectorAll()-Aufrufe (addRow/updateTotals)
+    // funktionieren dadurch unverändert weiter.
+    var freeTextContainer = container;
+    var sectionContainer = container;
     var freeTextTemplate = document.getElementById('invoice-free-text-row-template');
     var freeTextAddButton = document.getElementById('invoice-free-text-add');
-    var nextFreeTextSort = 1000;
+    var sectionTemplate = document.getElementById('invoice-section-row-template');
+    var sectionAddButton = document.getElementById('invoice-section-add');
 
     function addFreeTextRow(data) {
         var fragment = freeTextTemplate.content.cloneNode(true);
@@ -669,35 +695,100 @@ foreach ($laborArticles as $laborArticle) {
         if (data.description) { row.querySelector('.invoice-free-text-description').value = data.description; }
         if (data.quantity) { row.querySelector('.invoice-free-text-quantity').value = data.quantity; }
         if (data.unit_price !== undefined) { row.querySelector('.invoice-free-text-price').value = data.unit_price; }
-        row.querySelector('.invoice-free-text-sort').value = data.sort_order !== undefined ? data.sort_order : nextFreeTextSort++;
-        row.querySelector('.invoice-free-text-remove').addEventListener('click', function () { row.remove(); });
+        row.querySelector('.invoice-free-text-sort').value = 0;
+        row.querySelector('.invoice-free-text-remove').addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
+        enableRowDrag(row);
         freeTextContainer.appendChild(row);
+        updateOnlyLaborState();
     }
 
     if (freeTextAddButton) {
         freeTextAddButton.addEventListener('click', function () { addFreeTextRow(); });
     }
-    EXISTING_FREE_TEXT_ITEMS.forEach(function (item) { addFreeTextRow(item); });
-
-    var sectionContainer = document.getElementById('invoice-section-texts');
-    var sectionTemplate = document.getElementById('invoice-section-row-template');
-    var sectionAddButton = document.getElementById('invoice-section-add');
-    var nextSectionSort = 2000;
 
     function addSectionRow(data) {
         var fragment = sectionTemplate.content.cloneNode(true);
         var row = fragment.querySelector('.invoice-section-row');
         data = data || {};
         if (data.heading) { row.querySelector('.invoice-section-heading').value = data.heading; }
-        row.querySelector('.invoice-section-sort').value = data.sort_order !== undefined ? data.sort_order : nextSectionSort++;
+        row.querySelector('.invoice-section-sort').value = 0;
         row.querySelector('.invoice-section-remove').addEventListener('click', function () { row.remove(); });
+        enableRowDrag(row);
         sectionContainer.appendChild(row);
     }
 
     if (sectionAddButton) {
         sectionAddButton.addEventListener('click', function () { addSectionRow(); });
     }
-    EXISTING_SECTION_TEXTS.forEach(function (item) { addSectionRow(item); });
+
+    // --- Drag-and-Drop-Umsortierung -----------------------------------------
+    // Nur der Griff (.invoice-row-handle) löst das native HTML5-Drag aus
+    // (draggable wird erst bei dessen mousedown gesetzt) — ein Klick/Drag in
+    // einem Eingabefeld der Zeile soll z. B. weiterhin die Textauswahl
+    // bedienen, statt versehentlich die Zeile zu verschieben.
+    var draggingRow = null;
+
+    function enableRowDrag(row) {
+        var handle = row.querySelector('.invoice-row-handle');
+        if (!handle) { return; }
+        handle.addEventListener('mousedown', function () { row.draggable = true; });
+        row.addEventListener('dragend', function () { row.draggable = false; draggingRow = null; });
+    }
+
+    container.addEventListener('dragstart', function (e) {
+        var row = e.target.closest('.invoice-row');
+        if (!row) { return; }
+        draggingRow = row;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+
+    container.addEventListener('dragover', function (e) {
+        if (!draggingRow) { return; }
+        e.preventDefault();
+        var row = e.target.closest('.invoice-row');
+        if (!row || row === draggingRow) { return; }
+        var rect = row.getBoundingClientRect();
+        var placeBefore = (e.clientY - rect.top) < rect.height / 2;
+        container.insertBefore(draggingRow, placeBefore ? row : row.nextSibling);
+    });
+
+    // --- Reihenfolge beim Absenden festschreiben ----------------------------
+    // sort_order aller Zeilen (Position/Freitext-Posten/Zwischentext) wird
+    // erst hier, unmittelbar vor dem Absenden, aus der tatsächlichen
+    // DOM-Reihenfolge von #invoice-rows berechnet (0, 1, 2, ...) — die
+    // Eingabe-/Drag-and-Drop-Reihenfolge wird damit 1:1 zur sort_order und
+    // damit zur Reihenfolge auf der Rechnung (orderedRows()-Konzept).
+    if (invoiceForm) {
+        invoiceForm.addEventListener('submit', function () {
+            var order = 0;
+            container.querySelectorAll('[data-row-sort]').forEach(function (input) {
+                input.value = order++;
+            });
+        });
+    }
+
+    // --- Vorhandene Zeilen in der tatsächlichen Dokumentreihenfolge rendern -
+    // EXISTING_ITEMS/EXISTING_FREE_TEXT_ITEMS/EXISTING_SECTION_TEXTS werden
+    // zu EINER Liste zusammengeführt und nach sort_order sortiert, statt wie
+    // zuvor blockweise (erst alle Positionen, dann alle Freitext-Posten, dann
+    // alle Zwischentexte) ins DOM gehängt zu werden — sonst würde die
+    // Bearbeitungsansicht eines bereits (z. B. künftig per Drag-and-Drop)
+    // interleavten Dokuments die wahre Reihenfolge nicht mehr zeigen.
+    var mergedRows = []
+        .concat(EXISTING_ITEMS.map(function (item) { return { type: 'item', sort: Number(item.sort_order || 0), data: item }; }))
+        .concat(EXISTING_FREE_TEXT_ITEMS.map(function (item) { return { type: 'free_text', sort: Number(item.sort_order || 0), data: item }; }))
+        .concat(EXISTING_SECTION_TEXTS.map(function (item) { return { type: 'section', sort: Number(item.sort_order || 0), data: item }; }))
+        .sort(function (a, b) { return a.sort - b.sort; });
+
+    if (mergedRows.length > 0) {
+        mergedRows.forEach(function (row) {
+            if (row.type === 'item') { addRow(row.data); }
+            else if (row.type === 'free_text') { addFreeTextRow(row.data); }
+            else { addSectionRow(row.data); }
+        });
+    } else {
+        addRow();
+    }
 
     // --- Live-Gesamtsumme -------------------------------------------------
     // Siehe offers/form.php für die identische Begründung/Funktionsweise
@@ -758,7 +849,45 @@ foreach ($laborArticles as $laborArticle) {
         rowEl.classList.toggle('flex', visible);
     }
 
+    // --- "Nur Arbeitszeit"-Regel --------------------------------------------
+    // Siehe ValidatesInvoiceInput::validateInvoiceInput() für die
+    // serverseitige Entsprechung (dort verbindlich erzwungen): sind weder
+    // Mietpositionen noch Freitext-Posten vorhanden, dafür aber mindestens
+    // eine Arbeitszeit-Position, dürfen Zubehörpauschale und Kombirabatt
+    // nicht gesetzt werden — hier rein clientseitig als sofortiges visuelles
+    // Feedback (deaktivierte Steuerelemente + Hinweistext), ohne das zu
+    // ersetzen.
+    function updateOnlyLaborState() {
+        var hasRentalOrFreeText = container.querySelectorAll('.invoice-item-row, .invoice-free-text-row').length > 0;
+        var hasLabor = typeof laborContainer !== 'undefined' && laborContainer
+            ? laborContainer.querySelectorAll('.invoice-labor-item-row').length > 0
+            : false;
+        var onlyLabor = !hasRentalOrFreeText && hasLabor;
+
+        if (accessoryCheckbox) {
+            accessoryCheckbox.disabled = onlyLabor;
+            if (onlyLabor) { accessoryCheckbox.checked = false; }
+        }
+
+        document.querySelectorAll('[data-discount-option]').forEach(function (option) {
+            option.disabled = onlyLabor;
+            if (onlyLabor) { option.checked = option.value === ''; }
+        });
+
+        if (onlyLabor) {
+            var wrapper = document.getElementById('discount-value-wrapper');
+            if (wrapper) { wrapper.classList.add('hidden'); }
+        }
+
+        var accessoryHint = document.getElementById('invoice-accessory-labor-only-hint');
+        var discountHint = document.getElementById('invoice-discount-labor-only-hint');
+        if (accessoryHint) { accessoryHint.classList.toggle('hidden', !onlyLabor); }
+        if (discountHint) { discountHint.classList.toggle('hidden', !onlyLabor); }
+    }
+
     function updateTotals() {
+        updateOnlyLaborState();
+
         if (!totalRentalEl || !invoiceForm) { return; }
 
         var rentalTotal = 0;

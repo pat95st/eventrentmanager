@@ -22,7 +22,7 @@ $action = $isEditing ? '/minutenprogramme/' . e($program->id) : '/veranstaltunge
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><?= e($rental->eventName) ?></p>
 </div>
 
-<form method="post" action="<?= $action ?>" class="max-w-xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="<?= $action ?>" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
 
     <?php if (!$isEditing && $templates !== []): ?>

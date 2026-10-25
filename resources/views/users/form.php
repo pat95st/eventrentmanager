@@ -21,18 +21,17 @@ $mustSetupTwoFactor = $val('must_setup_two_factor', $user->mustSetupTwoFactor ??
 <form
     method="post"
     action="<?= $editingId !== null ? '/benutzer/' . e($editingId) : '/benutzer' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-    <div>
-        <label for="email" class="block text-xs font-medium text-slate-600 dark:text-slate-400">E-Mail-Adresse *</label>
-        <input type="email" id="email" name="email" required
-               value="<?= e($val('email', $user->email ?? '')) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['email']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['email'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['email']) ?></p><?php endif; ?>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+            <label for="email" class="block text-xs font-medium text-slate-600 dark:text-slate-400">E-Mail-Adresse *</label>
+            <input type="email" id="email" name="email" required
+                   value="<?= e($val('email', $user->email ?? '')) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['email']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['email'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['email']) ?></p><?php endif; ?>
+        </div>
         <div>
             <label for="first_name" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Vorname <?= $user === null ? '*' : '' ?></label>
             <input type="text" id="first_name" name="first_name" <?= $user === null ? 'required' : '' ?>

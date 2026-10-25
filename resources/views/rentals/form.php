@@ -21,31 +21,33 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 <form
     method="post"
     action="<?= $editingId !== null ? '/veranstaltungen/' . e($editingId) : '/veranstaltungen' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-    <div>
-        <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('rentals.form.customer')) ?></label>
-        <select id="customer_id" name="customer_id" required
-                class="mt-1 w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value=""><?= e(t('rentals.form.customer_placeholder')) ?></option>
-            <?php $selectedCustomer = $val('customer_id', $rental?->customerId); ?>
-            <?php foreach ($customers as $customer): ?>
-                <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
-        <?php if ($customers === []): ?>
-            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= t('rentals.form.no_customers', ['link' => '<a href="/kunden/neu" class="underline">' . e(t('rentals.form.no_customers_link')) . '</a>']) ?></p>
-        <?php endif; ?>
-    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('rentals.form.customer')) ?></label>
+            <select id="customer_id" name="customer_id" required
+                    class="mt-1 w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e(t('rentals.form.customer_placeholder')) ?></option>
+                <?php $selectedCustomer = $val('customer_id', $rental?->customerId); ?>
+                <?php foreach ($customers as $customer): ?>
+                    <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
+            <?php if ($customers === []): ?>
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= t('rentals.form.no_customers', ['link' => '<a href="/kunden/neu" class="underline">' . e(t('rentals.form.no_customers_link')) . '</a>']) ?></p>
+            <?php endif; ?>
+        </div>
 
-    <div>
-        <label for="event_name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('rentals.form.event_name')) ?></label>
-        <input type="text" id="event_name" name="event_name" required
-               value="<?= e($val('event_name', $rental?->eventName)) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['eventName']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['eventName'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['eventName']) ?></p><?php endif; ?>
+        <div>
+            <label for="event_name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('rentals.form.event_name')) ?></label>
+            <input type="text" id="event_name" name="event_name" required
+                   value="<?= e($val('event_name', $rental?->eventName)) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['eventName']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['eventName'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['eventName']) ?></p><?php endif; ?>
+        </div>
     </div>
 
     <?php

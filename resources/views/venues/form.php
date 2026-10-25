@@ -44,24 +44,26 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 <form
     method="post"
     action="<?= $editingId !== null ? '/veranstaltungsorte/' . e($editingId) : '/veranstaltungsorte' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-    <div>
-        <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.form.name')) ?></label>
-        <input type="text" id="name" name="name" required
-               value="<?= e($val('name', $venue?->name)) ?>"
-               placeholder="z. B. Stadthalle Musterstadt"
-               class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
-    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.form.name')) ?></label>
+            <input type="text" id="name" name="name" required
+                   value="<?= e($val('name', $venue?->name)) ?>"
+                   placeholder="z. B. Stadthalle Musterstadt"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
+        </div>
 
-    <div>
-        <label for="street" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.form.street')) ?></label>
-        <input type="text" id="street" name="street" required
-               value="<?= e($val('street', $venue?->street)) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['street']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['street'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['street']) ?></p><?php endif; ?>
+        <div>
+            <label for="street" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.form.street')) ?></label>
+            <input type="text" id="street" name="street" required
+                   value="<?= e($val('street', $venue?->street)) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['street']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['street'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['street']) ?></p><?php endif; ?>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -134,7 +136,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 </form>
 
 <?php if ($venue !== null): ?>
-    <div class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="mt-6 max-w-3xl rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('venues.power.title')) ?></h2>
 
         <?php if ($needsDistributorWithRcd): ?>

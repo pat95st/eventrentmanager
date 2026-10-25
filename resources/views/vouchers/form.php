@@ -20,7 +20,7 @@ $selectedType = $val('discount_type', $voucher?->discountType->value) ?: Voucher
 <form
     method="post"
     action="<?= $editingId !== null ? '/gutscheine/' . e($editingId) : '/gutscheine' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
@@ -54,16 +54,15 @@ $selectedType = $val('discount_type', $voucher?->discountType->value) ?: Voucher
         <?php if (isset($errors['discountType'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['discountType']) ?></p><?php endif; ?>
     </div>
 
-    <div>
-        <label for="discount_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Rabatt-Wert *</label>
-        <input type="text" id="discount_value" name="discount_value" required
-               value="<?= e($val('discount_value', $voucher?->discountValue)) ?>" placeholder="z. B. 15 oder 25,00"
-               class="mt-1 w-full rounded-md border <?= isset($errors['discountValue']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Je nach Rabatt-Art ein Prozentsatz (0–100) oder ein Betrag in EUR.</p>
-        <?php if (isset($errors['discountValue'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['discountValue']) ?></p><?php endif; ?>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+            <label for="discount_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Rabatt-Wert *</label>
+            <input type="text" id="discount_value" name="discount_value" required
+                   value="<?= e($val('discount_value', $voucher?->discountValue)) ?>" placeholder="z. B. 15 oder 25,00"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['discountValue']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Prozentsatz (0–100) oder Betrag in EUR.</p>
+            <?php if (isset($errors['discountValue'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['discountValue']) ?></p><?php endif; ?>
+        </div>
         <div>
             <label for="valid_from" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Gültig ab<?= $voucher !== null ? ' *' : '' ?></label>
             <input type="date" id="valid_from" name="valid_from"

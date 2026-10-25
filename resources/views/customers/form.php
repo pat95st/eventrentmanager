@@ -20,7 +20,7 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
 <form
     method="post"
     action="<?= $editingId !== null ? '/kunden/' . e($editingId) : '/kunden' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div>
@@ -62,19 +62,21 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
         </div>
     </div>
 
-    <div>
-        <label for="street" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.street')) ?></label>
-        <input type="text" id="street" name="street" required
-               value="<?= e($val('street', $customer?->street)) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['street']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['street'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['street']) ?></p><?php endif; ?>
-    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="sm:col-span-2">
+            <label for="street" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.street')) ?></label>
+            <input type="text" id="street" name="street" required
+                   value="<?= e($val('street', $customer?->street)) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['street']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['street'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['street']) ?></p><?php endif; ?>
+        </div>
 
-    <div>
-        <label for="address_line2" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.address_line2')) ?></label>
-        <input type="text" id="address_line2" name="address_line2" placeholder="z. B. c/o, Etage, Gebäudeteil"
-               value="<?= e($val('address_line2', $customer?->addressLine2)) ?>"
-               class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+        <div>
+            <label for="address_line2" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.address_line2')) ?></label>
+            <input type="text" id="address_line2" name="address_line2" placeholder="z. B. c/o, Etage"
+                   value="<?= e($val('address_line2', $customer?->addressLine2)) ?>"
+                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+        </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

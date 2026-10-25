@@ -21,30 +21,32 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
     method="post"
     action="<?= $editingId !== null ? '/belege/' . e($editingId) : '/belege' ?>"
     enctype="multipart/form-data"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     id="receipt-form"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
-    <div>
-        <label for="supplier_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('receipts.form.supplier')) ?></label>
-        <select id="supplier_id" name="supplier_id" required
-                class="mt-1 w-full rounded-md border <?= isset($errors['supplierId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value=""><?= e(t('receipts.form.supplier_placeholder')) ?></option>
-            <?php $selectedSupplier = $val('supplier_id', $receipt?->supplierId); ?>
-            <?php foreach ($suppliers as $supplier): ?>
-                <option value="<?= e($supplier->id) ?>" <?= $selectedSupplier === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <?php if (isset($errors['supplierId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['supplierId']) ?></p><?php endif; ?>
-    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="supplier_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('receipts.form.supplier')) ?></label>
+            <select id="supplier_id" name="supplier_id" required
+                    class="mt-1 w-full rounded-md border <?= isset($errors['supplierId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e(t('receipts.form.supplier_placeholder')) ?></option>
+                <?php $selectedSupplier = $val('supplier_id', $receipt?->supplierId); ?>
+                <?php foreach ($suppliers as $supplier): ?>
+                    <option value="<?= e($supplier->id) ?>" <?= $selectedSupplier === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors['supplierId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['supplierId']) ?></p><?php endif; ?>
+        </div>
 
-    <div>
-        <label for="receipt_number" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('receipts.form.receipt_number')) ?></label>
-        <input type="text" id="receipt_number" name="receipt_number"
-               value="<?= e($val('receipt_number', $receipt?->receiptNumber)) ?>"
-               class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('receipts.form.receipt_number_hint')) ?></p>
+        <div>
+            <label for="receipt_number" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('receipts.form.receipt_number')) ?></label>
+            <input type="text" id="receipt_number" name="receipt_number"
+                   value="<?= e($val('receipt_number', $receipt?->receiptNumber)) ?>"
+                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('receipts.form.receipt_number_hint')) ?></p>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -17,7 +17,7 @@ $selectedArticleIds = $detail?->articleIds ?? [];
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $isEditing ? e(t('notice_documents.edit')) : e(t('notice_documents.new')) ?></h1>
 </div>
 
-<form method="post" action="<?= $action ?>" enctype="multipart/form-data" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="<?= $action ?>" enctype="multipart/form-data" class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
 
     <div>

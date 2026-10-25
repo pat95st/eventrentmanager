@@ -19,29 +19,31 @@ $selectedType = $val('type', $supplier?->type->value) ?: SupplierType::Kauf->val
 <form
     method="post"
     action="<?= $editingId !== null ? '/lieferanten/' . e($editingId) : '/lieferanten' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-    <div>
-        <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Name *</label>
-        <input type="text" id="name" name="name" required
-               value="<?= e($val('name', $supplier?->name)) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
-    </div>
-
-    <div>
-        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Art *</label>
-        <div class="mt-1 flex gap-4">
-            <?php foreach (SupplierType::cases() as $type): ?>
-                <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                    <input type="radio" name="type" value="<?= e($type->value) ?>"
-                           <?= $selectedType === $type->value ? 'checked' : '' ?>>
-                    <?= e($type->label()) ?>
-                </label>
-            <?php endforeach; ?>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Name *</label>
+            <input type="text" id="name" name="name" required
+                   value="<?= e($val('name', $supplier?->name)) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
         </div>
-        <?php if (isset($errors['type'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['type']) ?></p><?php endif; ?>
+
+        <div>
+            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Art *</label>
+            <div class="mt-2.5 flex gap-4">
+                <?php foreach (SupplierType::cases() as $type): ?>
+                    <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <input type="radio" name="type" value="<?= e($type->value) ?>"
+                               <?= $selectedType === $type->value ? 'checked' : '' ?>>
+                        <?= e($type->label()) ?>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <?php if (isset($errors['type'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['type']) ?></p><?php endif; ?>
+        </div>
     </div>
 
     <div>

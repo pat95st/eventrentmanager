@@ -20,7 +20,7 @@ $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['
 <form
     method="post"
     action="<?= $editingId !== null ? '/fahrzeuge/' . e($editingId) : '/fahrzeuge' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
@@ -38,19 +38,21 @@ $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['
         <?php if (isset($errors['category'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['category']) ?></p><?php endif; ?>
     </div>
 
-    <div>
-        <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Bezeichnung *</label>
-        <input type="text" id="name" name="name" required placeholder="z. B. Sprinter 1 oder Anhänger klein"
-               value="<?= e($val('name', $vehicle?->name)) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
-    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Bezeichnung *</label>
+            <input type="text" id="name" name="name" required placeholder="z. B. Sprinter 1 oder Anhänger klein"
+                   value="<?= e($val('name', $vehicle?->name)) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
+        </div>
 
-    <div>
-        <label for="license_plate" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Kennzeichen</label>
-        <input type="text" id="license_plate" name="license_plate"
-               value="<?= e($val('license_plate', $vehicle?->licensePlate)) ?>"
-               class="mt-1 w-full max-w-xs rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+        <div>
+            <label for="license_plate" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Kennzeichen</label>
+            <input type="text" id="license_plate" name="license_plate"
+                   value="<?= e($val('license_plate', $vehicle?->licensePlate)) ?>"
+                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+        </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

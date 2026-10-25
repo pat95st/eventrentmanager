@@ -18,24 +18,26 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 <form
     method="post"
     action="<?= $editingId !== null ? '/lagerorte/' . e($editingId) : '/lagerorte' ?>"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-    <div>
-        <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('warehouses.form.name')) ?></label>
-        <input type="text" id="name" name="name" required
-               value="<?= e($val('name', $warehouse?->name)) ?>"
-               placeholder="z. B. Hauptlager"
-               class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
-    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('warehouses.form.name')) ?></label>
+            <input type="text" id="name" name="name" required
+                   value="<?= e($val('name', $warehouse?->name)) ?>"
+                   placeholder="z. B. Hauptlager"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['name']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['name'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['name']) ?></p><?php endif; ?>
+        </div>
 
-    <div>
-        <label for="street" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('warehouses.form.street')) ?></label>
-        <input type="text" id="street" name="street" required
-               value="<?= e($val('street', $warehouse?->street)) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['street']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <?php if (isset($errors['street'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['street']) ?></p><?php endif; ?>
+        <div>
+            <label for="street" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('warehouses.form.street')) ?></label>
+            <input type="text" id="street" name="street" required
+                   value="<?= e($val('street', $warehouse?->street)) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['street']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['street'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['street']) ?></p><?php endif; ?>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -22,7 +22,7 @@ $items = $old['items'] ?? $existingItems;
 <form
     method="post"
     action="<?= $editingId !== null ? '/bestellungen/' . e($editingId) : '/bestellungen' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-5xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 

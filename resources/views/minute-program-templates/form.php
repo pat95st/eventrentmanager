@@ -15,7 +15,7 @@ $action = $isEditing ? '/minutenprogramm-vorlagen/' . e($template->id) : '/minut
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $isEditing ? e(t('minute_program_templates.edit')) : e(t('minute_program_templates.new')) ?></h1>
 </div>
 
-<form method="post" action="<?= $action ?>" class="max-w-xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="<?= $action ?>" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
 
     <div>

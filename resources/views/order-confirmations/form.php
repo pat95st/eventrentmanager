@@ -44,42 +44,44 @@ foreach ($articles as $article) {
 <form
     method="post"
     action="<?= $editingId !== null ? '/auftragsbestaetigungen/' . e($editingId) : '/auftragsbestaetigungen' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="max-w-5xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     id="order-confirmation-form"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
-    <div>
-        <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.customer')) ?></label>
-        <div class="mt-1 flex gap-2">
-            <select id="customer_id" name="customer_id"
-                    class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                <option value=""><?= e(t('order_confirmations.form.customer_placeholder')) ?></option>
-                <?php $selectedCustomer = $val('customer_id', $orderConfirmation?->customerId); ?>
-                <?php foreach ($customers as $customer): ?>
-                    <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                + <?= e(t('customers.quick_create.title')) ?>
-            </button>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div>
+            <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.customer')) ?></label>
+            <div class="mt-1 flex gap-2">
+                <select id="customer_id" name="customer_id"
+                        class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <option value=""><?= e(t('order_confirmations.form.customer_placeholder')) ?></option>
+                    <?php $selectedCustomer = $val('customer_id', $orderConfirmation?->customerId); ?>
+                    <?php foreach ($customers as $customer): ?>
+                        <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('customers.quick_create.title')) ?>
+                </button>
+            </div>
+            <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
         </div>
-        <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
+
+        <div>
+            <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.event_location')) ?></label>
+            <input type="text" id="event_location" name="event_location" list="venue-datalist"
+                   value="<?= e($val('event_location', $orderConfirmation?->eventLocation)) ?>"
+                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            <datalist id="venue-datalist">
+                <?php foreach ($venues as $venue): ?>
+                    <option value="<?= e($venue->name) ?>"></option>
+                <?php endforeach; ?>
+            </datalist>
+        </div>
     </div>
 
-    <div>
-        <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.event_location')) ?></label>
-        <input type="text" id="event_location" name="event_location" list="venue-datalist"
-               value="<?= e($val('event_location', $orderConfirmation?->eventLocation)) ?>"
-               class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-        <datalist id="venue-datalist">
-            <?php foreach ($venues as $venue): ?>
-                <option value="<?= e($venue->name) ?>"></option>
-            <?php endforeach; ?>
-        </datalist>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
             <label for="start_date" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.start_date')) ?></label>
             <input type="date" id="start_date" name="start_date" required

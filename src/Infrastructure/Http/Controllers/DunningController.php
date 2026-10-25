@@ -68,7 +68,8 @@ final class DunningController
         }
 
         $companySettings = $this->queries->ask(new GetCompanySettings());
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings);
+        $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::Dunning));
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $layout);
 
         Response::download($pdf, 'Mahnung-' . $detail->notice->dunningNumber . '.pdf', 'application/pdf');
     }

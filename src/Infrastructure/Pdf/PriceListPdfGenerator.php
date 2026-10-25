@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Pdf;
 
 use App\Domain\Article\Article;
+use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 use App\Domain\Settings\PriceTier;
 use App\Domain\Settings\RentalPriceCalculator;
 
@@ -31,7 +32,7 @@ final class PriceListPdfGenerator
      * @param Article[]   $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert
      * @param PriceTier[] $tiers
      */
-    public function generate(array $articles, array $tiers): string
+    public function generate(array $articles, array $tiers, ?PdfLayoutSettings $layout = null): string
     {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -41,7 +42,7 @@ final class PriceListPdfGenerator
         $pageNumber = 1;
 
         $writer->addPage();
-        $y = $this->drawHeader($writer, $pageWidth, $pageHeight, $pageNumber);
+        $y = $this->drawHeader($writer, $pageWidth, $pageHeight, $pageNumber, layout: $layout);
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns, $tiers);
 
         if ($articles === []) {
@@ -63,11 +64,20 @@ final class PriceListPdfGenerator
         return $writer->output();
     }
 
-    private function drawHeader(SimplePdfWriter $writer, float $pageWidth, float $pageHeight, int $pageNumber, bool $continuation = false): float
+    private function drawHeader(SimplePdfWriter $writer, float $pageWidth, float $pageHeight, int $pageNumber, bool $continuation = false, ?PdfLayoutSettings $layout = null): float
     {
         $y = $pageHeight - self::MARGIN;
+
+        $titleOverride = !$continuation ? $layout?->get('title') : null;
+        $titleX = self::MARGIN;
+        if ($titleOverride !== null) {
+            $titlePoint = $titleOverride->toPdfPoint($pageHeight);
+            $titleX = $titlePoint['x'];
+            $y = $titlePoint['y'];
+        }
         $title = $continuation ? 'Preisliste (Fortsetzung)' : 'Preisliste';
-        $writer->text(self::MARGIN, $y - 4, $title, 18, true);
+        $titleFontSize = $titleOverride?->fontSize ?? 18.0;
+        $writer->text($titleX, $y - 4, $title, $titleFontSize, true);
         $y -= 26;
 
         if (!$continuation) {

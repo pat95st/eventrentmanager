@@ -36,6 +36,7 @@ final class EmailDunningNoticeHandler implements CommandHandlerInterface
     public function __construct(
         private readonly GetDunningNoticeHandler $getDunningNoticeHandler,
         private readonly CompanySettingsRepositoryInterface $companySettings,
+        private readonly \App\Domain\Settings\PdfLayout\PdfLayoutSettingsRepositoryInterface $pdfLayoutSettings,
         private readonly DunningPdfGenerator $pdfGenerator,
         private readonly MailerInterface $mailer,
         private readonly EmailTemplateRenderer $templateRenderer,
@@ -56,7 +57,8 @@ final class EmailDunningNoticeHandler implements CommandHandlerInterface
         $detail = $this->getDunningNoticeHandler->handle(new GetDunningNotice($command->dunningNoticeId));
 
         $companySettings = $this->companySettings->get();
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings);
+        $layout = $this->pdfLayoutSettings->getForDocumentType(\App\Domain\Settings\PdfLayout\PdfDocumentType::Dunning);
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $layout);
 
         $pdfFilename = 'Mahnung-' . $detail->notice->dunningNumber . '.pdf';
 

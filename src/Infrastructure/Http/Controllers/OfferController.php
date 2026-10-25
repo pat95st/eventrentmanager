@@ -345,7 +345,8 @@ final class OfferController
         $legalSettings = $this->queries->ask(new GetLegalSettings());
         $offerPdfSettings = $this->queries->ask(new GetOfferPdfSettings());
         $pdfDesignSettings = $this->queries->ask(new GetPdfDesignSettings());
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $legalSettings, $offerPdfSettings, $pdfDesignSettings);
+        $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::Offer));
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $legalSettings, $offerPdfSettings, $pdfDesignSettings, $layout);
 
         $filename = 'Angebot-' . strtoupper(substr($detail->offer->id, 0, 8)) . '.pdf';
 

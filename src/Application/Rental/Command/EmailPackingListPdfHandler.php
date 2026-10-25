@@ -39,6 +39,7 @@ final class EmailPackingListPdfHandler implements CommandHandlerInterface
     public function __construct(
         private readonly GetRentalHandler $getRentalHandler,
         private readonly CompanySettingsRepositoryInterface $companySettings,
+        private readonly \App\Domain\Settings\PdfLayout\PdfLayoutSettingsRepositoryInterface $pdfLayoutSettings,
         private readonly PackingListPdfGenerator $pdfGenerator,
         private readonly MailerInterface $mailer,
         private readonly EmailTemplateRenderer $templateRenderer,
@@ -59,8 +60,9 @@ final class EmailPackingListPdfHandler implements CommandHandlerInterface
         // wird vom Controller genauso behandelt wie bei den übrigen Aktionen.
         $detail = $this->getRentalHandler->handle(new GetRental($command->rentalId));
         $companySettings = $this->companySettings->get();
+        $layout = $this->pdfLayoutSettings->getForDocumentType(\App\Domain\Settings\PdfLayout\PdfDocumentType::PackingList);
 
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings);
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $layout);
         $filename = 'Packliste-' . $this->sanitizeFilename(
             $detail->rental->eventName !== '' ? $detail->rental->eventName : $detail->rental->id
         ) . '.pdf';

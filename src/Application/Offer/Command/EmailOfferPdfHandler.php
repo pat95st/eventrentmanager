@@ -40,6 +40,7 @@ final class EmailOfferPdfHandler implements CommandHandlerInterface
         private readonly LegalSettingsRepositoryInterface $legalSettings,
         private readonly OfferPdfSettingsRepositoryInterface $offerPdfSettings,
         private readonly PdfDesignSettingsRepositoryInterface $pdfDesignSettings,
+        private readonly \App\Domain\Settings\PdfLayout\PdfLayoutSettingsRepositoryInterface $pdfLayoutSettings,
         private readonly OfferPdfGenerator $pdfGenerator,
         private readonly MailerInterface $mailer,
         private readonly EmailTemplateRenderer $templateRenderer,
@@ -61,8 +62,9 @@ final class EmailOfferPdfHandler implements CommandHandlerInterface
         $legalSettings = $this->legalSettings->get();
         $offerPdfSettings = $this->offerPdfSettings->get();
         $pdfDesignSettings = $this->pdfDesignSettings->get();
+        $layout = $this->pdfLayoutSettings->getForDocumentType(\App\Domain\Settings\PdfLayout\PdfDocumentType::Offer);
 
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $legalSettings, $offerPdfSettings, $pdfDesignSettings);
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $legalSettings, $offerPdfSettings, $pdfDesignSettings, $layout);
         $filename = 'Angebot-' . strtoupper(substr($detail->offer->id, 0, 8)) . '.pdf';
 
         // Synchroner Push auf konfigurierte Ziellaufwerke (siehe

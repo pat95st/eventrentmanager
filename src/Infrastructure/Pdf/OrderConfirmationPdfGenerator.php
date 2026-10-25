@@ -11,6 +11,7 @@ use App\Domain\OrderConfirmation\OrderConfirmationFreeTextItem;
 use App\Domain\OrderConfirmation\OrderConfirmationSectionText;
 use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\PdfDesignSettings;
+use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 
 /**
@@ -44,7 +45,7 @@ final class OrderConfirmationPdfGenerator
     {
     }
 
-    public function generate(OrderConfirmationDetail $detail, CompanySettings $companySettings, ?PdfDesignSettings $pdfDesignSettings = null): string
+    public function generate(OrderConfirmationDetail $detail, CompanySettings $companySettings, ?PdfDesignSettings $pdfDesignSettings = null, ?PdfLayoutSettings $layout = null): string
     {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -57,7 +58,7 @@ final class OrderConfirmationPdfGenerator
         $pageNumber = 1;
 
         $writer->addPage();
-        $y = $this->drawHeader($writer, $detail, $companySettings, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber, continuation: false, pdfDesignSettings: $pdfDesignSettings);
+        $y = $this->drawHeader($writer, $detail, $companySettings, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber, continuation: false, pdfDesignSettings: $pdfDesignSettings, layout: $layout);
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings);
 
         if ($rows === []) {
@@ -176,31 +177,57 @@ final class OrderConfirmationPdfGenerator
         float $pageHeight,
         int $pageNumber,
         bool $continuation = false,
-        ?PdfDesignSettings $pdfDesignSettings = null
+        ?PdfDesignSettings $pdfDesignSettings = null,
+        ?PdfLayoutSettings $layout = null
     ): float {
         $this->drawFoldMarks($writer, $pageHeight);
 
         if ($logoJpeg !== null && $logoBox !== null) {
-            $logoX = $pdfDesignSettings?->logoPosition === PdfDesignSettings::LOGO_POSITION_LEFT
-                ? self::MARGIN
-                : $pageWidth - self::MARGIN - $logoBox[0];
-            $writer->image($logoJpeg, $logoX, $pageHeight - self::MARGIN - $logoBox[1], $logoBox[0], $logoBox[1]);
+            $logoOverride = $layout?->get('logo');
+            if ($logoOverride !== null) {
+                $logoPoint = $logoOverride->toPdfPoint($pageHeight);
+                $writer->image($logoJpeg, $logoPoint['x'], $logoPoint['y'] - $logoBox[1], $logoBox[0], $logoBox[1]);
+            } else {
+                $logoX = $pdfDesignSettings?->logoPosition === PdfDesignSettings::LOGO_POSITION_LEFT
+                    ? self::MARGIN
+                    : $pageWidth - self::MARGIN - $logoBox[0];
+                $writer->image($logoJpeg, $logoX, $pageHeight - self::MARGIN - $logoBox[1], $logoBox[0], $logoBox[1]);
+            }
         }
 
         if (!$continuation && $companySettings !== null) {
-            $this->drawWindowEnvelopeAddress($writer, $detail, $companySettings, $pageHeight);
+            $this->drawWindowEnvelopeAddress($writer, $detail, $companySettings, $pageHeight, $layout);
         }
 
         $y = $continuation
             ? $pageHeight - self::MARGIN
             : $pageHeight - (self::WINDOW_ZONE_BOTTOM_MM * self::MM_TO_PT) - 10.0;
+
+        $titleOverride = !$continuation ? $layout?->get('title') : null;
+        $titleX = self::MARGIN;
+        if ($titleOverride !== null) {
+            $titlePoint = $titleOverride->toPdfPoint($pageHeight);
+            $titleX = $titlePoint['x'];
+            $y = $titlePoint['y'];
+        }
         $title = $continuation ? 'Auftragsbestätigung (Fortsetzung)' : 'Auftragsbestätigung';
-        $writer->text(self::MARGIN, $y - 4, $title, 18, true, color: $pdfDesignSettings?->accentColorPdfString() ?? '0 0 0');
+        $titleFontSize = $titleOverride?->fontSize ?? 18.0;
+        $writer->text($titleX, $y - 4, $title, $titleFontSize, true, color: $pdfDesignSettings?->accentColorPdfString() ?? '0 0 0');
         $y -= 30;
 
         if (!$continuation) {
+            $infoLinesOverride = $layout?->get('info_lines');
+            $infoLinesX = self::MARGIN;
+            $infoLinesFontSize = 10.0;
+            if ($infoLinesOverride !== null) {
+                $infoPoint = $infoLinesOverride->toPdfPoint($pageHeight);
+                $infoLinesX = $infoPoint['x'];
+                $y = $infoPoint['y'];
+                $infoLinesFontSize = $infoLinesOverride->fontSize ?? 10.0;
+            }
+
             foreach ($this->buildInfoLines($detail) as $line) {
-                $writer->text(self::MARGIN, $y, $line, 10);
+                $writer->text($infoLinesX, $y, $line, $infoLinesFontSize);
                 $y -= 14;
             }
         }
@@ -243,20 +270,39 @@ final class OrderConfirmationPdfGenerator
         }
     }
 
-    private function drawWindowEnvelopeAddress(SimplePdfWriter $writer, OrderConfirmationDetail $detail, CompanySettings $companySettings, float $pageHeight): void
+    private function drawWindowEnvelopeAddress(SimplePdfWriter $writer, OrderConfirmationDetail $detail, CompanySettings $companySettings, float $pageHeight, ?PdfLayoutSettings $layout = null): void
     {
         $zoneX = self::WINDOW_ZONE_LEFT_MM * self::MM_TO_PT;
         $zoneTopY = $pageHeight - (self::WINDOW_ZONE_TOP_MM * self::MM_TO_PT);
 
         $returnLine = $this->buildReturnAddressLine($companySettings);
+        $returnOverride = $layout?->get('return_address');
+        $returnX = $zoneX;
+        $returnFontSize = 7.5;
         $y = $zoneTopY - 7.0;
+        if ($returnOverride !== null) {
+            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
+            $returnX = $returnPoint['x'];
+            $y = $returnPoint['y'];
+            $returnFontSize = $returnOverride->fontSize ?? 7.5;
+        }
         if ($returnLine !== null) {
-            $writer->text($zoneX, $y, $returnLine, 7.5);
+            $writer->text($returnX, $y, $returnLine, $returnFontSize);
         }
         $y -= 18.0;
 
+        $addressOverride = $layout?->get('customer_address');
+        $addressX = $zoneX;
+        $addressFontSize = 10.0;
+        if ($addressOverride !== null) {
+            $addressPoint = $addressOverride->toPdfPoint($pageHeight);
+            $addressX = $addressPoint['x'];
+            $y = $addressPoint['y'];
+            $addressFontSize = $addressOverride->fontSize ?? 10.0;
+        }
+
         foreach ($this->buildCustomerAddressLines($detail->customer) as $line) {
-            $writer->text($zoneX, $y, $line, 10.0);
+            $writer->text($addressX, $y, $line, $addressFontSize);
             $y -= 12.5;
         }
     }

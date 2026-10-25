@@ -279,7 +279,8 @@ final class OrderConfirmationController
 
         $companySettings = $this->queries->ask(new GetCompanySettings());
         $pdfDesignSettings = $this->queries->ask(new GetPdfDesignSettings());
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $pdfDesignSettings);
+        $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::OrderConfirmation));
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $pdfDesignSettings, $layout);
 
         $filename = 'Auftragsbestaetigung-' . $detail->orderConfirmation->orderConfirmationNumber . '.pdf';
 

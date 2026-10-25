@@ -490,7 +490,8 @@ final class RentalController
         }
 
         $companySettings = $this->queries->ask(new GetCompanySettings());
-        $pdf = $this->packingListPdfGenerator->generate($detail, $companySettings);
+        $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::PackingList));
+        $pdf = $this->packingListPdfGenerator->generate($detail, $companySettings, $layout);
 
         $filename = 'Packliste-' . $this->sanitizeFilename($detail->rental->eventName !== '' ? $detail->rental->eventName : $detail->rental->id) . '.pdf';
 

@@ -50,6 +50,7 @@ final class SettingsSections
                     ['key' => 'settings-rechnungsvorlage', 'href' => '/einstellungen/rechnungsvorlage', 'label' => t('nav.invoice_pdf_template')],
                     ['key' => 'settings-angebotsvorlage', 'href' => '/einstellungen/angebotsvorlage', 'label' => t('nav.offer_pdf_template')],
                     ['key' => 'settings-pdf-design', 'href' => '/einstellungen/pdf-design', 'label' => t('nav.pdf_design_settings')],
+                    ['key' => 'settings-pdf-layout', 'href' => '/einstellungen/pdf-layout', 'label' => t('nav.pdf_layout_settings')],
                     ['key' => 'settings-preise', 'href' => '/einstellungen/preise', 'label' => t('nav.pricing_settings')],
                     ['key' => 'settings-gutscheine', 'href' => '/einstellungen/gutscheine', 'label' => t('nav.voucher_settings')],
                     ['key' => 'settings-preisstaffelung', 'href' => '/einstellungen/preisstaffelung', 'label' => t('nav.price_tiers')],

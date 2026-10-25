@@ -14,6 +14,7 @@ use App\Domain\Settings\InvoicePdfSettings;
 use App\Domain\Settings\InvoiceSettings;
 use App\Domain\Settings\LegalSettings;
 use App\Domain\Settings\PdfDesignSettings;
+use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 
 /**
@@ -73,7 +74,8 @@ final class InvoicePdfGenerator
         InvoiceSettings $invoiceSettings,
         ?LegalSettings $legalSettings = null,
         ?InvoicePdfSettings $invoicePdfSettings = null,
-        ?PdfDesignSettings $pdfDesignSettings = null
+        ?PdfDesignSettings $pdfDesignSettings = null,
+        ?PdfLayoutSettings $layout = null
     ): string {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -86,7 +88,7 @@ final class InvoicePdfGenerator
         $pageNumber = 1;
 
         $writer->addPage();
-        $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber, continuation: false, invoicePdfSettings: $invoicePdfSettings, pdfDesignSettings: $pdfDesignSettings);
+        $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber, continuation: false, invoicePdfSettings: $invoicePdfSettings, pdfDesignSettings: $pdfDesignSettings, layout: $layout);
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings);
 
         if ($rows === []) {
@@ -221,13 +223,23 @@ final class InvoicePdfGenerator
 
         $closingBlocks = $this->richTextRenderer->parse($invoicePdfSettings?->closingHtml);
         if ($closingBlocks !== []) {
+            $closingOverride = $layout?->get('closing_text');
+            $closingX = self::MARGIN;
+            $closingY = $y - 10.0;
+            $closingWidth = $pageWidth - 2 * self::MARGIN;
+            if ($closingOverride !== null) {
+                $closingPoint = $closingOverride->toPdfPoint($pageHeight);
+                $closingX = $closingPoint['x'];
+                $closingY = $closingPoint['y'];
+                $closingWidth = $closingOverride->widthPt() ?? $closingWidth;
+            }
             $closingPageNumber = $pageNumber;
             $y = $this->richTextRenderer->render(
                 $writer,
                 $closingBlocks,
-                self::MARGIN,
-                $y - 10.0,
-                $pageWidth - 2 * self::MARGIN,
+                $closingX,
+                $closingY,
+                $closingWidth,
                 self::MARGIN + 20,
                 function () use ($writer, $detail, $companySettings, $invoiceSettings, $pageWidth, $pageHeight, $pdfDesignSettings, &$closingPageNumber): float {
                     $closingPageNumber++;
@@ -306,32 +318,40 @@ final class InvoicePdfGenerator
         int $pageNumber,
         bool $continuation = false,
         ?InvoicePdfSettings $invoicePdfSettings = null,
-        ?PdfDesignSettings $pdfDesignSettings = null
+        ?PdfDesignSettings $pdfDesignSettings = null,
+        ?PdfLayoutSettings $layout = null
     ): float {
         // Faltmarken (DIN 5008) werden auf JEDER Seite gezeichnet, da das
         // Falzen unabhängig vom Inhalt ist (siehe Klassen-Doc).
         $this->drawFoldMarks($writer, $pageHeight);
 
         if ($logoJpeg !== null && $logoBox !== null) {
-            // Logo-Position (links/rechts oben) laut PdfDesignSettings, siehe
-            // OfferPdfGenerator für die identische Begründung (keine Kollision
-            // mit der Fensterkuvert-Adresszone).
-            $logoX = $pdfDesignSettings?->logoPosition === PdfDesignSettings::LOGO_POSITION_LEFT
-                ? self::MARGIN
-                : $pageWidth - self::MARGIN - $logoBox[0];
-            $writer->image(
-                $logoJpeg,
-                $logoX,
-                $pageHeight - self::MARGIN - $logoBox[1],
-                $logoBox[0],
-                $logoBox[1]
-            );
+            // Logo-Position: per visuellem Editor überschreibbar (siehe
+            // App\Domain\Settings\PdfLayout), sonst wie bisher links/rechts
+            // oben laut PdfDesignSettings (keine Kollision mit der
+            // Fensterkuvert-Adresszone).
+            $logoOverride = $layout?->get('logo');
+            if ($logoOverride !== null) {
+                $logoPoint = $logoOverride->toPdfPoint($pageHeight);
+                $writer->image($logoJpeg, $logoPoint['x'], $logoPoint['y'] - $logoBox[1], $logoBox[0], $logoBox[1]);
+            } else {
+                $logoX = $pdfDesignSettings?->logoPosition === PdfDesignSettings::LOGO_POSITION_LEFT
+                    ? self::MARGIN
+                    : $pageWidth - self::MARGIN - $logoBox[0];
+                $writer->image(
+                    $logoJpeg,
+                    $logoX,
+                    $pageHeight - self::MARGIN - $logoBox[1],
+                    $logoBox[0],
+                    $logoBox[1]
+                );
+            }
         }
 
         // Fensterkuvert-Adresszone: NUR auf der ersten Seite (kein
         // Kuvertfenster für Folgeseiten relevant, siehe Klassen-Doc).
         if (!$continuation) {
-            $this->drawWindowEnvelopeAddress($writer, $detail, $companySettings, $pageHeight);
+            $this->drawWindowEnvelopeAddress($writer, $detail, $companySettings, $pageHeight, $layout);
         }
 
         // ENTSCHEIDUNG (Kollisionsvermeidung Fensterkuvert-Zone vs.
@@ -344,8 +364,17 @@ final class InvoicePdfGenerator
         $y = $continuation
             ? $pageHeight - self::MARGIN
             : $pageHeight - (self::WINDOW_ZONE_BOTTOM_MM * self::MM_TO_PT) - 10.0;
+
+        $titleOverride = !$continuation ? $layout?->get('title') : null;
+        $titleX = self::MARGIN;
+        if ($titleOverride !== null) {
+            $titlePoint = $titleOverride->toPdfPoint($pageHeight);
+            $titleX = $titlePoint['x'];
+            $y = $titlePoint['y'];
+        }
         $title = $continuation ? 'Rechnung (Fortsetzung)' : 'Rechnung';
-        $writer->text(self::MARGIN, $y - 4, $title, 18, true, color: $pdfDesignSettings?->accentColorPdfString() ?? '0 0 0');
+        $titleFontSize = $titleOverride?->fontSize ?? 18.0;
+        $writer->text($titleX, $y - 4, $title, $titleFontSize, true, color: $pdfDesignSettings?->accentColorPdfString() ?? '0 0 0');
         $y -= 24;
 
         if (!$detail->invoice->isFinalized()) {
@@ -356,14 +385,24 @@ final class InvoicePdfGenerator
         }
 
         if (!$continuation) {
+            $infoLinesOverride = $layout?->get('info_lines');
+            $infoLinesX = self::MARGIN;
+            $infoLinesFontSize = 10.0;
+            if ($infoLinesOverride !== null) {
+                $infoPoint = $infoLinesOverride->toPdfPoint($pageHeight);
+                $infoLinesX = $infoPoint['x'];
+                $y = $infoPoint['y'];
+                $infoLinesFontSize = $infoLinesOverride->fontSize ?? 10.0;
+            }
+
             foreach ($this->buildInvoiceInfoLines($detail, $invoiceSettings) as $line) {
-                $writer->text(self::MARGIN, $y, $line, 10);
+                $writer->text($infoLinesX, $y, $line, $infoLinesFontSize);
                 $y -= 14;
             }
 
             $taxIdLine = $this->buildTaxIdLine($invoiceSettings);
             if ($taxIdLine !== null) {
-                $writer->text(self::MARGIN, $y, $taxIdLine, 7.5);
+                $writer->text($infoLinesX, $y, $taxIdLine, 7.5);
                 $y -= 12;
             }
 
@@ -371,8 +410,18 @@ final class InvoicePdfGenerator
             // OfferPdfGenerator für die identische Begründung.
             $introBlocks = $this->richTextRenderer->parse($invoicePdfSettings?->introHtml);
             if ($introBlocks !== []) {
-                $y -= 6;
-                $y = $this->richTextRenderer->render($writer, $introBlocks, self::MARGIN, $y, $pageWidth - 2 * self::MARGIN, self::MARGIN + 60);
+                $introOverride = $layout?->get('intro_text');
+                $introX = self::MARGIN;
+                $introWidth = $pageWidth - 2 * self::MARGIN;
+                if ($introOverride !== null) {
+                    $introPoint = $introOverride->toPdfPoint($pageHeight);
+                    $introX = $introPoint['x'];
+                    $y = $introPoint['y'];
+                    $introWidth = $introOverride->widthPt() ?? $introWidth;
+                } else {
+                    $y -= 6;
+                }
+                $y = $this->richTextRenderer->render($writer, $introBlocks, $introX, $y, $introWidth, self::MARGIN + 60);
             }
         }
 
@@ -441,20 +490,39 @@ final class InvoicePdfGenerator
      * Kundenadressblock. Bei fehlenden Adressdaten wird die jeweilige
      * Zeile/der jeweilige Teil einfach weggelassen statt abzustürzen.
      */
-    private function drawWindowEnvelopeAddress(SimplePdfWriter $writer, InvoiceDetail $detail, CompanySettings $companySettings, float $pageHeight): void
+    private function drawWindowEnvelopeAddress(SimplePdfWriter $writer, InvoiceDetail $detail, CompanySettings $companySettings, float $pageHeight, ?PdfLayoutSettings $layout = null): void
     {
         $zoneX = self::WINDOW_ZONE_LEFT_MM * self::MM_TO_PT;
         $zoneTopY = $pageHeight - (self::WINDOW_ZONE_TOP_MM * self::MM_TO_PT);
 
         $returnLine = $this->buildReturnAddressLine($companySettings);
+        $returnOverride = $layout?->get('return_address');
+        $returnX = $zoneX;
+        $returnFontSize = 7.5;
         $y = $zoneTopY - 7.0;
+        if ($returnOverride !== null) {
+            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
+            $returnX = $returnPoint['x'];
+            $y = $returnPoint['y'];
+            $returnFontSize = $returnOverride->fontSize ?? 7.5;
+        }
         if ($returnLine !== null) {
-            $writer->text($zoneX, $y, $returnLine, 7.5);
+            $writer->text($returnX, $y, $returnLine, $returnFontSize);
         }
         $y -= 18.0;
 
+        $addressOverride = $layout?->get('customer_address');
+        $addressX = $zoneX;
+        $addressFontSize = 10.0;
+        if ($addressOverride !== null) {
+            $addressPoint = $addressOverride->toPdfPoint($pageHeight);
+            $addressX = $addressPoint['x'];
+            $y = $addressPoint['y'];
+            $addressFontSize = $addressOverride->fontSize ?? 10.0;
+        }
+
         foreach ($this->buildCustomerAddressLines($detail->customer) as $line) {
-            $writer->text($zoneX, $y, $line, 10.0);
+            $writer->text($addressX, $y, $line, $addressFontSize);
             $y -= 12.5;
         }
     }

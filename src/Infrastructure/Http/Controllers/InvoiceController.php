@@ -290,7 +290,8 @@ final class InvoiceController
         $legalSettings = $this->queries->ask(new GetLegalSettings());
         $invoicePdfSettings = $this->queries->ask(new GetInvoicePdfSettings());
         $pdfDesignSettings = $this->queries->ask(new GetPdfDesignSettings());
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $invoiceSettings, $legalSettings, $invoicePdfSettings, $pdfDesignSettings);
+        $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::Invoice));
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $invoiceSettings, $legalSettings, $invoicePdfSettings, $pdfDesignSettings, $layout);
 
         $filename = 'Rechnung-' . ($detail->invoice->invoiceNumber ?? ('Entwurf-' . strtoupper(substr($detail->invoice->id, 0, 8)))) . '.pdf';
 

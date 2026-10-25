@@ -78,8 +78,9 @@ final class ArticleController
     {
         $articles = $this->billableArticlesForPriceList();
         $tiers = $this->queries->ask(new GetPriceTiers());
+        $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::PriceList));
 
-        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers);
+        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers, $layout);
 
         Response::download($pdf, 'Preisliste.pdf', 'application/pdf');
     }

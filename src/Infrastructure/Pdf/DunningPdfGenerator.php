@@ -7,6 +7,7 @@ namespace App\Infrastructure\Pdf;
 use App\Application\Dunning\Query\DunningNoticeDetail;
 use App\Domain\Customer\Customer;
 use App\Domain\Settings\CompanySettings;
+use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 
 /**
  * Erzeugt eine Mahnung als PDF — bewusst DEUTLICH einfacher als
@@ -22,7 +23,7 @@ final class DunningPdfGenerator
 {
     private const MARGIN = 50.0;
 
-    public function generate(DunningNoticeDetail $detail, CompanySettings $companySettings): string
+    public function generate(DunningNoticeDetail $detail, CompanySettings $companySettings, ?PdfLayoutSettings $layout = null): string
     {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -32,13 +33,32 @@ final class DunningPdfGenerator
         $y = $pageHeight - self::MARGIN;
 
         $returnLine = $this->buildReturnAddressLine($companySettings);
+        $returnOverride = $layout?->get('return_address');
+        $returnX = self::MARGIN;
+        $returnFontSize = 7.5;
+        if ($returnOverride !== null) {
+            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
+            $returnX = $returnPoint['x'];
+            $y = $returnPoint['y'];
+            $returnFontSize = $returnOverride->fontSize ?? 7.5;
+        }
         if ($returnLine !== null) {
-            $writer->text(self::MARGIN, $y, $returnLine, 7.5);
+            $writer->text($returnX, $y, $returnLine, $returnFontSize);
             $y -= 24;
         }
 
+        $addressOverride = $layout?->get('customer_address');
+        $addressX = self::MARGIN;
+        $addressFontSize = 10.0;
+        if ($addressOverride !== null) {
+            $addressPoint = $addressOverride->toPdfPoint($pageHeight);
+            $addressX = $addressPoint['x'];
+            $y = $addressPoint['y'];
+            $addressFontSize = $addressOverride->fontSize ?? 10.0;
+        }
+
         foreach ($this->buildCustomerAddressLines($detail->customer) as $line) {
-            $writer->text(self::MARGIN, $y, $line, 10.0);
+            $writer->text($addressX, $y, $line, $addressFontSize);
             $y -= 13.0;
         }
         $y -= 24;
@@ -46,7 +66,15 @@ final class DunningPdfGenerator
         $notice = $detail->notice;
         $invoice = $detail->invoice;
 
-        $writer->text(self::MARGIN, $y, 'Mahnung: ' . $notice->levelName, 16, true);
+        $titleOverride = $layout?->get('title');
+        $titleX = self::MARGIN;
+        if ($titleOverride !== null) {
+            $titlePoint = $titleOverride->toPdfPoint($pageHeight);
+            $titleX = $titlePoint['x'];
+            $y = $titlePoint['y'];
+        }
+        $titleFontSize = $titleOverride?->fontSize ?? 16.0;
+        $writer->text($titleX, $y, 'Mahnung: ' . $notice->levelName, $titleFontSize, true);
         $y -= 28;
 
         $infoLines = [

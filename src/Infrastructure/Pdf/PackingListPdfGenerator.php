@@ -6,6 +6,7 @@ namespace App\Infrastructure\Pdf;
 
 use App\Application\Rental\Query\RentalDetail;
 use App\Domain\Settings\CompanySettings;
+use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 
 /**
@@ -33,7 +34,7 @@ final class PackingListPdfGenerator
     {
     }
 
-    public function generate(RentalDetail $detail, CompanySettings $companySettings): string
+    public function generate(RentalDetail $detail, CompanySettings $companySettings, ?PdfLayoutSettings $layout = null): string
     {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -46,7 +47,7 @@ final class PackingListPdfGenerator
         $pageNumber = 1;
 
         $writer->addPage();
-        $y = $this->drawHeader($writer, $detail, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber);
+        $y = $this->drawHeader($writer, $detail, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber, layout: $layout);
         $y = $this->drawTableHeader($writer, $y, $pageWidth);
 
         if ($rows === []) {
@@ -105,26 +106,52 @@ final class PackingListPdfGenerator
         float $pageWidth,
         float $pageHeight,
         int $pageNumber,
-        bool $continuation = false
+        bool $continuation = false,
+        ?PdfLayoutSettings $layout = null
     ): float {
         if ($logoJpeg !== null && $logoBox !== null) {
-            $writer->image(
-                $logoJpeg,
-                $pageWidth - self::MARGIN - $logoBox[0],
-                $pageHeight - self::MARGIN - $logoBox[1],
-                $logoBox[0],
-                $logoBox[1]
-            );
+            $logoOverride = $layout?->get('logo');
+            if ($logoOverride !== null) {
+                $logoPoint = $logoOverride->toPdfPoint($pageHeight);
+                $writer->image($logoJpeg, $logoPoint['x'], $logoPoint['y'] - $logoBox[1], $logoBox[0], $logoBox[1]);
+            } else {
+                $writer->image(
+                    $logoJpeg,
+                    $pageWidth - self::MARGIN - $logoBox[0],
+                    $pageHeight - self::MARGIN - $logoBox[1],
+                    $logoBox[0],
+                    $logoBox[1]
+                );
+            }
         }
 
         $y = $pageHeight - self::MARGIN;
+
+        $titleOverride = !$continuation ? $layout?->get('title') : null;
+        $titleX = self::MARGIN;
+        if ($titleOverride !== null) {
+            $titlePoint = $titleOverride->toPdfPoint($pageHeight);
+            $titleX = $titlePoint['x'];
+            $y = $titlePoint['y'];
+        }
         $title = $continuation ? 'Packliste (Fortsetzung)' : 'Packliste';
-        $writer->text(self::MARGIN, $y - 4, $title, 18, true);
+        $titleFontSize = $titleOverride?->fontSize ?? 18.0;
+        $writer->text($titleX, $y - 4, $title, $titleFontSize, true);
         $y -= 30;
 
         if (!$continuation) {
+            $infoLinesOverride = $layout?->get('info_lines');
+            $infoLinesX = self::MARGIN;
+            $infoLinesFontSize = 10.0;
+            if ($infoLinesOverride !== null) {
+                $infoPoint = $infoLinesOverride->toPdfPoint($pageHeight);
+                $infoLinesX = $infoPoint['x'];
+                $y = $infoPoint['y'];
+                $infoLinesFontSize = $infoLinesOverride->fontSize ?? 10.0;
+            }
+
             foreach ($this->buildEventInfoLines($detail) as $line) {
-                $writer->text(self::MARGIN, $y, $line, 10);
+                $writer->text($infoLinesX, $y, $line, $infoLinesFontSize);
                 $y -= 14;
             }
         } else {

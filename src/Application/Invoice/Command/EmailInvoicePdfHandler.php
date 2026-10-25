@@ -45,6 +45,7 @@ final class EmailInvoicePdfHandler implements CommandHandlerInterface
         private readonly LegalSettingsRepositoryInterface $legalSettings,
         private readonly InvoicePdfSettingsRepositoryInterface $invoicePdfSettings,
         private readonly PdfDesignSettingsRepositoryInterface $pdfDesignSettings,
+        private readonly \App\Domain\Settings\PdfLayout\PdfLayoutSettingsRepositoryInterface $pdfLayoutSettings,
         private readonly InvoicePdfGenerator $pdfGenerator,
         private readonly XRechnungGenerator $xRechnungGenerator,
         private readonly MailerInterface $mailer,
@@ -73,8 +74,9 @@ final class EmailInvoicePdfHandler implements CommandHandlerInterface
         $legalSettings = $this->legalSettings->get();
         $invoicePdfSettings = $this->invoicePdfSettings->get();
         $pdfDesignSettings = $this->pdfDesignSettings->get();
+        $layout = $this->pdfLayoutSettings->getForDocumentType(\App\Domain\Settings\PdfLayout\PdfDocumentType::Invoice);
 
-        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $invoiceSettings, $legalSettings, $invoicePdfSettings, $pdfDesignSettings);
+        $pdf = $this->pdfGenerator->generate($detail, $companySettings, $invoiceSettings, $legalSettings, $invoicePdfSettings, $pdfDesignSettings, $layout);
         $xml = $this->xRechnungGenerator->generate($detail, $companySettings, $invoiceSettings);
 
         $pdfFilename = 'Rechnung-' . $detail->invoice->invoiceNumber . '.pdf';

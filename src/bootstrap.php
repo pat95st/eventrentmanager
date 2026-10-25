@@ -463,6 +463,7 @@ $articleChannelPublisherRegistry = new \App\Application\Article\Channel\ArticleC
 $legalSettingsRepository = new MariadbLegalSettingsRepository($pdo);
 $offerPdfSettingsRepository = new MariadbOfferPdfSettingsRepository($pdo);
 $pdfDesignSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfDesignSettingsRepository($pdo);
+$pdfLayoutSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfLayoutSettingsRepository($pdo);
 $emailTemplateRepository = new MariadbEmailTemplateRepository($pdo);
 $emailTemplateRenderer = new EmailTemplateRenderer($emailTemplateRepository, $companySettingsRepository, $fileStorage);
 $mailer = new SmtpMailer($smtpSettingsRepository);
@@ -526,6 +527,9 @@ $commandBus = new CommandBus();
 // "Undefined variable $queryBus" auslösen, da $queryBus zum Zeitpunkt ihrer
 // Ausführung noch nicht existierte.
 $queryBus = new QueryBus();
+
+$queryBus->register(\App\Application\Settings\Query\GetPdfLayoutSettings::class, new \App\Application\Settings\Query\GetPdfLayoutSettingsHandler($pdfLayoutSettingsRepository));
+$commandBus->register(\App\Application\Settings\Command\UpdatePdfLayoutSettings::class, new \App\Application\Settings\Command\UpdatePdfLayoutSettingsHandler($pdfLayoutSettingsRepository));
 
 $commandBus->register(\App\Application\Category\Command\CreateCategory::class, new CreateCategoryHandler($categoryRepository));
 $commandBus->register(\App\Application\Category\Command\UpdateCategory::class, new UpdateCategoryHandler($categoryRepository));
@@ -747,6 +751,7 @@ $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new E
     $legalSettingsRepository,
     $offerPdfSettingsRepository,
     $pdfDesignSettingsRepository,
+    $pdfLayoutSettingsRepository,
     $offerPdfGenerator,
     $mailer,
     $emailTemplateRenderer,
@@ -806,6 +811,7 @@ $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, n
     $legalSettingsRepository,
     $invoicePdfSettingsRepository,
     $pdfDesignSettingsRepository,
+    $pdfLayoutSettingsRepository,
     $invoicePdfGenerator,
     $xRechnungGenerator,
     $mailer,
@@ -856,6 +862,7 @@ $getDunningNoticeHandler = new \App\Application\Dunning\Query\GetDunningNoticeHa
 $commandBus->register(\App\Application\Dunning\Command\EmailDunningNotice::class, new \App\Application\Dunning\Command\EmailDunningNoticeHandler(
     $getDunningNoticeHandler,
     $companySettingsRepository,
+    $pdfLayoutSettingsRepository,
     $dunningPdfGenerator,
     $mailer,
     $emailTemplateRenderer,
@@ -1179,6 +1186,7 @@ $packingListPdfGenerator = new PackingListPdfGenerator($fileStorage);
 $commandBus->register(\App\Application\Rental\Command\EmailPackingListPdf::class, new EmailPackingListPdfHandler(
     $getRentalHandler,
     $companySettingsRepository,
+    $pdfLayoutSettingsRepository,
     $packingListPdfGenerator,
     $mailer,
     $emailTemplateRenderer,
@@ -1301,6 +1309,7 @@ $emailTemplateSettingsController = new EmailTemplateSettingsController($commandB
 $legalSettingsController = new LegalSettingsController($commandBus, $queryBus);
 $offerPdfTemplateSettingsController = new OfferPdfTemplateSettingsController($commandBus, $queryBus);
 $pdfDesignSettingsController = new \App\Infrastructure\Http\Controllers\PdfDesignSettingsController($commandBus, $queryBus);
+$pdfLayoutSettingsController = new \App\Infrastructure\Http\Controllers\PdfLayoutSettingsController($commandBus, $queryBus);
 $rentalReminderSettingsController = new \App\Infrastructure\Http\Controllers\RentalReminderSettingsController($commandBus, $queryBus);
 $invoiceDueReminderSettingsController = new \App\Infrastructure\Http\Controllers\InvoiceDueReminderSettingsController($commandBus, $queryBus);
 $overageSettingsController = new \App\Infrastructure\Http\Controllers\OverageSettingsController($commandBus, $queryBus);
@@ -1858,6 +1867,9 @@ $router->post('/einstellungen/rechnungsvorlage', $auth->guard(Permission::Admini
 
 $router->get('/einstellungen/pdf-design', $auth->guard(Permission::Administration, [$pdfDesignSettingsController, 'edit']));
 $router->post('/einstellungen/pdf-design', $auth->guard(Permission::Administration, [$pdfDesignSettingsController, 'update']));
+
+$router->get('/einstellungen/pdf-layout', $auth->guard(Permission::Administration, [$pdfLayoutSettingsController, 'edit']));
+$router->post('/einstellungen/pdf-layout', $auth->guard(Permission::Administration, [$pdfLayoutSettingsController, 'update']));
 
 $router->get('/einstellungen/erinnerungen', $auth->guard(Permission::Administration, [$rentalReminderSettingsController, 'edit']));
 $router->post('/einstellungen/erinnerungen', $auth->guard(Permission::Administration, [$rentalReminderSettingsController, 'update']));

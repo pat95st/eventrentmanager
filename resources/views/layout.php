@@ -46,9 +46,11 @@ $backgroundImageUrl = CompanyBranding::backgroundImageUrl();
 
 // "Artikel" ist ein Menüpunkt mit Untermenü (Hersteller/Kategorien sind
 // dem Artikelstamm untergeordnet); RMA ist ein eigener, gleichrangiger
-// Menüpunkt. Jeder Menüpunkt wird nur angezeigt, wenn der angemeldete
-// Benutzer das zugehörige Recht besitzt (siehe Zuordnung in bootstrap.php).
-$articlesGroupKeys = ['articles', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents'];
+// Menüpunkt. Lagerorte gehören organisatorisch ebenfalls zur Artikel-
+// verwaltung und stecken daher hier (nicht mehr bei "Veranstaltungen").
+// Jeder Menüpunkt wird nur angezeigt, wenn der angemeldete Benutzer das
+// zugehörige Recht besitzt (siehe Zuordnung in bootstrap.php).
+$articlesGroupKeys = ['articles', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents', 'warehouses'];
 $articlesChildren = [
     ['key' => 'articles', 'label' => t('nav.articles_all'), 'href' => '/artikel'],
     ['key' => 'cases', 'label' => t('nav.cases'), 'href' => '/cases'],
@@ -58,21 +60,54 @@ $articlesChildren = [
     ['key' => 'rma', 'label' => t('nav.rma'), 'href' => '/rma'],
     ['key' => 'firmware', 'label' => t('nav.firmware'), 'href' => '/firmware'],
     ['key' => 'notice_documents', 'label' => t('nav.notice_documents'), 'href' => '/hinweisdokumente'],
+    ['key' => 'warehouses', 'label' => t('nav.warehouses'), 'href' => '/lagerorte'],
 ];
 $isArticlesGroupActive = in_array($activeNav, $articlesGroupKeys, true);
 
-// "Veranstaltung" ist analog zu "Artikel" ein Menüpunkt mit Untermenü
-// (Veranstaltungsorte und Kalender sind der Veranstaltungsverwaltung
-// untergeordnet).
-$rentalsGroupKeys = ['rentals', 'offers', 'order_confirmations', 'invoices', 'bank_import', 'venues', 'warehouses', 'calendar', 'minute_program_templates'];
-$rentalsChildren = [
-    ['key' => 'rentals', 'label' => t('nav.rentals_all'), 'href' => '/veranstaltungen'],
+// "Kontakte" fasst die beiden externen Adressbestände (Kunden, Lieferanten)
+// unter einem gemeinsamen Oberpunkt zusammen. Die beiden Kindpunkte haben
+// unterschiedliche Rechte (Kundenverwaltung bzw. Artikelverwaltung) — der
+// Oberpunkt selbst ist bereits sichtbar, sobald mindestens eines davon
+// zutrifft (siehe $canCustomers/$canArticles weiter unten).
+$contactsGroupKeys = ['customers', 'suppliers'];
+$contactsChildren = [
+    ['key' => 'customers', 'label' => t('nav.customers'), 'href' => '/kunden'],
+    ['key' => 'suppliers', 'label' => t('nav.suppliers'), 'href' => '/lieferanten'],
+];
+$isContactsGroupActive = in_array($activeNav, $contactsGroupKeys, true);
+
+// "Einkauf" fasst Belege (Beleg-Posteingang) und Bestellungen unter einem
+// gemeinsamen Oberpunkt zusammen — beide gehören zum Wareneinkauf bei
+// Lieferanten und waren bisher gleichrangige, einzelne Menüpunkte.
+$procurementGroupKeys = ['receipts', 'receipt_inbox', 'purchase_orders'];
+$procurementChildren = [
+    ['key' => 'receipts', 'label' => t('nav.receipts'), 'href' => '/belege'],
+    ['key' => 'purchase_orders', 'label' => t('nav.purchase_orders'), 'href' => '/bestellungen'],
+];
+$isProcurementGroupActive = in_array($activeNav, $procurementGroupKeys, true) || $activeNav === 'receipt_inbox';
+
+// "Dokumente" sammelt die kaufmännischen Dokumente (Angebote, Auftrags-
+// bestätigungen, Rechnungen) sowie den Zahlungsabgleich — bewusst GETRENNT
+// von "Veranstaltungen", da diese Dokumente eigenständig (nicht nur aus
+// einer Veranstaltung heraus) angelegt werden können.
+$documentsGroupKeys = ['offers', 'order_confirmations', 'invoices', 'bank_import'];
+$documentsChildren = [
     ['key' => 'offers', 'label' => t('nav.offers'), 'href' => '/angebote'],
     ['key' => 'order_confirmations', 'label' => t('nav.order_confirmations'), 'href' => '/auftragsbestaetigungen'],
     ['key' => 'invoices', 'label' => t('nav.invoices'), 'href' => '/rechnungen'],
     ['key' => 'bank_import', 'label' => t('nav.bank_import'), 'href' => '/zahlungsabgleich'],
+];
+$isDocumentsGroupActive = in_array($activeNav, $documentsGroupKeys, true);
+
+// "Veranstaltung" ist analog zu "Artikel" ein Menüpunkt mit Untermenü
+// (Veranstaltungsorte und Kalender sind der Veranstaltungsverwaltung
+// untergeordnet) — enthält nach der Trennung von den kaufmännischen
+// Dokumenten (siehe "Dokumente" oben) und Lagerorte (siehe "Artikel" oben)
+// nur noch die eigentliche Veranstaltungsplanung.
+$rentalsGroupKeys = ['rentals', 'venues', 'calendar', 'minute_program_templates'];
+$rentalsChildren = [
+    ['key' => 'rentals', 'label' => t('nav.rentals_all'), 'href' => '/veranstaltungen'],
     ['key' => 'venues', 'label' => t('nav.venues'), 'href' => '/veranstaltungsorte'],
-    ['key' => 'warehouses', 'label' => t('nav.warehouses'), 'href' => '/lagerorte'],
     ['key' => 'calendar', 'label' => t('nav.calendar'), 'href' => '/kalender'],
     ['key' => 'minute_program_templates', 'label' => t('nav.minute_program_templates'), 'href' => '/minutenprogramm-vorlagen'],
 ];
@@ -87,6 +122,12 @@ $canArticles = $currentUser?->has(Permission::Artikelverwaltung) ?? false;
 $canCustomers = $currentUser?->has(Permission::Kundenverwaltung) ?? false;
 $canRentals = $currentUser?->has(Permission::AusgabeRuecknahme) ?? false;
 $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
+// "Kontakte" ist sichtbar, sobald mindestens einer der beiden Kindpunkte
+// (Kunden ODER Lieferanten) berechtigt ist; "Einkauf"/"Dokumente" teilen
+// sich jeweils ein einziges Recht mit allen ihren Kindpunkten (siehe oben).
+$canContacts = $canCustomers || $canArticles;
+$canProcurement = $canArticles;
+$canDocuments = $canRentals;
 ?>
 <!DOCTYPE html>
 <html lang="<?= e($activeLocale) ?>">
@@ -264,36 +305,51 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
         </div>
         <?php endif; ?>
 
-        <?php if ($canCustomers): ?>
-        <a
-          href="/kunden"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'customers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e(t('nav.customers')) ?></a>
+        <?php if ($canContacts): ?>
+        <div class="group relative">
+          <a
+            href="/kunden"
+            class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          >
+            <?= e(t('nav.contacts')) ?>
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+          </a>
+          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+            <?php foreach ($contactsChildren as $child): ?>
+              <a
+                href="<?= e($child['href']) ?>"
+                class="block px-3 py-2 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+              ><?= e($child['label']) ?></a>
+            <?php endforeach; ?>
+          </div>
+        </div>
         <?php endif; ?>
 
-        <?php if ($canArticles): ?>
-        <a
-          href="/lieferanten"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'suppliers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e(t('nav.suppliers')) ?></a>
-        <?php endif; ?>
-
-        <?php if ($canArticles): ?>
-        <a
-          href="/belege"
-          class="relative rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'receipts' || $activeNav === 'receipt_inbox' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e(t('nav.receipts')) ?>
-          <?php if (\App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
-            <span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
-          <?php endif; ?>
-        </a>
-        <?php endif; ?>
-
-        <?php if ($canArticles): ?>
-        <a
-          href="/bestellungen"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'purchase_orders' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e(t('nav.purchase_orders')) ?></a>
+        <?php if ($canProcurement): ?>
+        <div class="group relative">
+          <a
+            href="/belege"
+            class="relative flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          >
+            <?= e(t('nav.procurement')) ?>
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+            <?php if (\App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
+              <span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
+            <?php endif; ?>
+          </a>
+          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+            <?php foreach ($procurementChildren as $child): ?>
+              <a
+                href="<?= e($child['href']) ?>"
+                class="relative block px-3 py-2 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+              ><?= e($child['label']) ?>
+                <?php if ($child['key'] === 'receipts' && \App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
+                  <span class="absolute right-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
+                <?php endif; ?>
+              </a>
+            <?php endforeach; ?>
+          </div>
+        </div>
         <?php endif; ?>
 
         <?php if ($canArticles): ?>
@@ -301,6 +357,26 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
           href="/verkaeufe"
           class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.sales')) ?></a>
+        <?php endif; ?>
+
+        <?php if ($canDocuments): ?>
+        <div class="group relative">
+          <a
+            href="/angebote"
+            class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          >
+            <?= e(t('nav.documents')) ?>
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+          </a>
+          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+            <?php foreach ($documentsChildren as $child): ?>
+              <a
+                href="<?= e($child['href']) ?>"
+                class="block px-3 py-2 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+              ><?= e($child['label']) ?></a>
+            <?php endforeach; ?>
+          </div>
+        </div>
         <?php endif; ?>
 
         <?php if ($canRentals): ?>
@@ -412,36 +488,38 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
       <?php endforeach; ?>
       <?php endif; ?>
 
-      <?php if ($canCustomers): ?>
+      <?php if ($canContacts): ?>
       <a
         href="/kunden"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'customers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.customers')) ?></a>
+        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+      ><?= e(t('nav.contacts')) ?></a>
+      <?php foreach ($contactsChildren as $child): ?>
+        <a
+          href="<?= e($child['href']) ?>"
+          class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+        ><?= e($child['label']) ?></a>
+      <?php endforeach; ?>
       <?php endif; ?>
 
-      <?php if ($canArticles): ?>
-      <a
-        href="/lieferanten"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'suppliers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.suppliers')) ?></a>
-      <?php endif; ?>
-
-      <?php if ($canArticles): ?>
+      <?php if ($canProcurement): ?>
       <a
         href="/belege"
-        class="relative block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'receipts' || $activeNav === 'receipt_inbox' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.receipts')) ?>
+        class="relative block rounded-md px-3 py-2.5 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+      ><?= e(t('nav.procurement')) ?>
         <?php if (\App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
           <span class="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
         <?php endif; ?>
       </a>
-      <?php endif; ?>
-
-      <?php if ($canArticles): ?>
-      <a
-        href="/bestellungen"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'purchase_orders' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.purchase_orders')) ?></a>
+      <?php foreach ($procurementChildren as $child): ?>
+        <a
+          href="<?= e($child['href']) ?>"
+          class="relative block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+        ><?= e($child['label']) ?>
+          <?php if ($child['key'] === 'receipts' && \App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
+            <span class="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
+          <?php endif; ?>
+        </a>
+      <?php endforeach; ?>
       <?php endif; ?>
 
       <?php if ($canArticles): ?>
@@ -449,6 +527,19 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
         href="/verkaeufe"
         class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
       ><?= e(t('nav.sales')) ?></a>
+      <?php endif; ?>
+
+      <?php if ($canDocuments): ?>
+      <a
+        href="/angebote"
+        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+      ><?= e(t('nav.documents')) ?></a>
+      <?php foreach ($documentsChildren as $child): ?>
+        <a
+          href="<?= e($child['href']) ?>"
+          class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+        ><?= e($child['label']) ?></a>
+      <?php endforeach; ?>
       <?php endif; ?>
 
       <?php if ($canRentals): ?>

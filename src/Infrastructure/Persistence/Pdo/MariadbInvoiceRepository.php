@@ -28,17 +28,23 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 invoice_number, invoice_date, due_date, buyer_reference,
                 status, is_small_business, vat_rate_percent,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
+                flat_rate_enabled, flat_rate_amount,
                 shipping_amount,
                 paid_at, note, closing_text,
-                source_offer_id, source_rental_id, created_at, updated_at
+                source_offer_id, source_rental_id,
+                logistics_method, logistics_date1, logistics_date2,
+                created_at, updated_at
              ) VALUES (
                 :id, :customer_id, :event_location, :venue_id, :start_date, :end_date,
                 :invoice_number, :invoice_date, :due_date, :buyer_reference,
                 :status, :is_small_business, :vat_rate_percent,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
+                :flat_rate_enabled, :flat_rate_amount,
                 :shipping_amount,
                 :paid_at, :note, :closing_text,
-                :source_offer_id, :source_rental_id, :created_at, :updated_at
+                :source_offer_id, :source_rental_id,
+                :logistics_method, :logistics_date1, :logistics_date2,
+                :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, event_location = :event_location2, venue_id = :venue_id2,
@@ -49,9 +55,11 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 accessory_flat_rate_enabled = :accessory_flat_rate_enabled2,
                 accessory_flat_rate_percent = :accessory_flat_rate_percent2,
                 discount_type = :discount_type2, discount_value = :discount_value2,
+                flat_rate_enabled = :flat_rate_enabled2, flat_rate_amount = :flat_rate_amount2,
                 shipping_amount = :shipping_amount2,
                 paid_at = :paid_at2, note = :note2, closing_text = :closing_text2,
                 source_offer_id = :source_offer_id2, source_rental_id = :source_rental_id2,
+                logistics_method = :logistics_method2, logistics_date1 = :logistics_date12, logistics_date2 = :logistics_date22,
                 updated_at = :updated_at2'
         );
 
@@ -60,6 +68,9 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
         $paidAt = $invoice->paidAt?->format('Y-m-d H:i:s');
         $isSmallBusiness = $invoice->isSmallBusiness === null ? null : ($invoice->isSmallBusiness ? 1 : 0);
         $accessoryFlatRateEnabled = $invoice->accessoryFlatRateEnabled ? 1 : 0;
+        $flatRateEnabled = $invoice->flatRateEnabled ? 1 : 0;
+        $logisticsDate1 = $invoice->logisticsDate1?->format('Y-m-d H:i:s');
+        $logisticsDate2 = $invoice->logisticsDate2?->format('Y-m-d H:i:s');
 
         $stmt->execute([
             'id' => $invoice->id,
@@ -79,12 +90,17 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'accessory_flat_rate_percent' => $invoice->accessoryFlatRatePercent,
             'discount_type' => $invoice->discountType,
             'discount_value' => $invoice->discountValue,
+            'flat_rate_enabled' => $flatRateEnabled,
+            'flat_rate_amount' => $invoice->flatRateAmount,
             'shipping_amount' => $invoice->shippingAmount,
             'paid_at' => $paidAt,
             'note' => $invoice->note,
             'closing_text' => $invoice->closingText,
             'source_offer_id' => $invoice->sourceOfferId,
             'source_rental_id' => $invoice->sourceRentalId,
+            'logistics_method' => $invoice->logisticsMethod,
+            'logistics_date1' => $logisticsDate1,
+            'logistics_date2' => $logisticsDate2,
             'created_at' => $invoice->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $invoice->updatedAt->format('Y-m-d H:i:s'),
             'customer_id2' => $invoice->customerId,
@@ -103,12 +119,17 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'accessory_flat_rate_percent2' => $invoice->accessoryFlatRatePercent,
             'discount_type2' => $invoice->discountType,
             'discount_value2' => $invoice->discountValue,
+            'flat_rate_enabled2' => $flatRateEnabled,
+            'flat_rate_amount2' => $invoice->flatRateAmount,
             'shipping_amount2' => $invoice->shippingAmount,
             'paid_at2' => $paidAt,
             'note2' => $invoice->note,
             'closing_text2' => $invoice->closingText,
             'source_offer_id2' => $invoice->sourceOfferId,
             'source_rental_id2' => $invoice->sourceRentalId,
+            'logistics_method2' => $invoice->logisticsMethod,
+            'logistics_date12' => $logisticsDate1,
+            'logistics_date22' => $logisticsDate2,
             'updated_at2' => $invoice->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -220,8 +241,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             $delete->execute(['invoice_id' => $invoiceId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO invoice_items (id, invoice_id, article_id, quantity, unit_price_per_day, line_note, sort_order)
-                 VALUES (:id, :invoice_id, :article_id, :quantity, :unit_price_per_day, :line_note, :sort_order)'
+                'INSERT INTO invoice_items (id, invoice_id, article_id, quantity, unit_price_per_day, line_note, sort_order, is_rental_item)
+                 VALUES (:id, :invoice_id, :article_id, :quantity, :unit_price_per_day, :line_note, :sort_order, :is_rental_item)'
             );
 
             foreach ($items as $item) {
@@ -233,6 +254,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                     'unit_price_per_day' => $item->unitPricePerDay,
                     'line_note' => $item->lineNote,
                     'sort_order' => $item->sortOrder,
+                    'is_rental_item' => $item->isRentalItem ? 1 : 0,
                 ]);
             }
 
@@ -456,6 +478,11 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             discountType: $row['discount_type'],
             discountValue: $row['discount_value'],
             shippingAmount: $row['shipping_amount'],
+            flatRateEnabled: (bool) ($row['flat_rate_enabled'] ?? false),
+            flatRateAmount: $row['flat_rate_amount'] ?? null,
+            logisticsMethod: $row['logistics_method'] ?? null,
+            logisticsDate1: ($row['logistics_date1'] ?? null) !== null ? new DateTimeImmutable($row['logistics_date1']) : null,
+            logisticsDate2: ($row['logistics_date2'] ?? null) !== null ? new DateTimeImmutable($row['logistics_date2']) : null,
         );
     }
 
@@ -469,6 +496,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             unitPricePerDay: $row['unit_price_per_day'],
             lineNote: $row['line_note'],
             sortOrder: (int) $row['sort_order'],
+            isRentalItem: (bool) ($row['is_rental_item'] ?? true),
         );
     }
 

@@ -392,6 +392,8 @@ $minuteProgramDetailBuilder = new \App\Application\MinuteProgram\Query\MinutePro
 $noticeDocumentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNoticeDocumentRepository($pdo);
 $noticeDocumentArticleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNoticeDocumentArticleRepository($pdo);
 $categoryRepository = new MariadbCategoryRepository($pdo);
+$closingTextTemplateFolderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbClosingTextTemplateFolderRepository($pdo);
+$closingTextTemplateRepository = new \App\Infrastructure\Persistence\Pdo\MariadbClosingTextTemplateRepository($pdo);
 $manufacturerRepository = new MariadbManufacturerRepository($pdo);
 $laborTimeArticleRepository = new MariadbLaborTimeArticleRepository($pdo);
 $articleRepository = new MariadbArticleRepository($pdo);
@@ -540,6 +542,14 @@ $commandBus->register(\App\Application\Settings\Command\UpdatePdfLayoutSettings:
 $commandBus->register(\App\Application\Category\Command\CreateCategory::class, new CreateCategoryHandler($categoryRepository));
 $commandBus->register(\App\Application\Category\Command\UpdateCategory::class, new UpdateCategoryHandler($categoryRepository));
 $commandBus->register(\App\Application\Category\Command\DeleteCategory::class, new DeleteCategoryHandler($categoryRepository, $articleRepository));
+
+$commandBus->register(\App\Application\ClosingTextTemplate\Command\CreateClosingTextTemplateFolder::class, new \App\Application\ClosingTextTemplate\Command\CreateClosingTextTemplateFolderHandler($closingTextTemplateFolderRepository));
+$commandBus->register(\App\Application\ClosingTextTemplate\Command\UpdateClosingTextTemplateFolder::class, new \App\Application\ClosingTextTemplate\Command\UpdateClosingTextTemplateFolderHandler($closingTextTemplateFolderRepository));
+$commandBus->register(\App\Application\ClosingTextTemplate\Command\DeleteClosingTextTemplateFolder::class, new \App\Application\ClosingTextTemplate\Command\DeleteClosingTextTemplateFolderHandler($closingTextTemplateFolderRepository, $closingTextTemplateRepository));
+$commandBus->register(\App\Application\ClosingTextTemplate\Command\DeleteClosingTextTemplate::class, new \App\Application\ClosingTextTemplate\Command\DeleteClosingTextTemplateHandler($closingTextTemplateRepository));
+// CreateClosingTextTemplate/UpdateClosingTextTemplate werden weiter unten
+// registriert (siehe dort), da sie $htmlSanitizer benötigen, das erst
+// später instanziiert wird.
 
 $commandBus->register(\App\Application\Manufacturer\Command\CreateManufacturer::class, new CreateManufacturerHandler($manufacturerRepository));
 $commandBus->register(\App\Application\Manufacturer\Command\UpdateManufacturer::class, new UpdateManufacturerHandler($manufacturerRepository));
@@ -723,6 +733,8 @@ $commandBus->register(\App\Application\Settings\Command\UpdatePriceTiers::class,
 $commandBus->register(\App\Application\Settings\Command\UpdateCompanySettings::class, new UpdateCompanySettingsHandler($companySettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateLegalSettings::class, new UpdateLegalSettingsHandler($legalSettingsRepository));
 $htmlSanitizer = new HtmlSanitizer();
+$commandBus->register(\App\Application\ClosingTextTemplate\Command\CreateClosingTextTemplate::class, new \App\Application\ClosingTextTemplate\Command\CreateClosingTextTemplateHandler($closingTextTemplateRepository, $closingTextTemplateFolderRepository, $htmlSanitizer));
+$commandBus->register(\App\Application\ClosingTextTemplate\Command\UpdateClosingTextTemplate::class, new \App\Application\ClosingTextTemplate\Command\UpdateClosingTextTemplateHandler($closingTextTemplateRepository, $closingTextTemplateFolderRepository, $htmlSanitizer));
 $richTextPdfRenderer = new RichTextPdfRenderer(new HtmlToRichTextParser());
 $commandBus->register(\App\Application\Settings\Command\UpdateOfferPdfSettings::class, new UpdateOfferPdfSettingsHandler($offerPdfSettingsRepository, $htmlSanitizer));
 $commandBus->register(\App\Application\Mail\Command\SaveEmailTemplate::class, new \App\Application\Mail\Command\SaveEmailTemplateHandler($emailTemplateRepository));
@@ -797,8 +809,8 @@ $queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmatio
 $queryBus->register(\App\Application\OrderConfirmation\Query\ListOrderConfirmations::class, new \App\Application\OrderConfirmation\Query\ListOrderConfirmationsHandler($orderConfirmationRepository, $customerRepository));
 
 // --- Rechnungen (Invoices) --------------------------------------------
-$commandBus->register(\App\Application\Invoice\Command\CreateInvoice::class, new CreateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $htmlSanitizer));
-$commandBus->register(\App\Application\Invoice\Command\UpdateInvoice::class, new UpdateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $htmlSanitizer));
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoice::class, new CreateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $htmlSanitizer, $rentalRepository));
+$commandBus->register(\App\Application\Invoice\Command\UpdateInvoice::class, new UpdateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $htmlSanitizer, $rentalRepository));
 $commandBus->register(\App\Application\Invoice\Command\DeleteInvoice::class, new DeleteInvoiceHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceSent::class, new MarkInvoiceSentHandler($invoiceRepository, $invoiceSettingsRepository, $documentNumberSequence, $pdo));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoicePaid::class, new MarkInvoicePaidHandler($invoiceRepository));
@@ -961,6 +973,8 @@ $commandBus->register(\App\Application\AddressBook\Command\DeleteCardDavCredenti
 // --- Weitere Query-Registrierungen ($queryBus wurde bereits weiter oben, neben
 // dem Command-Bus, instanziiert) ---------------------------------------------
 $queryBus->register(\App\Application\Category\Query\ListCategories::class, new ListCategoriesHandler($categoryRepository));
+$queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFolders::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFoldersHandler($closingTextTemplateFolderRepository));
+$queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplates::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplatesHandler($closingTextTemplateRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));
 $queryBus->register(\App\Application\LaborTime\Query\ListLaborTimeArticles::class, new ListLaborTimeArticlesHandler($laborTimeArticleRepository));
 
@@ -1179,6 +1193,7 @@ $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageUploadLog:
 $dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository, $supplierRepository);
 $reportingController = new \App\Infrastructure\Http\Controllers\ReportingController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
+$closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
 $laborTimeArticleController = new LaborTimeArticleController($commandBus, $queryBus);
 $articleController = new ArticleController($commandBus, $queryBus, $fileStorage, new PriceListPdfGenerator(), new PriceListCsvExporter(), $saleStockLotRepository, $customerRepository);
@@ -1269,7 +1284,7 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
@@ -1278,7 +1293,7 @@ $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedem
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
 $offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository);
 $orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator);
-$invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator);
+$invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository);
 $bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository);
 $invoiceSettingsController = new InvoiceSettingsController($commandBus, $queryBus);
 $numberingSettingsController = new DocumentNumberingSettingsController($commandBus, $queryBus);
@@ -1441,6 +1456,24 @@ $router->get('/kategorien/{id}/bearbeiten', $auth->guard(Permission::Artikelverw
 $router->post('/kategorien', $auth->guard(Permission::Artikelverwaltung, [$categoryController, 'store']));
 $router->post('/kategorien/{id}', $auth->guard(Permission::Artikelverwaltung, [$categoryController, 'update']));
 $router->post('/kategorien/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$categoryController, 'destroy']));
+
+// Textvorlagen für Schlusstexte (siehe App\Domain\ClosingTextTemplate):
+// Verwaltung (Ordner/Vorlagen anlegen/bearbeiten/löschen) unter
+// Administration wie die übrigen /einstellungen/...-Seiten. list() ist
+// bewusst NICHT admin-gated (Permission::null wie /kunden/suche & Co.) —
+// der "Vorlage einfügen"-Picker in Rechnung/Angebot/Auftragsbestätigung
+// muss für jeden angemeldeten Benutzer funktionieren, unabhängig von
+// dessen Administration-Recht.
+$router->get('/textvorlagen/liste', $auth->guard(null, [$closingTextTemplateController, 'list']));
+$router->get('/einstellungen/textvorlagen', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'index']));
+$router->get('/einstellungen/textvorlagen/ordner/{id}/bearbeiten', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'editFolder']));
+$router->post('/einstellungen/textvorlagen/ordner', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'storeFolder']));
+$router->post('/einstellungen/textvorlagen/ordner/{id}', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'updateFolder']));
+$router->post('/einstellungen/textvorlagen/ordner/{id}/loeschen', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'destroyFolder']));
+$router->get('/einstellungen/textvorlagen/vorlagen/{id}/bearbeiten', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'editTemplate']));
+$router->post('/einstellungen/textvorlagen/vorlagen', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'storeTemplate']));
+$router->post('/einstellungen/textvorlagen/vorlagen/{id}', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'updateTemplate']));
+$router->post('/einstellungen/textvorlagen/vorlagen/{id}/loeschen', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'destroyTemplate']));
 
 $router->get('/hersteller', $auth->guard(Permission::Artikelverwaltung, [$manufacturerController, 'index']));
 // Live-Suche (JSON) für das Hersteller-Auswahlfeld in Artikel-/Case-
@@ -1625,6 +1658,14 @@ $router->get('/lagerorte/{id}/bearbeiten', $auth->guard(Permission::AusgabeRueck
 $router->post('/lagerorte/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$warehouseController, 'update']));
 $router->post('/lagerorte/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$warehouseController, 'destroy']));
 
+// Siehe /kunden/suche bzw. /artikel/suche für die identische Begründung
+// (Permission::null statt AusgabeRuecknahme) — die Live-Suche für die
+// Veranstaltungs-Verknüpfung auf Rechnungen (invoices/form.php) darf von
+// jedem angemeldeten Benutzer genutzt werden, unabhängig von dessen
+// Rechten in der Vermietungsverwaltung selbst. Vor den {id}-Routen
+// platziert, damit "suche" nicht als {id} interpretiert wird.
+$router->get('/veranstaltungen/suche', $auth->guard(null, [$rentalController, 'search']));
+$router->get('/veranstaltungen/{id}/logistik', $auth->guard(null, [$rentalController, 'logistics']));
 $router->get('/veranstaltungen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'index']));
 $router->get('/veranstaltungen/neu', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'create']));
 $router->post('/veranstaltungen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'store']));

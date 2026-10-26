@@ -134,9 +134,22 @@ final class InvoicePdfGenerator
         $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, $pdfDesignSettings?->accentColorLinePdfString() ?? '0.4 0.4 0.4');
         $y -= 20;
 
-        $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zwischensumme Mietpreise:', 9);
+        // Pauschalpreis (siehe Invoice::$flatRateEnabled-Klassendoc): Label
+        // wechselt auf "Pauschale für Miete", der Betrag ist bereits
+        // $totals->rentalNetTotal (InvoiceDetail::totals() setzt dort den
+        // Pauschalbetrag statt der tatsächlichen Positionssumme ein).
+        $writer->text($pageWidth - self::MARGIN - 230, $y, ($detail->invoice->flatRateEnabled ? 'Pauschale für Miete:' : 'Zwischensumme Mietpreise:'), 9);
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->rentalNetTotal, 2, ',', '.') . ' EUR', 9);
         $y -= 14;
+
+        // Verkaufs-/Sonstige Positionen (InvoiceItem::$isRentalItem = false)
+        // — bleiben beim Pauschalpreis unberührt, eigene Zeile wie Freitext-
+        // Posten/Arbeitszeit (siehe DocumentTotals::$saleTotal).
+        if ($detail->saleItemsTotal() > 0) {
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Verkauf/Sonstiges:', 9);
+            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->saleItemsTotal(), 2, ',', '.') . ' EUR', 9);
+            $y -= 14;
+        }
 
         if ($detail->invoice->accessoryFlatRateEnabled && $detail->invoice->accessoryFlatRatePercent !== null) {
             $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zubehörpauschale (' . number_format((float) $detail->invoice->accessoryFlatRatePercent, 2, ',', '.') . '%):', 9);
@@ -323,11 +336,16 @@ final class InvoicePdfGenerator
             }
 
             $entry = $row->data;
+            // Pauschalpreis (siehe Invoice::$flatRateEnabled-Klassendoc):
+            // bei Mietpositionen bleiben Menge/Bezeichnung sichtbar, aber
+            // Einzelpreis/Summe werden nicht genannt. Verkaufs-/Sonstige
+            // Positionen (isRentalItem = false) sind davon unberührt.
+            $hidePrice = $detail->invoice->flatRateEnabled && $entry->item->isRentalItem;
             $rows[] = [
                 'nameLines' => $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
                 'quantity' => (string) $entry->item->quantity,
-                'unitPrice' => number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR',
-                'lineTotal' => number_format($entry->lineTotal(), 2, ',', '.') . ' EUR',
+                'unitPrice' => $hidePrice ? '–' : (number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR'),
+                'lineTotal' => $hidePrice ? '–' : (number_format($entry->lineTotal(), 2, ',', '.') . ' EUR'),
                 'isSection' => false,
             ];
         }

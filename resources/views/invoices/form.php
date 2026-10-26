@@ -35,7 +35,7 @@ if (!function_exists('renderDocumentClosingTextField')) {
     function renderDocumentClosingTextField(string $name, string $value, ?string $error): void
     {
         ?>
-    <div data-rt-field class="rt-field">
+    <div data-rt-field data-rt-name="<?= e($name) ?>" class="rt-field">
         <div data-rt-toolbar class="mb-0 hidden flex-wrap gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 p-1.5 dark:border-slate-700 dark:bg-slate-800">
             <button type="button" data-cmd="bold" title="<?= e(t('rich_text.toolbar.bold')) ?>" class="rounded px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">F</button>
             <button type="button" data-cmd="italic" title="<?= e(t('rich_text.toolbar.italic')) ?>" class="rounded px-2 py-1 text-xs italic text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">K</button>
@@ -67,6 +67,52 @@ if (!function_exists('renderDocumentClosingTextField')) {
         ><?= e($value) ?></textarea>
         <?php if ($error !== null): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($error) ?></p><?php endif; ?>
     </div>
+        <?php
+    }
+}
+
+/**
+ * "Vorlage einfügen"-Button neben einem per renderDocumentClosingTextField()
+ * gerenderten Feld — öffnet das Modal aus renderClosingTextTemplatePicker()
+ * (einmal pro Formular gerendert, siehe unten) und zielt per
+ * data-template-picker-trigger="<name>" auf [data-rt-name="<name>"].
+ */
+if (!function_exists('renderClosingTextTemplatePickerButton')) {
+    function renderClosingTextTemplatePickerButton(string $targetFieldName): void
+    {
+        ?>
+        <button
+            type="button"
+            data-template-picker-trigger="<?= e($targetFieldName) ?>"
+            class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+        >Vorlage einfügen</button>
+        <?php
+    }
+}
+
+/**
+ * Modal für den Textvorlagen-Picker (siehe
+ * App\Infrastructure\Http\Controllers\ClosingTextTemplateController::list()
+ * für die geladenen Daten und das zugehörige <script> weiter unten in
+ * dieser Datei für die Interaktion) — wird EINMAL pro Formular gerendert,
+ * unabhängig davon wie viele renderClosingTextTemplatePickerButton()-Buttons
+ * es gibt.
+ */
+if (!function_exists('renderClosingTextTemplatePickerModal')) {
+    function renderClosingTextTemplatePickerModal(): void
+    {
+        ?>
+        <div data-template-picker-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+            <div class="flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
+                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+                    <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-100">Textvorlage einfügen</h2>
+                    <button type="button" data-template-picker-close class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>
+                </div>
+                <div data-template-picker-body class="flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    <p class="text-slate-400 dark:text-slate-500">Lädt…</p>
+                </div>
+            </div>
+        </div>
         <?php
     }
 }
@@ -165,6 +211,36 @@ foreach ($laborArticles as $laborArticle) {
         </div>
     </div>
 
+    <?php
+        // Veranstaltungs-Verknüpfung (optional): Live-Suche gegen eine
+        // bestehende Veranstaltung (Rental), analog Kunde/Veranstaltungsort
+        // oben (siehe RentalController::search()/UseCase-Entscheidung aus
+        // der Aufgabenstellung "Pauschalpreis/Veranstaltung bei
+        // Rechnungen"). Rein informativ/organisatorisch — ändert NICHT die
+        // Kopfdaten der Rechnung (Kunde/Zeitraum bleiben unabhängig
+        // editierbar), belegt aber beim Auswählen die Logistik-Termine
+        // weiter unten vor, sofern diese noch leer sind (siehe Skript
+        // weiter unten).
+        $selectedRentalIdVal = $val('rental_id', $selectedRentalId);
+    ?>
+    <div>
+        <label for="rental_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.rental')) ?></label>
+        <div class="mt-1 max-w-md">
+            <?php
+            renderLiveSearchField(
+                'rental_id',
+                '/veranstaltungen/suche',
+                $selectedRentalIdVal !== '' ? $selectedRentalIdVal : null,
+                $selectedRentalLabel,
+                t('invoices.form.rental_placeholder'),
+                $errors['rentalId'] ?? null,
+                'select',
+            );
+            ?>
+        </div>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.rental_hint')) ?></p>
+    </div>
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
             <label for="start_date" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.start_date')) ?></label>
@@ -193,6 +269,88 @@ foreach ($laborArticles as $laborArticle) {
         <label for="note" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.note')) ?></label>
         <textarea id="note" name="note" rows="3"
                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700"><?= e($val('note', $invoice?->note)) ?></textarea>
+    </div>
+
+    <?php
+        // Logistik bei Vermietungen: Abholung/Rückgabe durch den Kunden
+        // ('pickup', Standard) vs. Lieferung/Abholung durch uns
+        // ('delivery') — siehe Invoice::$logisticsMethod-Klassendoc. Beide
+        // Termine optional und unabhängig von einer verknüpften
+        // Veranstaltung frei editierbar.
+        $logisticsMethodVal = $val('logistics_method', $invoice?->logisticsMethod) ?: 'pickup';
+        $logisticsDate1Val = $val('logistics_date1', $invoice?->logisticsDate1?->format('Y-m-d\TH:i'));
+        $logisticsDate2Val = $val('logistics_date2', $invoice?->logisticsDate2?->format('Y-m-d\TH:i'));
+    ?>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.logistics_title')) ?></h2>
+        <div class="flex flex-wrap items-center gap-4">
+            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+                <input type="radio" name="logistics_method" value="pickup" data-logistics-option <?= $logisticsMethodVal === 'pickup' ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+                <?= e(t('invoices.form.logistics_pickup')) ?>
+            </label>
+            <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300">
+                <input type="radio" name="logistics_method" value="delivery" data-logistics-option <?= $logisticsMethodVal === 'delivery' ? 'checked' : '' ?> class="h-4 w-4 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+                <?= e(t('invoices.form.logistics_delivery')) ?>
+            </label>
+        </div>
+        <div class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+                <label for="logistics_date1" id="logistics-date1-label" class="block text-xs font-medium text-slate-600 dark:text-slate-400"></label>
+                <input type="datetime-local" id="logistics_date1" name="logistics_date1"
+                       value="<?= e($logisticsDate1Val ?? '') ?>"
+                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            </div>
+            <div>
+                <label for="logistics_date2" id="logistics-date2-label" class="block text-xs font-medium text-slate-600 dark:text-slate-400"></label>
+                <input type="datetime-local" id="logistics_date2" name="logistics_date2"
+                       value="<?= e($logisticsDate2Val ?? '') ?>"
+                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            </div>
+        </div>
+        <p class="mt-1.5 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.logistics_hint')) ?></p>
+        <script>
+            (function () {
+                var date1Label = document.getElementById('logistics-date1-label');
+                var date2Label = document.getElementById('logistics-date2-label');
+                var options = document.querySelectorAll('[data-logistics-option]');
+                var LABELS = {
+                    pickup: { date1: <?= json_encode(t('invoices.form.logistics_pickup_date1')) ?>, date2: <?= json_encode(t('invoices.form.logistics_pickup_date2')) ?> },
+                    delivery: { date1: <?= json_encode(t('invoices.form.logistics_delivery_date1')) ?>, date2: <?= json_encode(t('invoices.form.logistics_delivery_date2')) ?> }
+                };
+                function applyLabels() {
+                    var checked = document.querySelector('[data-logistics-option]:checked');
+                    var method = checked ? checked.value : 'pickup';
+                    date1Label.textContent = LABELS[method].date1;
+                    date2Label.textContent = LABELS[method].date2;
+                }
+                options.forEach(function (option) { option.addEventListener('change', applyLabels); });
+                applyLabels();
+
+                // Vorbelegung aus der verknüpften Veranstaltung (siehe
+                // RentalController::logistics()) — nur wenn beide Felder
+                // noch leer sind, damit eine bereits getroffene eigene
+                // Eingabe nicht überschrieben wird.
+                var rentalHidden = document.querySelector('input[name="rental_id"][data-live-search-value]');
+                var date1Input = document.getElementById('logistics_date1');
+                var date2Input = document.getElementById('logistics_date2');
+
+                function prefillFromRental(rentalId) {
+                    if (!rentalId || date1Input.value || date2Input.value) { return; }
+                    fetch('/veranstaltungen/' + encodeURIComponent(rentalId) + '/logistik')
+                        .then(function (response) { return response.ok ? response.json() : null; })
+                        .then(function (data) {
+                            if (!data) { return; }
+                            if (data.pickupAt && !date1Input.value) { date1Input.value = data.pickupAt; }
+                            if (data.returnAt && !date2Input.value) { date2Input.value = data.returnAt; }
+                        })
+                        .catch(function () { /* Verbindungsprobleme ignorieren — Termine bleiben frei editierbar */ });
+                }
+
+                if (rentalHidden) {
+                    rentalHidden.addEventListener('change', function () { prefillFromRental(rentalHidden.value); });
+                }
+            })();
+        </script>
     </div>
 
     <?php
@@ -240,6 +398,49 @@ foreach ($laborArticles as $laborArticle) {
         <div id="invoice-rows" class="space-y-2"></div>
         <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.items_hint')) ?></p>
         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.rows_drag_hint')) ?></p>
+    </div>
+
+    <?php
+        // Pauschalpreis für Mietpositionen (siehe Invoice::$flatRateEnabled-
+        // Klassendoc, AskUserQuestion-Entscheidung "Positionen ohne Preis +
+        // Pauschalsumme" / "nur für Miet-Positionen"): die Positionen
+        // bleiben oben mit Menge/Bezeichnung sichtbar, nur die Einzelpreise
+        // werden auf der Rechnung (nicht im Formular) ausgeblendet; statt
+        // der Summe der Mietpositionen zählt flat_rate_amount. Positionen
+        // mit abgewählter "Mietposition"-Checkbox (siehe Zeilen-Template
+        // oben) bleiben davon unberührt und normal einzeln bepreist.
+        $flatRateCheckedVal = array_key_exists('flat_rate_enabled', $old)
+            ? $old['flat_rate_enabled'] === '1'
+            : ($invoice?->flatRateEnabled ?? false);
+        $flatRateAmountVal = $val('flat_rate_amount', $invoice?->flatRateAmount);
+    ?>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="flex items-start gap-2">
+            <input type="checkbox" id="flat_rate_enabled" name="flat_rate_enabled" value="1" <?= $flatRateCheckedVal ? 'checked' : '' ?>
+                   class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+            <div class="flex-1">
+                <label for="flat_rate_enabled" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <?= e(t('invoices.form.flat_rate_enabled')) ?>
+                </label>
+                <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.flat_rate_hint')) ?></p>
+                <div id="flat-rate-amount-wrapper" class="mt-2 max-w-[12rem] <?= $flatRateCheckedVal ? '' : 'hidden' ?>">
+                    <label for="flat_rate_amount" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.flat_rate_amount')) ?></label>
+                    <input type="text" id="flat_rate_amount" name="flat_rate_amount" inputmode="decimal"
+                           value="<?= e((string) ($flatRateAmountVal ?? '')) ?>"
+                           class="mt-1 w-full rounded-md border <?= isset($errors['flatRateAmount']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <?php if (isset($errors['flatRateAmount'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['flatRateAmount']) ?></p><?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <script>
+            (function () {
+                var checkbox = document.getElementById('flat_rate_enabled');
+                var wrapper = document.getElementById('flat-rate-amount-wrapper');
+                if (checkbox && wrapper) {
+                    checkbox.addEventListener('change', function () { wrapper.classList.toggle('hidden', !checkbox.checked); });
+                }
+            })();
+        </script>
     </div>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -345,6 +546,10 @@ foreach ($laborArticles as $laborArticle) {
                 <dt><?= e(t('invoices.form.totals_free_text')) ?></dt>
                 <dd data-total-free-text>0,00 €</dd>
             </div>
+            <div data-total-sale-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('invoices.form.totals_sale')) ?></dt>
+                <dd data-total-sale>0,00 €</dd>
+            </div>
             <?php if ($isSmallBusinessPreview): ?>
                 <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
                     <dt><?= e(t('invoices.show.grand_total')) ?></dt>
@@ -370,7 +575,10 @@ foreach ($laborArticles as $laborArticle) {
     </div>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.closing_text')) ?></label>
+        <div class="flex items-baseline justify-between">
+            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.form.closing_text')) ?></label>
+            <?php renderClosingTextTemplatePickerButton('closing_text'); ?>
+        </div>
         <p class="mb-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.closing_text_hint')) ?></p>
         <?php renderDocumentClosingTextField('closing_text', $val('closing_text', $invoice?->closingText), $errors['closingText'] ?? null); ?>
     </div>
@@ -382,6 +590,8 @@ foreach ($laborArticles as $laborArticle) {
         <a href="<?= $invoice !== null ? '/rechnungen/' . e($invoice->id) : '/rechnungen' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
     </div>
 </form>
+
+<?php renderClosingTextTemplatePickerModal(); ?>
 
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
@@ -426,6 +636,10 @@ foreach ($laborArticles as $laborArticle) {
         <div class="min-w-[140px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_note')) ?></label>
             <input type="text" name="line_note[]" class="invoice-item-note mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <div class="flex items-center gap-1.5 pb-1.5">
+            <input type="checkbox" name="is_rental_item[]" value="1" checked class="invoice-item-is-rental h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
+            <label class="text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_is_rental')) ?></label>
         </div>
         <input type="hidden" name="sort_order[]" class="invoice-item-sort" data-row-sort value="0">
         <button type="button" class="invoice-item-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
@@ -551,6 +765,7 @@ foreach ($laborArticles as $laborArticle) {
         var quantityInput = row.querySelector('.invoice-item-quantity');
         var priceInput = row.querySelector('.invoice-item-price');
         var noteInput = row.querySelector('.invoice-item-note');
+        var isRentalInput = row.querySelector('.invoice-item-is-rental');
         var sortInput = row.querySelector('.invoice-item-sort');
         var removeButton = row.querySelector('.invoice-item-remove');
 
@@ -562,6 +777,7 @@ foreach ($laborArticles as $laborArticle) {
         }
         if (data.quantity) { quantityInput.value = data.quantity; }
         if (data.line_note) { noteInput.value = data.line_note; }
+        if (isRentalInput) { isRentalInput.checked = data.is_rental_item === undefined || data.is_rental_item === '1' || data.is_rental_item === true; }
         sortInput.value = data.sort_order !== undefined ? data.sort_order : nextSortOrder++;
 
         if (data.unit_price !== undefined && data.unit_price !== '') {
@@ -811,6 +1027,10 @@ foreach ($laborArticles as $laborArticle) {
     var totalLaborEl = document.querySelector('[data-total-labor]');
     var totalFreeTextRow = document.querySelector('[data-total-free-text-row]');
     var totalFreeTextEl = document.querySelector('[data-total-free-text]');
+    var totalSaleRow = document.querySelector('[data-total-sale-row]');
+    var totalSaleEl = document.querySelector('[data-total-sale]');
+    var flatRateCheckbox = document.getElementById('flat_rate_enabled');
+    var flatRateAmountInput = document.getElementById('flat_rate_amount');
     var totalNetEl = document.querySelector('[data-total-net]');
     var totalVatEl = document.querySelector('[data-total-vat]');
     var totalGrandEl = document.querySelector('[data-total-grand]');
@@ -882,12 +1102,27 @@ foreach ($laborArticles as $laborArticle) {
 
         if (!totalRentalEl || !invoiceForm) { return; }
 
-        var rentalTotal = 0;
+        // Mietpositionen (is_rental_item angehakt, Standard) und Verkaufs-/
+        // Sonstige Positionen (abgewählt) getrennt aufsummieren — siehe
+        // Invoice::$flatRateEnabled-Klassendoc: nur die Mietpositionen
+        // können durch den Pauschalbetrag ersetzt werden, Verkaufs-/
+        // Sonstige Positionen zählen immer normal (wie freeTextTotal/
+        // laborTotal NACH dem Kombirabatt).
+        var actualRentalTotal = 0;
+        var saleTotal = 0;
         container.querySelectorAll('.invoice-item-row').forEach(function (row) {
             var qty = parseAmount(row.querySelector('.invoice-item-quantity').value);
             var price = parseAmount(row.querySelector('.invoice-item-price').value);
-            rentalTotal += qty * price;
+            var isRentalCheckbox = row.querySelector('.invoice-item-is-rental');
+            if (isRentalCheckbox && !isRentalCheckbox.checked) {
+                saleTotal += qty * price;
+            } else {
+                actualRentalTotal += qty * price;
+            }
         });
+
+        var flatRateEnabled = !!(flatRateCheckbox && flatRateCheckbox.checked);
+        var rentalTotal = flatRateEnabled ? parseAmount(flatRateAmountInput ? flatRateAmountInput.value : '') : actualRentalTotal;
 
         var accessoryEnabled = !!(accessoryCheckbox && accessoryCheckbox.checked);
         var accessoryAmount = accessoryEnabled ? round2(rentalTotal * parseAmount(ACCESSORY_PERCENT) / 100) : 0;
@@ -921,7 +1156,7 @@ foreach ($laborArticles as $laborArticle) {
             });
         }
 
-        var netTotal = subtotalAfterDiscount + laborTotal + freeTextTotal;
+        var netTotal = subtotalAfterDiscount + laborTotal + freeTextTotal + saleTotal;
         var vatAmount = IS_SMALL_BUSINESS ? 0 : round2(netTotal * parseAmount(VAT_RATE_PERCENT) / 100);
         var grossTotal = netTotal + vatAmount;
 
@@ -949,6 +1184,11 @@ foreach ($laborArticles as $laborArticle) {
         toggleRow(totalFreeTextRow, freeTextTotal > 0);
         if (freeTextTotal > 0) {
             totalFreeTextEl.textContent = '+' + formatEuro(freeTextTotal);
+        }
+
+        toggleRow(totalSaleRow, saleTotal > 0);
+        if (saleTotal > 0) {
+            totalSaleEl.textContent = '+' + formatEuro(saleTotal);
         }
 
         if (totalNetEl) { totalNetEl.textContent = formatEuro(netTotal); }
@@ -1029,6 +1269,170 @@ foreach ($laborArticles as $laborArticle) {
             textarea.value = editable.innerHTML;
           }
         });
+      }
+    });
+  })();
+</script>
+
+<script>
+  // "Vorlage einfügen"-Picker (siehe renderClosingTextTemplatePickerButton()/
+  // renderClosingTextTemplatePickerModal() oben in dieser Datei): lädt
+  // einmalig /textvorlagen/liste (siehe ClosingTextTemplateController::
+  // list()), zeigt Ordner/Vorlagen als Baum im Modal und fügt die gewählte
+  // Vorlage beim Klick in das per data-template-picker-trigger="<name>"
+  // adressierte Rich-Text-Feld (data-rt-name="<name>", siehe
+  // renderDocumentClosingTextField()) ein. Identisches Muster wird (bewusst
+  // dupliziert statt per Include geteilt, siehe Konvention im restlichen
+  // Formular) in offers/form.php und order-confirmations/form.php verwendet.
+  (function () {
+    var modal = document.querySelector('[data-template-picker-modal]');
+    if (!modal) {
+      return;
+    }
+
+    var body = modal.querySelector('[data-template-picker-body]');
+    var closeBtn = modal.querySelector('[data-template-picker-close]');
+    var cachedData = null;
+    var activeTargetField = null;
+
+    function escapeHtml(value) {
+      var div = document.createElement('div');
+      div.textContent = value == null ? '' : value;
+      return div.innerHTML;
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      activeTargetField = null;
+    }
+
+    function renderTree(data) {
+      var folders = data.folders || [];
+      var templates = data.templates || [];
+      var templatesByFolder = {};
+      templates.forEach(function (tpl) {
+        var key = tpl.folderId || '';
+        (templatesByFolder[key] = templatesByFolder[key] || []).push(tpl);
+      });
+      var childrenByParent = {};
+      folders.forEach(function (folder) {
+        var key = folder.parentId || '';
+        (childrenByParent[key] = childrenByParent[key] || []).push(folder);
+      });
+
+      function renderNode(parentKey, depth) {
+        var out = '';
+        (templatesByFolder[parentKey] || []).forEach(function (tpl) {
+          out += '<button type="button" data-template-picker-pick="' + escapeHtml(tpl.id) + '" '
+            + 'style="padding-left:' + (depth * 0.9 + 0.5) + 'rem" '
+            + 'class="block w-full rounded px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">'
+            + '📄 ' + escapeHtml(tpl.name) + '</button>';
+        });
+        (childrenByParent[parentKey] || []).forEach(function (folder) {
+          out += '<div style="padding-left:' + (depth * 0.9) + 'rem" '
+            + 'class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">'
+            + '📁 ' + escapeHtml(folder.name) + '</div>';
+          out += renderNode(folder.id, depth + 1);
+        });
+
+        return out;
+      }
+
+      var html = renderNode('', 0);
+      if (html === '') {
+        html = '<p class="text-slate-400 dark:text-slate-500">Es sind noch keine Textvorlagen gespeichert. Unter Einstellungen &rarr; Textvorlagen lassen sich welche anlegen.</p>';
+      }
+
+      body.innerHTML = html;
+
+      body.querySelectorAll('[data-template-picker-pick]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-template-picker-pick');
+          var tpl = templates.filter(function (candidate) { return candidate.id === id; })[0];
+          if (tpl) {
+            insertIntoTarget(tpl.content || '');
+          }
+          closeModal();
+        });
+      });
+    }
+
+    function openModal(targetFieldName) {
+      activeTargetField = targetFieldName;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      if (cachedData) {
+        renderTree(cachedData);
+
+        return;
+      }
+
+      body.innerHTML = '<p class="text-slate-400 dark:text-slate-500">Lädt…</p>';
+      fetch('/textvorlagen/liste')
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          cachedData = data;
+          renderTree(data);
+        })
+        .catch(function () {
+          body.innerHTML = '<p class="text-red-500 dark:text-red-400">Textvorlagen konnten nicht geladen werden.</p>';
+        });
+    }
+
+    function insertIntoTarget(content) {
+      if (!activeTargetField) {
+        return;
+      }
+
+      var field = document.querySelector('[data-rt-field][data-rt-name="' + activeTargetField + '"]');
+      if (!field) {
+        return;
+      }
+
+      var editable = field.querySelector('[data-rt-editable]');
+      var textarea = field.querySelector('[data-rt-source]');
+      if (!editable || !textarea) {
+        return;
+      }
+
+      if (!editable.classList.contains('hidden')) {
+        editable.focus();
+        var inserted = false;
+        try {
+          inserted = document.execCommand('insertHTML', false, content);
+        } catch (e) {
+          inserted = false;
+        }
+        if (!inserted) {
+          editable.innerHTML += content;
+        }
+        textarea.value = editable.innerHTML;
+      } else {
+        textarea.value = (textarea.value ? textarea.value + '\n' : '') + content;
+      }
+    }
+
+    document.querySelectorAll('[data-template-picker-trigger]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openModal(btn.getAttribute('data-template-picker-trigger'));
+      });
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeModal();
       }
     });
   })();

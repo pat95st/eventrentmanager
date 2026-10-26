@@ -21,6 +21,13 @@ final class InvoiceItem
         // Gemeinsame Reihenfolge mit InvoiceFreeTextItem/InvoiceSectionText
         // (orderedRows()-Konzept, siehe InvoiceRow/InvoiceDetail::orderedRows()).
         public int $sortOrder = 0,
+        // Mietposition (Standard) vs. Verkaufs-/Sonstige Position — nur für
+        // die "nur Mietpositionen"-Regel des Pauschalpreises relevant (siehe
+        // Invoice::$flatRateEnabled-Klassendoc/DocumentTotals): ist
+        // $isRentalItem = false, zählt die Position NICHT zur
+        // Mietpreis-Zwischensumme (bzw. zur Pauschale), sondern bleibt wie
+        // bisher einzeln bepreist und fließt in DocumentTotals::$saleTotal.
+        public bool $isRentalItem = true,
     ) {
     }
 

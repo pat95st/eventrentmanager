@@ -21,6 +21,34 @@ CREATE TABLE categories (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- Textvorlagen für Schlusstexte (Rechnungen/Angebote/Auftragsbestätigungen),
+-- in Ordnern organisiert — Baumstruktur analog categories/Category oben
+-- (siehe Migration 094).
+-- ---------------------------------------------------------------------
+CREATE TABLE closing_text_template_folders (
+    id          CHAR(36)     NOT NULL PRIMARY KEY,
+    name        VARCHAR(255) NOT NULL,
+    parent_id   CHAR(36)     NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_closing_text_template_folders_parent
+        FOREIGN KEY (parent_id) REFERENCES closing_text_template_folders (id) ON DELETE SET NULL,
+    INDEX idx_closing_text_template_folders_parent (parent_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE closing_text_templates (
+    id          CHAR(36)     NOT NULL PRIMARY KEY,
+    folder_id   CHAR(36)     NULL,
+    name        VARCHAR(255) NOT NULL,
+    content     MEDIUMTEXT   NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_closing_text_templates_folder
+        FOREIGN KEY (folder_id) REFERENCES closing_text_template_folders (id) ON DELETE SET NULL,
+    INDEX idx_closing_text_templates_folder (folder_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- Hersteller
 -- ---------------------------------------------------------------------
 CREATE TABLE manufacturers (
@@ -1479,6 +1507,14 @@ CREATE TABLE invoices (
     -- 037 / App\Domain\Pricing\DocumentTotals.
     accessory_flat_rate_enabled TINYINT(1)    NOT NULL DEFAULT 1,
     accessory_flat_rate_percent DECIMAL(5, 2) NULL,
+    -- Pauschalpreis für die Mietpositionen (siehe Migration 094): ist
+    -- flat_rate_enabled gesetzt, erscheinen die Mietpositionen auf der
+    -- Rechnung ohne Einzelpreise, stattdessen zählt flat_rate_amount als
+    -- Zwischensumme der Mietpreise (App\Domain\Pricing\DocumentTotals).
+    -- Verkaufs-/Sonstige Positionen (invoice_items.is_rental_item = 0) sind
+    -- davon unberührt und werden weiterhin regulär einzeln bepreist.
+    flat_rate_enabled   TINYINT(1)     NOT NULL DEFAULT 0,
+    flat_rate_amount    DECIMAL(10, 2) NULL,
     discount_type       ENUM('percent', 'fixed') NULL,
     discount_value      DECIMAL(10, 2) NULL,
     shipping_amount     DECIMAL(10, 2) NULL, -- optionale Versandkosten, siehe database/migrations/072_add_inventory_number_sales.sql
@@ -1489,6 +1525,14 @@ CREATE TABLE invoices (
     closing_text        MEDIUMTEXT     NULL,
     source_offer_id     CHAR(36)       NULL,
     source_rental_id    CHAR(36)       NULL,
+    -- Logistik bei Vermietungen (siehe Migration 094): logistics_method
+    -- unterscheidet Selbstabholung durch den Kunden ('pickup') von
+    -- Lieferung durch uns ('delivery') — bei 'pickup' sind date1/date2
+    -- Abhol-/Rückgabetermin DES KUNDEN, bei 'delivery' Liefer-/
+    -- Abholtermin DURCH UNS (siehe Invoice-Klassen-Doc).
+    logistics_method    ENUM('pickup', 'delivery') NULL,
+    logistics_date1     DATETIME       NULL,
+    logistics_date2     DATETIME       NULL,
     created_at          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_invoices_customer
@@ -1513,6 +1557,9 @@ CREATE TABLE invoice_items (
     quantity            INT UNSIGNED  NOT NULL,
     unit_price_per_day  DECIMAL(10, 2) NOT NULL,
     line_note           VARCHAR(255)  NULL,
+    -- Mietposition (true, Standard/Bestand) vs. Verkaufs-/Sonstige Position
+    -- (false) — siehe Migration 094 + Invoice::$flatRateEnabled-Klassendoc.
+    is_rental_item      TINYINT(1)    NOT NULL DEFAULT 1,
     -- Gemeinsame Reihenfolge mit invoice_free_text_items/invoice_section_texts
     -- (orderedRows()-Konzept, siehe Migration 085/InvoiceDetail::orderedRows()).
     sort_order          INT UNSIGNED  NOT NULL DEFAULT 0,

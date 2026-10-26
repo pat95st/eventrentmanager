@@ -4,6 +4,7 @@
 /** @var \App\Domain\Settings\InvoiceSettings $invoiceSettings */
 /** @var \App\Domain\Dunning\DunningNotice[] $dunningNotices */
 /** @var \App\Domain\Dunning\DunningLevel[] $dunningLevels */
+/** @var \App\Domain\Rental\Rental|null $linkedRental */
 
 use App\Application\Invoice\Query\InvoiceRow;
 
@@ -49,6 +50,24 @@ $rows = $detail->orderedRows();
             </p>
         <?php else: ?>
             <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.show.not_sent_yet')) ?></p>
+        <?php endif; ?>
+        <?php if ($linkedRental !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('invoices.show.rental_link')) ?>:
+                <a href="/veranstaltungen/<?= e($linkedRental->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedRental->eventName) ?></a>
+            </p>
+        <?php endif; ?>
+        <?php if ($invoice->logisticsDate1 !== null || $invoice->logisticsDate2 !== null): ?>
+            <?php $isDelivery = $invoice->logisticsMethod === 'delivery'; ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?php if ($invoice->logisticsDate1 !== null): ?>
+                    <?= e(t($isDelivery ? 'invoices.show.logistics_delivery_date1' : 'invoices.show.logistics_pickup_date1')) ?>: <?= e($invoice->logisticsDate1->format('d.m.Y H:i')) ?>
+                <?php endif; ?>
+                <?php if ($invoice->logisticsDate1 !== null && $invoice->logisticsDate2 !== null): ?> · <?php endif; ?>
+                <?php if ($invoice->logisticsDate2 !== null): ?>
+                    <?= e(t($isDelivery ? 'invoices.show.logistics_delivery_date2' : 'invoices.show.logistics_pickup_date2')) ?>: <?= e($invoice->logisticsDate2->format('d.m.Y H:i')) ?>
+                <?php endif; ?>
+            </p>
         <?php endif; ?>
     </div>
     <div class="flex flex-wrap items-center gap-3">
@@ -217,7 +236,15 @@ $rows = $detail->orderedRows();
                             <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($item->lineTotal(), 2, ',', '.') ?> €</td>
                         </tr>
                     <?php else: ?>
-                        <?php $entry = $row->data; ?>
+                        <?php
+                            $entry = $row->data;
+                            // Pauschalpreis (siehe Invoice::$flatRateEnabled-Klassendoc):
+                            // bei Mietpositionen werden Einzelpreis/Summe auf der
+                            // Rechnung nicht genannt — Menge/Bezeichnung bleiben
+                            // sichtbar. Verkaufs-/Sonstige Positionen
+                            // (isRentalItem = false) sind davon unberührt.
+                            $hidePriceForRow = $invoice->flatRateEnabled && $entry->item->isRentalItem;
+                        ?>
                         <tr>
                             <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
                                 <?= e($entry->displayName()) ?>
@@ -226,17 +253,30 @@ $rows = $detail->orderedRows();
                                 <?php endif; ?>
                             </td>
                             <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= $entry->item->quantity ?></td>
-                            <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') ?> €</td>
-                            <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($entry->lineTotal(), 2, ',', '.') ?> €</td>
+                            <?php if ($hidePriceForRow): ?>
+                                <td class="px-2 py-2 text-slate-400 dark:text-slate-500">–</td>
+                                <td class="px-2 py-2 text-right text-slate-400 dark:text-slate-500">–</td>
+                            <?php else: ?>
+                                <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') ?> €</td>
+                                <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($entry->lineTotal(), 2, ',', '.') ?> €</td>
+                            <?php endif; ?>
                         </tr>
                     <?php endif; ?>
                 <?php endforeach; ?>
             </tbody>
             <tfoot>
                 <tr class="border-t border-slate-200 dark:border-slate-700">
-                    <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.rental_subtotal')) ?></td>
+                    <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3">
+                        <?= $invoice->flatRateEnabled ? e(t('invoices.show.flat_rate_label')) : e(t('invoices.show.rental_subtotal')) ?>
+                    </td>
                     <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300"><?= number_format($totals->rentalNetTotal, 2, ',', '.') ?> €</td>
                 </tr>
+                <?php if ($detail->saleItemsTotal() > 0): ?>
+                    <tr>
+                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.form.totals_sale')) ?></td>
+                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->saleItemsTotal(), 2, ',', '.') ?> €</td>
+                    </tr>
+                <?php endif; ?>
                 <?php if ($invoice->accessoryFlatRateEnabled && $invoice->accessoryFlatRatePercent !== null): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.accessory_flat_rate', ['rate' => number_format((float) $invoice->accessoryFlatRatePercent, 2, ',', '.')])) ?></td>

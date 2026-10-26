@@ -8,6 +8,7 @@ use App\Application\Common\VenueResolver;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use DateTimeImmutable;
 
@@ -23,18 +24,21 @@ use DateTimeImmutable;
 trait ValidatesInvoiceInput
 {
     /**
-     * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order?: string}> $rawItems
+     * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order?: string, is_rental_item?: string}> $rawItems
      * @param array<int, array{labor_article_id: string, hours: string}> $rawLaborItems
      * @param array<int, array{description: string, quantity: string, unit_price: string, sort_order?: string}> $rawFreeTextItems
      * @param array<int, array{heading: string, sort_order?: string}> $rawSectionTexts
      * @return array{0: array<string, string>, 1: array{
      *     customerId: ?string, startDate: ?DateTimeImmutable, endDate: ?DateTimeImmutable,
      *     eventLocation: ?string, venueId: ?string, buyerReference: ?string, note: ?string,
-     *     items: array<int, array{articleId: string, quantity: int, unitPrice: string, lineNote: ?string, sortOrder: int}>,
+     *     items: array<int, array{articleId: string, quantity: int, unitPrice: string, lineNote: ?string, sortOrder: int, isRentalItem: bool}>,
      *     laborItems: array<int, array{laborTimeArticleId: string, hours: string, unitRatePerHour: string}>,
      *     freeTextItems: array<int, array{description: string, quantity: string, unitPrice: string, sortOrder: int}>,
      *     sectionTexts: array<int, array{heading: string, sortOrder: int}>,
      *     discountType: ?string, discountValue: ?string,
+     *     rentalId: ?string,
+     *     flatRateAmount: ?string,
+     *     logisticsMethod: ?string, logisticsDate1: ?DateTimeImmutable, logisticsDate2: ?DateTimeImmutable,
      * }}
      */
     private function validateInvoiceInput(
@@ -54,8 +58,44 @@ trait ValidatesInvoiceInput
         array $rawSectionTexts = [],
         ?string $rawDiscountType = null,
         ?string $rawDiscountValue = null,
+        ?RentalRepositoryInterface $rentals = null,
+        ?string $rawRentalId = null,
+        bool $flatRateEnabled = false,
+        ?string $rawFlatRateAmount = null,
+        ?string $rawLogisticsMethod = null,
+        ?string $rawLogisticsDate1 = null,
+        ?string $rawLogisticsDate2 = null,
     ): array {
         $errors = [];
+
+        $rentalId = $rawRentalId !== null ? trim($rawRentalId) : '';
+        if ($rentalId !== '' && $rentals !== null && $rentals->findById($rentalId) === null) {
+            $errors['rentalId'] = 'Die gewählte Veranstaltung wurde nicht gefunden.';
+            $rentalId = '';
+        }
+
+        $flatRateAmount = null;
+        if ($flatRateEnabled) {
+            $rawAmount = str_replace(',', '.', trim((string) $rawFlatRateAmount));
+            $amount = filter_var($rawAmount, FILTER_VALIDATE_FLOAT);
+            if ($rawAmount === '' || $amount === false || $amount < 0) {
+                $errors['flatRateAmount'] = 'Bitte einen gültigen Pauschalbetrag (0 oder größer) angeben.';
+            } else {
+                $flatRateAmount = number_format($amount, 2, '.', '');
+            }
+        }
+
+        $logisticsMethod = $rawLogisticsMethod !== null ? trim($rawLogisticsMethod) : null;
+        if ($logisticsMethod !== null && !in_array($logisticsMethod, ['pickup', 'delivery'], true)) {
+            $logisticsMethod = null;
+        }
+        $logisticsDate1 = $this->parseInvoiceDateTime($rawLogisticsDate1);
+        $logisticsDate2 = $this->parseInvoiceDateTime($rawLogisticsDate2);
+        if ($logisticsDate1 === null && $logisticsDate2 === null) {
+            // Ohne Termine ist die Methode fachlich bedeutungslos — nicht
+            // mit abspeichern (bleibt auf der Rechnung unauffällig NULL).
+            $logisticsMethod = null;
+        }
 
         $customerId = trim($customerId);
         if ($customerId !== '' && $customers->findById($customerId) === null) {
@@ -117,6 +157,8 @@ trait ValidatesInvoiceInput
                 'unitPrice' => number_format($unitPrice, 2, '.', ''),
                 'lineNote' => $lineNote !== '' ? $lineNote : null,
                 'sortOrder' => (int) ($rawItem['sort_order'] ?? $index),
+                // Default true (Mietposition) — siehe InvoiceItem::$isRentalItem.
+                'isRentalItem' => ($rawItem['is_rental_item'] ?? '1') === '1',
             ];
         }
 
@@ -250,6 +292,11 @@ trait ValidatesInvoiceInput
             'sectionTexts' => $sectionTexts,
             'discountType' => $discountType,
             'discountValue' => $discountValue,
+            'rentalId' => $rentalId !== '' ? $rentalId : null,
+            'flatRateAmount' => $flatRateAmount,
+            'logisticsMethod' => $logisticsMethod,
+            'logisticsDate1' => $logisticsDate1,
+            'logisticsDate2' => $logisticsDate2,
         ]];
     }
 
@@ -265,5 +312,15 @@ trait ValidatesInvoiceInput
         } catch (\Exception) {
             return null;
         }
+    }
+
+    /** Wie parseInvoiceDate(), aber für datetime-local-Eingaben (Logistik-Termine) und akzeptiert null. */
+    private function parseInvoiceDateTime(?string $value): ?DateTimeImmutable
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        return $this->parseInvoiceDate($value);
     }
 }

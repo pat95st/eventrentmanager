@@ -17,6 +17,7 @@ use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\Invoice\InvoiceStatus;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\RichText\HtmlSanitizer;
@@ -41,6 +42,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly HtmlSanitizer $htmlSanitizer,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -65,6 +67,13 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
+            $this->rentals,
+            $command->rentalId,
+            $command->flatRateEnabled,
+            $command->flatRateAmount,
+            $command->logisticsMethod,
+            $command->logisticsDate1,
+            $command->logisticsDate2,
         );
 
         if ($errors !== []) {
@@ -78,6 +87,14 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         // zusätzlich anhand derselben Bedingung erzwungen.
         $onlyLaborItems = $data['items'] === [] && $data['freeTextItems'] === [] && $data['laborItems'] !== [];
         $accessoryFlatRateEnabled = $onlyLaborItems ? false : $command->accessoryFlatRateEnabled;
+
+        // Pauschalpreis ist nur sinnvoll, wenn mindestens eine Mietposition
+        // (isRentalItem = true) vorhanden ist — sonst gäbe es nichts, dessen
+        // Einzelpreise ausgeblendet werden könnten (siehe DocumentTotals-
+        // Klassendoc/Invoice::$flatRateEnabled).
+        $hasRentalItems = array_filter($data['items'], static fn (array $item) => $item['isRentalItem']) !== [];
+        $flatRateEnabled = $hasRentalItems && $command->flatRateEnabled;
+        $flatRateAmount = $flatRateEnabled ? $data['flatRateAmount'] : null;
 
         // Zubehörpauschale wird beim Anlegen — sofern aktiv — vom aktuellen
         // Stand der PricingSettings auf die Rechnung SELBST gesnapshotet
@@ -104,14 +121,19 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             paidAt: null,
             note: $data['note'],
             sourceOfferId: null,
-            sourceRentalId: null,
+            sourceRentalId: $data['rentalId'],
             createdAt: $now,
             updatedAt: $now,
             accessoryFlatRateEnabled: $accessoryFlatRateEnabled,
             accessoryFlatRatePercent: $accessoryFlatRatePercent,
+            flatRateEnabled: $flatRateEnabled,
+            flatRateAmount: $flatRateAmount,
             discountType: $data['discountType'],
             discountValue: $data['discountValue'],
             closingText: $this->htmlSanitizer->sanitize($command->closingText),
+            logisticsMethod: $data['logisticsMethod'],
+            logisticsDate1: $data['logisticsDate1'],
+            logisticsDate2: $data['logisticsDate2'],
         );
 
         $this->invoices->save($invoice);
@@ -125,6 +147,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
                 unitPricePerDay: $item['unitPrice'],
                 lineNote: $item['lineNote'],
                 sortOrder: $item['sortOrder'],
+                isRentalItem: $item['isRentalItem'],
             ),
             $data['items']
         );

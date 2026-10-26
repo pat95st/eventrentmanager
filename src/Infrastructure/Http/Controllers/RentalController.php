@@ -82,7 +82,56 @@ final class RentalController
         private readonly RentalCustomerChecklistUrlBuilder $customerChecklistUrlBuilder,
         private readonly VoucherRedemptionRepositoryInterface $voucherRedemptions,
         private readonly LegalSettingsRepositoryInterface $legalSettings,
+        private readonly \App\Domain\Rental\RentalRepositoryInterface $rentals,
     ) {
+    }
+
+    /**
+     * Live-Suche für die Veranstaltungs-Verknüpfung auf Rechnungen (siehe
+     * invoices/form.php) — identisches Muster wie CustomerController::search()
+     * & Co. Label kombiniert Veranstaltungsname, Kunde und Zeitraum, damit
+     * sich mehrere Veranstaltungen desselben Kunden unterscheiden lassen.
+     */
+    public function search(Request $request): void
+    {
+        $search = $request->query('q');
+        $entries = $this->queries->ask(new ListRentals($search, null, 1, 20))->items;
+
+        Response::json([
+            'items' => array_map(
+                static fn (\App\Application\Rental\Query\RentalListEntry $entry): array => [
+                    'id' => $entry->rental->id,
+                    'label' => sprintf(
+                        '%s – %s (%s – %s)',
+                        $entry->rental->eventName,
+                        $entry->customer->displayName(),
+                        $entry->rental->startDate->format('d.m.Y'),
+                        $entry->rental->endDate->format('d.m.Y'),
+                    ),
+                ],
+                $entries
+            ),
+        ]);
+    }
+
+    /**
+     * Abhol-/Rückgabetermin der Veranstaltung als JSON (siehe
+     * Rental::$pickupAt/$returnAt) — wird von invoices/form.php per Fetch
+     * abgerufen, um die Logistik-Termine beim Auswählen einer Veranstaltung
+     * vorzubelegen (siehe Invoice::$logisticsDate1/$logisticsDate2-Klassendoc).
+     * Keine Fehlerseite bei unbekannter ID — liefert einfach leere Termine,
+     * damit ein knapp daneben liegender/veralteter Aufruf das Formular nicht
+     * stört.
+     */
+    public function logistics(Request $request): void
+    {
+        $id = $request->param('id');
+        $rental = $this->rentals->findById($id);
+
+        Response::json([
+            'pickupAt' => $rental?->pickupAt?->format('Y-m-d\TH:i'),
+            'returnAt' => $rental?->returnAt?->format('Y-m-d\TH:i'),
+        ]);
     }
 
     public function index(Request $request): void

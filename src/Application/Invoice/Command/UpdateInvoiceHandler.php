@@ -17,6 +17,7 @@ use App\Domain\Invoice\InvoiceLaborItem;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\RichText\HtmlSanitizer;
@@ -45,6 +46,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly HtmlSanitizer $htmlSanitizer,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -78,6 +80,13 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
             $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
+            $this->rentals,
+            $command->rentalId,
+            $command->flatRateEnabled,
+            $command->flatRateAmount,
+            $command->logisticsMethod,
+            $command->logisticsDate1,
+            $command->logisticsDate2,
         );
 
         if ($errors !== []) {
@@ -94,6 +103,17 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         $invoice->discountType = $data['discountType'];
         $invoice->discountValue = $data['discountValue'];
         $invoice->closingText = $this->htmlSanitizer->sanitize($command->closingText);
+        $invoice->sourceRentalId = $data['rentalId'];
+        $invoice->logisticsMethod = $data['logisticsMethod'];
+        $invoice->logisticsDate1 = $data['logisticsDate1'];
+        $invoice->logisticsDate2 = $data['logisticsDate2'];
+
+        // Pauschalpreis: siehe CreateInvoiceHandler für die identische
+        // Begründung (nur sinnvoll, wenn mindestens eine Mietposition
+        // vorhanden ist).
+        $hasRentalItems = array_filter($data['items'], static fn (array $item) => $item['isRentalItem']) !== [];
+        $invoice->flatRateEnabled = $hasRentalItems && $command->flatRateEnabled;
+        $invoice->flatRateAmount = $invoice->flatRateEnabled ? $data['flatRateAmount'] : null;
 
         // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
         // für die identische Begründung (dort bereits für den Kombirabatt
@@ -128,6 +148,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
                 unitPricePerDay: $item['unitPrice'],
                 lineNote: $item['lineNote'],
                 sortOrder: $item['sortOrder'],
+                isRentalItem: $item['isRentalItem'],
             ),
             $data['items']
         );

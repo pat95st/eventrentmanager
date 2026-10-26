@@ -38,7 +38,7 @@ if (!function_exists('renderDocumentClosingTextField')) {
     function renderDocumentClosingTextField(string $name, string $value, ?string $error): void
     {
         ?>
-    <div data-rt-field class="rt-field">
+    <div data-rt-field data-rt-name="<?= e($name) ?>" class="rt-field">
         <div data-rt-toolbar class="mb-0 hidden flex-wrap gap-1 rounded-t-md border border-b-0 border-slate-300 bg-slate-50 p-1.5 dark:border-slate-700 dark:bg-slate-800">
             <button type="button" data-cmd="bold" title="<?= e(t('rich_text.toolbar.bold')) ?>" class="rounded px-2 py-1 text-xs font-bold text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">F</button>
             <button type="button" data-cmd="italic" title="<?= e(t('rich_text.toolbar.italic')) ?>" class="rounded px-2 py-1 text-xs italic text-slate-600 hover:bg-slate-200 dark:text-slate-300 dark:hover:bg-slate-700">K</button>
@@ -70,6 +70,44 @@ if (!function_exists('renderDocumentClosingTextField')) {
         ><?= e($value) ?></textarea>
         <?php if ($error !== null): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($error) ?></p><?php endif; ?>
     </div>
+        <?php
+    }
+}
+
+/**
+ * "Vorlage einfügen"-Button + Modal für den Textvorlagen-Picker — identisch
+ * zu renderClosingTextTemplatePickerButton()/renderClosingTextTemplatePickerModal()
+ * in resources/views/invoices/form.php, bewusst erneut dupliziert (siehe
+ * dortiger Kommentar zum selben Muster).
+ */
+if (!function_exists('renderClosingTextTemplatePickerButton')) {
+    function renderClosingTextTemplatePickerButton(string $targetFieldName): void
+    {
+        ?>
+        <button
+            type="button"
+            data-template-picker-trigger="<?= e($targetFieldName) ?>"
+            class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"
+        >Vorlage einfügen</button>
+        <?php
+    }
+}
+
+if (!function_exists('renderClosingTextTemplatePickerModal')) {
+    function renderClosingTextTemplatePickerModal(): void
+    {
+        ?>
+        <div data-template-picker-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
+            <div class="flex max-h-[80vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
+                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+                    <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-100">Textvorlage einfügen</h2>
+                    <button type="button" data-template-picker-close class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>
+                </div>
+                <div data-template-picker-body class="flex-1 overflow-y-auto px-4 py-3 text-sm">
+                    <p class="text-slate-400 dark:text-slate-500">Lädt…</p>
+                </div>
+            </div>
+        </div>
         <?php
     }
 }
@@ -383,7 +421,10 @@ foreach ($laborArticles as $laborArticle) {
     </div>
 
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.closing_text')) ?></label>
+        <div class="flex items-baseline justify-between">
+            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.form.closing_text')) ?></label>
+            <?php renderClosingTextTemplatePickerButton('closing_text'); ?>
+        </div>
         <p class="mb-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.closing_text_hint')) ?></p>
         <?php renderDocumentClosingTextField('closing_text', $val('closing_text', $offer?->closingText), $errors['closingText'] ?? null); ?>
     </div>
@@ -395,6 +436,8 @@ foreach ($laborArticles as $laborArticle) {
         <a href="<?= $offer !== null ? '/angebote/' . e($offer->id) : '/angebote' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
     </div>
 </form>
+
+<?php renderClosingTextTemplatePickerModal(); ?>
 
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
@@ -1195,6 +1238,170 @@ foreach ($laborArticles as $laborArticle) {
             textarea.value = editable.innerHTML;
           }
         });
+      }
+    });
+  })();
+</script>
+
+<script>
+  // "Vorlage einfügen"-Picker (siehe renderClosingTextTemplatePickerButton()/
+  // renderClosingTextTemplatePickerModal() oben in dieser Datei): lädt
+  // einmalig /textvorlagen/liste (siehe ClosingTextTemplateController::
+  // list()), zeigt Ordner/Vorlagen als Baum im Modal und fügt die gewählte
+  // Vorlage beim Klick in das per data-template-picker-trigger="<name>"
+  // adressierte Rich-Text-Feld (data-rt-name="<name>", siehe
+  // renderDocumentClosingTextField()) ein. Identisches Muster wie in
+  // resources/views/invoices/form.php (bewusst dupliziert, siehe Konvention
+  // im restlichen Formular).
+  (function () {
+    var modal = document.querySelector('[data-template-picker-modal]');
+    if (!modal) {
+      return;
+    }
+
+    var body = modal.querySelector('[data-template-picker-body]');
+    var closeBtn = modal.querySelector('[data-template-picker-close]');
+    var cachedData = null;
+    var activeTargetField = null;
+
+    function escapeHtml(value) {
+      var div = document.createElement('div');
+      div.textContent = value == null ? '' : value;
+      return div.innerHTML;
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      activeTargetField = null;
+    }
+
+    function renderTree(data) {
+      var folders = data.folders || [];
+      var templates = data.templates || [];
+      var templatesByFolder = {};
+      templates.forEach(function (tpl) {
+        var key = tpl.folderId || '';
+        (templatesByFolder[key] = templatesByFolder[key] || []).push(tpl);
+      });
+      var childrenByParent = {};
+      folders.forEach(function (folder) {
+        var key = folder.parentId || '';
+        (childrenByParent[key] = childrenByParent[key] || []).push(folder);
+      });
+
+      function renderNode(parentKey, depth) {
+        var out = '';
+        (templatesByFolder[parentKey] || []).forEach(function (tpl) {
+          out += '<button type="button" data-template-picker-pick="' + escapeHtml(tpl.id) + '" '
+            + 'style="padding-left:' + (depth * 0.9 + 0.5) + 'rem" '
+            + 'class="block w-full rounded px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800">'
+            + '📄 ' + escapeHtml(tpl.name) + '</button>';
+        });
+        (childrenByParent[parentKey] || []).forEach(function (folder) {
+          out += '<div style="padding-left:' + (depth * 0.9) + 'rem" '
+            + 'class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">'
+            + '📁 ' + escapeHtml(folder.name) + '</div>';
+          out += renderNode(folder.id, depth + 1);
+        });
+
+        return out;
+      }
+
+      var html = renderNode('', 0);
+      if (html === '') {
+        html = '<p class="text-slate-400 dark:text-slate-500">Es sind noch keine Textvorlagen gespeichert. Unter Einstellungen &rarr; Textvorlagen lassen sich welche anlegen.</p>';
+      }
+
+      body.innerHTML = html;
+
+      body.querySelectorAll('[data-template-picker-pick]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-template-picker-pick');
+          var tpl = templates.filter(function (candidate) { return candidate.id === id; })[0];
+          if (tpl) {
+            insertIntoTarget(tpl.content || '');
+          }
+          closeModal();
+        });
+      });
+    }
+
+    function openModal(targetFieldName) {
+      activeTargetField = targetFieldName;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      if (cachedData) {
+        renderTree(cachedData);
+
+        return;
+      }
+
+      body.innerHTML = '<p class="text-slate-400 dark:text-slate-500">Lädt…</p>';
+      fetch('/textvorlagen/liste')
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          cachedData = data;
+          renderTree(data);
+        })
+        .catch(function () {
+          body.innerHTML = '<p class="text-red-500 dark:text-red-400">Textvorlagen konnten nicht geladen werden.</p>';
+        });
+    }
+
+    function insertIntoTarget(content) {
+      if (!activeTargetField) {
+        return;
+      }
+
+      var field = document.querySelector('[data-rt-field][data-rt-name="' + activeTargetField + '"]');
+      if (!field) {
+        return;
+      }
+
+      var editable = field.querySelector('[data-rt-editable]');
+      var textarea = field.querySelector('[data-rt-source]');
+      if (!editable || !textarea) {
+        return;
+      }
+
+      if (!editable.classList.contains('hidden')) {
+        editable.focus();
+        var inserted = false;
+        try {
+          inserted = document.execCommand('insertHTML', false, content);
+        } catch (e) {
+          inserted = false;
+        }
+        if (!inserted) {
+          editable.innerHTML += content;
+        }
+        textarea.value = editable.innerHTML;
+      } else {
+        textarea.value = (textarea.value ? textarea.value + '\n' : '') + content;
+      }
+    }
+
+    document.querySelectorAll('[data-template-picker-trigger]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openModal(btn.getAttribute('data-template-picker-trigger'));
+      });
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeModal);
+    }
+
+    modal.addEventListener('click', function (event) {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeModal();
       }
     });
   })();

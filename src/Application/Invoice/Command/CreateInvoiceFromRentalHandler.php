@@ -92,6 +92,17 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
             // Aufgabenstellung); der aktuelle Prozentsatz wird gesnapshotet.
             accessoryFlatRateEnabled: true,
             accessoryFlatRatePercent: $this->pricingSettings->get()->accessoryFlatRatePercent,
+            // Abhol-/Rückgabetermin aus der Logistik-Zuordnung der
+            // Veranstaltung vorbelegen (siehe Rental::$pickupAt/$returnAt),
+            // sofern dort gepflegt — bleibt auf der Rechnung danach frei
+            // editierbar und unabhängig von der Veranstaltung (siehe
+            // Invoice::$logisticsMethod-Klassendoc). Default-Methode
+            // 'pickup' (Selbstabholung); eine Lieferung durch uns wird hier
+            // nicht automatisch erkannt und muss auf der Rechnung selbst
+            // umgestellt werden.
+            logisticsMethod: ($rental->pickupAt !== null || $rental->returnAt !== null) ? 'pickup' : null,
+            logisticsDate1: $rental->pickupAt,
+            logisticsDate2: $rental->returnAt,
         );
         $this->invoices->save($invoice);
 

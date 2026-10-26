@@ -33,8 +33,10 @@ use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Invoice\Invoice;
 use App\Domain\Invoice\InvoiceStatus;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\RentalPriceCalculator;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\EInvoice\XRechnungGenerator;
@@ -56,6 +58,8 @@ final class InvoiceController
         private readonly VenueRepositoryInterface $venues,
         private readonly InvoicePdfGenerator $pdfGenerator,
         private readonly XRechnungGenerator $xRechnungGenerator,
+        private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerRepositoryInterface $customers,
     ) {
     }
 
@@ -116,6 +120,12 @@ final class InvoiceController
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
+            rentalId: $this->nullIfEmpty($request->input('rental_id')),
+            flatRateEnabled: $request->input('flat_rate_enabled') === '1',
+            flatRateAmount: $request->input('flat_rate_amount'),
+            logisticsMethod: $this->nullIfEmpty($request->input('logistics_method')),
+            logisticsDate1: $this->nullIfEmpty($request->input('logistics_date1')),
+            logisticsDate2: $this->nullIfEmpty($request->input('logistics_date2')),
         );
 
         try {
@@ -143,6 +153,7 @@ final class InvoiceController
         $invoiceSettings = $this->queries->ask(new GetInvoiceSettings());
         $dunningNotices = $this->queries->ask(new ListDunningNoticesForInvoice($id));
         $dunningLevels = $this->queries->ask(new ListDunningLevels());
+        $linkedRental = $detail->invoice->sourceRentalId !== null ? $this->rentals->findById($detail->invoice->sourceRentalId) : null;
 
         echo View::page('invoices/show', [
             'detail' => $detail,
@@ -150,6 +161,7 @@ final class InvoiceController
             'invoiceSettings' => $invoiceSettings,
             'dunningNotices' => $dunningNotices,
             'dunningLevels' => $dunningLevels,
+            'linkedRental' => $linkedRental,
         ], activeNav: 'invoices', title: t('invoices.page_title.detail'));
     }
 
@@ -188,6 +200,12 @@ final class InvoiceController
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
+            rentalId: $this->nullIfEmpty($request->input('rental_id')),
+            flatRateEnabled: $request->input('flat_rate_enabled') === '1',
+            flatRateAmount: $request->input('flat_rate_amount'),
+            logisticsMethod: $this->nullIfEmpty($request->input('logistics_method')),
+            logisticsDate1: $this->nullIfEmpty($request->input('logistics_date1')),
+            logisticsDate2: $this->nullIfEmpty($request->input('logistics_date2')),
         );
 
         try {
@@ -416,6 +434,7 @@ final class InvoiceController
                     'unit_price' => $entry->item->unitPricePerDay,
                     'line_note' => $entry->item->lineNote ?? '',
                     'sort_order' => $entry->item->sortOrder,
+                    'is_rental_item' => $entry->item->isRentalItem ? '1' : '0',
                 ];
             }
             foreach ($detail->laborItems as $entry) {
@@ -452,6 +471,26 @@ final class InvoiceController
             $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
         }
 
+        // Anzeige-Label der verknüpften Veranstaltung (siehe
+        // Invoice::$sourceRentalId/RentalController::search() für das
+        // identische Label-Format) für die Vorbelegung der Live-Suche im
+        // Formular (siehe invoices/form.php).
+        $selectedRentalId = $invoice?->sourceRentalId;
+        $selectedRentalLabel = null;
+        if ($selectedRentalId !== null) {
+            $rental = $this->rentals->findById($selectedRentalId);
+            $rentalCustomer = $rental !== null ? $this->customers->findById($rental->customerId) : null;
+            if ($rental !== null && $rentalCustomer !== null) {
+                $selectedRentalLabel = sprintf(
+                    '%s – %s (%s – %s)',
+                    $rental->eventName,
+                    $rentalCustomer->displayName(),
+                    $rental->startDate->format('d.m.Y'),
+                    $rental->endDate->format('d.m.Y'),
+                );
+            }
+        }
+
         echo View::page('invoices/form', [
             'invoice' => $invoice,
             'customers' => $customers,
@@ -470,10 +509,12 @@ final class InvoiceController
             'existingSectionTexts' => $existingSectionTexts,
             'isSmallBusinessPreview' => $isSmallBusinessPreview,
             'vatRatePercentPreview' => $vatRatePercentPreview,
+            'selectedRentalId' => $selectedRentalId,
+            'selectedRentalLabel' => $selectedRentalLabel,
         ], activeNav: 'invoices', title: $invoice !== null ? t('invoices.edit') : t('invoices.new'));
     }
 
-    /** @return array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order: string}> */
+    /** @return array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order: string, is_rental_item: string}> */
     private function itemsFromRequest(Request $request): array
     {
         $articleIds = $request->post['article_id'] ?? [];
@@ -481,6 +522,10 @@ final class InvoiceController
         $unitPrices = $request->post['unit_price'] ?? [];
         $lineNotes = $request->post['line_note'] ?? [];
         $sortOrders = $request->post['sort_order'] ?? [];
+        // Checkbox je Zeile (siehe invoices/form.php) — "1" wenn angehakt
+        // (Mietposition, Default), fehlt im POST-Array ansonsten (Verkauf/
+        // Sonstiges), siehe ValidatesInvoiceInput::validateInvoiceInput().
+        $isRentalItems = $request->post['is_rental_item'] ?? [];
 
         if (!is_array($articleIds)) {
             return [];
@@ -494,6 +539,7 @@ final class InvoiceController
                 'unit_price' => (string) ($unitPrices[$index] ?? ''),
                 'line_note' => (string) ($lineNotes[$index] ?? ''),
                 'sort_order' => (string) ($sortOrders[$index] ?? $index),
+                'is_rental_item' => (string) ($isRentalItems[$index] ?? '0'),
             ];
         }
 
@@ -585,6 +631,12 @@ final class InvoiceController
             'free_text_items' => $command->freeTextItems,
             'section_texts' => $command->sectionTexts,
             'closing_text' => $command->closingText ?? '',
+            'rental_id' => $command->rentalId ?? '',
+            'flat_rate_enabled' => $command->flatRateEnabled ? '1' : '',
+            'flat_rate_amount' => $command->flatRateAmount ?? '',
+            'logistics_method' => $command->logisticsMethod ?? '',
+            'logistics_date1' => $command->logisticsDate1 ?? '',
+            'logistics_date2' => $command->logisticsDate2 ?? '',
         ];
     }
 

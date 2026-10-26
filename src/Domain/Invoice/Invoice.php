@@ -54,6 +54,18 @@ final class Invoice
         // NULL, solange enabled=false.
         public bool $accessoryFlatRateEnabled = true,
         public ?string $accessoryFlatRatePercent = null,
+        // Pauschalpreis für die Mietpositionen: ist $flatRateEnabled aktiv,
+        // erscheinen die Mietpositionen (InvoiceItem::$isRentalItem = true)
+        // auf der Rechnung ohne Einzelpreise, stattdessen zählt
+        // $flatRateAmount als Zwischensumme der Mietpreise (siehe
+        // App\Domain\Pricing\DocumentTotals — $flatRateAmount wird dort als
+        // rentalNetTotal übergeben statt der tatsächlichen Summe der
+        // Mietpositionen). Verkaufs-/Sonstige Positionen
+        // (InvoiceItem::$isRentalItem = false) sind davon unberührt und
+        // werden weiterhin regulär einzeln bepreist und als
+        // DocumentTotals::$saleTotal aufsummiert.
+        public bool $flatRateEnabled = false,
+        public ?string $flatRateAmount = null,
         // Optionaler Kombirabatt: entweder 'percent' oder 'fixed', siehe
         // App\Domain\Pricing\DocumentTotals für die Berechnungsreihenfolge.
         public ?string $discountType = null,
@@ -71,6 +83,22 @@ final class Invoice
         // InvoicePdfSettings::$closingHtml, hier aber pro Rechnung statt
         // global).
         public ?string $closingText = null,
+        // Logistik bei Vermietungen: unterscheidet Selbstabholung durch den
+        // Kunden ('pickup', Standard/Default null wird als 'pickup'
+        // behandelt) von Lieferung durch uns ('delivery'). Bei 'pickup'
+        // sind $logisticsDate1/$logisticsDate2 Abhol-/Rückgabetermin DES
+        // KUNDEN, bei 'delivery' Liefer-/Abholtermin DURCH UNS (siehe
+        // invoices/form.php bzw. -/show.php für die je nach Methode
+        // unterschiedliche Beschriftung). Rein optional, unabhängig davon,
+        // ob die Rechnung über $sourceRentalId mit einer Veranstaltung
+        // verknüpft ist — beim Erzeugen/Auswählen einer Veranstaltung werden
+        // die Felder lediglich aus deren Rental::$pickupAt/$returnAt
+        // vorbelegt (siehe CreateInvoiceFromRentalHandler/
+        // RentalController::logistics()), bleiben danach aber frei
+        // editierbar und unabhängig von der Veranstaltung.
+        public ?string $logisticsMethod = null, // 'pickup'|'delivery'|null
+        public ?DateTimeImmutable $logisticsDate1 = null,
+        public ?DateTimeImmutable $logisticsDate2 = null,
     ) {
     }
 

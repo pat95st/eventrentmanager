@@ -38,6 +38,41 @@ final class InvoiceDetail
         return $total;
     }
 
+    /**
+     * Zwischensumme der tatsächlichen (nicht pauschalierten) Mietpreis-
+     * Positionen — also nur InvoiceItem::$isRentalItem = true. Siehe
+     * rentalItemsTotalForDisplay() für den bei aktivem Pauschalpreis
+     * (Invoice::$flatRateEnabled) tatsächlich verwendeten Wert.
+     */
+    public function rentalItemsTotal(): float
+    {
+        $total = 0.0;
+        foreach ($this->items as $entry) {
+            if ($entry->item->isRentalItem) {
+                $total += $entry->lineTotal();
+            }
+        }
+
+        return $total;
+    }
+
+    /**
+     * Zwischensumme der Verkaufs-/Sonstigen Positionen (InvoiceItem::$isRentalItem = false)
+     * — bleiben beim Pauschalpreis unberührt und normal einzeln bepreist
+     * (siehe DocumentTotals-Klassendoc/Invoice::$flatRateEnabled).
+     */
+    public function saleItemsTotal(): float
+    {
+        $total = 0.0;
+        foreach ($this->items as $entry) {
+            if (!$entry->item->isRentalItem) {
+                $total += $entry->lineTotal();
+            }
+        }
+
+        return $total;
+    }
+
     /** Historisch/legacy Alias — siehe offers/show.php-Äquivalent (grandTotal). Für Rechnungen bewusst als netTotal() benannt, da hier zusätzlich Steuer ausgewiesen wird. */
     public function grandTotal(): float
     {
@@ -75,8 +110,19 @@ final class InvoiceDetail
      */
     public function totals(InvoiceSettings $invoiceSettings): DocumentTotals
     {
+        // Pauschalpreis (siehe Invoice::$flatRateEnabled-Klassendoc): ist er
+        // aktiv, zählt flatRateAmount statt der tatsächlichen Summe der
+        // Mietpositionen als rentalNetTotal (Zubehörpauschale/Kombirabatt
+        // beziehen sich dann auf die Pauschale). Verkaufs-/Sonstige
+        // Positionen (saleItemsTotal()) sind davon unberührt und werden wie
+        // bei Angeboten als saleTotal NACH Zubehörpauschale/Kombirabatt
+        // addiert.
+        $rentalNetTotal = $this->invoice->flatRateEnabled && $this->invoice->flatRateAmount !== null
+            ? (float) $this->invoice->flatRateAmount
+            : $this->rentalItemsTotal();
+
         return DocumentTotals::calculate(
-            rentalNetTotal: $this->netTotal(),
+            rentalNetTotal: $rentalNetTotal,
             accessoryFlatRateEnabled: $this->invoice->accessoryFlatRateEnabled,
             accessoryFlatRatePercent: $this->invoice->accessoryFlatRatePercent,
             discountType: $this->invoice->discountType,
@@ -85,6 +131,7 @@ final class InvoiceDetail
             isSmallBusiness: $this->invoice->isSmallBusiness ?? $invoiceSettings->isSmallBusiness,
             vatRatePercent: $this->invoice->vatRatePercent ?? $invoiceSettings->vatRatePercent,
             shippingAmount: $this->invoice->shippingAmount !== null ? (float) $this->invoice->shippingAmount : 0.0,
+            saleTotal: $this->saleItemsTotal(),
             freeTextTotal: $this->freeTextTotal(),
         );
     }

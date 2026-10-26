@@ -49,6 +49,7 @@ final class SettingsSections
                     ['key' => 'settings-nummerierung', 'href' => '/einstellungen/nummerierung', 'label' => t('nav.numbering_settings')],
                     ['key' => 'settings-rechnungsvorlage', 'href' => '/einstellungen/rechnungsvorlage', 'label' => t('nav.invoice_pdf_template')],
                     ['key' => 'settings-angebotsvorlage', 'href' => '/einstellungen/angebotsvorlage', 'label' => t('nav.offer_pdf_template')],
+                    ['key' => 'settings-textvorlagen', 'href' => '/einstellungen/textvorlagen', 'label' => t('nav.closing_text_templates')],
                     ['key' => 'settings-pdf-design', 'href' => '/einstellungen/pdf-design', 'label' => t('nav.pdf_design_settings')],
                     ['key' => 'settings-pdf-layout', 'href' => '/einstellungen/pdf-layout', 'label' => t('nav.pdf_layout_settings')],
                     ['key' => 'settings-preise', 'href' => '/einstellungen/preise', 'label' => t('nav.pricing_settings')],

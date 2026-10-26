@@ -11,6 +11,23 @@ use App\Domain\Vehicle\VehicleCategory;
 /** @var array<string, string> $paginationQuery */
 
 use function App\Infrastructure\Http\e;
+
+/**
+ * Entfernt eine überflüssige ".0"-Nachkommastelle aus einem DECIMAL(6,1)-
+ * Wert wie "300.0" (=> "300"), lässt eine echte Nachkommastelle wie "180.5"
+ * unverändert. Bewusst kein pauschales rtrim($v, '0'), das bei einem Wert
+ * wie "100" auch die signifikanten Nullen abschneiden würde.
+ */
+if (!function_exists('formatVehicleDimension')) {
+    function formatVehicleDimension(string $value): string
+    {
+        if (!str_contains($value, '.')) {
+            return $value;
+        }
+
+        return rtrim(rtrim($value, '0'), '.');
+    }
+}
 ?>
 
 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -57,7 +74,28 @@ use function App\Infrastructure\Http\e;
                             <?= $vehicle->payloadKg !== null ? e($vehicle->payloadKg) . ' kg' : '–' ?>
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
-                            <?= $vehicle->loadAreaDimensions !== null ? e($vehicle->loadAreaDimensions) : '–' ?>
+                            <?php
+                            // L x B x H, wobei H bei offener Ladefläche (kein
+                            // Aufbau, keine Höhenbegrenzung) durch den
+                            // Hinweistext statt einer Zahl ersetzt wird.
+                            $dimensionParts = [];
+                            if ($vehicle->loadAreaLengthCm !== null) {
+                                $dimensionParts[] = formatVehicleDimension($vehicle->loadAreaLengthCm);
+                            }
+                            if ($vehicle->loadAreaWidthCm !== null) {
+                                $dimensionParts[] = formatVehicleDimension($vehicle->loadAreaWidthCm);
+                            }
+                            if (!$vehicle->loadAreaOpenTop && $vehicle->loadAreaHeightCm !== null) {
+                                $dimensionParts[] = formatVehicleDimension($vehicle->loadAreaHeightCm);
+                            }
+
+                            $label = $dimensionParts !== [] ? implode(' x ', $dimensionParts) . ' cm' : '';
+                            if ($vehicle->loadAreaOpenTop) {
+                                $label = $label !== '' ? $label . ' (offene Ladefläche)' : 'offene Ladefläche';
+                            }
+
+                            echo $label !== '' ? e($label) : '–';
+                            ?>
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
                             <?php if ($vehicle->category === VehicleCategory::Auto): ?>

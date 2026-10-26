@@ -13,6 +13,7 @@ use App\Application\Query\QueryBus;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Manufacturer\Manufacturer;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
@@ -24,6 +25,28 @@ final class ManufacturerController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
     ) {
+    }
+
+    /**
+     * JSON-Live-Suche für das Hersteller-Auswahlfeld in Artikel-/
+     * Case-Formularen (siehe App\Infrastructure\Http\renderLiveSearchField()).
+     * `null`-Permission im zugehörigen `$auth->guard()`-Aufruf aus demselben
+     * Grund wie bei CustomerController::search().
+     */
+    public function search(Request $request): void
+    {
+        $search = $request->query('q');
+        $manufacturers = $this->queries->ask(new ListManufacturers($search, 20));
+
+        Response::json([
+            'items' => array_map(
+                static fn (Manufacturer $manufacturer): array => [
+                    'id' => $manufacturer->id,
+                    'label' => $manufacturer->name,
+                ],
+                $manufacturers
+            ),
+        ]);
     }
 
     public function index(Request $request): void

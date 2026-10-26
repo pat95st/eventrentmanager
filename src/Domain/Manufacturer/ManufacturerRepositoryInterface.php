@@ -10,8 +10,19 @@ interface ManufacturerRepositoryInterface
 
     public function findById(string $id): ?Manufacturer;
 
-    /** @return Manufacturer[] alphabetisch sortiert */
-    public function findAll(): array;
+    /**
+     * $search/$limit/$offset bleiben optional (Default: alle, unsortiert
+     * nach Übereinstimmung, alphabetisch) — ohne Angabe identisches
+     * Verhalten wie zuvor (siehe ListManufacturersHandler, das weiterhin
+     * ohne Parameter aufruft). Mit $search gefüllt: Treffer über den Namen
+     * (siehe MariadbManufacturerRepository::buildSearchWhere()), genutzt von
+     * der neuen Live-Suche (ManufacturerController::search()).
+     *
+     * @return Manufacturer[] alphabetisch sortiert
+     */
+    public function findAll(?string $search = null, ?int $limit = null, ?int $offset = null): array;
+
+    public function countAll(?string $search = null): int;
 
     public function existsByName(string $name, ?string $excludeId = null): bool;
 

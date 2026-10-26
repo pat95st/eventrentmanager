@@ -1846,12 +1846,14 @@ CREATE TABLE dunning_notices (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
--- Fahrzeug-Stammdaten (siehe database/migrations/073_add_vehicles.sql für
--- Details/Kommentare). Je Fahrzeug wird die Zuladung (payload_kg) sowie
--- die Abmessung der Ladefläche als Freitext gespeichert. Anhängekupplung/
--- Anhängelast sind nur bei category = 'auto' relevant, das Leergewicht nur
--- bei category = 'anhaenger' (die Anwendung erzwingt das, nicht die
--- Datenbank, analog zu is19Inch/heightUnits bei Article).
+-- Fahrzeug-Stammdaten (siehe database/migrations/073_add_vehicles.sql und
+-- 093_vehicle_load_area_dimensions.sql für Details/Kommentare). Je Fahrzeug
+-- wird die Zuladung (payload_kg) sowie Länge/Breite/Höhe der Ladefläche in
+-- cm gespeichert; load_area_height_cm ist NULL, wenn load_area_open_top = 1
+-- (offene Ladefläche/Pritsche ohne Aufbau, keine Höhenbegrenzung).
+-- Anhängekupplung/Anhängelast sind nur bei category = 'auto' relevant, das
+-- Leergewicht nur bei category = 'anhaenger' (die Anwendung erzwingt das,
+-- nicht die Datenbank, analog zu is19Inch/heightUnits bei Article).
 -- ---------------------------------------------------------------------
 CREATE TABLE vehicles (
     id                      CHAR(36)       NOT NULL PRIMARY KEY,
@@ -1859,7 +1861,10 @@ CREATE TABLE vehicles (
     name                    VARCHAR(255)   NOT NULL,
     license_plate           VARCHAR(20)    NULL,
     payload_kg              DECIMAL(8, 2)  NULL,
-    load_area_dimensions    VARCHAR(100)   NULL,
+    load_area_length_cm     DECIMAL(6, 1)  NULL,
+    load_area_width_cm      DECIMAL(6, 1)  NULL,
+    load_area_height_cm     DECIMAL(6, 1)  NULL,
+    load_area_open_top      TINYINT(1)     NOT NULL DEFAULT 0,
     tow_hitch_available     TINYINT(1)     NULL,
     tow_capacity_kg         DECIMAL(8, 2)  NULL,
     empty_weight_kg         DECIMAL(8, 2)  NULL,

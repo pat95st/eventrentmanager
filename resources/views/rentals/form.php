@@ -8,6 +8,7 @@
 /** @var string|null $editingId */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
@@ -27,15 +28,28 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('rentals.form.customer')) ?></label>
-            <select id="customer_id" name="customer_id" required
-                    class="mt-1 w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                <option value=""><?= e(t('rentals.form.customer_placeholder')) ?></option>
-                <?php $selectedCustomer = $val('customer_id', $rental?->customerId); ?>
-                <?php foreach ($customers as $customer): ?>
-                    <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
+            <div class="mt-1">
+                <?php
+                $selectedCustomer = $val('customer_id', $rental?->customerId);
+                $selectedCustomerLabel = null;
+                foreach ($customers as $customer) {
+                    if ($customer->id === $selectedCustomer) {
+                        $selectedCustomerLabel = $customer->displayName();
+                        break;
+                    }
+                }
+                renderLiveSearchField(
+                    'customer_id',
+                    '/kunden/suche',
+                    $selectedCustomer !== '' ? $selectedCustomer : null,
+                    $selectedCustomerLabel,
+                    t('rentals.form.customer_placeholder'),
+                    $errors['customerId'] ?? null,
+                    'select',
+                    true,
+                );
+                ?>
+            </div>
             <?php if ($customers === []): ?>
                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= t('rentals.form.no_customers', ['link' => '<a href="/kunden/neu" class="underline">' . e(t('rentals.form.no_customers_link')) . '</a>']) ?></p>
             <?php endif; ?>
@@ -57,17 +71,20 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
     ?>
     <div>
         <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('rentals.form.event_location')) ?></label>
-        <input type="text" id="event_location" name="event_location" list="venue-datalist"
-               value="<?= e($initialEventLocation) ?>"
-               class="mt-1 w-full rounded-md border <?= isset($errors['eventLocation']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-        <datalist id="venue-datalist">
-            <?php foreach ($venues as $venue): ?>
-                <option value="<?= e($venue->name) ?>"></option>
-            <?php endforeach; ?>
-        </datalist>
-        <?php if (isset($errors['eventLocation'])): ?>
-            <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['eventLocation']) ?></p>
-        <?php else: ?>
+        <div class="mt-1">
+            <?php
+            renderLiveSearchField(
+                'event_location',
+                '/veranstaltungsorte/suche',
+                null,
+                $initialEventLocation,
+                t('rentals.form.event_location'),
+                $errors['eventLocation'] ?? null,
+                'freetext',
+            );
+            ?>
+        </div>
+        <?php if (!isset($errors['eventLocation'])): ?>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
                 <?= t('rentals.form.event_location_hint', ['link' => '<a href="/veranstaltungsorte" class="underline" target="_blank">' . e(t('rentals.form.event_location_link')) . '</a>']) ?>
             </p>

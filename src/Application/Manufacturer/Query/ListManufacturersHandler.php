@@ -18,6 +18,6 @@ final class ListManufacturersHandler implements QueryHandlerInterface
     {
         assert($query instanceof ListManufacturers);
 
-        return $this->manufacturers->findAll();
+        return $this->manufacturers->findAll($query->search, $query->limit);
     }
 }

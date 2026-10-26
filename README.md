@@ -100,8 +100,10 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   kann optional ein Lieferant zugeordnet werden.
 - **Fahrzeuge** (eigener Menüpunkt „Fahrzeuge“): Fuhrpark-Stammdaten,
   kategorisiert als „Auto“ oder „Anhänger“. Jedes Fahrzeug speichert
-  Bezeichnung, Kennzeichen (optional), Zuladung (kg) und die Abmessung der
-  Ladefläche (Freitext). Bei „Auto“ zusätzlich: ob eine Anhängekupplung
+  Bezeichnung, Kennzeichen (optional), Zuladung (kg) und Länge/Breite/Höhe
+  der Ladefläche (jeweils in cm, einzeln erfasst); statt einer Höhe kann
+  auch „offene Ladefläche“ angegeben werden (kein Aufbau, keine
+  Höhenbegrenzung). Bei „Auto“ zusätzlich: ob eine Anhängekupplung
   vorhanden ist und, falls ja, die Anhängelast (kg). Bei „Anhänger“
   zusätzlich: das Leergewicht (kg). Ein Fahrzeug lässt sich nicht löschen,
   solange es noch in einer Beladungsliste oder einer Zugfahrzeug-Zuordnung

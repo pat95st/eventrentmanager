@@ -15,6 +15,12 @@ require_once __DIR__ . '/autoload.php';
 // den Aufruf View::setViewsPath() weiter unten mitgeladen wird.
 require_once __DIR__ . '/Infrastructure/Http/Translator.php';
 
+// LiveSearchField.php enthält ausschließlich die globale Helferfunktion
+// renderLiveSearchField() (keine Klasse) — aus demselben Grund wie bei
+// Translator.php oben explizit requiret, da ein reiner Funktionsaufruf den
+// Klassen-Autoloader nicht auslösen würde.
+require_once __DIR__ . '/Infrastructure/Http/LiveSearchField.php';
+
 use App\Application\Article\Command\AddArticleAccessoryHandler;
 use App\Application\Article\Command\AddArticleImageHandler;
 use App\Application\Article\Command\AddInventoryNumberHandler;
@@ -1437,6 +1443,12 @@ $router->post('/kategorien/{id}', $auth->guard(Permission::Artikelverwaltung, [$
 $router->post('/kategorien/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$categoryController, 'destroy']));
 
 $router->get('/hersteller', $auth->guard(Permission::Artikelverwaltung, [$manufacturerController, 'index']));
+// Live-Suche (JSON) für das Hersteller-Auswahlfeld in Artikel-/Case-
+// Formularen: bewusst `null` statt Permission::Artikelverwaltung, da jeder
+// angemeldete Benutzer, der einen Artikel/Case mit Herstellerauswahl
+// anlegen darf, suchen können muss, unabhängig von dieser spezifischeren
+// Berechtigung (identisch zum bisherigen, ungefilterten Dropdown).
+$router->get('/hersteller/suche', $auth->guard(null, [$manufacturerController, 'search']));
 $router->get('/hersteller/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$manufacturerController, 'edit']));
 $router->post('/hersteller', $auth->guard(Permission::Artikelverwaltung, [$manufacturerController, 'store']));
 $router->post('/hersteller/{id}', $auth->guard(Permission::Artikelverwaltung, [$manufacturerController, 'update']));
@@ -1448,6 +1460,10 @@ $router->post('/arbeitszeit-artikel/{id}', $auth->guard(Permission::Artikelverwa
 $router->post('/arbeitszeit-artikel/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$laborTimeArticleController, 'destroy']));
 
 $router->get('/artikel', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'index']));
+// Live-Suche (JSON) für die Artikelauswahl in Angebots-/Rechnungs-/
+// Auftragsbestätigungsformularen — `null`-Permission, siehe Begründung bei
+// '/hersteller/suche' oben.
+$router->get('/artikel/suche', $auth->guard(null, [$articleController, 'search']));
 $router->get('/artikel/neu', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'create']));
 $router->post('/artikel', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'store']));
 $router->get('/artikel/preisliste.pdf', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'exportPriceListPdf']));
@@ -1520,6 +1536,10 @@ $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}', $au
 $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'destroy']));
 
 $router->get('/kunden', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'index']));
+// Live-Suche (JSON) für die Kundenauswahl in Angebots-/Rechnungs-/
+// Auftragsbestätigungs-/Vermietungsformularen — `null`-Permission, siehe
+// Begründung bei '/hersteller/suche' oben.
+$router->get('/kunden/suche', $auth->guard(null, [$customerController, 'search']));
 $router->get('/kunden/neu', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'create']));
 $router->post('/kunden', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'store']));
 $router->get('/kunden/{id}/bearbeiten', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'edit']));
@@ -1544,6 +1564,10 @@ $router->post('/case-inhalt/{id}', $auth->guard(Permission::Artikelverwaltung, [
 $router->post('/case-inhalt/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'deleteContentItem']));
 
 $router->get('/lieferanten', $auth->guard(Permission::Artikelverwaltung, [$supplierController, 'index']));
+// Live-Suche (JSON) für die Lieferantenauswahl in Bestell-/
+// Wareneingangsformularen — `null`-Permission, siehe Begründung bei
+// '/hersteller/suche' oben.
+$router->get('/lieferanten/suche', $auth->guard(null, [$supplierController, 'search']));
 $router->get('/lieferanten/neu', $auth->guard(Permission::Artikelverwaltung, [$supplierController, 'create']));
 $router->post('/lieferanten', $auth->guard(Permission::Artikelverwaltung, [$supplierController, 'store']));
 $router->get('/lieferanten/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$supplierController, 'edit']));
@@ -1581,6 +1605,10 @@ $router->post('/gutscheine/{id}', $auth->guard(Permission::Administration, [$vou
 $router->post('/gutscheine/{id}/loeschen', $auth->guard(Permission::Administration, [$voucherController, 'destroy']));
 
 $router->get('/veranstaltungsorte', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'index']));
+// Live-Suche (JSON) für das Veranstaltungsort-Freitextfeld in Angebots-/
+// Rechnungs-/Auftragsbestätigungs-/Vermietungsformularen — `null`-
+// Permission, siehe Begründung bei '/hersteller/suche' oben.
+$router->get('/veranstaltungsorte/suche', $auth->guard(null, [$venueController, 'search']));
 $router->get('/veranstaltungsorte/neu', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'create']));
 $router->post('/veranstaltungsorte', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'store']));
 $router->get('/veranstaltungsorte/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'edit']));

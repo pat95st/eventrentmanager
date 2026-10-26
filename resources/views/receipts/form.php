@@ -7,6 +7,7 @@
 /** @var string|null $editingId */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
@@ -29,15 +30,28 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="supplier_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('receipts.form.supplier')) ?></label>
-            <select id="supplier_id" name="supplier_id" required
-                    class="mt-1 w-full rounded-md border <?= isset($errors['supplierId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                <option value=""><?= e(t('receipts.form.supplier_placeholder')) ?></option>
-                <?php $selectedSupplier = $val('supplier_id', $receipt?->supplierId); ?>
-                <?php foreach ($suppliers as $supplier): ?>
-                    <option value="<?= e($supplier->id) ?>" <?= $selectedSupplier === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <?php if (isset($errors['supplierId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['supplierId']) ?></p><?php endif; ?>
+            <div class="mt-1">
+                <?php
+                $selectedSupplier = $val('supplier_id', $receipt?->supplierId);
+                $selectedSupplierLabel = null;
+                foreach ($suppliers as $supplier) {
+                    if ($supplier->id === $selectedSupplier) {
+                        $selectedSupplierLabel = $supplier->name;
+                        break;
+                    }
+                }
+                renderLiveSearchField(
+                    'supplier_id',
+                    '/lieferanten/suche',
+                    $selectedSupplier !== '' ? $selectedSupplier : null,
+                    $selectedSupplierLabel,
+                    t('receipts.form.supplier_placeholder'),
+                    $errors['supplierId'] ?? null,
+                    'select',
+                    true,
+                );
+                ?>
+            </div>
         </div>
 
         <div>

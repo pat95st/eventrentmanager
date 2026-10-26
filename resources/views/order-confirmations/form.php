@@ -13,6 +13,7 @@
 /** @var array<int, array{heading: string, sort_order: int|string}> $existingSectionTexts */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 /**
@@ -101,31 +102,48 @@ foreach ($articles as $article) {
         <div>
             <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.customer')) ?></label>
             <div class="mt-1 flex gap-2">
-                <select id="customer_id" name="customer_id"
-                        class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                    <option value=""><?= e(t('order_confirmations.form.customer_placeholder')) ?></option>
-                    <?php $selectedCustomer = $val('customer_id', $orderConfirmation?->customerId); ?>
-                    <?php foreach ($customers as $customer): ?>
-                        <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="flex-1">
+                    <?php
+                    $selectedCustomer = $val('customer_id', $orderConfirmation?->customerId);
+                    $selectedCustomerLabel = null;
+                    foreach ($customers as $customer) {
+                        if ($customer->id === $selectedCustomer) {
+                            $selectedCustomerLabel = $customer->displayName();
+                            break;
+                        }
+                    }
+                    renderLiveSearchField(
+                        'customer_id',
+                        '/kunden/suche',
+                        $selectedCustomer !== '' ? $selectedCustomer : null,
+                        $selectedCustomerLabel,
+                        t('order_confirmations.form.customer_placeholder'),
+                        $errors['customerId'] ?? null,
+                        'select',
+                    );
+                    ?>
+                </div>
                 <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('customers.quick_create.title')) ?>
                 </button>
             </div>
-            <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
         </div>
 
         <div>
             <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.event_location')) ?></label>
-            <input type="text" id="event_location" name="event_location" list="venue-datalist"
-                   value="<?= e($val('event_location', $orderConfirmation?->eventLocation)) ?>"
-                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-            <datalist id="venue-datalist">
-                <?php foreach ($venues as $venue): ?>
-                    <option value="<?= e($venue->name) ?>"></option>
-                <?php endforeach; ?>
-            </datalist>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'event_location',
+                    '/veranstaltungsorte/suche',
+                    null,
+                    $val('event_location', $orderConfirmation?->eventLocation),
+                    t('order_confirmations.form.event_location'),
+                    null,
+                    'freetext',
+                );
+                ?>
+            </div>
         </div>
     </div>
 
@@ -255,12 +273,21 @@ foreach ($articles as $article) {
         <span class="oc-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('order_confirmations.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.item_article')) ?></label>
-            <select name="article_id[]" class="oc-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                <option value=""><?= e(t('order_confirmations.form.item_article_placeholder')) ?></option>
-                <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
-                <?php endforeach; ?>
-            </select>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'article_id[]',
+                    '/artikel/suche',
+                    null,
+                    null,
+                    t('order_confirmations.form.item_article_placeholder'),
+                    null,
+                    'select',
+                    false,
+                    false,
+                );
+                ?>
+            </div>
         </div>
         <div class="w-20">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.item_quantity')) ?></label>
@@ -350,7 +377,9 @@ foreach ($articles as $article) {
     function addRow(data) {
         var fragment = template.content.cloneNode(true);
         var row = fragment.querySelector('.oc-item-row');
-        var articleSelect = row.querySelector('.oc-item-article');
+        var articleWidget = row.querySelector('[data-live-search]');
+        var articleInput = articleWidget.querySelector('[data-live-search-input]');
+        var articleHidden = articleWidget.querySelector('[data-live-search-value]');
         var quantityInput = row.querySelector('.oc-item-quantity');
         var priceInput = row.querySelector('.oc-item-price');
         var noteInput = row.querySelector('.oc-item-note');
@@ -358,7 +387,11 @@ foreach ($articles as $article) {
         var removeButton = row.querySelector('.oc-item-remove');
 
         data = data || {};
-        if (data.article_id) { articleSelect.value = data.article_id; }
+        if (data.article_id) {
+            articleHidden.value = data.article_id;
+            var knownArticle = ARTICLES[data.article_id];
+            articleInput.value = knownArticle ? knownArticle.name : '';
+        }
         if (data.quantity) { quantityInput.value = data.quantity; }
         if (data.line_note) { noteInput.value = data.line_note; }
         sortInput.value = data.sort_order !== undefined ? data.sort_order : nextSortOrder++;
@@ -366,21 +399,26 @@ foreach ($articles as $article) {
         if (data.unit_price !== undefined && data.unit_price !== '') {
             priceInput.value = data.unit_price;
         } else {
-            var suggested = suggestPrice(articleSelect.value);
+            var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         }
 
-        articleSelect.addEventListener('change', function () {
-            var suggested = suggestPrice(articleSelect.value);
+        articleHidden.addEventListener('change', function () {
+            var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         });
         removeButton.addEventListener('click', function () { row.remove(); });
 
         enableRowDrag(row);
         container.appendChild(row);
+        window.LiveSearch.init(row);
+        return articleInput;
     }
 
-    addButton.addEventListener('click', function () { addRow(); });
+    addButton.addEventListener('click', function () {
+        var articleInput = addRow();
+        window.setTimeout(function () { articleInput.focus(); }, 0);
+    });
 
     // --- Freitext-Posten -----------------------------------------------
     // freeTextContainer/sectionContainer sind bewusst DASSELBE Element wie

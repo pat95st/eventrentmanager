@@ -29,7 +29,9 @@ use App\Application\Article\Command\UpdateArticlePreIssueCheck;
 use App\Application\Article\Command\UpdateInventoryNumber;
 use App\Application\Article\Query\GetArticle;
 use App\Application\Article\Query\ListArticles;
+use App\Application\Article\Query\ArticleListItem;
 use App\Application\Article\Query\ListArticlesForDisplay;
+use App\Domain\Article\ArticleDisplayName;
 use App\Application\Category\Query\ListCategories;
 use App\Application\Command\CommandBus;
 use App\Application\Manufacturer\Query\ListManufacturers;
@@ -146,6 +148,40 @@ final class ArticleController
         $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
 
         Response::file($absolutePath, basename($match->filePath), $mimeType);
+    }
+
+    /**
+     * JSON-Live-Suche für die Artikelauswahl in den Positionszeilen von
+     * Angebots-/Rechnungs-/Auftragsbestätigungsformularen (siehe
+     * App\Infrastructure\Http\renderLiveSearchField()). Nutzt denselben
+     * zentralen Use Case wie index() (inkl. aufgelöstem Herstellernamen,
+     * siehe ArticleDisplayName), aber mit `onlyActive: true` (identisch zum
+     * bisherigen Verhalten der ersetzten `<select>`-Dropdowns, die ebenfalls
+     * nur aktive Artikel anboten). `null`-Permission im zugehörigen
+     * `$auth->guard()`-Aufruf aus demselben Grund wie bei
+     * CustomerController::search().
+     */
+    public function search(Request $request): void
+    {
+        $search = $request->query('q');
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true));
+
+        Response::json([
+            'items' => array_map(
+                static function (ArticleListItem $item): array {
+                    $sublabel = $item->article->isBillable && $item->article->dailyRentalPrice !== null
+                        ? number_format((float) $item->article->dailyRentalPrice, 2, ',', '.') . ' € / Tag'
+                        : null;
+
+                    return [
+                        'id' => $item->article->id,
+                        'label' => ArticleDisplayName::of($item->article, $item->manufacturer),
+                        'sublabel' => $sublabel,
+                    ];
+                },
+                $result->items
+            ),
+        ]);
     }
 
     public function index(Request $request): void

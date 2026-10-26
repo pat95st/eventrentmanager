@@ -7,6 +7,7 @@
 /** @var string|null $editingId */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 $byParent = [];
@@ -53,15 +54,28 @@ $hasFirmware = array_key_exists('has_firmware', $old)
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
             <label for="manufacturer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.manufacturer')) ?></label>
-            <select id="manufacturer_id" name="manufacturer_id" required
-                    class="mt-1 w-full rounded-md border <?= isset($errors['manufacturerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                <option value=""><?= e(t('articles.form.manufacturer_placeholder')) ?></option>
-                <?php $selectedManufacturer = $val('manufacturer_id', $article?->manufacturerId); ?>
-                <?php foreach ($manufacturers as $manufacturer): ?>
-                    <option value="<?= e($manufacturer->id) ?>" <?= $selectedManufacturer === $manufacturer->id ? 'selected' : '' ?>><?= e($manufacturer->name) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <?php if (isset($errors['manufacturerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['manufacturerId']) ?></p><?php endif; ?>
+            <div class="mt-1">
+                <?php
+                $selectedManufacturer = $val('manufacturer_id', $article?->manufacturerId);
+                $selectedManufacturerLabel = null;
+                foreach ($manufacturers as $manufacturer) {
+                    if ($manufacturer->id === $selectedManufacturer) {
+                        $selectedManufacturerLabel = $manufacturer->name;
+                        break;
+                    }
+                }
+                renderLiveSearchField(
+                    'manufacturer_id',
+                    '/hersteller/suche',
+                    $selectedManufacturer !== '' ? $selectedManufacturer : null,
+                    $selectedManufacturerLabel,
+                    t('articles.form.manufacturer_placeholder'),
+                    $errors['manufacturerId'] ?? null,
+                    'select',
+                    true,
+                );
+                ?>
+            </div>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.manufacturer_hint')) ?></p>
         </div>
 

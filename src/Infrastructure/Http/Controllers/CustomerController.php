@@ -35,6 +35,34 @@ final class CustomerController
     ) {
     }
 
+    /**
+     * JSON-Live-Suche für das Kunden-Auswahlfeld in Angebots-/Rechnungs-/
+     * Auftragsbestätigungs-/Vermietungsformularen (siehe
+     * App\Infrastructure\Http\renderLiveSearchField()). Liefert bewusst nur
+     * eine kleine, feste Trefferzahl (keine Paginierung/Gesamtanzahl nötig,
+     * da das Frontend bei jeder Eingabe neu anfragt) — `null` als Permission
+     * im zugehörigen `$auth->guard()`-Aufruf (siehe bootstrap.php), da jeder
+     * angemeldete Benutzer, der ein Dokument mit Kundenauswahl anlegen darf,
+     * unabhängig von `Permission::Kundenverwaltung` suchen können muss
+     * (exakt dieselbe Begründung wie beim bisherigen, ungefilterten
+     * Kunden-Dropdown in diesen Formularen).
+     */
+    public function search(Request $request): void
+    {
+        $search = $request->query('q');
+        $customers = $this->queries->ask(new ListCustomers($search, 1, 20))->items;
+
+        Response::json([
+            'items' => array_map(
+                static fn (Customer $customer): array => [
+                    'id' => $customer->id,
+                    'label' => $customer->displayName(),
+                ],
+                $customers
+            ),
+        ]);
+    }
+
     public function index(Request $request): void
     {
         $search = $request->query('q');

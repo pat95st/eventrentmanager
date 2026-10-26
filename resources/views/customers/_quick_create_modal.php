@@ -7,14 +7,14 @@
  * keine Berührungspunkte mit dem jeweiligen Dokumenttyp und müsste bei einer
  * Änderung sonst an drei Stellen synchron gehalten werden. Legt per fetch()
  * einen Kunden über den bestehenden POST /kunden-Endpunkt an
- * (CustomerController::store(), AJAX-Zweig) und hängt bei Erfolg eine neue
- * <option> an das jeweilige customer_id-<select> an, ohne die Seite neu zu
- * laden. Das übergebene $targetSelectId muss "customer_id" sein (alle drei
- * Formulare verwenden dieselbe ID) — der Parameter existiert trotzdem, damit
- * diese Partial nicht implizit an eine feste ID gebunden ist, falls sich das
- * künftig unterscheidet.
- *
- * @var string $targetSelectId ID des <select name="customer_id">, dessen Optionsliste ergänzt wird.
+ * (CustomerController::store(), AJAX-Zweig) und trägt bei Erfolg den neuen
+ * Kunden direkt in das/die Live-Suche-Auswahlfeld(er) für customer_id ein
+ * (siehe App\Infrastructure\Http\renderLiveSearchField(), Modus "select"),
+ * ohne die Seite neu zu laden. Seit der Umstellung von <select> auf die
+ * Live-Suche gibt es dafür kein eindeutiges Element mehr je Formular,
+ * weshalb hier — anders als zuvor — ALLE passenden Widgets auf der Seite
+ * befüllt werden (data-live-search[data-url="/kunden/suche"]); in der
+ * Praxis kommt genau eines pro Seite vor.
  */
 
 use App\Domain\Customer\CustomerType;
@@ -196,14 +196,18 @@ use function App\Infrastructure\Http\t;
                 return;
             }
 
-            var select = document.querySelectorAll('select[name="customer_id"]');
-            select.forEach(function (sel) {
-                var option = document.createElement('option');
-                option.value = result.data.id;
-                option.textContent = result.data.displayName;
-                option.selected = true;
-                sel.appendChild(option);
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
+            // Alle Live-Suche-Widgets für Kunden auf der Seite mit dem neu
+            // angelegten Kunden befüllen (siehe Kommentar oben). Über das
+            // "livesearch:set"-Event statt direktem Setzen von
+            // input.value/hidden.value, damit auch der intern im Widget
+            // gemerkte "zuletzt bestätigte" Zustand aktualisiert wird (siehe
+            // public/assets/js/live-search.js) — sonst würde das Feld beim
+            // nächsten Verlassen wieder leer springen.
+            var widgets = document.querySelectorAll('[data-live-search][data-url="/kunden/suche"]');
+            widgets.forEach(function (widget) {
+                widget.dispatchEvent(new CustomEvent('livesearch:set', {
+                    detail: { id: result.data.id, label: result.data.displayName },
+                }));
             });
 
             closeModal();

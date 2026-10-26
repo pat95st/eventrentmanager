@@ -983,5 +983,11 @@ $canDocuments = $canRentals;
       });
     })();
   </script>
+  <!-- Live-Suche (Autocomplete) für Datensatz-Auswahlfelder, siehe
+       public/assets/js/live-search.js und
+       App\Infrastructure\Http\renderLiveSearchField() — global geladen
+       (statt pro View), da die Komponente auf vielen, unterschiedlichen
+       Seiten verwendet wird. -->
+  <script src="/assets/js/live-search.js" defer></script>
 </body>
 </html>

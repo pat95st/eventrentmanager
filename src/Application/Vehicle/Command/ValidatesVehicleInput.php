@@ -24,7 +24,9 @@ trait ValidatesVehicleInput
     /**
      * @return array{0: array<string, string>, 1: array{
      *     category: VehicleCategory|null, name: string, licensePlate: string|null,
-     *     payloadKg: string|null, loadAreaDimensions: string|null,
+     *     payloadKg: string|null, loadAreaLengthCm: string|null,
+     *     loadAreaWidthCm: string|null, loadAreaHeightCm: string|null,
+     *     loadAreaOpenTop: bool,
      *     towHitchAvailable: bool|null, towCapacityKg: string|null,
      *     emptyWeightKg: string|null, notes: string|null
      * }}
@@ -34,7 +36,10 @@ trait ValidatesVehicleInput
         string $name,
         ?string $licensePlate,
         ?string $payloadKg,
-        ?string $loadAreaDimensions,
+        ?string $loadAreaLengthCm,
+        ?string $loadAreaWidthCm,
+        ?string $loadAreaHeightCm,
+        bool $loadAreaOpenTop,
         bool $towHitchAvailable,
         ?string $towCapacityKg,
         ?string $emptyWeightKg,
@@ -59,9 +64,17 @@ trait ValidatesVehicleInput
 
         $payloadKg = $this->parseOptionalDecimal($payloadKg, 'payloadKg', 'Bitte die Zuladung als Zahl (kg) angeben.', $errors);
 
-        $loadAreaDimensions = $loadAreaDimensions !== null ? trim($loadAreaDimensions) : null;
-        if ($loadAreaDimensions === '') {
-            $loadAreaDimensions = null;
+        $loadAreaLengthCm = $this->parseOptionalDecimal($loadAreaLengthCm, 'loadAreaLengthCm', 'Bitte die Länge der Ladefläche als Zahl (cm) angeben.', $errors);
+        $loadAreaWidthCm = $this->parseOptionalDecimal($loadAreaWidthCm, 'loadAreaWidthCm', 'Bitte die Breite der Ladefläche als Zahl (cm) angeben.', $errors);
+        $loadAreaHeightCm = $this->parseOptionalDecimal($loadAreaHeightCm, 'loadAreaHeightCm', 'Bitte die Höhe der Ladefläche als Zahl (cm) angeben.', $errors);
+
+        // Bei offener Ladefläche (kein Aufbau) gibt es keine Höhenbegrenzung
+        // — die Höhe wird dann unabhängig von der Eingabe auf null
+        // zurückgesetzt, analog zu Article::heightUnits bei is19Inch = false
+        // (siehe ValidatesVehicleInput-Docblock oben).
+        if ($loadAreaOpenTop) {
+            $loadAreaHeightCm = null;
+            unset($errors['loadAreaHeightCm']);
         }
 
         $towCapacityKg = $this->parseOptionalDecimal($towCapacityKg, 'towCapacityKg', 'Bitte die Anhängelast als Zahl (kg) angeben.', $errors);
@@ -94,7 +107,10 @@ trait ValidatesVehicleInput
             'name' => $name,
             'licensePlate' => $licensePlate,
             'payloadKg' => $payloadKg,
-            'loadAreaDimensions' => $loadAreaDimensions,
+            'loadAreaLengthCm' => $loadAreaLengthCm,
+            'loadAreaWidthCm' => $loadAreaWidthCm,
+            'loadAreaHeightCm' => $loadAreaHeightCm,
+            'loadAreaOpenTop' => $loadAreaOpenTop,
             'towHitchAvailable' => $category === VehicleCategory::Auto ? $towHitchAvailable : null,
             'towCapacityKg' => $towCapacityKg,
             'emptyWeightKg' => $emptyWeightKg,

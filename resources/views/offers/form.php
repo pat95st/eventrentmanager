@@ -19,6 +19,7 @@
 /** @var array<string, int> $saleStock Artikel-ID => aktueller Lagerbestand des Verkaufsbestands */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 /**
@@ -144,32 +145,49 @@ foreach ($laborArticles as $laborArticle) {
         <div>
             <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.customer')) ?></label>
             <div class="mt-1 flex gap-2">
-                <select id="customer_id" name="customer_id"
-                        class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                    <option value=""><?= e(t('offers.form.customer_placeholder')) ?></option>
-                    <?php $selectedCustomer = $val('customer_id', $offer?->customerId); ?>
-                    <?php foreach ($customers as $customer): ?>
-                        <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="flex-1">
+                    <?php
+                    $selectedCustomer = $val('customer_id', $offer?->customerId);
+                    $selectedCustomerLabel = null;
+                    foreach ($customers as $customer) {
+                        if ($customer->id === $selectedCustomer) {
+                            $selectedCustomerLabel = $customer->displayName();
+                            break;
+                        }
+                    }
+                    renderLiveSearchField(
+                        'customer_id',
+                        '/kunden/suche',
+                        $selectedCustomer !== '' ? $selectedCustomer : null,
+                        $selectedCustomerLabel,
+                        t('offers.form.customer_placeholder'),
+                        $errors['customerId'] ?? null,
+                        'select',
+                    );
+                    ?>
+                </div>
                 <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('customers.quick_create.title')) ?>
                 </button>
             </div>
-            <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.customer_hint')) ?></p>
         </div>
 
         <div>
             <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.event_location')) ?></label>
-            <input type="text" id="event_location" name="event_location" list="venue-datalist"
-                   value="<?= e($val('event_location', $offer?->eventLocation)) ?>"
-                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-            <datalist id="venue-datalist">
-                <?php foreach ($venues as $venue): ?>
-                    <option value="<?= e($venue->name) ?>"></option>
-                <?php endforeach; ?>
-            </datalist>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'event_location',
+                    '/veranstaltungsorte/suche',
+                    null,
+                    $val('event_location', $offer?->eventLocation),
+                    t('offers.form.event_location'),
+                    null,
+                    'freetext',
+                );
+                ?>
+            </div>
         </div>
     </div>
 
@@ -381,44 +399,32 @@ foreach ($laborArticles as $laborArticle) {
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
 <?php
-    // Artikel-Auswahl-Modal: durchsuchbare Alternative zum <select> je
-    // Positionszeile, damit man sich bei vielen Artikeln leichter das
-    // Richtige zusammensuchen kann (Name-Suche, Live-Filterung). Das
-    // <select> bleibt als eigentliche Datenquelle (name="article_id[]")
-    // bestehen — das Modal setzt beim Klick auf einen Treffer nur dessen
-    // value und feuert ein change-Event, damit Preisvorschlag und
-    // Live-Gesamtsumme wie gewohnt reagieren.
+    // Das frühere separate Artikel-Auswahl-Modal entfällt mit der
+    // Umstellung auf die Live-Suche (siehe invoices/form.php für die
+    // identische Begründung): die Zeile hat die Suche jetzt direkt inline,
+    // serverseitig per AJAX gegen /artikel/suche statt einer vollständig
+    // vorgeladenen Artikelliste.
 ?>
-<div id="article-picker-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4">
-    <div class="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
-        <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
-            <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('offers.form.picker_title')) ?></h3>
-            <button type="button" id="article-picker-close" class="text-lg leading-none text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>
-        </div>
-        <div class="p-4 pb-2">
-            <input type="text" id="article-picker-search" placeholder="<?= e(t('offers.form.picker_search_placeholder')) ?>"
-                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700" autocomplete="off">
-        </div>
-        <div id="article-picker-list" class="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2"></div>
-        <p id="article-picker-empty" class="hidden px-4 pb-4 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.picker_empty')) ?></p>
-    </div>
-</div>
 
 <template id="offer-item-row-template">
     <div class="offer-item-row offer-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <span class="offer-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('offers.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.item_article')) ?></label>
-            <div class="mt-1 flex gap-1">
-                <select name="article_id[]" class="offer-item-article w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    <option value=""><?= e(t('offers.show.article_placeholder')) ?></option>
-                    <?php foreach ($articles as $article): ?>
-                        <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" class="offer-item-pick shrink-0 rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" title="<?= e(t('offers.form.picker_button')) ?>">
-                    🔍
-                </button>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'article_id[]',
+                    '/artikel/suche',
+                    null,
+                    null,
+                    t('offers.show.article_placeholder'),
+                    null,
+                    'select',
+                    false,
+                    false,
+                );
+                ?>
             </div>
         </div>
         <div class="w-20">
@@ -480,12 +486,21 @@ foreach ($laborArticles as $laborArticle) {
     <div class="offer-sale-item-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <div class="min-w-[180px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.sale_item_article')) ?></label>
-            <select name="sale_article_id[]" class="offer-sale-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                <option value=""><?= e(t('offers.show.article_placeholder')) ?></option>
-                <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
-                <?php endforeach; ?>
-            </select>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'sale_article_id[]',
+                    '/artikel/suche',
+                    null,
+                    null,
+                    t('offers.show.article_placeholder'),
+                    null,
+                    'select',
+                    false,
+                    false,
+                );
+                ?>
+            </div>
         </div>
         <div class="min-w-[180px]">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.sale_item_source')) ?></label>
@@ -599,16 +614,21 @@ foreach ($laborArticles as $laborArticle) {
     function addRow(data) {
         var fragment = template.content.cloneNode(true);
         var row = fragment.querySelector('.offer-item-row');
-        var articleSelect = row.querySelector('.offer-item-article');
+        var articleWidget = row.querySelector('[data-live-search]');
+        var articleInput = articleWidget.querySelector('[data-live-search-input]');
+        var articleHidden = articleWidget.querySelector('[data-live-search-value]');
         var quantityInput = row.querySelector('.offer-item-quantity');
         var priceInput = row.querySelector('.offer-item-price');
         var noteInput = row.querySelector('.offer-item-note');
         var sortInput = row.querySelector('.offer-item-sort');
         var removeButton = row.querySelector('.offer-item-remove');
-        var pickButton = row.querySelector('.offer-item-pick');
 
         data = data || {};
-        if (data.article_id) { articleSelect.value = data.article_id; }
+        if (data.article_id) {
+            articleHidden.value = data.article_id;
+            var knownArticle = ARTICLES[data.article_id];
+            articleInput.value = knownArticle ? knownArticle.name : '';
+        }
         if (data.quantity) { quantityInput.value = data.quantity; }
         if (data.line_note) { noteInput.value = data.line_note; }
         sortInput.value = data.sort_order !== undefined ? data.sort_order : nextSortOrder++;
@@ -616,33 +636,30 @@ foreach ($laborArticles as $laborArticle) {
         if (data.unit_price !== undefined && data.unit_price !== '') {
             priceInput.value = data.unit_price;
         } else {
-            var suggested = suggestPrice(articleSelect.value);
+            var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         }
 
-        articleSelect.addEventListener('change', function () {
-            var suggested = suggestPrice(articleSelect.value);
+        articleHidden.addEventListener('change', function () {
+            var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         });
 
         removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
-        if (pickButton) {
-            pickButton.addEventListener('click', function () { openArticlePicker(articleSelect); });
-        }
-
         enableRowDrag(row);
         container.appendChild(row);
+        window.LiveSearch.init(row);
         updateOnlyLaborState();
-        return articleSelect;
+        return articleInput;
     }
 
     function refreshAllSuggestions() {
         container.querySelectorAll('.offer-item-row').forEach(function (row) {
-            var articleSelect = row.querySelector('.offer-item-article');
+            var articleHidden = row.querySelector('[data-live-search-value]');
             var priceInput = row.querySelector('.offer-item-price');
             if (!priceInput.dataset.touched) {
-                var suggested = suggestPrice(articleSelect.value);
+                var suggested = suggestPrice(articleHidden.value);
                 if (suggested !== null) { priceInput.value = suggested; }
             }
         });
@@ -654,98 +671,12 @@ foreach ($laborArticles as $laborArticle) {
         }
     });
 
-    addButton.addEventListener('click', function () { openArticlePicker(addRow()); });
+    addButton.addEventListener('click', function () {
+        var articleInput = addRow();
+        window.setTimeout(function () { articleInput.focus(); }, 0);
+    });
     startInput.addEventListener('change', refreshAllSuggestions);
     endInput.addEventListener('change', refreshAllSuggestions);
-
-    // --- Artikel-Auswahl-Modal ---------------------------------------------
-    // Durchsuchbare Alternative zum <select> je Zeile (siehe Kommentar beim
-    // Modal-Markup weiter unten). ARTICLE_ENTRIES wird aus dem bereits für
-    // die Preisvorschläge vorhandenen ARTICLES-Objekt abgeleitet, damit die
-    // Artikelliste nicht doppelt aus PHP serialisiert werden muss.
-    var ARTICLE_ENTRIES = Object.keys(ARTICLES).map(function (id) {
-        return { id: id, name: ARTICLES[id].name, price: ARTICLES[id].price };
-    }).sort(function (a, b) { return a.name.localeCompare(b.name, 'de'); });
-
-    var articlePickerModal = document.getElementById('article-picker-modal');
-    var articlePickerSearch = document.getElementById('article-picker-search');
-    var articlePickerList = document.getElementById('article-picker-list');
-    var articlePickerEmpty = document.getElementById('article-picker-empty');
-    var articlePickerCloseButton = document.getElementById('article-picker-close');
-    var articlePickerTarget = null;
-
-    function formatPickerPrice(price) {
-        if (price === null) { return ''; }
-        var n = parseFloat(price);
-        if (isNaN(n)) { return ''; }
-        return n.toFixed(2).replace('.', ',') + ' €';
-    }
-
-    function renderArticlePickerList(filter) {
-        var term = (filter || '').trim().toLowerCase();
-        var matches = term === ''
-            ? ARTICLE_ENTRIES
-            : ARTICLE_ENTRIES.filter(function (entry) { return entry.name.toLowerCase().indexOf(term) !== -1; });
-
-        articlePickerList.innerHTML = '';
-        matches.forEach(function (entry) {
-            var button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800';
-
-            var nameSpan = document.createElement('span');
-            nameSpan.textContent = entry.name;
-            button.appendChild(nameSpan);
-
-            var priceText = formatPickerPrice(entry.price);
-            if (priceText !== '') {
-                var priceSpan = document.createElement('span');
-                priceSpan.className = 'shrink-0 text-xs text-slate-400 dark:text-slate-500';
-                priceSpan.textContent = priceText;
-                button.appendChild(priceSpan);
-            }
-
-            button.addEventListener('click', function () {
-                if (articlePickerTarget) {
-                    articlePickerTarget.value = entry.id;
-                    articlePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                closeArticlePicker();
-            });
-
-            articlePickerList.appendChild(button);
-        });
-
-        articlePickerEmpty.classList.toggle('hidden', matches.length > 0);
-    }
-
-    function openArticlePicker(targetSelect) {
-        if (!targetSelect || !articlePickerModal) { return; }
-        articlePickerTarget = targetSelect;
-        articlePickerSearch.value = '';
-        renderArticlePickerList('');
-        articlePickerModal.classList.remove('hidden');
-        articlePickerModal.classList.add('flex');
-        window.setTimeout(function () { articlePickerSearch.focus(); }, 0);
-    }
-
-    function closeArticlePicker() {
-        if (!articlePickerModal) { return; }
-        articlePickerModal.classList.add('hidden');
-        articlePickerModal.classList.remove('flex');
-        articlePickerTarget = null;
-    }
-
-    if (articlePickerModal) {
-        articlePickerSearch.addEventListener('input', function () { renderArticlePickerList(articlePickerSearch.value); });
-        articlePickerCloseButton.addEventListener('click', closeArticlePicker);
-        articlePickerModal.addEventListener('click', function (e) {
-            if (e.target === articlePickerModal) { closeArticlePicker(); }
-        });
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !articlePickerModal.classList.contains('hidden')) { closeArticlePicker(); }
-        });
-    }
 
     if (document.getElementById('offer-labor-item-row-template')) {
         var LABOR_ARTICLES = <?= json_encode($laborArticlesJson, JSON_THROW_ON_ERROR) ?>;
@@ -813,9 +744,9 @@ foreach ($laborArticles as $laborArticle) {
         var saleAddButton = document.getElementById('offer-sale-item-add');
 
         var refreshSaleInventoryOptions = function (row, selectedInventoryNumberId) {
-            var articleSelect = row.querySelector('.offer-sale-item-article');
+            var articleHidden = row.querySelector('[data-live-search-value]');
             var inventorySelect = row.querySelector('.offer-sale-item-inventory');
-            var numbers = SALE_INVENTORY_NUMBERS[articleSelect.value] || [];
+            var numbers = SALE_INVENTORY_NUMBERS[articleHidden.value] || [];
 
             inventorySelect.innerHTML = '';
             var placeholder = document.createElement('option');
@@ -836,9 +767,9 @@ foreach ($laborArticles as $laborArticle) {
         };
 
         var refreshSaleStockHint = function (row) {
-            var articleSelect = row.querySelector('.offer-sale-item-article');
+            var articleHidden = row.querySelector('[data-live-search-value]');
             var hintEl = row.querySelector('.offer-sale-item-stock-hint');
-            var quantity = SALE_STOCK[articleSelect.value];
+            var quantity = SALE_STOCK[articleHidden.value];
             hintEl.textContent = quantity !== undefined ? SALE_STOCK_HINT_TEMPLATE.replace('{quantity}', quantity) : '';
         };
 
@@ -852,7 +783,9 @@ foreach ($laborArticles as $laborArticle) {
         var addSaleRow = function (data) {
             var fragment = saleTemplate.content.cloneNode(true);
             var row = fragment.querySelector('.offer-sale-item-row');
-            var articleSelect = row.querySelector('.offer-sale-item-article');
+            var articleWidget = row.querySelector('[data-live-search]');
+            var articleInput = articleWidget.querySelector('[data-live-search-input]');
+            var articleHidden = articleWidget.querySelector('[data-live-search-value]');
             var sourceSelect = row.querySelector('.offer-sale-item-source');
             var quantityInput = row.querySelector('.offer-sale-item-quantity');
             var priceInput = row.querySelector('.offer-sale-item-price');
@@ -860,7 +793,11 @@ foreach ($laborArticles as $laborArticle) {
             var removeButton = row.querySelector('.offer-sale-item-remove');
 
             data = data || {};
-            if (data.article_id) { articleSelect.value = data.article_id; }
+            if (data.article_id) {
+                articleHidden.value = data.article_id;
+                var knownArticle = ARTICLES[data.article_id];
+                articleInput.value = knownArticle ? knownArticle.name : '';
+            }
             if (data.source) { sourceSelect.value = data.source === 'inventory_number' ? 'inventory_number' : 'stock'; }
             if (data.quantity) { quantityInput.value = data.quantity; }
             if (data.unit_price !== undefined) { priceInput.value = data.unit_price; }
@@ -870,7 +807,7 @@ foreach ($laborArticles as $laborArticle) {
             refreshSaleStockHint(row);
             refreshSaleSourceVisibility(row);
 
-            articleSelect.addEventListener('change', function () {
+            articleHidden.addEventListener('change', function () {
                 refreshSaleInventoryOptions(row, '');
                 refreshSaleStockHint(row);
             });
@@ -878,6 +815,7 @@ foreach ($laborArticles as $laborArticle) {
             removeButton.addEventListener('click', function () { row.remove(); });
 
             saleContainer.appendChild(row);
+            window.LiveSearch.init(row);
         };
 
         if (saleAddButton) {

@@ -9,6 +9,7 @@
 /** @var array<int, array{article_id: string, target_type: string, quantity: int|string, unit_price: string}> $existingItems */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
@@ -29,15 +30,27 @@ $items = $old['items'] ?? $existingItems;
 
     <div>
         <label for="supplier_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('purchase_orders.form.supplier')) ?></label>
-        <select id="supplier_id" name="supplier_id"
-                class="mt-1 w-full rounded-md border <?= isset($errors['supplierId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <option value=""><?= e(t('purchase_orders.form.supplier_placeholder')) ?></option>
-            <?php $selectedSupplier = $val('supplier_id', $order?->supplierId); ?>
-            <?php foreach ($suppliers as $supplier): ?>
-                <option value="<?= e($supplier->id) ?>" <?= $selectedSupplier === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <?php if (isset($errors['supplierId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['supplierId']) ?></p><?php endif; ?>
+        <div class="mt-1">
+            <?php
+            $selectedSupplier = $val('supplier_id', $order?->supplierId);
+            $selectedSupplierLabel = null;
+            foreach ($suppliers as $supplier) {
+                if ($supplier->id === $selectedSupplier) {
+                    $selectedSupplierLabel = $supplier->name;
+                    break;
+                }
+            }
+            renderLiveSearchField(
+                'supplier_id',
+                '/lieferanten/suche',
+                $selectedSupplier !== '' ? $selectedSupplier : null,
+                $selectedSupplierLabel,
+                t('purchase_orders.form.supplier_placeholder'),
+                $errors['supplierId'] ?? null,
+                'select',
+            );
+            ?>
+        </div>
     </div>
 
     <div>
@@ -69,12 +82,21 @@ $items = $old['items'] ?? $existingItems;
     <div class="purchase-order-item-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <div class="min-w-[180px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('purchase_orders.form.item_article')) ?></label>
-            <select name="article_id[]" class="purchase-order-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                <option value=""><?= e(t('offers.show.article_placeholder')) ?></option>
-                <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
-                <?php endforeach; ?>
-            </select>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'article_id[]',
+                    '/artikel/suche',
+                    null,
+                    null,
+                    t('offers.show.article_placeholder'),
+                    null,
+                    'select',
+                    false,
+                    false,
+                );
+                ?>
+            </div>
         </div>
         <div class="min-w-[180px]">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('purchase_orders.form.item_target')) ?></label>
@@ -99,6 +121,19 @@ $items = $old['items'] ?? $existingItems;
 
 <script>
 (function () {
+    // Nur für die Anzeige-Labels beim Vorbelegen bestehender Zeilen (siehe
+    // addRow()) — die Live-Suche selbst lädt Vorschläge per AJAX gegen
+    // /artikel/suche, siehe invoices/form.php für die identische Begründung.
+    var ARTICLES = <?= json_encode(
+        array_combine(
+            array_map(static fn ($article) => $article->id, $articles),
+            array_map(
+                static fn ($article) => ['name' => $articleDisplayNames[$article->id] ?? $article->name],
+                $articles
+            )
+        ),
+        JSON_THROW_ON_ERROR
+    ) ?>;
     var EXISTING_ITEMS = <?= json_encode(array_values($items), JSON_THROW_ON_ERROR) ?>;
 
     var container = document.getElementById('purchase-order-items');
@@ -108,14 +143,20 @@ $items = $old['items'] ?? $existingItems;
     function addRow(data) {
         var fragment = template.content.cloneNode(true);
         var row = fragment.querySelector('.purchase-order-item-row');
-        var articleSelect = row.querySelector('.purchase-order-item-article');
+        var articleWidget = row.querySelector('[data-live-search]');
+        var articleInput = articleWidget.querySelector('[data-live-search-input]');
+        var articleHidden = articleWidget.querySelector('[data-live-search-value]');
         var targetSelect = row.querySelector('.purchase-order-item-target');
         var quantityInput = row.querySelector('.purchase-order-item-quantity');
         var priceInput = row.querySelector('.purchase-order-item-price');
         var removeButton = row.querySelector('.purchase-order-item-remove');
 
         data = data || {};
-        if (data.article_id) { articleSelect.value = data.article_id; }
+        if (data.article_id) {
+            articleHidden.value = data.article_id;
+            var knownArticle = ARTICLES[data.article_id];
+            articleInput.value = knownArticle ? knownArticle.name : '';
+        }
         if (data.target_type) { targetSelect.value = data.target_type; }
         if (data.quantity) { quantityInput.value = data.quantity; }
         if (data.unit_price !== undefined) { priceInput.value = data.unit_price; }
@@ -123,6 +164,7 @@ $items = $old['items'] ?? $existingItems;
         removeButton.addEventListener('click', function () { row.remove(); });
 
         container.appendChild(row);
+        window.LiveSearch.init(row);
     }
 
     addButton.addEventListener('click', function () { addRow(); });

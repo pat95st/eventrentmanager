@@ -17,6 +17,7 @@
 /** @var string $vatRatePercentPreview */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
 /**
@@ -118,32 +119,49 @@ foreach ($laborArticles as $laborArticle) {
         <div>
             <label for="customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.customer')) ?></label>
             <div class="mt-1 flex gap-2">
-                <select id="customer_id" name="customer_id"
-                        class="w-full rounded-md border <?= isset($errors['customerId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                    <option value=""><?= e(t('invoices.form.customer_placeholder')) ?></option>
-                    <?php $selectedCustomer = $val('customer_id', $invoice?->customerId); ?>
-                    <?php foreach ($customers as $customer): ?>
-                        <option value="<?= e($customer->id) ?>" <?= $selectedCustomer === $customer->id ? 'selected' : '' ?>><?= e($customer->displayName()) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="flex-1">
+                    <?php
+                    $selectedCustomer = $val('customer_id', $invoice?->customerId);
+                    $selectedCustomerLabel = null;
+                    foreach ($customers as $customer) {
+                        if ($customer->id === $selectedCustomer) {
+                            $selectedCustomerLabel = $customer->displayName();
+                            break;
+                        }
+                    }
+                    renderLiveSearchField(
+                        'customer_id',
+                        '/kunden/suche',
+                        $selectedCustomer !== '' ? $selectedCustomer : null,
+                        $selectedCustomerLabel,
+                        t('invoices.form.customer_placeholder'),
+                        $errors['customerId'] ?? null,
+                        'select',
+                    );
+                    ?>
+                </div>
                 <button type="button" data-customer-quick-create-open class="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('customers.quick_create.title')) ?>
                 </button>
             </div>
-            <?php if (isset($errors['customerId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['customerId']) ?></p><?php endif; ?>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.customer_hint')) ?></p>
         </div>
 
         <div>
             <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.event_location')) ?></label>
-            <input type="text" id="event_location" name="event_location" list="venue-datalist"
-                   value="<?= e($val('event_location', $invoice?->eventLocation)) ?>"
-                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-            <datalist id="venue-datalist">
-                <?php foreach ($venues as $venue): ?>
-                    <option value="<?= e($venue->name) ?>"></option>
-                <?php endforeach; ?>
-            </datalist>
+            <div class="mt-1">
+                <?php
+                renderLiveSearchField(
+                    'event_location',
+                    '/veranstaltungsorte/suche',
+                    null,
+                    $val('event_location', $invoice?->eventLocation),
+                    t('invoices.form.event_location'),
+                    null,
+                    'freetext',
+                );
+                ?>
+            </div>
         </div>
     </div>
 
@@ -368,40 +386,33 @@ foreach ($laborArticles as $laborArticle) {
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
 <?php
-    // Artikel-Auswahl-Modal: siehe offers/form.php für die identische
-    // Begründung/Funktionsweise (bewusst dupliziert, gleiches Muster wie der
-    // restliche Formularcode dieser beiden Views).
+    // Das frühere separate Artikel-Auswahl-Modal (Lupen-Button je Zeile +
+    // eigenes Such-Overlay, client-seitig über alle ARTICLES gefiltert)
+    // entfällt mit der Umstellung auf die Live-Suche: die Zeile hat die
+    // Suche jetzt direkt inline (siehe App\Infrastructure\Http\
+    // renderLiveSearchField() im Template unten, serverseitige AJAX-Suche
+    // gegen /artikel/suche statt vollständig vorgeladener Artikelliste).
 ?>
-<div id="article-picker-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4">
-    <div class="flex max-h-[80vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
-        <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
-            <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('invoices.form.picker_title')) ?></h3>
-            <button type="button" id="article-picker-close" class="text-lg leading-none text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>
-        </div>
-        <div class="p-4 pb-2">
-            <input type="text" id="article-picker-search" placeholder="<?= e(t('invoices.form.picker_search_placeholder')) ?>"
-                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700" autocomplete="off">
-        </div>
-        <div id="article-picker-list" class="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2"></div>
-        <p id="article-picker-empty" class="hidden px-4 pb-4 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.picker_empty')) ?></p>
-    </div>
-</div>
 
 <template id="invoice-item-row-template">
     <div class="invoice-item-row invoice-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <span class="invoice-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('invoices.form.rows_drag_hint')) ?>">⠿</span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_article')) ?></label>
-            <div class="mt-1 flex gap-1">
-                <select name="article_id[]" class="invoice-item-article w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    <option value=""><?= e(t('invoices.show.article_placeholder')) ?></option>
-                    <?php foreach ($articles as $article): ?>
-                        <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" class="invoice-item-pick shrink-0 rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" title="<?= e(t('invoices.form.picker_button')) ?>">
-                    🔍
-                </button>
+            <div class="invoice-item-article-wrap mt-1">
+                <?php
+                renderLiveSearchField(
+                    'article_id[]',
+                    '/artikel/suche',
+                    null,
+                    null,
+                    t('invoices.show.article_placeholder'),
+                    null,
+                    'select',
+                    false,
+                    false,
+                );
+                ?>
             </div>
         </div>
         <div class="w-20">
@@ -534,16 +545,21 @@ foreach ($laborArticles as $laborArticle) {
     function addRow(data) {
         var fragment = template.content.cloneNode(true);
         var row = fragment.querySelector('.invoice-item-row');
-        var articleSelect = row.querySelector('.invoice-item-article');
+        var articleWidget = row.querySelector('[data-live-search]');
+        var articleInput = articleWidget.querySelector('[data-live-search-input]');
+        var articleHidden = articleWidget.querySelector('[data-live-search-value]');
         var quantityInput = row.querySelector('.invoice-item-quantity');
         var priceInput = row.querySelector('.invoice-item-price');
         var noteInput = row.querySelector('.invoice-item-note');
         var sortInput = row.querySelector('.invoice-item-sort');
         var removeButton = row.querySelector('.invoice-item-remove');
-        var pickButton = row.querySelector('.invoice-item-pick');
 
         data = data || {};
-        if (data.article_id) { articleSelect.value = data.article_id; }
+        if (data.article_id) {
+            articleHidden.value = data.article_id;
+            var knownArticle = ARTICLES[data.article_id];
+            articleInput.value = knownArticle ? knownArticle.name : '';
+        }
         if (data.quantity) { quantityInput.value = data.quantity; }
         if (data.line_note) { noteInput.value = data.line_note; }
         sortInput.value = data.sort_order !== undefined ? data.sort_order : nextSortOrder++;
@@ -551,33 +567,34 @@ foreach ($laborArticles as $laborArticle) {
         if (data.unit_price !== undefined && data.unit_price !== '') {
             priceInput.value = data.unit_price;
         } else {
-            var suggested = suggestPrice(articleSelect.value);
+            var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         }
 
-        articleSelect.addEventListener('change', function () {
-            var suggested = suggestPrice(articleSelect.value);
+        articleHidden.addEventListener('change', function () {
+            var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         });
 
         removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
-        if (pickButton) {
-            pickButton.addEventListener('click', function () { openArticlePicker(articleSelect); });
-        }
-
         enableRowDrag(row);
         container.appendChild(row);
+        // Live-Suche erst initialisieren, nachdem Vorbelegung (article_id/
+        // Name) und Event-Listener gesetzt sind, siehe public/assets/js/
+        // live-search.js — die Widget-Initialisierung liest input.value/
+        // hidden.value als zunächst "bestätigten" Zustand.
+        window.LiveSearch.init(row);
         updateOnlyLaborState();
-        return articleSelect;
+        return articleInput;
     }
 
     function refreshAllSuggestions() {
         container.querySelectorAll('.invoice-item-row').forEach(function (row) {
-            var articleSelect = row.querySelector('.invoice-item-article');
+            var articleHidden = row.querySelector('[data-live-search-value]');
             var priceInput = row.querySelector('.invoice-item-price');
             if (!priceInput.dataset.touched) {
-                var suggested = suggestPrice(articleSelect.value);
+                var suggested = suggestPrice(articleHidden.value);
                 if (suggested !== null) { priceInput.value = suggested; }
             }
         });
@@ -589,97 +606,12 @@ foreach ($laborArticles as $laborArticle) {
         }
     });
 
-    addButton.addEventListener('click', function () { openArticlePicker(addRow()); });
+    addButton.addEventListener('click', function () {
+        var articleInput = addRow();
+        window.setTimeout(function () { articleInput.focus(); }, 0);
+    });
     startInput.addEventListener('change', refreshAllSuggestions);
     endInput.addEventListener('change', refreshAllSuggestions);
-
-    // --- Artikel-Auswahl-Modal ---------------------------------------------
-    // Siehe offers/form.php für die identische Begründung/Funktionsweise
-    // (bewusst dupliziert, gleiches Muster wie der restliche Formularcode
-    // dieser beiden Views).
-    var ARTICLE_ENTRIES = Object.keys(ARTICLES).map(function (id) {
-        return { id: id, name: ARTICLES[id].name, price: ARTICLES[id].price };
-    }).sort(function (a, b) { return a.name.localeCompare(b.name, 'de'); });
-
-    var articlePickerModal = document.getElementById('article-picker-modal');
-    var articlePickerSearch = document.getElementById('article-picker-search');
-    var articlePickerList = document.getElementById('article-picker-list');
-    var articlePickerEmpty = document.getElementById('article-picker-empty');
-    var articlePickerCloseButton = document.getElementById('article-picker-close');
-    var articlePickerTarget = null;
-
-    function formatPickerPrice(price) {
-        if (price === null) { return ''; }
-        var n = parseFloat(price);
-        if (isNaN(n)) { return ''; }
-        return n.toFixed(2).replace('.', ',') + ' €';
-    }
-
-    function renderArticlePickerList(filter) {
-        var term = (filter || '').trim().toLowerCase();
-        var matches = term === ''
-            ? ARTICLE_ENTRIES
-            : ARTICLE_ENTRIES.filter(function (entry) { return entry.name.toLowerCase().indexOf(term) !== -1; });
-
-        articlePickerList.innerHTML = '';
-        matches.forEach(function (entry) {
-            var button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800';
-
-            var nameSpan = document.createElement('span');
-            nameSpan.textContent = entry.name;
-            button.appendChild(nameSpan);
-
-            var priceText = formatPickerPrice(entry.price);
-            if (priceText !== '') {
-                var priceSpan = document.createElement('span');
-                priceSpan.className = 'shrink-0 text-xs text-slate-400 dark:text-slate-500';
-                priceSpan.textContent = priceText;
-                button.appendChild(priceSpan);
-            }
-
-            button.addEventListener('click', function () {
-                if (articlePickerTarget) {
-                    articlePickerTarget.value = entry.id;
-                    articlePickerTarget.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                closeArticlePicker();
-            });
-
-            articlePickerList.appendChild(button);
-        });
-
-        articlePickerEmpty.classList.toggle('hidden', matches.length > 0);
-    }
-
-    function openArticlePicker(targetSelect) {
-        if (!targetSelect || !articlePickerModal) { return; }
-        articlePickerTarget = targetSelect;
-        articlePickerSearch.value = '';
-        renderArticlePickerList('');
-        articlePickerModal.classList.remove('hidden');
-        articlePickerModal.classList.add('flex');
-        window.setTimeout(function () { articlePickerSearch.focus(); }, 0);
-    }
-
-    function closeArticlePicker() {
-        if (!articlePickerModal) { return; }
-        articlePickerModal.classList.add('hidden');
-        articlePickerModal.classList.remove('flex');
-        articlePickerTarget = null;
-    }
-
-    if (articlePickerModal) {
-        articlePickerSearch.addEventListener('input', function () { renderArticlePickerList(articlePickerSearch.value); });
-        articlePickerCloseButton.addEventListener('click', closeArticlePicker);
-        articlePickerModal.addEventListener('click', function (e) {
-            if (e.target === articlePickerModal) { closeArticlePicker(); }
-        });
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !articlePickerModal.classList.contains('hidden')) { closeArticlePicker(); }
-        });
-    }
 
     if (document.getElementById('invoice-labor-item-row-template')) {
         var LABOR_ARTICLES = <?= json_encode($laborArticlesJson, JSON_THROW_ON_ERROR) ?>;

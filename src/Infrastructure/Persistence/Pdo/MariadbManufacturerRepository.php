@@ -44,11 +44,48 @@ final class MariadbManufacturerRepository implements ManufacturerRepositoryInter
         return $row ? $this->hydrate($row) : null;
     }
 
-    public function findAll(): array
+    public function findAll(?string $search = null, ?int $limit = null, ?int $offset = null): array
     {
-        $stmt = $this->pdo->query('SELECT * FROM manufacturers ORDER BY name ASC');
+        [$where, $params] = $this->buildSearchWhere($search);
+
+        $sql = 'SELECT * FROM manufacturers' . $where . ' ORDER BY name ASC';
+        if ($limit !== null) {
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value);
+        }
+        if ($limit !== null) {
+            $stmt->bindValue('limit', max(0, $limit), PDO::PARAM_INT);
+            $stmt->bindValue('offset', max(0, $offset ?? 0), PDO::PARAM_INT);
+        }
+        $stmt->execute();
 
         return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
+    public function countAll(?string $search = null): int
+    {
+        [$where, $params] = $this->buildSearchWhere($search);
+
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM manufacturers' . $where);
+        $stmt->execute($params);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    /** @return array{0: string, 1: array<string, string>} */
+    private function buildSearchWhere(?string $search): array
+    {
+        if ($search === null || trim($search) === '') {
+            return ['', []];
+        }
+
+        $needle = '%' . $search . '%';
+
+        return [' WHERE name LIKE :search', ['search' => $needle]];
     }
 
     public function existsByName(string $name, ?string $excludeId = null): bool

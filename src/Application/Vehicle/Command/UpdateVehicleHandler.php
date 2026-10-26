@@ -33,7 +33,10 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
             $command->name,
             $command->licensePlate,
             $command->payloadKg,
-            $command->loadAreaDimensions,
+            $command->loadAreaLengthCm,
+            $command->loadAreaWidthCm,
+            $command->loadAreaHeightCm,
+            $command->loadAreaOpenTop,
             $command->towHitchAvailable,
             $command->towCapacityKg,
             $command->emptyWeightKg,
@@ -48,7 +51,10 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
         $vehicle->name = $data['name'];
         $vehicle->licensePlate = $data['licensePlate'];
         $vehicle->payloadKg = $data['payloadKg'];
-        $vehicle->loadAreaDimensions = $data['loadAreaDimensions'];
+        $vehicle->loadAreaLengthCm = $data['loadAreaLengthCm'];
+        $vehicle->loadAreaWidthCm = $data['loadAreaWidthCm'];
+        $vehicle->loadAreaHeightCm = $data['loadAreaHeightCm'];
+        $vehicle->loadAreaOpenTop = $data['loadAreaOpenTop'];
         $vehicle->towHitchAvailable = $data['towHitchAvailable'];
         $vehicle->towCapacityKg = $data['towCapacityKg'];
         $vehicle->emptyWeightKg = $data['emptyWeightKg'];

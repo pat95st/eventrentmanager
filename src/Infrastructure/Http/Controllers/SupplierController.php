@@ -30,6 +30,30 @@ final class SupplierController
     ) {
     }
 
+    /**
+     * JSON-Live-Suche für das Lieferanten-Auswahlfeld in Bestell-/
+     * Wareneingangsformularen (siehe
+     * App\Infrastructure\Http\renderLiveSearchField()). `null`-Permission im
+     * zugehörigen `$auth->guard()`-Aufruf aus demselben Grund wie bei
+     * CustomerController::search().
+     */
+    public function search(Request $request): void
+    {
+        $search = $request->query('q');
+        $suppliers = $this->queries->ask(new ListSuppliers($search, 1, 20))->items;
+
+        Response::json([
+            'items' => array_map(
+                static fn (Supplier $supplier): array => [
+                    'id' => $supplier->id,
+                    'label' => $supplier->name,
+                    'sublabel' => $supplier->city,
+                ],
+                $suppliers
+            ),
+        ]);
+    }
+
     public function index(Request $request): void
     {
         $search = $request->query('q');

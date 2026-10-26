@@ -10,6 +10,7 @@ use function App\Infrastructure\Http\e;
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
 $selectedCategory = $val('category', $vehicle?->category->value) ?: VehicleCategory::Auto->value;
 $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['tow_hitch_available'] : ($vehicle?->towHitchAvailable ?? false);
+$loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) $old['load_area_open_top'] : ($vehicle?->loadAreaOpenTop ?? false);
 ?>
 
 <div class="mb-6">
@@ -55,20 +56,46 @@ $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-            <label for="payload_kg" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Zuladung (kg)</label>
-            <input type="text" id="payload_kg" name="payload_kg" inputmode="decimal" placeholder="z. B. 750"
-                   value="<?= e($val('payload_kg', $vehicle?->payloadKg)) ?>"
-                   class="mt-1 w-full rounded-md border <?= isset($errors['payloadKg']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <?php if (isset($errors['payloadKg'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['payloadKg']) ?></p><?php endif; ?>
+    <div class="max-w-xs">
+        <label for="payload_kg" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Zuladung (kg)</label>
+        <input type="text" id="payload_kg" name="payload_kg" inputmode="decimal" placeholder="z. B. 750"
+               value="<?= e($val('payload_kg', $vehicle?->payloadKg)) ?>"
+               class="mt-1 w-full rounded-md border <?= isset($errors['payloadKg']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+        <?php if (isset($errors['payloadKg'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['payloadKg']) ?></p><?php endif; ?>
+    </div>
+
+    <div>
+        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Ladefläche (cm)</label>
+        <div class="mt-1 grid grid-cols-3 gap-3">
+            <div>
+                <label for="load_area_length_cm" class="block text-[11px] text-slate-500 dark:text-slate-400">Länge</label>
+                <input type="text" id="load_area_length_cm" name="load_area_length_cm" inputmode="decimal" placeholder="z. B. 300"
+                       value="<?= e($val('load_area_length_cm', $vehicle?->loadAreaLengthCm)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['loadAreaLengthCm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['loadAreaLengthCm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['loadAreaLengthCm']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="load_area_width_cm" class="block text-[11px] text-slate-500 dark:text-slate-400">Breite</label>
+                <input type="text" id="load_area_width_cm" name="load_area_width_cm" inputmode="decimal" placeholder="z. B. 180"
+                       value="<?= e($val('load_area_width_cm', $vehicle?->loadAreaWidthCm)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['loadAreaWidthCm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['loadAreaWidthCm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['loadAreaWidthCm']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="load_area_height_cm" class="block text-[11px] text-slate-500 dark:text-slate-400">Höhe</label>
+                <input type="text" id="load_area_height_cm" name="load_area_height_cm" inputmode="decimal" placeholder="z. B. 200"
+                       data-load-area-height-field
+                       <?= $loadAreaOpenTopChecked ? 'disabled' : '' ?>
+                       value="<?= e($val('load_area_height_cm', $vehicle?->loadAreaHeightCm)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['loadAreaHeightCm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:bg-slate-50 disabled:text-slate-400 dark:disabled:bg-slate-800">
+                <?php if (isset($errors['loadAreaHeightCm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['loadAreaHeightCm']) ?></p><?php endif; ?>
+            </div>
         </div>
-        <div>
-            <label for="load_area_dimensions" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Abmessung der Ladefläche</label>
-            <input type="text" id="load_area_dimensions" name="load_area_dimensions" placeholder="z. B. 300 x 180 x 200 cm (L x B x H)"
-                   value="<?= e($val('load_area_dimensions', $vehicle?->loadAreaDimensions)) ?>"
-                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-        </div>
+        <label class="mt-2 inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" id="load_area_open_top" name="load_area_open_top" value="1" data-load-area-open-top-checkbox
+                   <?= $loadAreaOpenTopChecked ? 'checked' : '' ?>>
+            Offene Ladefläche (kein Aufbau, keine Höhenbegrenzung)
+        </label>
     </div>
 
     <div data-category-section="auto" class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
@@ -124,6 +151,15 @@ $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['
         var sections = form.querySelectorAll('[data-category-section]');
         var towHitchCheckbox = form.querySelector('[data-tow-hitch-checkbox]');
         var towCapacityField = form.querySelector('[data-tow-capacity-field]');
+        // Offene Ladefläche (kein Aufbau) => keine Höhenbegrenzung: das
+        // Höhenfeld wird deaktiviert UND geleert, damit kein "Geister"-Wert
+        // aus einer vorherigen Eingabe versehentlich mitgeschickt wird,
+        // falls das Feld per JS wieder enabled würde (serverseitig wird die
+        // Höhe bei loadAreaOpenTop ohnehin unabhängig davon auf null
+        // zurückgesetzt, siehe ValidatesVehicleInput — dies hier ist nur für
+        // eine korrekte Anzeige).
+        var loadAreaOpenTopCheckbox = form.querySelector('[data-load-area-open-top-checkbox]');
+        var loadAreaHeightField = form.querySelector('[data-load-area-height-field]');
 
         function update() {
             var selected = form.querySelector('[data-category-radio]:checked');
@@ -136,6 +172,14 @@ $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['
             if (towCapacityField) {
                 towCapacityField.classList.toggle('hidden', !(towHitchCheckbox && towHitchCheckbox.checked));
             }
+
+            if (loadAreaHeightField && loadAreaOpenTopCheckbox) {
+                var isOpenTop = loadAreaOpenTopCheckbox.checked;
+                loadAreaHeightField.disabled = isOpenTop;
+                if (isOpenTop) {
+                    loadAreaHeightField.value = '';
+                }
+            }
         }
 
         radios.forEach(function (radio) {
@@ -143,6 +187,9 @@ $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['
         });
         if (towHitchCheckbox) {
             towHitchCheckbox.addEventListener('change', update);
+        }
+        if (loadAreaOpenTopCheckbox) {
+            loadAreaOpenTopCheckbox.addEventListener('change', update);
         }
 
         update();

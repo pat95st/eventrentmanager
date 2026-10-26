@@ -40,6 +40,33 @@ final class VenueController
     ) {
     }
 
+    /**
+     * JSON-Live-Suche für das Veranstaltungsort-Freitextfeld in Angebots-/
+     * Rechnungs-/Auftragsbestätigungs-/Vermietungsformularen (siehe
+     * App\Infrastructure\Http\renderLiveSearchField(), Freitext-Modus —
+     * eine Auswahl füllt dort nur das Textfeld, die eigentliche Zuordnung zu
+     * einem gespeicherten Veranstaltungsort läuft serverseitig weiterhin
+     * über App\Application\Common\VenueResolver). `null`-Permission im
+     * zugehörigen `$auth->guard()`-Aufruf aus demselben Grund wie bei
+     * CustomerController::search().
+     */
+    public function search(Request $request): void
+    {
+        $search = $request->query('q');
+        $venues = $this->queries->ask(new ListVenues($search, 1, 20))->items;
+
+        Response::json([
+            'items' => array_map(
+                static fn (Venue $venue): array => [
+                    'id' => $venue->id,
+                    'label' => $venue->name,
+                    'sublabel' => $venue->city,
+                ],
+                $venues
+            ),
+        ]);
+    }
+
     public function index(Request $request): void
     {
         $search = $request->query('q');

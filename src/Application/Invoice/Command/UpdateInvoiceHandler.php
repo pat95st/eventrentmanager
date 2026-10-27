@@ -19,6 +19,7 @@ use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
@@ -45,6 +46,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
+        private readonly UserRepositoryInterface $users,
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
     ) {
@@ -68,6 +70,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
             $this->venues,
             $this->articles,
             $this->laborTimeArticles,
+            $this->users,
             $command->customerId,
             $command->startDate,
             $command->endDate,
@@ -159,6 +162,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
                 id: Uuid::v4(),
                 invoiceId: $invoice->id,
                 laborTimeArticleId: $item['laborTimeArticleId'],
+                userId: $item['userId'],
                 hours: $item['hours'],
                 unitRatePerHour: $item['unitRatePerHour'],
             ),

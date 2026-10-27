@@ -9,6 +9,7 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use DateTimeImmutable;
 
@@ -25,14 +26,14 @@ trait ValidatesInvoiceInput
 {
     /**
      * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order?: string, is_rental_item?: string}> $rawItems
-     * @param array<int, array{labor_article_id: string, hours: string}> $rawLaborItems
+     * @param array<int, array{labor_article_id: string, labor_user_id?: string, hours: string}> $rawLaborItems
      * @param array<int, array{description: string, quantity: string, unit_price: string, sort_order?: string}> $rawFreeTextItems
      * @param array<int, array{heading: string, sort_order?: string}> $rawSectionTexts
      * @return array{0: array<string, string>, 1: array{
      *     customerId: ?string, startDate: ?DateTimeImmutable, endDate: ?DateTimeImmutable,
      *     eventLocation: ?string, venueId: ?string, buyerReference: ?string, note: ?string,
      *     items: array<int, array{articleId: string, quantity: int, unitPrice: string, lineNote: ?string, sortOrder: int, isRentalItem: bool}>,
-     *     laborItems: array<int, array{laborTimeArticleId: string, hours: string, unitRatePerHour: string}>,
+     *     laborItems: array<int, array{laborTimeArticleId: string, userId: ?string, hours: string, unitRatePerHour: string}>,
      *     freeTextItems: array<int, array{description: string, quantity: string, unitPrice: string, sortOrder: int}>,
      *     sectionTexts: array<int, array{heading: string, sortOrder: int}>,
      *     discountType: ?string, discountValue: ?string,
@@ -46,6 +47,7 @@ trait ValidatesInvoiceInput
         VenueRepositoryInterface $venues,
         ArticleRepositoryInterface $articles,
         LaborTimeArticleRepositoryInterface $laborTimeArticles,
+        UserRepositoryInterface $users,
         string $customerId,
         string $rawStartDate,
         string $rawEndDate,
@@ -184,8 +186,16 @@ trait ValidatesInvoiceInput
                 continue;
             }
 
+            $laborUserId = trim((string) ($rawLaborItem['labor_user_id'] ?? ''));
+            if ($laborUserId !== '' && $users->findById($laborUserId) === null) {
+                $errors['laborItems'] = 'Mindestens eine Arbeitszeit-Position verweist auf einen unbekannten Mitarbeiter.';
+
+                continue;
+            }
+
             $laborItems[] = [
                 'laborTimeArticleId' => $laborArticleId,
+                'userId' => $laborUserId !== '' ? $laborUserId : null,
                 'hours' => number_format($hours, 2, '.', ''),
                 // Stundensatz wird beim Speichern gesnapshotet (siehe LaborTimeArticle-
                 // Klassendoc), NICHT frei eingebbar — anders als unitPrice bei den

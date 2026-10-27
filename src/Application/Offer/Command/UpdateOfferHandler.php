@@ -22,6 +22,7 @@ use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
 use App\Domain\Sale\SaleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\RichText\HtmlSanitizer;
 use App\Shared\Uuid;
@@ -49,6 +50,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly SaleRepositoryInterface $sales,
+        private readonly UserRepositoryInterface $users,
         private readonly HtmlSanitizer $htmlSanitizer,
     ) {
     }
@@ -69,6 +71,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
             $this->laborTimeArticles,
             $this->inventoryNumbers,
             $this->sales,
+            $this->users,
             $command->customerId,
             $command->startDate,
             $command->endDate,
@@ -167,6 +170,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
                 id: Uuid::v4(),
                 offerId: $offer->id,
                 laborTimeArticleId: $item['laborTimeArticleId'],
+                userId: $item['userId'],
                 hours: $item['hours'],
                 unitRatePerHour: $item['unitRatePerHour'],
             ),

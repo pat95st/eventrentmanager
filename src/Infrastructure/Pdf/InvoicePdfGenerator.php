@@ -174,8 +174,9 @@ final class InvoicePdfGenerator
                 $y -= 20;
             }
 
-            $laborLabel = $laborEntry->laborTimeArticle->name . ' ('
-                . number_format((float) $laborEntry->item->hours, 2, ',', '.') . ' Std. à '
+            $laborLabel = $laborEntry->laborTimeArticle->name
+                . ($laborEntry->user !== null ? ' – ' . $laborEntry->user->displayName() : '')
+                . ' (' . number_format((float) $laborEntry->item->hours, 2, ',', '.') . ' Std. à '
                 . number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.') . ' EUR):';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $laborLabel, 9);
             $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($laborEntry->lineTotal(), 2, ',', '.') . ' EUR', 9);

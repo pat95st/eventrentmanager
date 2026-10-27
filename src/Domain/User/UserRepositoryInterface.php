@@ -17,6 +17,17 @@ interface UserRepositoryInterface
     /** @return User[] sortiert nach E-Mail-Adresse, höchstens $limit Zeilen ab $offset */
     public function findAll(int $limit, int $offset): array;
 
+    /**
+     * Alle aktiven Benutzer, sortiert nach Nachname/Vorname (Fallback
+     * E-Mail-Adresse für Altdaten ohne Namen) — ungepaginiert, für
+     * Auswahllisten (z. B. Mitarbeiter je Arbeitszeit-Position, siehe
+     * InvoiceLaborItem::$userId/OfferLaborItem::$userId), bei denen alle
+     * Optionen auf einmal gebraucht werden statt einer Seite.
+     *
+     * @return User[]
+     */
+    public function findAllActive(): array;
+
     /** Gesamtanzahl aller Benutzer (für die Paginierung). */
     public function countAll(): int;
 

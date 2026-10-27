@@ -114,6 +114,15 @@ final class MariadbUserRepository implements UserRepositoryInterface
         return ((int) $stmt->fetchColumn()) > 0;
     }
 
+    public function findAllActive(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT * FROM users WHERE is_active = 1 ORDER BY last_name ASC, first_name ASC, email ASC"
+        );
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     public function findAll(int $limit, int $offset): array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM users ORDER BY email ASC LIMIT :limit OFFSET :offset');

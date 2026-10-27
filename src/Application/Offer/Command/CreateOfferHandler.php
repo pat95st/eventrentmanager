@@ -22,6 +22,7 @@ use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
 use App\Domain\Sale\SaleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
 use App\Infrastructure\RichText\HtmlSanitizer;
@@ -43,6 +44,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly SaleRepositoryInterface $sales,
+        private readonly UserRepositoryInterface $users,
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
         private readonly HtmlSanitizer $htmlSanitizer,
@@ -60,6 +62,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
             $this->laborTimeArticles,
             $this->inventoryNumbers,
             $this->sales,
+            $this->users,
             $command->customerId,
             $command->startDate,
             $command->endDate,
@@ -157,6 +160,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
                 id: Uuid::v4(),
                 offerId: $offer->id,
                 laborTimeArticleId: $item['laborTimeArticleId'],
+                userId: $item['userId'],
                 hours: $item['hours'],
                 unitRatePerHour: $item['unitRatePerHour'],
             ),

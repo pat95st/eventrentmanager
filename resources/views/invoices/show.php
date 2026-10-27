@@ -296,11 +296,20 @@ $rows = $detail->orderedRows();
                 <?php foreach ($detail->laborItems as $laborEntry): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3">
-                            <?= e(t('invoices.show.labor_item', [
-                                'name' => $laborEntry->laborTimeArticle->name,
-                                'hours' => number_format((float) $laborEntry->item->hours, 2, ',', '.'),
-                                'rate' => number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.'),
-                            ])) ?>
+                            <?php if ($laborEntry->user !== null): ?>
+                                <?= e(t('invoices.show.labor_item_with_user', [
+                                    'name' => $laborEntry->laborTimeArticle->name,
+                                    'hours' => number_format((float) $laborEntry->item->hours, 2, ',', '.'),
+                                    'rate' => number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.'),
+                                    'employee' => $laborEntry->user->displayName(),
+                                ])) ?>
+                            <?php else: ?>
+                                <?= e(t('invoices.show.labor_item', [
+                                    'name' => $laborEntry->laborTimeArticle->name,
+                                    'hours' => number_format((float) $laborEntry->item->hours, 2, ',', '.'),
+                                    'rate' => number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.'),
+                                ])) ?>
+                            <?php endif; ?>
                         </td>
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($laborEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>

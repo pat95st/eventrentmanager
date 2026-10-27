@@ -299,8 +299,8 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             $delete->execute(['offer_id' => $offerId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO offer_labor_items (id, offer_id, labor_time_article_id, hours, unit_rate_per_hour)
-                 VALUES (:id, :offer_id, :labor_time_article_id, :hours, :unit_rate_per_hour)'
+                'INSERT INTO offer_labor_items (id, offer_id, labor_time_article_id, user_id, hours, unit_rate_per_hour)
+                 VALUES (:id, :offer_id, :labor_time_article_id, :user_id, :hours, :unit_rate_per_hour)'
             );
 
             foreach ($items as $item) {
@@ -308,6 +308,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
                     'id' => $item->id,
                     'offer_id' => $item->offerId,
                     'labor_time_article_id' => $item->laborTimeArticleId,
+                    'user_id' => $item->userId,
                     'hours' => $item->hours,
                     'unit_rate_per_hour' => $item->unitRatePerHour,
                 ]);
@@ -449,6 +450,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             id: $row['id'],
             offerId: $row['offer_id'],
             laborTimeArticleId: $row['labor_time_article_id'],
+            userId: $row['user_id'],
             hours: $row['hours'],
             unitRatePerHour: $row['unit_rate_per_hour'],
         );

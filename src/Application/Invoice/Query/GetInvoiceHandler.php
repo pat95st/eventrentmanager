@@ -12,6 +12,7 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 
 final class GetInvoiceHandler implements QueryHandlerInterface
 {
@@ -21,6 +22,7 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly ManufacturerRepositoryInterface $manufacturers,
+        private readonly UserRepositoryInterface $users,
     ) {
     }
 
@@ -59,12 +61,29 @@ final class GetInvoiceHandler implements QueryHandlerInterface
             $rawItems
         )));
 
+        // Mitarbeiter je Arbeitszeit-Position wird ebenfalls über einen
+        // kleinen Cache aufgelöst (siehe $manufacturerFor oben für die
+        // identische Begründung).
+        $userCache = [];
+        $userFor = function (?string $userId) use (&$userCache) {
+            if ($userId === null) {
+                return null;
+            }
+            if (!array_key_exists($userId, $userCache)) {
+                $userCache[$userId] = $this->users->findById($userId);
+            }
+
+            return $userCache[$userId];
+        };
+
         $rawLaborItems = $this->invoices->findLaborItemsByInvoice($invoice->id);
         $laborItems = array_values(array_filter(array_map(
-            function ($item) {
+            function ($item) use ($userFor) {
                 $laborTimeArticle = $this->laborTimeArticles->findById($item->laborTimeArticleId);
 
-                return $laborTimeArticle !== null ? new InvoiceLaborItemWithArticle($item, $laborTimeArticle) : null;
+                return $laborTimeArticle !== null
+                    ? new InvoiceLaborItemWithArticle($item, $laborTimeArticle, $userFor($item->userId))
+                    : null;
             },
             $rawLaborItems
         )));

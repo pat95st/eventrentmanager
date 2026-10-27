@@ -36,6 +36,7 @@ use App\Domain\Offer\Offer;
 use App\Domain\Offer\OfferStatus;
 use App\Domain\Settings\RentalPriceCalculator;
 use App\Domain\Stock\SaleStockLotRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
@@ -56,6 +57,7 @@ final class OfferController
         private readonly OfferPdfGenerator $pdfGenerator,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly SaleStockLotRepositoryInterface $stockLots,
+        private readonly UserRepositoryInterface $users,
     ) {
     }
 
@@ -396,6 +398,11 @@ final class OfferController
 
         $laborArticles = $this->queries->ask(new ListLaborTimeArticles());
 
+        // Für die Mitarbeiter-Auswahl je Arbeitszeit-Position (siehe
+        // offers/form.php) — siehe InvoiceController::renderForm() für die
+        // identische Begründung.
+        $users = $this->users->findAllActive();
+
         $existingItems = [];
         $existingLaborItems = [];
         $existingSaleItems = [];
@@ -416,6 +423,7 @@ final class OfferController
             foreach ($detail->laborItems as $entry) {
                 $existingLaborItems[] = [
                     'labor_article_id' => $entry->item->laborTimeArticleId,
+                    'labor_user_id' => $entry->item->userId ?? '',
                     'hours' => $entry->item->hours,
                 ];
             }
@@ -491,6 +499,7 @@ final class OfferController
             'existingItems' => $existingItems,
             'pricingSettings' => $pricingSettings,
             'laborArticles' => $laborArticles,
+            'users' => $users,
             'existingLaborItems' => $existingLaborItems,
             'existingSaleItems' => $existingSaleItems,
             'existingFreeTextItems' => $existingFreeTextItems,
@@ -603,10 +612,11 @@ final class OfferController
         return $items;
     }
 
-    /** @return array<int, array{labor_article_id: string, hours: string}> */
+    /** @return array<int, array{labor_article_id: string, labor_user_id: string, hours: string}> */
     private function laborItemsFromRequest(Request $request): array
     {
         $laborArticleIds = $request->post['labor_article_id'] ?? [];
+        $laborUserIds = $request->post['labor_user_id'] ?? [];
         $hoursValues = $request->post['hours'] ?? [];
 
         if (!is_array($laborArticleIds)) {
@@ -617,6 +627,7 @@ final class OfferController
         foreach ($laborArticleIds as $index => $laborArticleId) {
             $items[] = [
                 'labor_article_id' => (string) $laborArticleId,
+                'labor_user_id' => (string) ($laborUserIds[$index] ?? ''),
                 'hours' => (string) ($hoursValues[$index] ?? ''),
             ];
         }

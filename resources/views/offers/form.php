@@ -10,7 +10,8 @@
 /** @var string|null $editingId */
 /** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string, sort_order: int|string}> $existingItems */
 /** @var \App\Domain\LaborTime\LaborTimeArticle[] $laborArticles */
-/** @var array<int, array{labor_article_id: string, hours: string}> $existingLaborItems */
+/** @var \App\Domain\User\User[] $users */
+/** @var array<int, array{labor_article_id: string, labor_user_id: string, hours: string}> $existingLaborItems */
 /** @var array<int, array{article_id: string, source: string, inventory_number_id: string, quantity: int|string, unit_price: string, line_note: string}> $existingSaleItems */
 /** @var array<int, array{description: string, quantity: string, unit_price: string, sort_order: int|string}> $existingFreeTextItems */
 /** @var array<int, array{heading: string, sort_order: int|string}> $existingSectionTexts */
@@ -503,6 +504,15 @@ foreach ($laborArticles as $laborArticle) {
                 <?php endforeach; ?>
             </select>
         </div>
+        <div class="min-w-[160px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.labor_item_user')) ?></label>
+            <select name="labor_user_id[]" class="offer-labor-item-user mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                <option value=""><?= e(t('offers.form.labor_item_user_placeholder')) ?></option>
+                <?php foreach ($users as $user): ?>
+                    <option value="<?= e($user->id) ?>"><?= e($user->displayName()) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
         <div class="w-24">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.labor_item_hours')) ?></label>
             <input type="text" name="hours[]" inputmode="decimal" class="offer-labor-item-hours mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -742,12 +752,14 @@ foreach ($laborArticles as $laborArticle) {
             var fragment = laborTemplate.content.cloneNode(true);
             var row = fragment.querySelector('.offer-labor-item-row');
             var articleSelect = row.querySelector('.offer-labor-item-article');
+            var userSelect = row.querySelector('.offer-labor-item-user');
             var hoursInput = row.querySelector('.offer-labor-item-hours');
             var totalInput = row.querySelector('.offer-labor-item-total');
             var removeButton = row.querySelector('.offer-labor-item-remove');
 
             data = data || {};
             if (data.labor_article_id) { articleSelect.value = data.labor_article_id; }
+            if (data.labor_user_id && userSelect) { userSelect.value = data.labor_user_id; }
             if (data.hours) { hoursInput.value = data.hours; }
             totalInput.value = computeLaborTotal(articleSelect.value, hoursInput.value);
 

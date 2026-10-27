@@ -165,6 +165,7 @@ final class CreateInvoiceFromOfferHandler implements CommandHandlerInterface
                 id: Uuid::v4(),
                 invoiceId: $invoice->id,
                 laborTimeArticleId: $item->laborTimeArticleId,
+                userId: $item->userId,
                 hours: $item->hours,
                 unitRatePerHour: $item->unitRatePerHour,
             ),

@@ -365,8 +365,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             $delete->execute(['invoice_id' => $invoiceId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO invoice_labor_items (id, invoice_id, labor_time_article_id, hours, unit_rate_per_hour)
-                 VALUES (:id, :invoice_id, :labor_time_article_id, :hours, :unit_rate_per_hour)'
+                'INSERT INTO invoice_labor_items (id, invoice_id, labor_time_article_id, user_id, hours, unit_rate_per_hour)
+                 VALUES (:id, :invoice_id, :labor_time_article_id, :user_id, :hours, :unit_rate_per_hour)'
             );
 
             foreach ($items as $item) {
@@ -374,6 +374,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                     'id' => $item->id,
                     'invoice_id' => $item->invoiceId,
                     'labor_time_article_id' => $item->laborTimeArticleId,
+                    'user_id' => $item->userId,
                     'hours' => $item->hours,
                     'unit_rate_per_hour' => $item->unitRatePerHour,
                 ]);
@@ -528,6 +529,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             id: $row['id'],
             invoiceId: $row['invoice_id'],
             laborTimeArticleId: $row['labor_time_article_id'],
+            userId: $row['user_id'],
             hours: $row['hours'],
             unitRatePerHour: $row['unit_rate_per_hour'],
         );

@@ -13,6 +13,7 @@ use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Offer\OfferRepositoryInterface;
+use App\Domain\User\UserRepositoryInterface;
 
 final class GetOfferHandler implements QueryHandlerInterface
 {
@@ -23,6 +24,7 @@ final class GetOfferHandler implements QueryHandlerInterface
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ManufacturerRepositoryInterface $manufacturers,
+        private readonly UserRepositoryInterface $users,
     ) {
     }
 
@@ -59,12 +61,29 @@ final class GetOfferHandler implements QueryHandlerInterface
             $rawItems
         )));
 
+        // Mitarbeiter je Arbeitszeit-Position wird ebenfalls über einen
+        // kleinen Cache aufgelöst (siehe GetInvoiceHandler für die
+        // identische Begründung).
+        $userCache = [];
+        $userFor = function (?string $userId) use (&$userCache) {
+            if ($userId === null) {
+                return null;
+            }
+            if (!array_key_exists($userId, $userCache)) {
+                $userCache[$userId] = $this->users->findById($userId);
+            }
+
+            return $userCache[$userId];
+        };
+
         $rawLaborItems = $this->offers->findLaborItemsByOffer($offer->id);
         $laborItems = array_values(array_filter(array_map(
-            function ($item) {
+            function ($item) use ($userFor) {
                 $laborTimeArticle = $this->laborTimeArticles->findById($item->laborTimeArticleId);
 
-                return $laborTimeArticle !== null ? new OfferLaborItemWithArticle($item, $laborTimeArticle) : null;
+                return $laborTimeArticle !== null
+                    ? new OfferLaborItemWithArticle($item, $laborTimeArticle, $userFor($item->userId))
+                    : null;
             },
             $rawLaborItems
         )));

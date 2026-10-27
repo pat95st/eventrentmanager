@@ -38,6 +38,7 @@ use App\Domain\Invoice\Invoice;
 use App\Domain\Invoice\InvoiceStatus;
 use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\RentalPriceCalculator;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\EInvoice\XRechnungGenerator;
 use App\Infrastructure\Http\Auth\CurrentUser;
@@ -60,6 +61,7 @@ final class InvoiceController
         private readonly XRechnungGenerator $xRechnungGenerator,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
+        private readonly UserRepositoryInterface $users,
     ) {
     }
 
@@ -407,6 +409,12 @@ final class InvoiceController
 
         $laborArticles = $this->queries->ask(new ListLaborTimeArticles());
 
+        // Für die Mitarbeiter-Auswahl je Arbeitszeit-Position (siehe
+        // invoices/form.php) — ungepaginiert, da alle Optionen auf einmal
+        // in der Auswahlliste gebraucht werden (siehe
+        // UserRepositoryInterface::findAllActive()).
+        $users = $this->users->findAllActive();
+
         // Für die clientseitige Live-Vorschau der Gesamtsumme im Formular
         // (siehe invoices/form.php): identisches Fallback-Muster wie
         // InvoiceDetail::totals() — der gesnapshotete Wert der Rechnung hat
@@ -440,6 +448,7 @@ final class InvoiceController
             foreach ($detail->laborItems as $entry) {
                 $existingLaborItems[] = [
                     'labor_article_id' => $entry->item->laborTimeArticleId,
+                    'labor_user_id' => $entry->item->userId ?? '',
                     'hours' => $entry->item->hours,
                 ];
             }
@@ -504,6 +513,7 @@ final class InvoiceController
             'existingItems' => $existingItems,
             'pricingSettings' => $pricingSettings,
             'laborArticles' => $laborArticles,
+            'users' => $users,
             'existingLaborItems' => $existingLaborItems,
             'existingFreeTextItems' => $existingFreeTextItems,
             'existingSectionTexts' => $existingSectionTexts,
@@ -592,10 +602,11 @@ final class InvoiceController
         return $items;
     }
 
-    /** @return array<int, array{labor_article_id: string, hours: string}> */
+    /** @return array<int, array{labor_article_id: string, labor_user_id: string, hours: string}> */
     private function laborItemsFromRequest(Request $request): array
     {
         $laborArticleIds = $request->post['labor_article_id'] ?? [];
+        $laborUserIds = $request->post['labor_user_id'] ?? [];
         $hoursValues = $request->post['hours'] ?? [];
 
         if (!is_array($laborArticleIds)) {
@@ -606,6 +617,7 @@ final class InvoiceController
         foreach ($laborArticleIds as $index => $laborArticleId) {
             $items[] = [
                 'labor_article_id' => (string) $laborArticleId,
+                'labor_user_id' => (string) ($laborUserIds[$index] ?? ''),
                 'hours' => (string) ($hoursValues[$index] ?? ''),
             ];
         }

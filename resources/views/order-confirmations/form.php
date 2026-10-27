@@ -394,6 +394,9 @@ foreach ($articles as $article) {
     var EXISTING_ITEMS = <?= json_encode(array_values($items), JSON_THROW_ON_ERROR) ?>;
     var EXISTING_FREE_TEXT_ITEMS = <?= json_encode(array_values($freeTextItems), JSON_THROW_ON_ERROR) ?>;
     var EXISTING_SECTION_TEXTS = <?= json_encode(array_values($sectionTexts), JSON_THROW_ON_ERROR) ?>;
+    // Globale Preisrundung — siehe offers/form.php für die identische Begründung.
+    var ROUNDING_STEP = <?= json_encode($pricingSettings->priceRoundingStep->amount()) ?>;
+    var ROUNDING_DIRECTION = <?= json_encode($pricingSettings->priceRoundingDirection->value) ?>;
 
     var ocForm = document.getElementById('order-confirmation-form');
     var container = document.getElementById('oc-rows');
@@ -409,12 +412,24 @@ foreach ($articles as $article) {
         return isNaN(diff) || diff < 1 ? 1 : Math.min(diff, 7);
     }
 
+    // Spiegelt App\Domain\Settings\RentalPriceCalculator::round() — siehe
+    // offers/form.php für die identische Begründung.
+    function roundPrice(price) {
+        if (ROUNDING_STEP === null || ROUNDING_STEP <= 0) { return price; }
+        var units = Math.round((price / ROUNDING_STEP) * 1e6) / 1e6;
+        var roundedUnits;
+        if (ROUNDING_DIRECTION === 'up') { roundedUnits = Math.ceil(units); }
+        else if (ROUNDING_DIRECTION === 'down') { roundedUnits = Math.floor(units); }
+        else { roundedUnits = Math.round(units); }
+        return roundedUnits * ROUNDING_STEP;
+    }
+
     function suggestPrice(articleId) {
         var article = ARTICLES[articleId];
         if (!article || article.price === null) { return null; }
         var factor = TIER_MULTIPLIERS[dayCount()] || TIER_MULTIPLIERS[1] || '1';
         var price = parseFloat(article.price) * parseFloat(factor);
-        return isNaN(price) ? null : price.toFixed(2);
+        return isNaN(price) ? null : roundPrice(price).toFixed(2);
     }
 
     function addRow(data) {

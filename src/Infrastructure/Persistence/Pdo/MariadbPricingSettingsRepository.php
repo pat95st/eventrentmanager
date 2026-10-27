@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Pdo;
 
+use App\Domain\Settings\PriceRoundingDirection;
+use App\Domain\Settings\PriceRoundingStep;
 use App\Domain\Settings\PricingSettings;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use PDO;
@@ -29,17 +31,28 @@ final class MariadbPricingSettingsRepository implements PricingSettingsRepositor
 
         return new PricingSettings(
             accessoryFlatRatePercent: $row['accessory_flat_rate_percent'],
+            // tryFrom() + "?? ..." statt from(): ein unbekannter/alter Wert
+            // in der Datenbank (sollte durch die Migration nicht vorkommen)
+            // führt so lieber zu "keine Rundung" als zu einem Fatal Error.
+            priceRoundingStep: PriceRoundingStep::tryFrom($row['price_rounding_step']) ?? PriceRoundingStep::None,
+            priceRoundingDirection: PriceRoundingDirection::tryFrom($row['price_rounding_direction']) ?? PriceRoundingDirection::Nearest,
         );
     }
 
     public function save(PricingSettings $settings): void
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE pricing_settings SET accessory_flat_rate_percent = :accessory_flat_rate_percent WHERE id = 1'
+            'UPDATE pricing_settings
+                SET accessory_flat_rate_percent = :accessory_flat_rate_percent,
+                    price_rounding_step = :price_rounding_step,
+                    price_rounding_direction = :price_rounding_direction
+              WHERE id = 1'
         );
 
         $stmt->execute([
             'accessory_flat_rate_percent' => $settings->accessoryFlatRatePercent,
+            'price_rounding_step' => $settings->priceRoundingStep->value,
+            'price_rounding_direction' => $settings->priceRoundingDirection->value,
         ]);
     }
 }

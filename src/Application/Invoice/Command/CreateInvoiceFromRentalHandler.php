@@ -66,6 +66,7 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         }
 
         $now = new DateTimeImmutable();
+        $pricingSettings = $this->pricingSettings->get();
 
         $invoice = new Invoice(
             id: Uuid::v4(),
@@ -91,7 +92,7 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
             // Veranstaltung erzeugte), standardmäßig aktiv (siehe
             // Aufgabenstellung); der aktuelle Prozentsatz wird gesnapshotet.
             accessoryFlatRateEnabled: true,
-            accessoryFlatRatePercent: $this->pricingSettings->get()->accessoryFlatRatePercent,
+            accessoryFlatRatePercent: $pricingSettings->accessoryFlatRatePercent,
             // Abhol-/Rückgabetermin aus der Logistik-Zuordnung der
             // Veranstaltung vorbelegen (siehe Rental::$pickupAt/$returnAt),
             // sofern dort gepflegt — bleibt auf der Rechnung danach frei
@@ -120,7 +121,12 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
 
             $unitPrice = '0.00';
             if ($article->isBillable && $article->dailyRentalPrice !== null) {
-                $pricesByDay = RentalPriceCalculator::calculate($article->dailyRentalPrice, $tiers);
+                $pricesByDay = RentalPriceCalculator::calculate(
+                    $article->dailyRentalPrice,
+                    $tiers,
+                    $pricingSettings->priceRoundingStep,
+                    $pricingSettings->priceRoundingDirection,
+                );
                 $unitPrice = $pricesByDay[$deploymentDays] ?? $article->dailyRentalPrice;
             }
 

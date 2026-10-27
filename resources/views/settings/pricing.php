@@ -3,6 +3,8 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 
+use App\Domain\Settings\PriceRoundingDirection;
+use App\Domain\Settings\PriceRoundingStep;
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
@@ -26,6 +28,35 @@ $val = fn (string $key, ?string $fallback) => array_key_exists($key, $old) ? (st
                value="<?= e($val('accessory_flat_rate_percent', $settings->accessoryFlatRatePercent)) ?>"
                class="mt-1 w-full max-w-[10rem] rounded-md border <?= isset($errors['accessoryFlatRatePercent']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
         <?php if (isset($errors['accessoryFlatRatePercent'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['accessoryFlatRatePercent']) ?></p><?php endif; ?>
+    </div>
+
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <h2 class="text-sm font-medium text-slate-700 dark:text-slate-300"><?= e(t('settings.pricing.rounding.heading')) ?></h2>
+        <p class="mb-3 mt-0.5 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.pricing.rounding.hint')) ?></p>
+
+        <div class="flex flex-col gap-4 sm:flex-row">
+            <div class="sm:flex-1">
+                <label for="price_rounding_step" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.pricing.field.price_rounding_step')) ?></label>
+                <select id="price_rounding_step" name="price_rounding_step"
+                        class="mt-1 w-full rounded-md border <?= isset($errors['priceRoundingStep']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:bg-slate-900">
+                    <?php foreach (PriceRoundingStep::cases() as $step): ?>
+                        <option value="<?= e($step->value) ?>" <?= $val('price_rounding_step', $settings->priceRoundingStep->value) === $step->value ? 'selected' : '' ?>><?= e($step->label()) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (isset($errors['priceRoundingStep'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['priceRoundingStep']) ?></p><?php endif; ?>
+            </div>
+
+            <div class="sm:flex-1">
+                <label for="price_rounding_direction" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.pricing.field.price_rounding_direction')) ?></label>
+                <select id="price_rounding_direction" name="price_rounding_direction"
+                        class="mt-1 w-full rounded-md border <?= isset($errors['priceRoundingDirection']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:bg-slate-900">
+                    <?php foreach (PriceRoundingDirection::cases() as $direction): ?>
+                        <option value="<?= e($direction->value) ?>" <?= $val('price_rounding_direction', $settings->priceRoundingDirection->value) === $direction->value ? 'selected' : '' ?>><?= e($direction->label()) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?php if (isset($errors['priceRoundingDirection'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['priceRoundingDirection']) ?></p><?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">

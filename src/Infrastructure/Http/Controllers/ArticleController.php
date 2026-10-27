@@ -41,6 +41,7 @@ use App\Application\Rental\Query\GetArticleAvailability;
 use App\Application\Rental\Query\ListRentalsForArticle;
 use App\Application\Sale\Command\SellArticleFromStock;
 use App\Application\Settings\Query\GetPriceTiers;
+use App\Application\Settings\Query\GetPricingSettings;
 use App\Application\Supplier\Query\ListSuppliers;
 use App\Domain\Article\ChannelSyncStatus;
 use App\Domain\Article\SalesChannel;
@@ -81,8 +82,9 @@ final class ArticleController
         $articles = $this->billableArticlesForPriceList();
         $tiers = $this->queries->ask(new GetPriceTiers());
         $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::PriceList));
+        $pricingSettings = $this->queries->ask(new GetPricingSettings());
 
-        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers, $layout);
+        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers, $layout, $pricingSettings->priceRoundingStep, $pricingSettings->priceRoundingDirection);
 
         Response::download($pdf, 'Preisliste.pdf', 'application/pdf');
     }
@@ -92,8 +94,9 @@ final class ArticleController
     {
         $articles = $this->billableArticlesForPriceList();
         $tiers = $this->queries->ask(new GetPriceTiers());
+        $pricingSettings = $this->queries->ask(new GetPricingSettings());
 
-        $csv = $this->priceListCsvExporter->generate($articles, $tiers);
+        $csv = $this->priceListCsvExporter->generate($articles, $tiers, $pricingSettings->priceRoundingStep, $pricingSettings->priceRoundingDirection);
 
         Response::download($csv, 'Preisliste.csv', 'text/csv; charset=UTF-8');
     }
@@ -308,7 +311,13 @@ final class ArticleController
         $rentalPricesByDay = null;
         if ($detail->article->isBillable && $detail->article->dailyRentalPrice !== null) {
             $priceTiers = $this->queries->ask(new GetPriceTiers());
-            $rentalPricesByDay = RentalPriceCalculator::calculate($detail->article->dailyRentalPrice, $priceTiers);
+            $pricingSettingsForDetail = $this->queries->ask(new GetPricingSettings());
+            $rentalPricesByDay = RentalPriceCalculator::calculate(
+                $detail->article->dailyRentalPrice,
+                $priceTiers,
+                $pricingSettingsForDetail->priceRoundingStep,
+                $pricingSettingsForDetail->priceRoundingDirection,
+            );
         }
 
         // Reiner Verkaufsbestand (siehe App\Domain\Stock\SaleStockLot) — ganz

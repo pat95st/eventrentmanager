@@ -10,6 +10,8 @@ final class UpdatePricingSettings implements CommandInterface
 {
     public function __construct(
         public readonly string $accessoryFlatRatePercent,
+        public readonly string $priceRoundingStep,
+        public readonly string $priceRoundingDirection,
     ) {
     }
 }

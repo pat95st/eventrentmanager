@@ -7,6 +7,8 @@ namespace App\Infrastructure\Pdf;
 use App\Application\Article\Query\ArticleListItem;
 use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
+use App\Domain\Settings\PriceRoundingDirection;
+use App\Domain\Settings\PriceRoundingStep;
 use App\Domain\Settings\PriceTier;
 use App\Domain\Settings\RentalPriceCalculator;
 
@@ -33,8 +35,13 @@ final class PriceListPdfGenerator
      * @param ArticleListItem[] $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert, mit aufgelöstem Hersteller
      * @param PriceTier[]       $tiers
      */
-    public function generate(array $articles, array $tiers, ?PdfLayoutSettings $layout = null): string
-    {
+    public function generate(
+        array $articles,
+        array $tiers,
+        ?PdfLayoutSettings $layout = null,
+        PriceRoundingStep $roundingStep = PriceRoundingStep::None,
+        PriceRoundingDirection $roundingDirection = PriceRoundingDirection::Nearest,
+    ): string {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
         $pageHeight = $writer->pageHeight();
@@ -58,7 +65,7 @@ final class PriceListPdfGenerator
                 $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns, $tiers);
             }
 
-            $this->drawRow($writer, $y, $item, $columns, $tiers);
+            $this->drawRow($writer, $y, $item, $columns, $tiers, $roundingStep, $roundingDirection);
             $y -= self::TABLE_LINE_HEIGHT;
         }
 
@@ -139,8 +146,15 @@ final class PriceListPdfGenerator
      * @param array{name: array{x: float, width: float}, tiers: array<int, array{x: float, width: float}>} $columns
      * @param PriceTier[] $tiers
      */
-    private function drawRow(SimplePdfWriter $writer, float $y, ArticleListItem $item, array $columns, array $tiers): void
-    {
+    private function drawRow(
+        SimplePdfWriter $writer,
+        float $y,
+        ArticleListItem $item,
+        array $columns,
+        array $tiers,
+        PriceRoundingStep $roundingStep = PriceRoundingStep::None,
+        PriceRoundingDirection $roundingDirection = PriceRoundingDirection::Nearest,
+    ): void {
         $baseline = $y - self::TABLE_LINE_HEIGHT + 3;
 
         $name = ArticleDisplayName::of($item->article, $item->manufacturer);
@@ -154,7 +168,7 @@ final class PriceListPdfGenerator
             return;
         }
 
-        $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers);
+        $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers, $roundingStep, $roundingDirection);
         foreach ($prices as $dayCount => $price) {
             $writer->text($columns['tiers'][$dayCount]['x'] + 2, $baseline, number_format((float) $price, 2, ',', '.') . ' €', self::TABLE_FONT_SIZE);
         }

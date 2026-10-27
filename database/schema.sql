@@ -1124,6 +1124,10 @@ CREATE TABLE invoice_settings (
 CREATE TABLE pricing_settings (
     id                           TINYINT       NOT NULL PRIMARY KEY DEFAULT 1,
     accessory_flat_rate_percent  DECIMAL(5, 2) NOT NULL DEFAULT 0,
+    -- Globale Rundung der Preisstaffel-Preise (siehe Migration 098,
+    -- App\Domain\Settings\PriceRoundingStep/PriceRoundingDirection).
+    price_rounding_step          VARCHAR(10)   NOT NULL DEFAULT 'none',
+    price_rounding_direction     VARCHAR(10)   NOT NULL DEFAULT 'nearest',
     updated_at                   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_pricing_settings_singleton CHECK (id = 1)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
@@ -1138,7 +1142,7 @@ VALUES (1, 0, 19.00, NULL, NULL, 14, NULL, NULL, NULL);
 -- eine RuntimeException, sobald eine Rechnung oder ein Angebot angelegt
 -- wird (GetPricingSettingsHandler -> InvoiceController::renderForm()/
 -- OfferController::renderForm()), weil die Tabelle sonst komplett leer ist.
-INSERT INTO pricing_settings (id, accessory_flat_rate_percent) VALUES (1, 0);
+INSERT INTO pricing_settings (id, accessory_flat_rate_percent, price_rounding_step, price_rounding_direction) VALUES (1, 0, 'none', 'nearest');
 
 -- ---------------------------------------------------------------------
 -- Generisches Nummerierungssystem je Dokumenttyp (Rechnungen, Angebote,

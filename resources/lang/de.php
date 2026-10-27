@@ -1177,6 +1177,10 @@ return [
     'settings.pricing.subtitle' => 'Firmenweite Preis-Einstellungen, die für Angebote UND Rechnungen gelten (Zubehörpauschale).',
     'settings.pricing.field.accessory_flat_rate_percent' => 'Zubehörpauschale (%)',
     'settings.pricing.field.accessory_flat_rate_percent_hint' => 'Wird automatisch als eigener Posten auf die Summe der Mietpreis-Positionen jedes neuen Angebots/jeder neuen Rechnung aufgeschlagen, ist dort aber pro Dokument abwählbar.',
+    'settings.pricing.rounding.heading' => 'Preisrundung',
+    'settings.pricing.rounding.hint' => 'Rundet die aus der Preisstaffelung berechneten Mietpreise (Preisvorschläge, Preisliste) zusätzlich auf den gewählten Schritt.',
+    'settings.pricing.field.price_rounding_step' => 'Rundungsschritt',
+    'settings.pricing.field.price_rounding_direction' => 'Rundungsrichtung',
     'settings.pricing.flash.saved' => 'Preis-Einstellungen wurden gespeichert.',
 
     'settings.overage.title' => 'Überziehungsregeln',

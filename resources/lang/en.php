@@ -1176,6 +1176,10 @@ return [
     'settings.pricing.subtitle' => 'Company-wide pricing settings that apply to BOTH offers and invoices (accessory flat rate).',
     'settings.pricing.field.accessory_flat_rate_percent' => 'Accessory flat rate (%)',
     'settings.pricing.field.accessory_flat_rate_percent_hint' => 'Automatically added as its own line on top of the sum of rental price items of every new offer/invoice, but can be deselected per document.',
+    'settings.pricing.rounding.heading' => 'Price rounding',
+    'settings.pricing.rounding.hint' => 'Additionally rounds the rental prices computed from the price tiers (price suggestions, price list) to the selected step.',
+    'settings.pricing.field.price_rounding_step' => 'Rounding step',
+    'settings.pricing.field.price_rounding_direction' => 'Rounding direction',
     'settings.pricing.flash.saved' => 'Pricing settings were saved.',
 
     'settings.overage.title' => 'Overage rules',

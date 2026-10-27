@@ -22,6 +22,13 @@ final class PricingSettings
 {
     public function __construct(
         public string $accessoryFlatRatePercent, // als String geführt, um Rundungsfehler bei DECIMAL zu vermeiden (siehe InvoiceSettings::$vatRatePercent)
+        // Globale Rundung der aus der Preisstaffelung berechneten Mietpreise
+        // (siehe RentalPriceCalculator::calculate(), PriceRoundingStep/
+        // PriceRoundingDirection) — standardmäßig deaktiviert, damit sich am
+        // Verhalten bestehender Installationen ohne explizite Einstellung
+        // nichts ändert.
+        public PriceRoundingStep $priceRoundingStep = PriceRoundingStep::None,
+        public PriceRoundingDirection $priceRoundingDirection = PriceRoundingDirection::Nearest,
     ) {
     }
 }

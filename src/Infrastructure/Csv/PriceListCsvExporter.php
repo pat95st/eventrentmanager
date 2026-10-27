@@ -6,6 +6,8 @@ namespace App\Infrastructure\Csv;
 
 use App\Application\Article\Query\ArticleListItem;
 use App\Domain\Article\ArticleDisplayName;
+use App\Domain\Settings\PriceRoundingDirection;
+use App\Domain\Settings\PriceRoundingStep;
 use App\Domain\Settings\PriceTier;
 use App\Domain\Settings\RentalPriceCalculator;
 
@@ -23,8 +25,12 @@ final class PriceListCsvExporter
      * @param ArticleListItem[] $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert, mit aufgelöstem Hersteller
      * @param PriceTier[]       $tiers
      */
-    public function generate(array $articles, array $tiers): string
-    {
+    public function generate(
+        array $articles,
+        array $tiers,
+        PriceRoundingStep $roundingStep = PriceRoundingStep::None,
+        PriceRoundingDirection $roundingDirection = PriceRoundingDirection::Nearest,
+    ): string {
         $handle = fopen('php://temp', 'r+');
         if ($handle === false) {
             throw new \RuntimeException('CSV-Ausgabestream konnte nicht geöffnet werden.');
@@ -47,7 +53,7 @@ final class PriceListCsvExporter
                     $row[] = '';
                 }
             } else {
-                $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers);
+                $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers, $roundingStep, $roundingDirection);
                 foreach ($tiers as $tier) {
                     $price = $prices[$tier->dayCount] ?? null;
                     $row[] = $price !== null ? str_replace('.', ',', $price) : '';

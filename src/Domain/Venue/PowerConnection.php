@@ -47,11 +47,17 @@ final class PowerConnection
 
     /**
      * Hinweis: für diesen Anschluss wird ein eigener Stromverteiler mit
-     * eigenem RCD benötigt. Trifft zu, wenn EINES der beiden zutrifft:
+     * eigenem RCD benötigt. Trifft zu, wenn EINES der folgenden zutrifft:
      *   - es ist gar kein RCD verbaut, ODER
-     *   - der Leitungsschutzschalter ist ≤ 32 A, aber der verbaute RCD löst
-     *     erst bei mehr als 30 mA aus (für ≤32-A-Anschlüsse wird in der
-     *     Praxis ein ≤30-mA-RCD verlangt).
+     *   - der verbaute RCD löst erst bei mehr als 30 mA aus, UND entweder
+     *       - der Leitungsschutzschalter ist ≤ 32 A (für ≤32-A-Anschlüsse
+     *         wird in der Praxis ein ≤30-mA-RCD verlangt), ODER
+     *       - die Anschlussart ist Festanschluss: hier gibt es (anders als
+     *         bei einem Steckverbinder mit bauartbedingtem Bemessungsstrom,
+     *         siehe PowerConnectionType::ratedCurrentAmps()) keine fest
+     *         vorgegebene Obergrenze für den Leitungsschutzschalter, daher
+     *         wird die 30-mA-Pflicht hier unabhängig von dessen Größe
+     *         angewendet (auf Nutzerwunsch, analog zur CEE-Warnung).
      */
     public function needsOwnDistributorWithRcd(): bool
     {
@@ -60,8 +66,11 @@ final class PowerConnection
         }
 
         $tripMa = $this->rcdTripCurrent->milliamps();
+        if ($tripMa === null || $tripMa <= 30) {
+            return false;
+        }
 
-        return $this->breakerRating->amps() <= 32 && $tripMa !== null && $tripMa > 30;
+        return $this->breakerRating->amps() <= 32 || $this->type === PowerConnectionType::Festanschluss;
     }
 
     /**

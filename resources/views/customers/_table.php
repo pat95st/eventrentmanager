@@ -16,17 +16,19 @@ use function App\Infrastructure\Http\t;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400"><?= e(t('customers.table.empty')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[760px] table-fixed text-left text-sm">
             <colgroup>
                 <col style="width: 10%">
+                <col style="width: 8%">
+                <col style="width: 20%">
                 <col style="width: 22%">
-                <col style="width: 26%">
-                <col style="width: 14%">
-                <col style="width: 18%">
-                <col style="width: 10%">
+                <col style="width: 12%">
+                <col style="width: 16%">
+                <col style="width: 12%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
+                    <th class="break-words px-4 py-2.5"><?= e(t('customers.table.number')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('customers.table.type')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('customers.table.name')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('customers.table.address')) ?></th>
@@ -38,6 +40,9 @@ use function App\Infrastructure\Http\t;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($customers as $customer): ?>
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+                        <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
+                            <?= e($customer->customerNumber) ?>
+                        </td>
                         <td class="break-words px-4 py-3">
                             <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $customer->type === \App\Domain\Customer\CustomerType::Geschaeftlich ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800' : 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600' ?>">
                                 <?= e($customer->type->label()) ?>

@@ -1335,6 +1335,7 @@ return [
     'customers.filter.submit' => 'Filtern',
     'customers.filter.reset' => 'Zurücksetzen',
     'customers.table.empty' => 'Keine Kunden gefunden.',
+    'customers.table.number' => 'Kundennummer',
     'customers.table.type' => 'Art',
     'customers.table.address' => 'Adresse',
     'customers.confirm_delete' => 'Diesen Kunden wirklich löschen?',

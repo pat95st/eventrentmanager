@@ -57,6 +57,10 @@ final class CustomerController
                 static fn (Customer $customer): array => [
                     'id' => $customer->id,
                     'label' => $customer->displayName(),
+                    // Kundennummer als Vorschlags-Zusatz (siehe live-search.js,
+                    // item.sublabel) — hilft insbesondere bei mehreren
+                    // gleichnamigen Kunden, den richtigen zu erkennen.
+                    'sublabel' => $customer->customerNumber,
                 ],
                 $customers
             ),

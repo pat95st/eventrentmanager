@@ -601,7 +601,7 @@ $commandBus->register(\App\Application\ElectricalInspection\Command\CreateElectr
 $commandBus->register(\App\Application\ElectricalInspection\Command\UpdateElectricalInspection::class, new UpdateElectricalInspectionHandler($electricalInspectionRepository));
 $commandBus->register(\App\Application\ElectricalInspection\Command\DeleteElectricalInspection::class, new DeleteElectricalInspectionHandler($electricalInspectionRepository));
 
-$commandBus->register(\App\Application\Customer\Command\CreateCustomer::class, new CreateCustomerHandler($customerRepository));
+$commandBus->register(\App\Application\Customer\Command\CreateCustomer::class, new CreateCustomerHandler($customerRepository, $documentNumberSequence, $pdo));
 $commandBus->register(\App\Application\Customer\Command\UpdateCustomer::class, new UpdateCustomerHandler($customerRepository));
 $commandBus->register(\App\Application\Customer\Command\DeleteCustomer::class, new DeleteCustomerHandler($customerRepository));
 

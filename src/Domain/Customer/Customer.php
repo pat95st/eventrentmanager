@@ -10,6 +10,11 @@ final class Customer
 {
     public function __construct(
         public readonly string $id,
+        // Fortlaufend, admin-konfigurierbar (siehe App\Domain\Numbering\*,
+        // NumberedDocumentType::Customer, Migration 095) — anders als die
+        // Rechnungsnummer (erst beim Versenden vergeben) SOFORT bei Anlage
+        // vergeben und daher nicht nullable, analog Offer::$offerNumber.
+        public readonly string $customerNumber,
         public CustomerType $type,
         public ?string $companyName,  // nur bei Art = Geschäftlich befüllt
         public string $firstName,

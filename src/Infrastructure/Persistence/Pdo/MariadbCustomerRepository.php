@@ -20,10 +20,10 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO customers (
-                id, type, company_name, first_name, last_name, street, address_line2,
+                id, customer_number, type, company_name, first_name, last_name, street, address_line2,
                 postal_code, city, phone, email, telegram_chat_id, id_checked_at, created_at, updated_at
              ) VALUES (
-                :id, :type, :company_name, :first_name, :last_name, :street, :address_line2,
+                :id, :customer_number, :type, :company_name, :first_name, :last_name, :street, :address_line2,
                 :postal_code, :city, :phone, :email, :telegram_chat_id, :id_checked_at, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
@@ -35,6 +35,7 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
 
         $params = [
             'id' => $customer->id,
+            'customer_number' => $customer->customerNumber,
             'type' => $customer->type->value,
             'company_name' => $customer->companyName,
             'first_name' => $customer->firstName,
@@ -122,7 +123,8 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
                    OR first_name LIKE :search2
                    OR last_name LIKE :search3
                    OR city LIKE :search4
-                   OR email LIKE :search5';
+                   OR email LIKE :search5
+                   OR customer_number LIKE :search6';
         $needle = '%' . $search . '%';
         $params = [
             'search' => $needle,
@@ -130,6 +132,7 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
             'search3' => $needle,
             'search4' => $needle,
             'search5' => $needle,
+            'search6' => $needle,
         ];
 
         return [$sql, $params];
@@ -145,6 +148,7 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
     {
         return new Customer(
             id: $row['id'],
+            customerNumber: $row['customer_number'],
             type: CustomerType::from($row['type']),
             companyName: $row['company_name'],
             firstName: $row['first_name'],

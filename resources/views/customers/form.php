@@ -14,7 +14,12 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
 
 <div class="mb-6">
     <a href="/kunden" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('customers.form.back')) ?></a>
-    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $customer !== null ? e(t('customers.edit')) : e(t('customers.new')) ?></h1>
+    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
+        <?= $customer !== null ? e(t('customers.edit')) : e(t('customers.new')) ?>
+        <?php if ($customer !== null): ?>
+            <span class="ml-2 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($customer->customerNumber) ?></span>
+        <?php endif; ?>
+    </h1>
 </div>
 
 <form

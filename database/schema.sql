@@ -503,6 +503,7 @@ CREATE TABLE electrical_inspections (
 -- ---------------------------------------------------------------------
 CREATE TABLE customers (
     id              CHAR(36)     NOT NULL PRIMARY KEY,
+    customer_number VARCHAR(50)  NOT NULL, -- fortlaufend, siehe Migration 095
     type            ENUM('privat', 'geschaeftlich') NOT NULL,
     company_name    VARCHAR(255) NULL,      -- nur bei type = 'geschaeftlich' befüllt
     first_name      VARCHAR(150) NOT NULL,
@@ -518,7 +519,8 @@ CREATE TABLE customers (
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_customers_last_name (last_name),
-    INDEX idx_customers_company_name (company_name)
+    INDEX idx_customers_company_name (company_name),
+    CONSTRAINT uq_customers_customer_number UNIQUE (customer_number)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -1156,7 +1158,8 @@ INSERT INTO document_numbering_settings (document_type, scheme, prefix, `separat
     ('invoice', 'simple', 'RE-', '-', 6),
     ('offer', 'simple', 'AN-', '-', 6),
     ('dunning_notice', 'simple', 'MAH-', '-', 6),
-    ('order_confirmation', 'simple', 'AB-', '-', 6);
+    ('order_confirmation', 'simple', 'AB-', '-', 6),
+    ('customer', 'simple', 'KD-', '-', 6);
 
 CREATE TABLE document_number_sequences (
     document_type  VARCHAR(30)  NOT NULL,
@@ -1169,7 +1172,8 @@ INSERT INTO document_number_sequences (document_type, sequence_year, next_number
     ('invoice', 0, 1),
     ('offer', 0, 1),
     ('dunning_notice', 0, 1),
-    ('order_confirmation', 0, 1);
+    ('order_confirmation', 0, 1),
+    ('customer', 0, 1);
 
 -- ---------------------------------------------------------------------
 -- Optionaler Einleitungs-/Schlusstext im Rechnungs-PDF-Dokument selbst

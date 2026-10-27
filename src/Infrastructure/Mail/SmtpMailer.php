@@ -52,9 +52,7 @@ final class SmtpMailer implements MailerInterface
 
             if ($settings->encryption === SmtpEncryption::Tls) {
                 $this->command($socket, 'STARTTLS', 220);
-                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                    throw new MailerException('STARTTLS-Verhandlung mit dem SMTP-Server ist fehlgeschlagen.');
-                }
+                $this->enableCrypto($socket);
                 // Nach STARTTLS ist ein erneutes EHLO vorgeschrieben (RFC 3207).
                 $this->command($socket, 'EHLO materialverleih.local', 250);
             }
@@ -140,6 +138,47 @@ final class SmtpMailer implements MailerInterface
         stream_set_timeout($socket, self::TIMEOUT_SECONDS);
 
         return $socket;
+    }
+
+    /**
+     * Verhandelt TLS auf einer bereits offenen Verbindung (STARTTLS, Port
+     * 587) über stream_socket_enable_crypto(). Eine fehlschlagende
+     * Zertifikatsprüfung (z. B. Hostname/subjectAltName-Mismatch bei
+     * Testservern mit "localhost") erzeugt dabei einen regulären PHP-
+     * Warning, der — anders als bei @stream_socket_client() in connect()
+     * oben — hier NICHT einfach mit "@" unterdrückt wird: ein verschluckter
+     * Hinweis würde ohne jede Fehlermeldung bei "STARTTLS-Verhandlung
+     * fehlgeschlagen" enden. Stattdessen wird die Warnung über einen
+     * temporären Error-Handler abgefangen, bevor sie den Standard-Handler
+     * (und damit den HTTP-Response-Body VOR den bereits gesendeten Headern,
+     * siehe Response::send()) erreicht — das war der eigentliche Fehler:
+     * die unbehandelte Warnung wurde direkt ausgegeben und löste dadurch
+     * "Cannot modify header information - headers already sent" aus. Die
+     * abgefangene Detailmeldung landet stattdessen lesbar in der
+     * MailerException, die von den Aufrufern ohnehin schon regulär
+     * abgefangen und dem Benutzer angezeigt wird.
+     *
+     * @param resource $socket
+     */
+    private function enableCrypto($socket): void
+    {
+        $warning = null;
+        set_error_handler(static function (int $errno, string $errstr) use (&$warning): bool {
+            $warning = $errstr;
+
+            return true;
+        });
+
+        try {
+            $ok = stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+        } finally {
+            restore_error_handler();
+        }
+
+        if ($ok !== true) {
+            $detail = $warning !== null && $warning !== '' ? " ({$warning})" : '';
+            throw new MailerException("STARTTLS-Verhandlung mit dem SMTP-Server ist fehlgeschlagen{$detail}.");
+        }
     }
 
     /** @param resource $socket */

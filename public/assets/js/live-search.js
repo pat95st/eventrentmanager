@@ -221,6 +221,31 @@
             }
         });
 
+        // Springt im "select"-Modus auf die zuletzt bestätigte Auswahl
+        // zurück, falls das sichtbare Textfeld (z. B. durch Tippen ohne
+        // anschließende Auswahl eines Vorschlags) nicht mehr dazu passt.
+        // Eigene Funktion, da dies an ZWEI Stellen gebraucht wird (siehe
+        // unten): im `focusout`-Handler (verzögert per `setTimeout`, damit
+        // ein per Maus angeklickter Vorschlag — der über `mousedown` vor
+        // `focusout` feuert — zuerst verarbeitet wird) UND zusätzlich
+        // SYNCHRON im `submit`-Handler des umgebenden Formulars. Ohne diesen
+        // zweiten Aufruf entsteht ein Race Condition: klickt man direkt vom
+        // Textfeld aus auf "Speichern", ohne vorher einen Vorschlag
+        // anzuklicken, feuert das native Formular-Submit NOCH IM SELBEN
+        // Tick wie `focusout` — der per `setTimeout(…, 0)` verzögerte
+        // Korrektur-Code liefe dann erst NACH dem bereits abgeschickten
+        // Formular, das versteckte Feld würde also mit dem zwischenzeitlich
+        // (beim Tippen) auf '' zurückgesetzten Wert gespeichert — siehe
+        // Bugreport "Schnellsuche-Auswahl wird nicht korrekt gespeichert".
+        function restoreConfirmedIfNeeded() {
+            if (mode === 'select' && input.value !== confirmedLabel) {
+                input.value = confirmedLabel;
+                if (hidden) {
+                    hidden.value = confirmedId;
+                }
+            }
+        }
+
         input.addEventListener('focusout', function (event) {
             // Klick auf einen Vorschlag läuft über mousedown (siehe oben)
             // und hat die Auswahl bereits verarbeitet, bevor dieses Event
@@ -232,15 +257,23 @@
                 }
 
                 hideResults();
-
-                if (mode === 'select' && input.value !== confirmedLabel) {
-                    input.value = confirmedLabel;
-                    if (hidden) {
-                        hidden.value = confirmedId;
-                    }
-                }
+                restoreConfirmedIfNeeded();
             }, 0);
         });
+
+        // Siehe Kommentar bei restoreConfirmedIfNeeded() oben: zusätzliche,
+        // SYNCHRONE Absicherung direkt beim Abschicken des Formulars, damit
+        // ein zwischenzeitlich (durch Tippen ohne Auswahl) auf '' gesetztes
+        // verstecktes Feld auf keinen Fall mitgeschickt wird. Läuft als
+        // regulärer (nicht abbrechender) `submit`-Listener VOR der
+        // eigentlichen, nativen Formularübermittlung.
+        var ownForm = root.closest('form');
+        if (ownForm) {
+            ownForm.addEventListener('submit', function () {
+                hideResults();
+                restoreConfirmedIfNeeded();
+            });
+        }
 
         // Externes Setzen von außerhalb des Widgets (z. B. nach Anlage
         // eines neuen Datensatzes über ein "+ Neu"-Quick-Create-Modal, siehe

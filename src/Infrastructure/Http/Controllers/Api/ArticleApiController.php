@@ -136,6 +136,7 @@ final class ArticleApiController
             'weight' => $article->weightValue !== null ? ['value' => $article->weightValue, 'unit' => $article->weightUnit] : null,
             'dimensions' => $article->dimensions,
             'requires_electrical_inspection' => $article->requiresElectricalInspection,
+            'protection_class' => $article->protectionClass?->value,
             'billable' => $article->isBillable,
             'active' => $article->isActive,
             'daily_rental_price' => $article->dailyRentalPrice,

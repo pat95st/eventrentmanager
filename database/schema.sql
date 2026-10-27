@@ -95,6 +95,7 @@ CREATE TABLE articles (
     install_depth_cm    DECIMAL(6, 1)   NULL, -- Einbautiefe in cm, nur relevant, wenn is_19_inch = 1
     purchase_price      DECIMAL(10, 2)  NULL, -- Einkaufspreis in Euro; optional
     requires_electrical_inspection TINYINT(1) NOT NULL DEFAULT 0, -- Elektroprüfung (z. B. DGUV V3) nötig?
+    protection_class    ENUM('I','II','III') NULL, -- Schutzklasse, nur relevant/gepflegt, wenn requires_electrical_inspection = 1, siehe Migration 096
     has_firmware        TINYINT(1)      NOT NULL DEFAULT 0, -- Gerät besitzt eine aktualisierbare Firmware? siehe firmware_versions
     is_billable         TINYINT(1)      NOT NULL DEFAULT 1, -- bei einer Vermietung als eigener Posten abgerechnet (sonst Zubehör, z. B. Kabel)
     is_active           TINYINT(1)      NOT NULL DEFAULT 1, -- deaktivierte Artikel bleiben in der Artikelverwaltung sichtbar, verschwinden aber aus der Artikelauswahl (siehe 054_add_article_active_flag.sql)
@@ -489,6 +490,10 @@ CREATE TABLE electrical_inspections (
     inspected_at            DATE         NOT NULL,
     validity_years          TINYINT      NOT NULL DEFAULT 1,
     passed                  TINYINT(1)   NOT NULL DEFAULT 1,
+    protective_conductor_resistance_ohm DECIMAL(5, 3) NULL, -- Schutzleiterwiderstand in Ω, nur bei Schutzklasse I sinnvoll, siehe Migration 096
+    insulation_resistance_mohm          DECIMAL(6, 2) NULL, -- Isolationswiderstand in MΩ
+    protective_conductor_current_ma     DECIMAL(6, 2) NULL, -- Schutzleiterstrom/Ableitstrom in mA, nur bei Schutzklasse I sinnvoll
+    touch_current_ma                    DECIMAL(6, 2) NULL, -- Berührungsstrom in mA
     inspector               VARCHAR(255) NULL,
     notes                   TEXT         NULL,
     created_at              DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1401,14 +1406,18 @@ CREATE TABLE offer_labor_items (
     id                      CHAR(36)       NOT NULL PRIMARY KEY,
     offer_id                CHAR(36)       NOT NULL,
     labor_time_article_id   CHAR(36)       NOT NULL,
+    user_id                 CHAR(36)       NULL, -- Mitarbeiter/Benutzer, siehe Migration 097; optional
     hours                   DECIMAL(6, 2)  NOT NULL,
     unit_rate_per_hour      DECIMAL(10, 2) NOT NULL,
     CONSTRAINT fk_offer_labor_items_offer
         FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
     CONSTRAINT fk_offer_labor_items_labor_time_article
         FOREIGN KEY (labor_time_article_id) REFERENCES labor_time_articles (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_offer_labor_items_user
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
     INDEX idx_offer_labor_items_offer (offer_id),
-    INDEX idx_offer_labor_items_labor_time_article (labor_time_article_id)
+    INDEX idx_offer_labor_items_labor_time_article (labor_time_article_id),
+    INDEX idx_offer_labor_items_user (user_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -1608,14 +1617,18 @@ CREATE TABLE invoice_labor_items (
     id                      CHAR(36)       NOT NULL PRIMARY KEY,
     invoice_id              CHAR(36)       NOT NULL,
     labor_time_article_id   CHAR(36)       NOT NULL,
+    user_id                 CHAR(36)       NULL, -- Mitarbeiter/Benutzer, siehe Migration 097; optional
     hours                   DECIMAL(6, 2)  NOT NULL,
     unit_rate_per_hour      DECIMAL(10, 2) NOT NULL,
     CONSTRAINT fk_invoice_labor_items_invoice
         FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE,
     CONSTRAINT fk_invoice_labor_items_labor_time_article
         FOREIGN KEY (labor_time_article_id) REFERENCES labor_time_articles (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_invoice_labor_items_user
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
     INDEX idx_invoice_labor_items_invoice (invoice_id),
-    INDEX idx_invoice_labor_items_labor_time_article (labor_time_article_id)
+    INDEX idx_invoice_labor_items_labor_time_article (labor_time_article_id),
+    INDEX idx_invoice_labor_items_user (user_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------

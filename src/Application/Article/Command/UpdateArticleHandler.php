@@ -7,6 +7,7 @@ namespace App\Application\Article\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Article\ProtectionClass;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -77,6 +78,10 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             }
         }
 
+        if ($command->requiresElectricalInspection && self::normalizeProtectionClass($command->protectionClass) === null) {
+            $errors['protectionClass'] = 'Bitte eine gültige Schutzklasse auswählen.';
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -94,6 +99,7 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $article->installDepthCm = $command->is19Inch ? self::normalizeInstallDepth($command->installDepthCm) : null;
         $article->purchasePrice = Money::normalize($command->purchasePrice) ?: null;
         $article->requiresElectricalInspection = $command->requiresElectricalInspection;
+        $article->protectionClass = $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null;
         $article->hasFirmware = $command->hasFirmware;
         $article->isBillable = $command->isBillable;
         $article->dailyRentalPrice = $command->isBillable ? (Money::normalize($command->dailyRentalPrice) ?: null) : null;
@@ -127,5 +133,10 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $value = filter_var($normalized, FILTER_VALIDATE_FLOAT);
 
         return $value !== false && $value > 0 ? number_format($value, 1, '.', '') : null;
+    }
+
+    private static function normalizeProtectionClass(?string $raw): ?ProtectionClass
+    {
+        return $raw !== null ? ProtectionClass::tryFrom($raw) : null;
     }
 }

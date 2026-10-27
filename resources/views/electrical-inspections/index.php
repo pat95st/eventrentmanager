@@ -65,6 +65,35 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
                     </div>
                 </div>
 
+                <?php
+                    $measurementRows = [
+                        ['label' => 'Schutzleiterwiderstand', 'value' => $inspection->protectiveConductorResistanceOhm, 'unit' => 'Ω'],
+                        ['label' => 'Isolationswiderstand', 'value' => $inspection->insulationResistanceMohm, 'unit' => 'MΩ'],
+                        ['label' => 'Schutzleiterstrom/Ableitstrom', 'value' => $inspection->protectiveConductorCurrentMa, 'unit' => 'mA'],
+                        ['label' => 'Berührungsstrom', 'value' => $inspection->touchCurrentMa, 'unit' => 'mA'],
+                    ];
+                    $measurementRows = array_filter($measurementRows, static fn (array $row) => $row['value'] !== null);
+                    $measurementWarnings = $inspection->measurementWarnings($context->article->protectionClass);
+                ?>
+                <?php if ($measurementRows !== []): ?>
+                    <dl class="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                        <?php foreach ($measurementRows as $row): ?>
+                            <div>
+                                <dt class="text-slate-400 dark:text-slate-500"><?= e($row['label']) ?></dt>
+                                <dd class="font-mono text-slate-700 dark:text-slate-300"><?= e($row['value']) ?> <?= e($row['unit']) ?></dd>
+                            </div>
+                        <?php endforeach; ?>
+                    </dl>
+                <?php endif; ?>
+
+                <?php if ($measurementWarnings !== []): ?>
+                    <ul class="mt-2 space-y-0.5">
+                        <?php foreach ($measurementWarnings as $warning): ?>
+                            <li class="text-xs text-red-600 dark:text-red-400">⚠ <?= e($warning) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
                 <?php if ($inspection->notes !== null): ?>
                     <p class="mt-3 whitespace-pre-line text-sm text-slate-600 dark:text-slate-400"><?= e($inspection->notes) ?></p>
                 <?php endif; ?>
@@ -109,8 +138,62 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
                        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
             </div>
 
+            <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+                <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Messwerte</h3>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Schutzleiterwiderstand (Ω) — nur Schutzklasse I</label>
+                        <input type="number" step="0.001" min="0" name="protective_conductor_resistance_ohm"
+                               value="<?= e($val('protective_conductor_resistance_ohm', $editingInspection?->protectiveConductorResistanceOhm)) ?>"
+                               class="mt-1 w-full rounded-md border <?= isset($errors['protectiveConductorResistanceOhm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <?php if (isset($errors['protectiveConductorResistanceOhm'])): ?>
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['protectiveConductorResistanceOhm']) ?></p>
+                        <?php else: ?>
+                            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Grenzwert: bis 5 m Leitungslänge 0,3 Ω, je weitere 7,5 m +0,1 Ω, absolut max. 1,0 Ω.</p>
+                        <?php endif; ?>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Isolationswiderstand (MΩ)</label>
+                        <input type="number" step="0.01" min="0" name="insulation_resistance_mohm"
+                               value="<?= e($val('insulation_resistance_mohm', $editingInspection?->insulationResistanceMohm)) ?>"
+                               class="mt-1 w-full rounded-md border <?= isset($errors['insulationResistanceMohm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <?php if (isset($errors['insulationResistanceMohm'])): ?>
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['insulationResistanceMohm']) ?></p>
+                        <?php else: ?>
+                            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Mindestwert: SK I ≥ 1,0 MΩ (Heizelemente ≥ 0,3 MΩ), SK II ≥ 2,0 MΩ, SK III ≥ 0,25 MΩ.</p>
+                        <?php endif; ?>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Schutzleiterstrom/Ableitstrom (mA) — nur Schutzklasse I</label>
+                        <input type="number" step="0.01" min="0" name="protective_conductor_current_ma"
+                               value="<?= e($val('protective_conductor_current_ma', $editingInspection?->protectiveConductorCurrentMa)) ?>"
+                               class="mt-1 w-full rounded-md border <?= isset($errors['protectiveConductorCurrentMa']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <?php if (isset($errors['protectiveConductorCurrentMa'])): ?>
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['protectiveConductorCurrentMa']) ?></p>
+                        <?php else: ?>
+                            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Grenzwert: max. 3,5 mA (Ausnahme: Heizleistung &gt; 3,5 kW → max. 1,0 mA/kW).</p>
+                        <?php endif; ?>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Berührungsstrom (mA) — SK II bzw. isolierte Teile bei SK I</label>
+                        <input type="number" step="0.01" min="0" name="touch_current_ma"
+                               value="<?= e($val('touch_current_ma', $editingInspection?->touchCurrentMa)) ?>"
+                               class="mt-1 w-full rounded-md border <?= isset($errors['touchCurrentMa']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        <?php if (isset($errors['touchCurrentMa'])): ?>
+                            <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['touchCurrentMa']) ?></p>
+                        <?php else: ?>
+                            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Grenzwert: max. 0,5 mA (Ersatzableitstromverfahren: max. 0,25 mA).</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
             <div>
-                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Notizen (Messwerte, Auffälligkeiten, …)</label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Notizen (sonstige Auffälligkeiten, …)</label>
                 <textarea name="notes" rows="3"
                           class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700"
                 ><?= e($val('notes', $editingInspection?->notes)) ?></textarea>

@@ -26,6 +26,7 @@ final class Article
         public ?string $installDepthCm, // Einbautiefe in cm, als String geführt (siehe weightValue); nur relevant, wenn is19Inch
         public ?string $purchasePrice, // Einkaufspreis in Euro, als String geführt (siehe weightValue); optional
         public bool $requiresElectricalInspection, // Elektroprüfung (z. B. DGUV V3) nötig?
+        public ?ProtectionClass $protectionClass, // Schutzklasse I/II/III; nur gepflegt, wenn requiresElectricalInspection = true, sonst immer null
         public bool $hasFirmware, // Gerät besitzt eine aktualisierbare Firmware? Nur dann werden Firmware-Versionen (siehe FirmwareVersion) für diesen Artikel verwaltet
         public bool $isBillable, // bei einer Vermietung als eigener Posten abgerechnet (sonst Zubehör, z. B. Kabel)
         public bool $isActive, // deaktivierte Artikel bleiben in der Artikelverwaltung sichtbar, verschwinden aber aus der Artikelauswahl (siehe ListArticlesHandler, Parameter onlyActive)

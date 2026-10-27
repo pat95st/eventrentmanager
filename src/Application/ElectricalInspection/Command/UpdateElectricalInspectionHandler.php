@@ -40,6 +40,11 @@ final class UpdateElectricalInspectionHandler implements CommandHandlerInterface
             $errors['validityYears'] = 'Bitte eine gültige Gültigkeitsdauer wählen (1 oder 2 Jahre).';
         }
 
+        $protectiveConductorResistanceOhm = self::normalizeMeasurement($command->protectiveConductorResistanceOhm, 3, $errors, 'protectiveConductorResistanceOhm');
+        $insulationResistanceMohm = self::normalizeMeasurement($command->insulationResistanceMohm, 2, $errors, 'insulationResistanceMohm');
+        $protectiveConductorCurrentMa = self::normalizeMeasurement($command->protectiveConductorCurrentMa, 2, $errors, 'protectiveConductorCurrentMa');
+        $touchCurrentMa = self::normalizeMeasurement($command->touchCurrentMa, 2, $errors, 'touchCurrentMa');
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -48,6 +53,10 @@ final class UpdateElectricalInspectionHandler implements CommandHandlerInterface
         $inspection->validityYears = $validityYears;
         $inspection->passed = $command->passed;
         $inspection->inspector = $this->nullIfBlank($command->inspector);
+        $inspection->protectiveConductorResistanceOhm = $protectiveConductorResistanceOhm;
+        $inspection->insulationResistanceMohm = $insulationResistanceMohm;
+        $inspection->protectiveConductorCurrentMa = $protectiveConductorCurrentMa;
+        $inspection->touchCurrentMa = $touchCurrentMa;
         $inspection->notes = $this->nullIfBlank($command->notes);
         $inspection->updatedAt = new DateTimeImmutable();
 
@@ -69,5 +78,31 @@ final class UpdateElectricalInspectionHandler implements CommandHandlerInterface
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * Normalisiert einen optionalen Messwert (dt. Komma erlaubt, nicht-negativ)
+     * auf die angegebene Anzahl Nachkommastellen; leer bleibt leer. Bei einem
+     * ungültigen (nicht-numerischen oder negativen) Wert wird $errors[$field]
+     * gesetzt und null zurückgegeben.
+     *
+     * @param array<string, string> $errors
+     */
+    private static function normalizeMeasurement(?string $raw, int $decimals, array &$errors, string $field): ?string
+    {
+        if ($raw === null || trim($raw) === '') {
+            return null;
+        }
+
+        $normalized = str_replace(',', '.', trim($raw));
+        $value = filter_var($normalized, FILTER_VALIDATE_FLOAT);
+
+        if ($value === false || $value < 0) {
+            $errors[$field] = 'Bitte einen gültigen, nicht-negativen Messwert angeben.';
+
+            return null;
+        }
+
+        return number_format($value, $decimals, '.', '');
     }
 }

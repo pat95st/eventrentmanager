@@ -86,6 +86,10 @@ final class ElectricalInspectionController
             validityYears: $request->input('validity_years'),
             passed: $request->input('passed') !== null,
             inspector: $request->input('inspector'),
+            protectiveConductorResistanceOhm: $request->input('protective_conductor_resistance_ohm'),
+            insulationResistanceMohm: $request->input('insulation_resistance_mohm'),
+            protectiveConductorCurrentMa: $request->input('protective_conductor_current_ma'),
+            touchCurrentMa: $request->input('touch_current_ma'),
             notes: $request->input('notes'),
         );
 
@@ -117,6 +121,10 @@ final class ElectricalInspectionController
             validityYears: $request->input('validity_years'),
             passed: $request->input('passed') !== null,
             inspector: $request->input('inspector'),
+            protectiveConductorResistanceOhm: $request->input('protective_conductor_resistance_ohm'),
+            insulationResistanceMohm: $request->input('insulation_resistance_mohm'),
+            protectiveConductorCurrentMa: $request->input('protective_conductor_current_ma'),
+            touchCurrentMa: $request->input('touch_current_ma'),
             notes: $request->input('notes'),
         );
 

@@ -85,7 +85,7 @@ $availabilityStatusMeta = [
             <?php endif; ?>
             <?php if ($article->requiresElectricalInspection): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700">
-                    <?= e(t('articles.show.electrical_inspection_badge')) ?>
+                    <?= e(t('articles.show.electrical_inspection_badge')) ?><?= $article->protectionClass !== null ? ' · ' . e($article->protectionClass->value) : '' ?>
                 </span>
             <?php endif; ?>
             <?php if ($article->is19Inch): ?>

@@ -8,6 +8,7 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\Article;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Article\ProtectionClass;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
@@ -50,6 +51,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
             installDepthCm: $command->is19Inch ? self::normalizeInstallDepth($command->installDepthCm) : null,
             purchasePrice: Money::normalize($command->purchasePrice) ?: null,
             requiresElectricalInspection: $command->requiresElectricalInspection,
+            protectionClass: $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null,
             hasFirmware: $command->hasFirmware,
             isBillable: $command->isBillable,
             isActive: true,
@@ -110,7 +112,16 @@ final class CreateArticleHandler implements CommandHandlerInterface
             }
         }
 
+        if ($command->requiresElectricalInspection && self::normalizeProtectionClass($command->protectionClass) === null) {
+            $errors['protectionClass'] = 'Bitte eine gültige Schutzklasse auswählen.';
+        }
+
         return $errors;
+    }
+
+    private static function normalizeProtectionClass(?string $raw): ?ProtectionClass
+    {
+        return $raw !== null ? ProtectionClass::tryFrom($raw) : null;
     }
 
     /** Höheneinheiten (HE): positive Ganzzahl, sonst null (= ungültig/leer). */

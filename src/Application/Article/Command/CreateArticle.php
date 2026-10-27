@@ -19,6 +19,7 @@ final class CreateArticle implements CommandInterface
         public readonly ?string $dimensions,
         public readonly ?string $purchasePrice = null,
         public readonly bool $requiresElectricalInspection = false,
+        public readonly ?string $protectionClass = null,
         public readonly bool $isBillable = true,
         public readonly ?string $dailyRentalPrice = null,
         public readonly bool $is19Inch = false,

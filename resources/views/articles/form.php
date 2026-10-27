@@ -6,6 +6,7 @@
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
 
+use App\Domain\Article\ProtectionClass;
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
@@ -19,6 +20,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
 $requiresElectricalInspection = array_key_exists('requires_electrical_inspection', $old)
     ? (bool) $old['requires_electrical_inspection']
     : ($article?->requiresElectricalInspection ?? false);
+$protectionClassValue = $val('protection_class', $article?->protectionClass?->value);
 // Neue Artikel sind standardmäßig abrechenbar; nur wer bewusst das Häkchen
 // entfernt (z. B. für Zubehör wie Kabel), bekommt is_billable = false.
 $isBillable = array_key_exists('is_billable', $old)
@@ -146,7 +148,7 @@ $hasFirmware = array_key_exists('has_firmware', $old)
 
     <div class="flex flex-wrap items-center gap-6">
         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-            <input type="checkbox" name="requires_electrical_inspection" value="1" <?= $requiresElectricalInspection ? 'checked' : '' ?>>
+            <input type="checkbox" id="requires_electrical_inspection" name="requires_electrical_inspection" value="1" <?= $requiresElectricalInspection ? 'checked' : '' ?>>
             <?= e(t('articles.form.electrical_inspection_checkbox')) ?>
         </label>
 
@@ -154,6 +156,18 @@ $hasFirmware = array_key_exists('has_firmware', $old)
             <input type="checkbox" id="is_19_inch" name="is_19_inch" value="1" <?= $is19Inch ? 'checked' : '' ?>>
             <?= e(t('articles.form.is_19_inch_checkbox')) ?>
         </label>
+    </div>
+
+    <div id="protection_class_field" class="max-w-xs <?= $requiresElectricalInspection ? '' : 'hidden' ?>">
+        <label for="protection_class" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.protection_class')) ?></label>
+        <select id="protection_class" name="protection_class"
+                class="mt-1 w-full rounded-md border <?= isset($errors['protectionClass']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <option value=""><?= e(t('articles.form.protection_class_placeholder')) ?></option>
+            <?php foreach (ProtectionClass::all() as $pcOption): ?>
+                <option value="<?= e($pcOption->value) ?>" <?= $protectionClassValue === $pcOption->value ? 'selected' : '' ?>><?= e($pcOption->label()) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <?php if (isset($errors['protectionClass'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['protectionClass']) ?></p><?php endif; ?>
     </div>
 
     <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-2 <?= $is19Inch ? '' : 'hidden' ?>">
@@ -235,6 +249,18 @@ $hasFirmware = array_key_exists('has_firmware', $old)
 
         function sync() {
             fields.classList.toggle('hidden', !checkbox.checked);
+        }
+
+        checkbox.addEventListener('change', sync);
+        sync();
+    })();
+
+    (function () {
+        var checkbox = document.getElementById('requires_electrical_inspection');
+        var field = document.getElementById('protection_class_field');
+
+        function sync() {
+            field.classList.toggle('hidden', !checkbox.checked);
         }
 
         checkbox.addEventListener('change', sync);

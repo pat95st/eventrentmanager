@@ -14,6 +14,10 @@ final class UpdateElectricalInspection implements CommandInterface
         public readonly ?string $validityYears,
         public readonly bool $passed,
         public readonly ?string $inspector,
+        public readonly ?string $protectiveConductorResistanceOhm,
+        public readonly ?string $insulationResistanceMohm,
+        public readonly ?string $protectiveConductorCurrentMa,
+        public readonly ?string $touchCurrentMa,
         public readonly ?string $notes,
     ) {
     }

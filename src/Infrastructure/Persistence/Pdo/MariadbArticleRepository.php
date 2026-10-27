@@ -7,6 +7,7 @@ namespace App\Infrastructure\Persistence\Pdo;
 use App\Domain\Article\Article;
 use App\Domain\Article\ArticleImage;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Article\ProtectionClass;
 use DateTimeImmutable;
 use PDO;
 
@@ -20,15 +21,16 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO articles
-                (id, name, manufacturer_id, prefix, category_id, description, weight_value, weight_unit, dimensions, is_19_inch, height_units, install_depth_cm, purchase_price, requires_electrical_inspection, has_firmware, is_billable, is_active, daily_rental_price, created_at, updated_at)
+                (id, name, manufacturer_id, prefix, category_id, description, weight_value, weight_unit, dimensions, is_19_inch, height_units, install_depth_cm, purchase_price, requires_electrical_inspection, protection_class, has_firmware, is_billable, is_active, daily_rental_price, created_at, updated_at)
              VALUES
-                (:id, :name, :manufacturer_id, :prefix, :category_id, :description, :weight_value, :weight_unit, :dimensions, :is_19_inch, :height_units, :install_depth_cm, :purchase_price, :requires_electrical_inspection, :has_firmware, :is_billable, :is_active, :daily_rental_price, :created_at, :updated_at)
+                (:id, :name, :manufacturer_id, :prefix, :category_id, :description, :weight_value, :weight_unit, :dimensions, :is_19_inch, :height_units, :install_depth_cm, :purchase_price, :requires_electrical_inspection, :protection_class, :has_firmware, :is_billable, :is_active, :daily_rental_price, :created_at, :updated_at)
              ON DUPLICATE KEY UPDATE
                 name = :name2, manufacturer_id = :manufacturer_id2, prefix = :prefix2, category_id = :category_id2,
                 description = :description2, weight_value = :weight_value2, weight_unit = :weight_unit2,
                 dimensions = :dimensions2, is_19_inch = :is_19_inch2, height_units = :height_units2,
                 install_depth_cm = :install_depth_cm2, purchase_price = :purchase_price2,
-                requires_electrical_inspection = :requires_electrical_inspection2, has_firmware = :has_firmware2,
+                requires_electrical_inspection = :requires_electrical_inspection2, protection_class = :protection_class2,
+                has_firmware = :has_firmware2,
                 is_billable = :is_billable2, is_active = :is_active2, daily_rental_price = :daily_rental_price2, updated_at = :updated_at2'
         );
 
@@ -47,6 +49,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             'install_depth_cm' => $article->installDepthCm,
             'purchase_price' => $article->purchasePrice,
             'requires_electrical_inspection' => $article->requiresElectricalInspection ? 1 : 0,
+            'protection_class' => $article->protectionClass?->value,
             'has_firmware' => $article->hasFirmware ? 1 : 0,
             'is_billable' => $article->isBillable ? 1 : 0,
             'is_active' => $article->isActive ? 1 : 0,
@@ -66,6 +69,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             'install_depth_cm2' => $article->installDepthCm,
             'purchase_price2' => $article->purchasePrice,
             'requires_electrical_inspection2' => $article->requiresElectricalInspection ? 1 : 0,
+            'protection_class2' => $article->protectionClass?->value,
             'has_firmware2' => $article->hasFirmware ? 1 : 0,
             'is_billable2' => $article->isBillable ? 1 : 0,
             'is_active2' => $article->isActive ? 1 : 0,
@@ -306,6 +310,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             installDepthCm: $row['install_depth_cm'],
             purchasePrice: $row['purchase_price'],
             requiresElectricalInspection: (bool) $row['requires_electrical_inspection'],
+            protectionClass: $row['protection_class'] !== null ? ProtectionClass::from($row['protection_class']) : null,
             hasFirmware: (bool) $row['has_firmware'],
             isBillable: (bool) $row['is_billable'],
             isActive: (bool) $row['is_active'],

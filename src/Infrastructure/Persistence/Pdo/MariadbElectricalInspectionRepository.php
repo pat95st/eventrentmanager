@@ -19,11 +19,15 @@ final class MariadbElectricalInspectionRepository implements ElectricalInspectio
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO electrical_inspections
-                (id, inventory_number_id, inspected_at, validity_years, passed, inspector, notes, created_at, updated_at)
+                (id, inventory_number_id, inspected_at, validity_years, passed, protective_conductor_resistance_ohm, insulation_resistance_mohm, protective_conductor_current_ma, touch_current_ma, inspector, notes, created_at, updated_at)
              VALUES
-                (:id, :inventory_number_id, :inspected_at, :validity_years, :passed, :inspector, :notes, :created_at, :updated_at)
+                (:id, :inventory_number_id, :inspected_at, :validity_years, :passed, :protective_conductor_resistance_ohm, :insulation_resistance_mohm, :protective_conductor_current_ma, :touch_current_ma, :inspector, :notes, :created_at, :updated_at)
              ON DUPLICATE KEY UPDATE
                 inspected_at = :inspected_at2, validity_years = :validity_years2, passed = :passed2,
+                protective_conductor_resistance_ohm = :protective_conductor_resistance_ohm2,
+                insulation_resistance_mohm = :insulation_resistance_mohm2,
+                protective_conductor_current_ma = :protective_conductor_current_ma2,
+                touch_current_ma = :touch_current_ma2,
                 inspector = :inspector2, notes = :notes2, updated_at = :updated_at2'
         );
 
@@ -33,6 +37,10 @@ final class MariadbElectricalInspectionRepository implements ElectricalInspectio
             'inspected_at' => $inspection->inspectedAt->format('Y-m-d'),
             'validity_years' => $inspection->validityYears,
             'passed' => (int) $inspection->passed,
+            'protective_conductor_resistance_ohm' => $inspection->protectiveConductorResistanceOhm,
+            'insulation_resistance_mohm' => $inspection->insulationResistanceMohm,
+            'protective_conductor_current_ma' => $inspection->protectiveConductorCurrentMa,
+            'touch_current_ma' => $inspection->touchCurrentMa,
             'inspector' => $inspection->inspector,
             'notes' => $inspection->notes,
             'created_at' => $inspection->createdAt->format('Y-m-d H:i:s'),
@@ -40,6 +48,10 @@ final class MariadbElectricalInspectionRepository implements ElectricalInspectio
             'inspected_at2' => $inspection->inspectedAt->format('Y-m-d'),
             'validity_years2' => $inspection->validityYears,
             'passed2' => (int) $inspection->passed,
+            'protective_conductor_resistance_ohm2' => $inspection->protectiveConductorResistanceOhm,
+            'insulation_resistance_mohm2' => $inspection->insulationResistanceMohm,
+            'protective_conductor_current_ma2' => $inspection->protectiveConductorCurrentMa,
+            'touch_current_ma2' => $inspection->touchCurrentMa,
             'inspector2' => $inspection->inspector,
             'notes2' => $inspection->notes,
             'updated_at2' => $inspection->updatedAt->format('Y-m-d H:i:s'),
@@ -101,6 +113,10 @@ final class MariadbElectricalInspectionRepository implements ElectricalInspectio
             validityYears: (int) $row['validity_years'],
             passed: (bool) $row['passed'],
             inspector: $row['inspector'],
+            protectiveConductorResistanceOhm: $row['protective_conductor_resistance_ohm'],
+            insulationResistanceMohm: $row['insulation_resistance_mohm'],
+            protectiveConductorCurrentMa: $row['protective_conductor_current_ma'],
+            touchCurrentMa: $row['touch_current_ma'],
             notes: $row['notes'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),

@@ -127,7 +127,12 @@ final class EmailOfferPdfHandler implements CommandHandlerInterface
         return [
             'customer_name' => $customerName,
             'location_line' => $locationLine,
-            'date_range' => $offer->startDate->format('d.m.Y') . ' - ' . $offer->endDate->format('d.m.Y'),
+            // Zeitraum optional (siehe Migration 102) — ohne Zeitraum bleibt
+            // die im Vorlagentext fest enthaltene Beschriftung "Zeitraum:"
+            // stehen, der Wert wird dann als "nicht festgelegt" ausgegeben.
+            'date_range' => $offer->startDate !== null && $offer->endDate !== null
+                ? $offer->startDate->format('d.m.Y') . ' - ' . $offer->endDate->format('d.m.Y')
+                : 'nicht festgelegt',
             'valid_until_line' => $validUntilLine,
             'note_html' => $noteHtml,
         ];

@@ -287,7 +287,11 @@ final class OrderConfirmationPdfGenerator
             $lines[] = 'Ort: ' . $orderConfirmation->eventLocation;
         }
 
-        $lines[] = 'Zeitraum: ' . $orderConfirmation->startDate->format('d.m.Y') . ' - ' . $orderConfirmation->endDate->format('d.m.Y');
+        // Siehe InvoicePdfGenerator für die identische Begründung (Zeitraum
+        // optional seit Migration 102).
+        if ($orderConfirmation->startDate !== null && $orderConfirmation->endDate !== null) {
+            $lines[] = 'Zeitraum: ' . $orderConfirmation->startDate->format('d.m.Y') . ' - ' . $orderConfirmation->endDate->format('d.m.Y');
+        }
 
         if ($orderConfirmation->note !== null && trim($orderConfirmation->note) !== '') {
             $lines[] = 'Anmerkung: ' . $orderConfirmation->note;

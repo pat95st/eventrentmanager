@@ -39,7 +39,9 @@ $rows = $detail->orderedRows();
             <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= e($status->badgeClasses()) ?>"><?= e($status->label()) ?></span>
             · <?= $detail->customer !== null ? e($detail->customer->displayName()) : e(t('invoices.show.no_customer')) ?>
             · <?= $invoice->eventLocation !== null ? e($invoice->eventLocation) : e(t('invoices.show.no_location')) ?>
-            · <?= e($invoice->startDate->format('d.m.Y')) ?> – <?= e($invoice->endDate->format('d.m.Y')) ?>
+            · <?= $invoice->startDate !== null && $invoice->endDate !== null
+                ? e($invoice->startDate->format('d.m.Y')) . ' – ' . e($invoice->endDate->format('d.m.Y'))
+                : e(t('invoices.show.no_period')) ?>
         </p>
         <?php if ($invoice->invoiceDate !== null): ?>
             <p class="text-xs text-slate-400 dark:text-slate-500">

@@ -45,7 +45,9 @@ use function App\Infrastructure\Http\t;
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $offer->eventLocation !== null ? e($offer->eventLocation) : '–' ?></td>
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
-                            <?= e($offer->startDate->format('d.m.Y')) ?> – <?= e($offer->endDate->format('d.m.Y')) ?>
+                            <?= $offer->startDate !== null && $offer->endDate !== null
+                                ? e($offer->startDate->format('d.m.Y')) . ' – ' . e($offer->endDate->format('d.m.Y'))
+                                : '–' ?>
                         </td>
                         <td class="break-words px-4 py-3">
                             <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= e($offer->status->badgeClasses()) ?>"><?= e($offer->status->label()) ?></span>

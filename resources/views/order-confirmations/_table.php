@@ -43,7 +43,9 @@ use function App\Infrastructure\Http\t;
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $orderConfirmation->eventLocation !== null ? e($orderConfirmation->eventLocation) : '–' ?></td>
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
-                            <?= e($orderConfirmation->startDate->format('d.m.Y')) ?> – <?= e($orderConfirmation->endDate->format('d.m.Y')) ?>
+                            <?= $orderConfirmation->startDate !== null && $orderConfirmation->endDate !== null
+                                ? e($orderConfirmation->startDate->format('d.m.Y')) . ' – ' . e($orderConfirmation->endDate->format('d.m.Y'))
+                                : '–' ?>
                         </td>
                         <td class="break-words px-4 py-3">
                             <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= e($orderConfirmation->status->badgeClasses()) ?>"><?= e($orderConfirmation->status->label()) ?></span>

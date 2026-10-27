@@ -24,7 +24,9 @@ $rows = $detail->orderedRows();
             <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= e($status->badgeClasses()) ?>"><?= e($status->label()) ?></span>
             · <?= $detail->customer !== null ? e($detail->customer->displayName()) : e(t('order_confirmations.show.no_customer')) ?>
             · <?= $orderConfirmation->eventLocation !== null ? e($orderConfirmation->eventLocation) : e(t('order_confirmations.show.no_location')) ?>
-            · <?= e($orderConfirmation->startDate->format('d.m.Y')) ?> – <?= e($orderConfirmation->endDate->format('d.m.Y')) ?>
+            · <?= $orderConfirmation->startDate !== null && $orderConfirmation->endDate !== null
+                ? e($orderConfirmation->startDate->format('d.m.Y')) . ' – ' . e($orderConfirmation->endDate->format('d.m.Y'))
+                : e(t('order_confirmations.show.no_period')) ?>
         </p>
         <?php if ($orderConfirmation->sourceOfferId !== null): ?>
             <p class="text-xs text-slate-400 dark:text-slate-500">

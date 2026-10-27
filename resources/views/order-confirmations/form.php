@@ -188,15 +188,15 @@ foreach ($articles as $article) {
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
             <label for="start_date" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.start_date')) ?></label>
-            <input type="date" id="start_date" name="start_date" required
-                   value="<?= e($val('start_date', $orderConfirmation?->startDate->format('Y-m-d'))) ?>"
+            <input type="date" id="start_date" name="start_date"
+                   value="<?= e($val('start_date', $orderConfirmation?->startDate?->format('Y-m-d'))) ?>"
                    class="mt-1 w-full rounded-md border <?= isset($errors['startDate']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
             <?php if (isset($errors['startDate'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['startDate']) ?></p><?php endif; ?>
         </div>
         <div>
             <label for="end_date" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.end_date')) ?></label>
-            <input type="date" id="end_date" name="end_date" required
-                   value="<?= e($val('end_date', $orderConfirmation?->endDate->format('Y-m-d'))) ?>"
+            <input type="date" id="end_date" name="end_date"
+                   value="<?= e($val('end_date', $orderConfirmation?->endDate?->format('Y-m-d'))) ?>"
                    class="mt-1 w-full rounded-md border <?= isset($errors['endDate']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
             <?php if (isset($errors['endDate'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['endDate']) ?></p><?php endif; ?>
         </div>

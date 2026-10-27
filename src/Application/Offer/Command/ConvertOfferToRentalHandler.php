@@ -60,6 +60,13 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
             throw new ValidationException(['customerId' => 'Für die Umwandlung muss dem Angebot zuerst ein Kunde zugeordnet werden.']);
         }
 
+        // Eine Veranstaltung (Rental) braucht zwingend einen Zeitraum — anders
+        // als das Angebot selbst, das seit Migration 102 auch ohne Zeitraum
+        // bestehen kann (siehe Offer::$startDate/$endDate).
+        if ($offer->startDate === null || $offer->endDate === null) {
+            throw new ValidationException(['startDate' => 'Für die Umwandlung muss dem Angebot zuerst ein Zeitraum (Start-/Enddatum) zugeordnet werden.']);
+        }
+
         $items = $this->offers->findItemsByOffer($offer->id);
 
         foreach ($items as $item) {

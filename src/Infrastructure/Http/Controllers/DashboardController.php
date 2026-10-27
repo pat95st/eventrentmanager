@@ -114,7 +114,10 @@ final class DashboardController
         foreach ($result->items as $offer) {
             $items[] = [
                 'label' => $this->customerLabel($offer->customerId, $offer->eventLocation),
-                'sub' => $offer->offerNumber . ' · ' . $offer->startDate->format('d.m.Y') . ' – ' . $offer->endDate->format('d.m.Y'),
+                // Zeitraum optional (siehe Migration 102).
+                'sub' => $offer->offerNumber . ' · ' . ($offer->startDate !== null && $offer->endDate !== null
+                    ? $offer->startDate->format('d.m.Y') . ' – ' . $offer->endDate->format('d.m.Y')
+                    : 'kein Zeitraum'),
                 'href' => '/angebote/' . $offer->id,
             ];
         }
@@ -130,7 +133,10 @@ final class DashboardController
         foreach ($result->items as $orderConfirmation) {
             $items[] = [
                 'label' => $this->customerLabel($orderConfirmation->customerId, $orderConfirmation->eventLocation),
-                'sub' => $orderConfirmation->orderConfirmationNumber . ' · ' . $orderConfirmation->startDate->format('d.m.Y') . ' – ' . $orderConfirmation->endDate->format('d.m.Y'),
+                // Zeitraum optional (siehe Migration 102).
+                'sub' => $orderConfirmation->orderConfirmationNumber . ' · ' . ($orderConfirmation->startDate !== null && $orderConfirmation->endDate !== null
+                    ? $orderConfirmation->startDate->format('d.m.Y') . ' – ' . $orderConfirmation->endDate->format('d.m.Y')
+                    : 'kein Zeitraum'),
                 'href' => '/auftragsbestaetigungen/' . $orderConfirmation->id,
             ];
         }

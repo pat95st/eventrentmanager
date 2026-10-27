@@ -435,7 +435,11 @@ final class OfferPdfGenerator
             $lines[] = 'Ort: ' . $offer->eventLocation;
         }
 
-        $lines[] = 'Zeitraum: ' . $offer->startDate->format('d.m.Y') . ' - ' . $offer->endDate->format('d.m.Y');
+        // Siehe InvoicePdfGenerator für die identische Begründung (Zeitraum
+        // optional seit Migration 102).
+        if ($offer->startDate !== null && $offer->endDate !== null) {
+            $lines[] = 'Zeitraum: ' . $offer->startDate->format('d.m.Y') . ' - ' . $offer->endDate->format('d.m.Y');
+        }
 
         if ($offer->note !== null && trim($offer->note) !== '') {
             $lines[] = 'Anmerkung: ' . $offer->note;

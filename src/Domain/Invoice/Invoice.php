@@ -31,8 +31,12 @@ final class Invoice
         public ?string $customerId,
         public ?string $eventLocation,
         public ?string $venueId,
-        public DateTimeImmutable $startDate,
-        public DateTimeImmutable $endDate,
+        // Zeitraum der Veranstaltung — optional, damit Rechnungen auch
+        // UNABHÄNGIG von einer konkreten Veranstaltung erstellt werden
+        // können (siehe Migration 102). Fehlt der Zeitraum, nimmt
+        // deploymentDaysForPricing() 1 Tag an.
+        public ?DateTimeImmutable $startDate,
+        public ?DateTimeImmutable $endDate,
         public ?string $invoiceNumber,
         public ?DateTimeImmutable $invoiceDate,
         public ?DateTimeImmutable $dueDate,
@@ -102,16 +106,24 @@ final class Invoice
     ) {
     }
 
-    /** Maximal mögliche Einsatztage für den gewählten Zeitraum (inklusive Start- und Endtag), analog Offer::maxDeploymentDays(). */
-    public function maxDeploymentDays(): int
+    /**
+     * Maximal mögliche Einsatztage für den gewählten Zeitraum (inklusive
+     * Start- und Endtag), analog Offer::maxDeploymentDays(). Liefert NULL,
+     * wenn kein Zeitraum hinterlegt ist (siehe Migration 102).
+     */
+    public function maxDeploymentDays(): ?int
     {
+        if ($this->startDate === null || $this->endDate === null) {
+            return null;
+        }
+
         return $this->startDate->diff($this->endDate)->days + 1;
     }
 
     /** Anzahl Einsatztage für die Preisstaffelung (RentalPriceCalculator kennt nur Stufen 1 bis 7). */
     public function deploymentDaysForPricing(): int
     {
-        return min(max($this->maxDeploymentDays(), 1), 7);
+        return min(max($this->maxDeploymentDays() ?? 1, 1), 7);
     }
 
     public function isEditable(): bool

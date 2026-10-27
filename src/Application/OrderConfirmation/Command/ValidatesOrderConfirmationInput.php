@@ -55,14 +55,31 @@ trait ValidatesOrderConfirmationInput
 
         [$resolvedLocation, $venueId] = VenueResolver::resolve($venues, $eventLocation);
 
-        $startDate = $this->parseOrderConfirmationDate($rawStartDate);
-        if ($startDate === null) {
-            $errors['startDate'] = 'Bitte ein gültiges Startdatum angeben.';
+        // Der Zeitraum ist optional (siehe Migration 102) — siehe
+        // ValidatesOfferInput::validateOfferInput() für die identische
+        // Begründung (eine Auftragsbestätigung kann auch unabhängig von
+        // einer konkreten Veranstaltung erstellt werden).
+        $rawStartDateTrimmed = trim($rawStartDate);
+        $rawEndDateTrimmed = trim($rawEndDate);
+
+        $startDate = null;
+        if ($rawStartDateTrimmed !== '') {
+            $startDate = $this->parseOrderConfirmationDate($rawStartDateTrimmed);
+            if ($startDate === null) {
+                $errors['startDate'] = 'Bitte ein gültiges Startdatum angeben.';
+            }
         }
 
-        $endDate = $this->parseOrderConfirmationDate($rawEndDate);
-        if ($endDate === null) {
-            $errors['endDate'] = 'Bitte ein gültiges Enddatum angeben.';
+        $endDate = null;
+        if ($rawEndDateTrimmed !== '') {
+            $endDate = $this->parseOrderConfirmationDate($rawEndDateTrimmed);
+            if ($endDate === null) {
+                $errors['endDate'] = 'Bitte ein gültiges Enddatum angeben.';
+            }
+        }
+
+        if (($rawStartDateTrimmed === '') !== ($rawEndDateTrimmed === '')) {
+            $errors['endDate'] = 'Bitte entweder Start- und Enddatum beide angeben oder beide leer lassen.';
         }
 
         if ($startDate !== null && $endDate !== null && $endDate < $startDate) {

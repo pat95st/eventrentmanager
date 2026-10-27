@@ -72,14 +72,31 @@ trait ValidatesOfferInput
 
         [$resolvedLocation, $venueId] = VenueResolver::resolve($venues, $eventLocation);
 
-        $startDate = $this->parseOfferDate($rawStartDate);
-        if ($startDate === null) {
-            $errors['startDate'] = 'Bitte ein gültiges Startdatum angeben.';
+        // Der Zeitraum ist optional (siehe Migration 102) — ein Angebot kann
+        // auch unabhängig von einer konkreten Veranstaltung erstellt werden.
+        // Nur wenn EINES der beiden Felder gefüllt ist, muss es gültig sein
+        // bzw. müssen beide zusammen einen schlüssigen Zeitraum ergeben.
+        $rawStartDateTrimmed = trim($rawStartDate);
+        $rawEndDateTrimmed = trim($rawEndDate);
+
+        $startDate = null;
+        if ($rawStartDateTrimmed !== '') {
+            $startDate = $this->parseOfferDate($rawStartDateTrimmed);
+            if ($startDate === null) {
+                $errors['startDate'] = 'Bitte ein gültiges Startdatum angeben.';
+            }
         }
 
-        $endDate = $this->parseOfferDate($rawEndDate);
-        if ($endDate === null) {
-            $errors['endDate'] = 'Bitte ein gültiges Enddatum angeben.';
+        $endDate = null;
+        if ($rawEndDateTrimmed !== '') {
+            $endDate = $this->parseOfferDate($rawEndDateTrimmed);
+            if ($endDate === null) {
+                $errors['endDate'] = 'Bitte ein gültiges Enddatum angeben.';
+            }
+        }
+
+        if (($rawStartDateTrimmed === '') !== ($rawEndDateTrimmed === '')) {
+            $errors['endDate'] = 'Bitte entweder Start- und Enddatum beide angeben oder beide leer lassen.';
         }
 
         if ($startDate !== null && $endDate !== null && $endDate < $startDate) {

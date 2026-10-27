@@ -24,8 +24,11 @@ final class OrderConfirmation
         public ?string $customerId,
         public ?string $eventLocation,
         public ?string $venueId,
-        public DateTimeImmutable $startDate,
-        public DateTimeImmutable $endDate,
+        // Zeitraum der Veranstaltung — optional, damit Auftragsbestätigungen
+        // auch UNABHÄNGIG von einer konkreten Veranstaltung erstellt werden
+        // können (siehe Migration 102).
+        public ?DateTimeImmutable $startDate,
+        public ?DateTimeImmutable $endDate,
         public OrderConfirmationStatus $status,
         public ?string $note,
         public readonly ?string $sourceOfferId,

@@ -135,7 +135,11 @@ final class EmailInvoicePdfHandler implements CommandHandlerInterface
         return [
             'customer_name' => $customerName,
             'location_line' => $locationLine,
-            'date_range' => $invoice->startDate->format('d.m.Y') . ' - ' . $invoice->endDate->format('d.m.Y'),
+            // Siehe EmailOfferPdfHandler für die identische Begründung
+            // (Zeitraum optional seit Migration 102).
+            'date_range' => $invoice->startDate !== null && $invoice->endDate !== null
+                ? $invoice->startDate->format('d.m.Y') . ' - ' . $invoice->endDate->format('d.m.Y')
+                : 'nicht festgelegt',
             'invoice_number' => e($invoice->invoiceNumber ?? ''),
             'due_date' => $invoice->dueDate !== null ? e($invoice->dueDate->format('d.m.Y')) : '',
             'note_html' => $noteHtml,

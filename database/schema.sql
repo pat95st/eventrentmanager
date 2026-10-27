@@ -1340,8 +1340,8 @@ CREATE TABLE offers (
     customer_id           CHAR(36)      NULL,
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
-    start_date            DATE          NOT NULL,
-    end_date              DATE          NOT NULL,
+    start_date            DATE          NULL, -- optional seit Migration 102
+    end_date              DATE          NULL, -- optional seit Migration 102
     valid_until           DATE          NULL,
     status                VARCHAR(20)   NOT NULL DEFAULT 'draft',
     note                  TEXT          NULL,
@@ -1452,8 +1452,8 @@ CREATE TABLE order_confirmations (
     customer_id           CHAR(36)      NULL,
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
-    start_date            DATE          NOT NULL,
-    end_date              DATE          NOT NULL,
+    start_date            DATE          NULL, -- optional seit Migration 102
+    end_date              DATE          NULL, -- optional seit Migration 102
     status                VARCHAR(20)   NOT NULL DEFAULT 'draft',
     note                  TEXT          NULL,
     -- Freitext ("Schlusstext"), erscheint NACH der Positionsliste/Summe
@@ -1527,8 +1527,8 @@ CREATE TABLE invoices (
     customer_id         CHAR(36)       NULL,
     event_location      VARCHAR(255)   NULL,
     venue_id            CHAR(36)       NULL,
-    start_date          DATE           NOT NULL,
-    end_date            DATE           NOT NULL,
+    start_date          DATE           NULL, -- optional seit Migration 102
+    end_date            DATE           NULL, -- optional seit Migration 102
     invoice_number      VARCHAR(32)    NULL UNIQUE,
     invoice_date        DATE           NULL,
     due_date             DATE          NULL,

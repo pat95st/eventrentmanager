@@ -107,14 +107,31 @@ trait ValidatesInvoiceInput
 
         [$resolvedLocation, $venueId] = VenueResolver::resolve($venues, $eventLocation);
 
-        $startDate = $this->parseInvoiceDate($rawStartDate);
-        if ($startDate === null) {
-            $errors['startDate'] = 'Bitte ein gültiges Startdatum angeben.';
+        // Der Zeitraum ist optional (siehe Migration 102) — siehe
+        // ValidatesOfferInput::validateOfferInput() für die identische
+        // Begründung (eine Rechnung kann auch unabhängig von einer
+        // konkreten Veranstaltung erstellt werden).
+        $rawStartDateTrimmed = trim($rawStartDate);
+        $rawEndDateTrimmed = trim($rawEndDate);
+
+        $startDate = null;
+        if ($rawStartDateTrimmed !== '') {
+            $startDate = $this->parseInvoiceDate($rawStartDateTrimmed);
+            if ($startDate === null) {
+                $errors['startDate'] = 'Bitte ein gültiges Startdatum angeben.';
+            }
         }
 
-        $endDate = $this->parseInvoiceDate($rawEndDate);
-        if ($endDate === null) {
-            $errors['endDate'] = 'Bitte ein gültiges Enddatum angeben.';
+        $endDate = null;
+        if ($rawEndDateTrimmed !== '') {
+            $endDate = $this->parseInvoiceDate($rawEndDateTrimmed);
+            if ($endDate === null) {
+                $errors['endDate'] = 'Bitte ein gültiges Enddatum angeben.';
+            }
+        }
+
+        if (($rawStartDateTrimmed === '') !== ($rawEndDateTrimmed === '')) {
+            $errors['endDate'] = 'Bitte entweder Start- und Enddatum beide angeben oder beide leer lassen.';
         }
 
         if ($startDate !== null && $endDate !== null && $endDate < $startDate) {

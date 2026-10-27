@@ -25,8 +25,12 @@ final class Offer
         public ?string $customerId,
         public ?string $eventLocation,
         public ?string $venueId,
-        public DateTimeImmutable $startDate,
-        public DateTimeImmutable $endDate,
+        // Zeitraum der Veranstaltung — optional, damit Angebote auch
+        // UNABHÄNGIG von einer konkreten Veranstaltung erstellt werden
+        // können (siehe Migration 102). Fehlt der Zeitraum, nimmt
+        // deploymentDaysForPricing() 1 Tag an.
+        public ?DateTimeImmutable $startDate,
+        public ?DateTimeImmutable $endDate,
         public ?DateTimeImmutable $validUntil,
         public OfferStatus $status,
         public ?string $note,
@@ -48,9 +52,18 @@ final class Offer
     ) {
     }
 
-    /** Maximal mögliche Einsatztage für den gewählten Zeitraum (inklusive Start- und Endtag), analog Rental::maxDeploymentDays(). */
-    public function maxDeploymentDays(): int
+    /**
+     * Maximal mögliche Einsatztage für den gewählten Zeitraum (inklusive
+     * Start- und Endtag), analog Rental::maxDeploymentDays(). Liefert NULL,
+     * wenn kein Zeitraum hinterlegt ist (siehe Migration 102) — Aufrufer,
+     * die trotzdem einen Tageswert brauchen, nutzen deploymentDaysForPricing().
+     */
+    public function maxDeploymentDays(): ?int
     {
+        if ($this->startDate === null || $this->endDate === null) {
+            return null;
+        }
+
         return $this->startDate->diff($this->endDate)->days + 1;
     }
 
@@ -61,7 +74,7 @@ final class Offer
      */
     public function deploymentDaysForPricing(): int
     {
-        return min(max($this->maxDeploymentDays(), 1), 7);
+        return min(max($this->maxDeploymentDays() ?? 1, 1), 7);
     }
 
     /**

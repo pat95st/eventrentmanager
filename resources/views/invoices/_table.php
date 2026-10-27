@@ -47,7 +47,9 @@ use function App\Infrastructure\Http\t;
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $invoice->eventLocation !== null ? e($invoice->eventLocation) : '–' ?></td>
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
-                            <?= e($invoice->startDate->format('d.m.Y')) ?> – <?= e($invoice->endDate->format('d.m.Y')) ?>
+                            <?= $invoice->startDate !== null && $invoice->endDate !== null
+                                ? e($invoice->startDate->format('d.m.Y')) . ' – ' . e($invoice->endDate->format('d.m.Y'))
+                                : '–' ?>
                         </td>
                         <td class="break-words px-4 py-3">
                             <span class="rounded-full px-2 py-0.5 text-xs font-medium <?= e($invoice->status->badgeClasses()) ?>"><?= e($invoice->status->label()) ?></span>

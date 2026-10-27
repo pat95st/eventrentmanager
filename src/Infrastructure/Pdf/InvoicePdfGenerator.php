@@ -505,7 +505,11 @@ final class InvoicePdfGenerator
             $lines[] = 'Ort: ' . $invoice->eventLocation;
         }
 
-        $lines[] = 'Leistungszeitraum: ' . $invoice->startDate->format('d.m.Y') . ' - ' . $invoice->endDate->format('d.m.Y');
+        // Zeitraum optional (siehe Migration 102) — ohne Zeitraum entfällt
+        // die Zeile ganz, statt einen leeren/irreführenden Wert zu drucken.
+        if ($invoice->startDate !== null && $invoice->endDate !== null) {
+            $lines[] = 'Leistungszeitraum: ' . $invoice->startDate->format('d.m.Y') . ' - ' . $invoice->endDate->format('d.m.Y');
+        }
 
         if ($invoice->buyerReference !== null && trim($invoice->buyerReference) !== '') {
             $lines[] = 'Ihre Referenz: ' . $invoice->buyerReference;

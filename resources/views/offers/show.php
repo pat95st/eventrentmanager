@@ -32,7 +32,9 @@ $rows = $detail->orderedRows();
             <?php endif; ?>
             · <?= $detail->customer !== null ? e($detail->customer->displayName()) : e(t('offers.show.no_customer')) ?>
             · <?= $offer->eventLocation !== null ? e($offer->eventLocation) : e(t('offers.show.no_location')) ?>
-            · <?= e($offer->startDate->format('d.m.Y')) ?> – <?= e($offer->endDate->format('d.m.Y')) ?>
+            · <?= $offer->startDate !== null && $offer->endDate !== null
+                ? e($offer->startDate->format('d.m.Y')) . ' – ' . e($offer->endDate->format('d.m.Y'))
+                : e(t('offers.show.no_period')) ?>
         </p>
         <?php if ($offer->validUntil !== null): ?>
             <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.show.valid_until', ['date' => $offer->validUntil->format('d.m.Y')])) ?></p>

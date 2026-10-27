@@ -18,7 +18,8 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.display.subtitle')) ?></p>
 </div>
 
-<div class="max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="flex flex-col gap-6 lg:flex-row lg:items-start">
+<div class="max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 lg:flex-1">
     <?php if (isset($errors['pageSize'])): ?>
         <div class="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300">
             <?= e($errors['pageSize']) ?>
@@ -77,7 +78,15 @@ use function App\Infrastructure\Http\t;
     </form>
 </div>
 
-<div class="mt-6 max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<?php
+    // Farbmodus + Farbschema: bilden gemeinsam eine zweite Spalte rechts
+    // neben der Darstellungs-Form (siehe öffnendes flex-Wrapper-Div oben),
+    // damit sie auf breiteren Bildschirmen nicht unnötig weit unter der
+    // ersten Box stehen. Auf schmalen Bildschirmen (< lg) bleiben alle drei
+    // Boxen wie bisher einfach untereinander gestapelt.
+?>
+<div class="flex flex-col gap-6 lg:flex-1 lg:max-w-lg">
+<div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <label for="theme_toggle_select" class="block text-xs font-medium text-slate-600 dark:text-slate-400">
         <?= e(t('profile.display.theme_label')) ?>
     </label>
@@ -100,7 +109,7 @@ use function App\Infrastructure\Http\t;
     // eine eigene Seite (/einstellungen), jetzt hier bei den übrigen
     // Darstellungs-Einstellungen zusammengefasst.
 ?>
-<div class="mt-6 max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.color_scheme.title')) ?></h2>
     <p class="mb-4 text-xs text-slate-400 dark:text-slate-500">
         <?= e(t('settings.color_scheme.hint')) ?>
@@ -144,6 +153,8 @@ use function App\Infrastructure\Http\t;
             </span>
         </button>
     </div>
+</div>
+</div>
 </div>
 
 <div id="push-section" class="mt-6 max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"

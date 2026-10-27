@@ -414,6 +414,55 @@ $canDocuments = $canRentals;
         <?php endif; ?>
       </nav>
 
+      <?php if ($currentUser !== null): ?>
+      <!-- Mobiles Einstellungsmenü: ab < lg (1024px) sichtbar, ganz rechts
+           im Header (ml-auto, da desktop-nav/Zahnrad+Benutzermenü hier auf
+           Mobilgeräten "hidden" sind und daher keinen Platz einnehmen).
+           Öffnet per Klick (statt Hover wie beim Desktop-Benutzermenü
+           weiter unten — Touch-Geräte kennen kein ":hover") dieselben
+           Profil-/Admin-Links als eigenes Menü, statt sie wie bisher nur
+           eingebettet im langen Hamburger-Hauptmenü zu zeigen. Nutzt
+           <details data-dropdown>, also dieselbe Dropdown-Mechanik (inkl.
+           Positionierung/Escape/Klick-außerhalb) wie die Zeilen-Aktions-
+           Menüs in Tabellen (siehe JS weiter unten). -->
+      <details class="relative ml-auto lg:hidden" data-dropdown>
+        <summary
+          aria-label="<?= e(t('nav.user_menu')) ?>"
+          class="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 <?= $activeNav === 'profile' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : '' ?>"
+        >
+          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M11.078 2.25c-.917-1-2.239-1-3.156 0l-.026.028a1.415 1.415 0 01-1.298.398 1.415 1.415 0 00-1.644 1.055 1.415 1.415 0 01-1.043 1.043 1.415 1.415 0 00-1.055 1.644c.11.494-.036 1.01-.398 1.374l-.02.02c-1 .917-1 2.239 0 3.156l.026.026c.362.363.508.88.398 1.374a1.415 1.415 0 001.055 1.644c.494.11.933.49 1.043 1.043a1.415 1.415 0 001.644 1.055c.494-.11 1.01.036 1.374.398l.02.02c.917 1 2.239 1 3.156 0l.026-.026a1.415 1.415 0 011.374-.398 1.415 1.415 0 001.644-1.055 1.415 1.415 0 011.043-1.043 1.415 1.415 0 001.055-1.644 1.415 1.415 0 01.398-1.374l.02-.02c1-.917 1-2.239 0-3.156l-.026-.026a1.415 1.415 0 01-.398-1.374 1.415 1.415 0 00-1.055-1.644 1.415 1.415 0 01-1.043-1.043 1.415 1.415 0 00-1.644-1.055 1.415 1.415 0 01-1.374-.398l-.02-.02zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+          </svg>
+          <span class="sr-only"><?= e(t('nav.user_menu')) ?></span>
+        </summary>
+        <div data-dropdown-menu class="absolute right-0 top-full z-20 mt-1 w-60 rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+          <div class="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
+          <a href="/profil/sicherheit" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
+          <a href="/profil/sitzungen" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
+          <a href="/profil/caldav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.caldav')) ?></a>
+          <a href="/profil/carddav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.carddav')) ?></a>
+          <a href="/profil/passwort" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.change_password')) ?></a>
+          <a href="/profil/darstellung" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
+          <a href="/profil/dashboard" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.dashboard_settings')) ?></a>
+          <?php if ($isAdmin): ?>
+            <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+            <a href="/berichte/einnahmen-ausgaben" class="block px-3 py-2 text-sm <?= $activeNav === 'reports' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.reports')) ?></a>
+            <a href="/berichte/umsatzprognose" class="block px-3 py-2 text-sm <?= $activeNav === 'revenue-forecast' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.revenue_forecast')) ?></a>
+            <a href="/benutzer" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.user_management')) ?></a>
+            <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+            <?php foreach (\App\Infrastructure\Http\SettingsSections::groups() as $navSettingsGroupMobileIcon): ?>
+              <a href="<?= e($navSettingsGroupMobileIcon['pages'][0]['href']) ?>" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e($navSettingsGroupMobileIcon['label']) ?></a>
+            <?php endforeach; ?>
+          <?php endif; ?>
+          <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+          <form method="post" action="/logout">
+            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+            <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800"><?= e(t('nav.logout')) ?></button>
+          </form>
+        </div>
+      </details>
+      <?php endif; ?>
+
       <!-- Zahnrad-Icon und Benutzermenü: erst ab lg (1024px) sichtbar — in
            der mobilen Ansicht stehen dieselben Ziele bereits vollständig im
            Hamburger-Menü (#mobile-nav weiter unten), eine zusätzliche,
@@ -570,31 +619,14 @@ $canDocuments = $canRentals;
       ><?= e(t('nav.vouchers')) ?></a>
       <?php endif; ?>
 
-      <?php if ($currentUser !== null): ?>
-        <div class="my-2 border-t border-slate-200 dark:border-slate-800"></div>
-        <div class="truncate px-3 pb-1.5 text-xs text-slate-400 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
-        <a href="/profil/sicherheit" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
-        <a href="/profil/sitzungen" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
-        <a href="/profil/caldav" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.caldav')) ?></a>
-        <a href="/profil/carddav" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.carddav')) ?></a>
-        <a href="/profil/passwort" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.change_password')) ?></a>
-        <a href="/profil/darstellung" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
-        <a href="/profil/dashboard" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.dashboard_settings')) ?></a>
-        <?php if ($isAdmin): ?>
-          <a href="/berichte/einnahmen-ausgaben" class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'reports' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.reports')) ?></a>
-          <a href="/berichte/umsatzprognose" class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'revenue-forecast' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.revenue_forecast')) ?></a>
-          <a href="/benutzer" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.user_management')) ?></a>
-
-          <div class="my-1 border-t border-slate-200 dark:border-slate-800"></div>
-          <?php foreach (\App\Infrastructure\Http\SettingsSections::groups() as $navSettingsGroupMobile): ?>
-            <a href="<?= e($navSettingsGroupMobile['pages'][0]['href']) ?>" class="block rounded-md px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><?= e($navSettingsGroupMobile['label']) ?></a>
-          <?php endforeach; ?>
-        <?php endif; ?>
-        <form method="post" action="/logout" class="px-3 pt-1">
-          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-          <button type="submit" class="block w-full rounded-md py-2 text-left text-sm font-medium text-red-600 hover:bg-slate-100 dark:text-red-400 dark:hover:bg-slate-800"><?= e(t('nav.logout')) ?></button>
-        </form>
-      <?php endif; ?>
+      <?php
+        // Profil-/Admin-Links (Sicherheit, Sitzungen, CalDAV, Passwort,
+        // Darstellung, Abmelden, …) stehen hier bewusst NICHT mehr —
+        // dafür gibt es jetzt das eigene mobile Einstellungsmenü über den
+        // Zahnrad-Button oben rechts im Header (siehe dortiger Kommentar),
+        // damit dieses Hauptmenü auf die eigentliche App-Navigation
+        // fokussiert bleibt.
+      ?>
     </nav>
   </header>
 
@@ -918,10 +950,22 @@ $canDocuments = $canRentals;
           return;
         }
 
+        // Server-Hinweis respektieren: bei den letzten Zeilen einer Tabelle
+        // rendert die PHP-Seite das Menü bereits mit "bottom-full" (siehe
+        // z. B. users/_table.php: $openUpward = $index >= count($users) - 2),
+        // weil dort unterhalb der Tabelle direkt die Paginierung folgt. Wird
+        // hier ausschließlich nach freiem Platz bis zum Fensterrand
+        // entschieden, ignoriert das diesen Hinweis — bei kurzen Tabellen
+        // ist unterhalb der Paginierung zwar noch jede Menge Platz im
+        // Browserfenster frei, das Menü würde dann aber nach unten direkt
+        // über die Paginierung hinweg geöffnet. Der Server-Hinweis hat daher
+        // Vorrang; die Platzberechnung bleibt als Fallback für Zeilen ohne
+        // Hinweis, die trotzdem zu nah am tatsächlichen Fensterrand liegen.
+        var serverHintUpward = menu.classList.contains('bottom-full');
         var summaryRect = summary.getBoundingClientRect();
         var menuRect = menu.getBoundingClientRect();
         var spaceBelow = window.innerHeight - summaryRect.bottom;
-        var openUpward = spaceBelow < menuRect.height && summaryRect.top > spaceBelow;
+        var openUpward = serverHintUpward || (spaceBelow < menuRect.height && summaryRect.top > spaceBelow);
 
         menu.style.position = 'fixed';
         if (openUpward) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
+use App\Application\Customer\Query\ListCustomers;
 use App\Application\Query\QueryBus;
 use App\Application\Voucher\Command\CreateVoucher;
 use App\Application\Voucher\Command\DeleteVoucher;
@@ -17,6 +18,7 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Voucher\Voucher;
 use App\Domain\Voucher\VoucherRedemptionRepositoryInterface;
+use App\Domain\Voucher\VoucherRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Pagination;
@@ -30,6 +32,7 @@ final class VoucherController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
         private readonly VoucherRedemptionRepositoryInterface $redemptions,
+        private readonly VoucherRepositoryInterface $vouchers,
     ) {
     }
 
@@ -43,10 +46,12 @@ final class VoucherController
 
         $voucherIds = array_map(static fn (Voucher $voucher) => $voucher->id, $result->items);
         $redemptionsByVoucherId = $this->redemptions->findByVoucherIds($voucherIds);
+        $customerIdsByVoucherId = $this->vouchers->findCustomerIdsForVouchers($voucherIds);
 
         $viewData = [
             'vouchers' => $result->items,
             'redemptionsByVoucherId' => $redemptionsByVoucherId,
+            'customerIdsByVoucherId' => $customerIdsByVoucherId,
             'search' => $search ?? '',
             'page' => $result->page,
             'pageSize' => $result->pageSize,
@@ -74,6 +79,8 @@ final class VoucherController
 
     public function store(Request $request): void
     {
+        $quantity = max(1, (int) ($request->input('quantity', '1') ?? '1'));
+
         $command = new CreateVoucher(
             codePrefix: $this->nullIfEmpty($request->input('code_prefix')),
             discountType: $request->input('discount_type', '') ?? '',
@@ -81,11 +88,14 @@ final class VoucherController
             validFrom: $this->nullIfEmpty($request->input('valid_from')),
             validUntil: $this->nullIfEmpty($request->input('valid_until')),
             notes: $this->nullIfEmpty($request->input('notes')),
+            customerIds: $request->inputArray('customer_ids'),
+            quantity: $quantity,
         );
 
         try {
-            $this->commands->dispatch($command);
-            Flash::success('Gutschein wurde angelegt.');
+            $createdIds = $this->commands->dispatch($command);
+            $count = is_array($createdIds) ? count($createdIds) : 1;
+            Flash::success($count > 1 ? "{$count} Gutscheine wurden angelegt." : 'Gutschein wurde angelegt.');
             Response::redirect('/gutscheine');
         } catch (ValidationException $e) {
             $this->renderForm(null, $e->errors(), $this->oldFromCreateCommand($command));
@@ -118,6 +128,7 @@ final class VoucherController
             validFrom: $this->nullIfEmpty($request->input('valid_from')),
             validUntil: $this->nullIfEmpty($request->input('valid_until')),
             notes: $this->nullIfEmpty($request->input('notes')),
+            customerIds: $request->inputArray('customer_ids'),
         );
 
         try {
@@ -150,6 +161,14 @@ final class VoucherController
     private function renderForm(?Voucher $voucher, array $errors, array $old, ?string $editingId = null): void
     {
         $settings = $this->queries->ask(new GetVoucherSettings());
+        $customers = $this->queries->ask(new ListCustomers())->items;
+
+        // Vorbelegung der Checkbox-Auswahl: nach einem Validierungsfehler aus
+        // $old (siehe oldFrom*Command()), sonst beim Bearbeiten aus der
+        // bereits gespeicherten Einschränkung, sonst leer (neuer Gutschein).
+        $selectedCustomerIds = array_key_exists('customer_ids', $old)
+            ? $old['customer_ids']
+            : ($voucher !== null ? $this->vouchers->findCustomerIds($voucher->id) : []);
 
         echo View::page('vouchers/form', [
             'voucher' => $voucher,
@@ -157,6 +176,8 @@ final class VoucherController
             'old' => $old,
             'editingId' => $editingId,
             'defaultValidityDays' => $settings->defaultValidityDays,
+            'customers' => $customers,
+            'selectedCustomerIds' => $selectedCustomerIds,
         ], activeNav: 'vouchers', title: $voucher !== null ? 'Gutschein bearbeiten' : 'Neuer Gutschein');
     }
 
@@ -170,6 +191,8 @@ final class VoucherController
             'valid_from' => $command->validFrom,
             'valid_until' => $command->validUntil,
             'notes' => $command->notes,
+            'customer_ids' => $command->customerIds,
+            'quantity' => (string) $command->quantity,
         ];
     }
 
@@ -182,6 +205,7 @@ final class VoucherController
             'valid_from' => $command->validFrom,
             'valid_until' => $command->validUntil,
             'notes' => $command->notes,
+            'customer_ids' => $command->customerIds,
         ];
     }
 

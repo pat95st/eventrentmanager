@@ -114,6 +114,50 @@ final class MariadbVoucherRepository implements VoucherRepositoryInterface
         $stmt->execute(['id' => $id]);
     }
 
+    public function replaceCustomerRestriction(string $voucherId, array $customerIds): void
+    {
+        // DELETE + INSERT statt eines Diffs: die Kundenauswahl ist eine
+        // überschaubare Liste (siehe vouchers/form.php), ein Diff würde hier
+        // keinen relevanten Vorteil bringen, aber Code-Komplexität hinzufügen.
+        $delete = $this->pdo->prepare('DELETE FROM voucher_customers WHERE voucher_id = :voucher_id');
+        $delete->execute(['voucher_id' => $voucherId]);
+
+        if ($customerIds === []) {
+            return;
+        }
+
+        $insert = $this->pdo->prepare('INSERT INTO voucher_customers (voucher_id, customer_id) VALUES (:voucher_id, :customer_id)');
+        foreach (array_unique($customerIds) as $customerId) {
+            $insert->execute(['voucher_id' => $voucherId, 'customer_id' => $customerId]);
+        }
+    }
+
+    public function findCustomerIds(string $voucherId): array
+    {
+        $stmt = $this->pdo->prepare('SELECT customer_id FROM voucher_customers WHERE voucher_id = :voucher_id');
+        $stmt->execute(['voucher_id' => $voucherId]);
+
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    public function findCustomerIdsForVouchers(array $voucherIds): array
+    {
+        if ($voucherIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($voucherIds), '?'));
+        $stmt = $this->pdo->prepare("SELECT voucher_id, customer_id FROM voucher_customers WHERE voucher_id IN ({$placeholders})");
+        $stmt->execute(array_values($voucherIds));
+
+        $result = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $result[$row['voucher_id']][] = $row['customer_id'];
+        }
+
+        return $result;
+    }
+
     private function hydrate(array $row): Voucher
     {
         return new Voucher(

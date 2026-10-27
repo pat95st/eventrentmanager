@@ -627,10 +627,10 @@ $commandBus->register(\App\Application\Vehicle\Command\RemoveRentalVehicleLoad::
 $commandBus->register(\App\Application\Vehicle\Command\SetRentalVehicleTow::class, new \App\Application\Vehicle\Command\SetRentalVehicleTowHandler($rentalRepository, $vehicleRepository, $rentalVehicleTowRepository));
 $commandBus->register(\App\Application\Vehicle\Command\RemoveRentalVehicleTow::class, new \App\Application\Vehicle\Command\RemoveRentalVehicleTowHandler($rentalVehicleTowRepository));
 
-$commandBus->register(\App\Application\Voucher\Command\CreateVoucher::class, new \App\Application\Voucher\Command\CreateVoucherHandler($voucherRepository, $voucherSettingsRepository));
-$commandBus->register(\App\Application\Voucher\Command\UpdateVoucher::class, new \App\Application\Voucher\Command\UpdateVoucherHandler($voucherRepository));
+$commandBus->register(\App\Application\Voucher\Command\CreateVoucher::class, new \App\Application\Voucher\Command\CreateVoucherHandler($voucherRepository, $voucherSettingsRepository, $customerRepository));
+$commandBus->register(\App\Application\Voucher\Command\UpdateVoucher::class, new \App\Application\Voucher\Command\UpdateVoucherHandler($voucherRepository, $customerRepository));
 $commandBus->register(\App\Application\Voucher\Command\DeleteVoucher::class, new \App\Application\Voucher\Command\DeleteVoucherHandler($voucherRepository, $voucherRedemptionRepository));
-$commandBus->register(\App\Application\Voucher\Command\RedeemVoucherForRental::class, new \App\Application\Voucher\Command\RedeemVoucherForRentalHandler($voucherRepository, $voucherRedemptionRepository));
+$commandBus->register(\App\Application\Voucher\Command\RedeemVoucherForRental::class, new \App\Application\Voucher\Command\RedeemVoucherForRentalHandler($voucherRepository, $voucherRedemptionRepository, $rentalRepository));
 $commandBus->register(\App\Application\Voucher\Command\RemoveVoucherRedemption::class, new \App\Application\Voucher\Command\RemoveVoucherRedemptionHandler($voucherRedemptionRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateVoucherSettings::class, new \App\Application\Settings\Command\UpdateVoucherSettingsHandler($voucherSettingsRepository));
 
@@ -1289,7 +1289,7 @@ $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgra
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
-$voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository);
+$voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository, $voucherRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
 $offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository);
 $orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator);

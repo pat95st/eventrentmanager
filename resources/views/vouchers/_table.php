@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Domain\Voucher\Voucher[] $vouchers */
 /** @var array<string, \App\Domain\Voucher\VoucherRedemption> $redemptionsByVoucherId */
+/** @var array<string, string[]> $customerIdsByVoucherId Nur Gutscheine MIT Kunden-Einschränkung */
 
 use App\Domain\Voucher\VoucherDiscountType;
 use function App\Infrastructure\Http\e;
@@ -44,6 +45,10 @@ $discountLabel = static function (\App\Domain\Voucher\Voucher $voucher): string 
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
                         <td class="break-words px-4 py-3 font-mono font-medium text-slate-900 dark:text-slate-100">
                             <?= e($voucher->code) ?>
+                            <?php $restrictedCount = count($customerIdsByVoucherId[$voucher->id] ?? []); ?>
+                            <?php if ($restrictedCount > 0): ?>
+                                <span class="mt-0.5 block font-sans text-[11px] font-normal text-slate-400 dark:text-slate-500">Nur <?= $restrictedCount ?> Kunde<?= $restrictedCount === 1 ? '' : 'n' ?></span>
+                            <?php endif; ?>
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
                             <?= e($discountLabel($voucher)) ?>

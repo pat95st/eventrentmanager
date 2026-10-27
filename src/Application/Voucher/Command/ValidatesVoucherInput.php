@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Voucher\Command;
 
+use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Voucher\VoucherDiscountType;
 use App\Shared\Money;
 use DateTimeImmutable;
@@ -91,5 +92,30 @@ trait ValidatesVoucherInput
             'validUntil' => $validUntil,
             'notes' => $notes,
         ]];
+    }
+
+    /**
+     * Bereinigt die aus der Checkbox-Liste (siehe vouchers/form.php)
+     * übermittelten Kunden-IDs: doppelte entfernt, und gegen den
+     * tatsächlichen Kundenbestand geprüft — eine zwischenzeitlich gelöschte
+     * oder nie existierende ID wird stillschweigend verworfen (statt eines
+     * Validierungsfehlers), da ein manipuliertes/veraltetes Formular hier
+     * keinen harten Fehler rechtfertigt und die restliche Auswahl trotzdem
+     * gespeichert werden soll.
+     *
+     * @param string[] $rawCustomerIds
+     * @return string[] Leer = keine Einschränkung (für alle Kunden gültig).
+     */
+    private function sanitizeVoucherCustomerIds(array $rawCustomerIds, CustomerRepositoryInterface $customers): array
+    {
+        $unique = array_values(array_unique(array_filter(
+            $rawCustomerIds,
+            static fn ($id) => is_string($id) && trim($id) !== '',
+        )));
+
+        return array_values(array_filter(
+            $unique,
+            static fn (string $id) => $customers->findById($id) !== null,
+        ));
     }
 }

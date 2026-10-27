@@ -2007,6 +2007,19 @@ CREATE TABLE vouchers (
     INDEX idx_vouchers_valid_until (valid_until)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- Siehe Migration 099: optionale Einschränkung eines Gutscheins auf eine
+-- Auswahl von Kunden (kein Eintrag = für alle Kunden gültig).
+CREATE TABLE voucher_customers (
+    voucher_id  CHAR(36) NOT NULL,
+    customer_id CHAR(36) NOT NULL,
+    PRIMARY KEY (voucher_id, customer_id),
+    CONSTRAINT fk_voucher_customers_voucher
+        FOREIGN KEY (voucher_id) REFERENCES vouchers (id) ON DELETE CASCADE,
+    CONSTRAINT fk_voucher_customers_customer
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
+    INDEX idx_voucher_customers_customer (customer_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE voucher_redemptions (
     id              CHAR(36)   NOT NULL PRIMARY KEY,
     voucher_id      CHAR(36)   NOT NULL,

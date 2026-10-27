@@ -6,6 +6,7 @@ namespace App\Application\Voucher\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Voucher\VoucherRepositoryInterface;
@@ -13,14 +14,17 @@ use DateTimeImmutable;
 
 /**
  * Der Code selbst ist nach dem Anlegen NICHT mehr editierbar (analog zu
- * Inventurnummern) — nur Rabatt-Art/-Wert, Gültigkeitszeitraum und Notiz.
+ * Inventurnummern) — nur Rabatt-Art/-Wert, Gültigkeitszeitraum, Notiz und
+ * die Kunden-Einschränkung.
  */
 final class UpdateVoucherHandler implements CommandHandlerInterface
 {
     use ValidatesVoucherInput;
 
-    public function __construct(private readonly VoucherRepositoryInterface $vouchers)
-    {
+    public function __construct(
+        private readonly VoucherRepositoryInterface $vouchers,
+        private readonly CustomerRepositoryInterface $customers,
+    ) {
     }
 
     public function handle(CommandInterface $command): mixed
@@ -59,6 +63,7 @@ final class UpdateVoucherHandler implements CommandHandlerInterface
         $voucher->updatedAt = new DateTimeImmutable();
 
         $this->vouchers->save($voucher);
+        $this->vouchers->replaceCustomerRestriction($voucher->id, $this->sanitizeVoucherCustomerIds($command->customerIds, $this->customers));
 
         return null;
     }

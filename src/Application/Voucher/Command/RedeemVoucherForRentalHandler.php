@@ -6,7 +6,9 @@ namespace App\Application\Voucher\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Voucher\VoucherRedemption;
 use App\Domain\Voucher\VoucherRedemptionRepositoryInterface;
 use App\Domain\Voucher\VoucherRepositoryInterface;
@@ -26,6 +28,7 @@ final class RedeemVoucherForRentalHandler implements CommandHandlerInterface
     public function __construct(
         private readonly VoucherRepositoryInterface $vouchers,
         private readonly VoucherRedemptionRepositoryInterface $redemptions,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -54,6 +57,21 @@ final class RedeemVoucherForRentalHandler implements CommandHandlerInterface
         $now = new DateTimeImmutable();
         if (!$voucher->isValidNow($now)) {
             throw new ValidationException(['code' => 'Dieser Gutschein ist aktuell nicht gültig (abgelaufen oder noch nicht gültig).']);
+        }
+
+        // Kunden-Einschränkung (siehe Migration 099): ein leeres Ergebnis
+        // bedeutet "für alle Kunden gültig", nur ein NICHT-leeres Ergebnis
+        // schränkt tatsächlich ein.
+        $restrictedCustomerIds = $this->vouchers->findCustomerIds($voucher->id);
+        if ($restrictedCustomerIds !== []) {
+            $rental = $this->rentals->findById($command->rentalId);
+            if ($rental === null) {
+                throw new NotFoundException("Veranstaltung \"{$command->rentalId}\" wurde nicht gefunden.");
+            }
+
+            if (!in_array($rental->customerId, $restrictedCustomerIds, true)) {
+                throw new ValidationException(['code' => 'Dieser Gutschein ist nur für bestimmte Kunden gültig und kann für diese Veranstaltung nicht eingelöst werden.']);
+            }
         }
 
         $this->redemptions->save(new VoucherRedemption(

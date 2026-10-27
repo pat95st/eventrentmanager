@@ -528,6 +528,20 @@ CREATE TABLE customers (
     CONSTRAINT uq_customers_customer_number UNIQUE (customer_number)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- Siehe Migration 100: mehrere Ansprechpartner je Kunde.
+CREATE TABLE customer_contacts (
+    id          CHAR(36)     NOT NULL PRIMARY KEY,
+    customer_id CHAR(36)     NOT NULL,
+    name        VARCHAR(255) NOT NULL,
+    job_title   VARCHAR(150) NULL,
+    phone       VARCHAR(50)  NULL,
+    email       VARCHAR(255) NULL,
+    sort_order  INT          NOT NULL DEFAULT 0,
+    CONSTRAINT fk_customer_contacts_customer
+        FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
+    INDEX idx_customer_contacts_customer (customer_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------------
 -- Cases (Flightcase-Modelle, analog zu Artikeln: eigener Hersteller aus
 -- derselben Herstellerliste, eigenes Präfix für Inventurnummern der

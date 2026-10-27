@@ -6,17 +6,22 @@ namespace App\Application\Customer\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Customer\CustomerContact;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Shared\Uuid;
 use DateTimeImmutable;
 
 final class UpdateCustomerHandler implements CommandHandlerInterface
 {
     use ValidatesCustomerInput;
 
-    public function __construct(private readonly CustomerRepositoryInterface $customers)
-    {
+    public function __construct(
+        private readonly CustomerRepositoryInterface $customers,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
+    ) {
     }
 
     public function handle(CommandInterface $command): mixed
@@ -42,6 +47,9 @@ final class UpdateCustomerHandler implements CommandHandlerInterface
             $command->telegramChatId,
         );
 
+        [$contactErrors, $contacts] = $this->validateCustomerContacts($command->contacts);
+        $errors = array_merge($errors, $contactErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -60,6 +68,20 @@ final class UpdateCustomerHandler implements CommandHandlerInterface
         $customer->updatedAt = new DateTimeImmutable();
 
         $this->customers->save($customer);
+
+        $this->customerContacts->replaceForCustomer($customer->id, array_map(
+            static fn (array $contact, int $index) => new CustomerContact(
+                id: Uuid::v4(),
+                customerId: $customer->id,
+                name: $contact['name'],
+                jobTitle: $contact['jobTitle'],
+                phone: $contact['phone'],
+                email: $contact['email'],
+                sortOrder: $index,
+            ),
+            $contacts,
+            array_keys($contacts),
+        ));
 
         return null;
     }

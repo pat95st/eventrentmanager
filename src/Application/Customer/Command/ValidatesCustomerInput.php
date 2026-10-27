@@ -116,4 +116,46 @@ trait ValidatesCustomerInput
             'telegramChatId' => $telegramChatId,
         ]];
     }
+
+    /**
+     * Validiert die Ansprechpartner-Zeilen (siehe customers/form.php,
+     * repeatable-row-Muster analog zu den Arbeitszeit-Positionen in
+     * offers/form.php). Eine Zeile ohne Namen wird stillschweigend
+     * übersprungen (= eine leere Vorlagenzeile, die nicht abgeschickt
+     * wurde), statt einen Validierungsfehler auszulösen.
+     *
+     * @param array<int, array{name?: string, job_title?: string, phone?: string, email?: string}> $rawContacts
+     * @return array{0: array<string, string>, 1: array<int, array{name: string, jobTitle: ?string, phone: ?string, email: ?string}>}
+     */
+    private function validateCustomerContacts(array $rawContacts): array
+    {
+        $errors = [];
+        $contacts = [];
+
+        foreach ($rawContacts as $rawContact) {
+            $name = trim((string) ($rawContact['name'] ?? ''));
+            if ($name === '') {
+                continue;
+            }
+
+            $jobTitle = trim((string) ($rawContact['job_title'] ?? ''));
+            $phone = trim((string) ($rawContact['phone'] ?? ''));
+            $email = trim((string) ($rawContact['email'] ?? ''));
+
+            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                $errors['contacts'] = 'Bitte bei jedem Ansprechpartner eine gültige E-Mail-Adresse angeben (oder das Feld leer lassen).';
+
+                continue;
+            }
+
+            $contacts[] = [
+                'name' => $name,
+                'jobTitle' => $jobTitle !== '' ? $jobTitle : null,
+                'phone' => $phone !== '' ? $phone : null,
+                'email' => $email !== '' ? $email : null,
+            ];
+        }
+
+        return [$errors, $contacts];
+    }
 }

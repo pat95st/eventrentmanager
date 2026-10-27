@@ -3,6 +3,7 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
+/** @var array<int, array{name: string, job_title: string, phone: string, email: string}> $contacts */
 
 use App\Domain\Customer\CustomerType;
 use function App\Infrastructure\Http\e;
@@ -48,6 +49,20 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
                value="<?= e($val('company_name', $customer?->companyName)) ?>"
                class="mt-1 w-full rounded-md border <?= isset($errors['companyName']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
         <?php if (isset($errors['companyName'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['companyName']) ?></p><?php endif; ?>
+    </div>
+
+    <div id="company-contacts-section" class="border-t border-slate-100 pt-4 dark:border-slate-800 <?= $selectedType === CustomerType::Geschaeftlich->value ? '' : 'hidden' ?>">
+        <div class="mb-2 flex items-center justify-between">
+            <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.contacts_heading')) ?></label>
+                <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"><?= e(t('customers.form.contacts_hint')) ?></p>
+            </div>
+            <button type="button" id="contact-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                + <?= e(t('customers.form.contact_add')) ?>
+            </button>
+        </div>
+        <?php if (isset($errors['contacts'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['contacts']) ?></p><?php endif; ?>
+        <div id="contacts" class="space-y-2"></div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -134,24 +149,84 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
     </div>
 </form>
 
+<template id="contact-row-template">
+    <div class="contact-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div class="min-w-[160px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_name')) ?></label>
+            <input type="text" name="contact_name[]" class="contact-name mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <div class="min-w-[140px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_job_title')) ?></label>
+            <input type="text" name="contact_job_title[]" class="contact-job-title mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <div class="min-w-[130px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_phone')) ?></label>
+            <input type="text" name="contact_phone[]" class="contact-phone mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <div class="min-w-[160px] flex-1">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_email')) ?></label>
+            <input type="email" name="contact_email[]" class="contact-email mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+        </div>
+        <button type="button" class="contact-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+            <?= e(t('offers.form.item_remove')) ?>
+        </button>
+    </div>
+</template>
+
 <?php if ($customer !== null): ?>
     <?php require __DIR__ . '/_send-message-box.php'; ?>
 <?php endif; ?>
 
 <script>
-  // Firmenname wird nur bei Art "Geschäftlich" benötigt; Feld dementsprechend ein-/ausblenden.
+  // Firmenname UND Ansprechpartner-Liste werden nur bei Art "Geschäftlich"
+  // benötigt; beide Bereiche dementsprechend ein-/ausblenden.
   (function () {
     var radios = document.querySelectorAll('.customer-type-radio');
     var companyField = document.getElementById('company-name-field');
+    var contactsSection = document.getElementById('company-contacts-section');
 
     function sync() {
       var checked = document.querySelector('.customer-type-radio:checked');
       var isBusiness = checked && checked.value === '<?= e(CustomerType::Geschaeftlich->value) ?>';
       companyField.classList.toggle('hidden', !isBusiness);
+      if (contactsSection) { contactsSection.classList.toggle('hidden', !isBusiness); }
     }
 
     radios.forEach(function (radio) {
       radio.addEventListener('change', sync);
     });
+  })();
+
+  // Ansprechpartner-Zeilen: identisches repeatable-row-Muster wie die
+  // Arbeitszeit-Positionen in offers/form.php (Template + EXISTING_*-Array),
+  // hier ohne Selects/Berechnung, da nur freie Textfelder benötigt werden.
+  (function () {
+    var EXISTING_CONTACTS = <?= json_encode(array_values($contacts), JSON_THROW_ON_ERROR) ?>;
+
+    var container = document.getElementById('contacts');
+    var template = document.getElementById('contact-row-template');
+    var addButton = document.getElementById('contact-add');
+    if (!container || !template) { return; }
+
+    function addContactRow(data) {
+        var fragment = template.content.cloneNode(true);
+        var row = fragment.querySelector('.contact-row');
+
+        data = data || {};
+        if (data.name) { row.querySelector('.contact-name').value = data.name; }
+        if (data.job_title) { row.querySelector('.contact-job-title').value = data.job_title; }
+        if (data.phone) { row.querySelector('.contact-phone').value = data.phone; }
+        if (data.email) { row.querySelector('.contact-email').value = data.email; }
+
+        row.querySelector('.contact-remove').addEventListener('click', function () { row.remove(); });
+
+        container.appendChild(row);
+    }
+
+    if (addButton) {
+        addButton.addEventListener('click', function () { addContactRow(); });
+    }
+
+    EXISTING_CONTACTS.forEach(function (contact) { addContactRow(contact); });
   })();
 </script>

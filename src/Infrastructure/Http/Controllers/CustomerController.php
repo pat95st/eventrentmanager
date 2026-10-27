@@ -15,6 +15,7 @@ use App\Application\Messaging\Command\SendAdHocMessageToCustomer;
 use App\Application\Messaging\Query\GetMessagingSettings;
 use App\Application\Query\QueryBus;
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerType;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -34,6 +35,7 @@ final class CustomerController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -118,6 +120,7 @@ final class CustomerController
             phone: $this->nullIfEmpty($request->input('phone')),
             email: $this->nullIfEmpty($request->input('email')),
             telegramChatId: $this->nullIfEmpty($request->input('telegram_chat_id')),
+            contacts: $this->contactsFromRequest($request),
         );
 
         try {
@@ -184,6 +187,7 @@ final class CustomerController
             phone: $this->nullIfEmpty($request->input('phone')),
             email: $this->nullIfEmpty($request->input('email')),
             telegramChatId: $this->nullIfEmpty($request->input('telegram_chat_id')),
+            contacts: $this->contactsFromRequest($request),
         );
 
         try {
@@ -280,12 +284,31 @@ final class CustomerController
         $messagingSettings = $customer !== null ? $this->queries->ask(new GetMessagingSettings()) : null;
         assert($messagingSettings === null || $messagingSettings instanceof MessagingSettings);
 
+        // Vorbelegung der Ansprechpartner-Zeilen: nach einem Validierungsfehler
+        // aus $old (siehe oldFromCommand()), sonst beim Bearbeiten aus den
+        // bereits gespeicherten Ansprechpartnern, sonst leer (neuer Kunde).
+        // Beide Quellen werden auf dieselbe assoziative Array-Form gebracht
+        // (wie contactsFromRequest() sie liefert), damit customers/form.php
+        // nur EINE Form hydrieren muss.
+        $contacts = array_key_exists('contacts', $old)
+            ? $old['contacts']
+            : ($customer !== null ? array_map(
+                static fn (\App\Domain\Customer\CustomerContact $contact): array => [
+                    'name' => $contact->name,
+                    'job_title' => $contact->jobTitle ?? '',
+                    'phone' => $contact->phone ?? '',
+                    'email' => $contact->email ?? '',
+                ],
+                $this->customerContacts->findByCustomerId($customer->id),
+            ) : []);
+
         echo View::page('customers/form', [
             'customer' => $customer,
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
             'messagingSettings' => $messagingSettings,
+            'contacts' => $contacts,
         ], activeNav: 'customers', title: $customer !== null ? t('customers.edit') : t('customers.new'));
     }
 
@@ -304,7 +327,33 @@ final class CustomerController
             'phone' => $command->phone,
             'email' => $command->email,
             'telegram_chat_id' => $command->telegramChatId,
+            'contacts' => $command->contacts,
         ];
+    }
+
+    /** @return array<int, array{name: string, job_title: string, phone: string, email: string}> */
+    private function contactsFromRequest(Request $request): array
+    {
+        $names = $request->post['contact_name'] ?? [];
+        if (!is_array($names)) {
+            return [];
+        }
+
+        $jobTitles = $request->post['contact_job_title'] ?? [];
+        $phones = $request->post['contact_phone'] ?? [];
+        $emails = $request->post['contact_email'] ?? [];
+
+        $contacts = [];
+        foreach ($names as $index => $name) {
+            $contacts[] = [
+                'name' => (string) $name,
+                'job_title' => (string) ($jobTitles[$index] ?? ''),
+                'phone' => (string) ($phones[$index] ?? ''),
+                'email' => (string) ($emails[$index] ?? ''),
+            ];
+        }
+
+        return $contacts;
     }
 
     private function nullIfEmpty(?string $value): ?string

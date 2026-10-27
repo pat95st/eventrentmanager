@@ -413,6 +413,7 @@ $rmaPackagePhotoRepository = new MariadbRmaPackagePhotoRepository($pdo);
 $rmaReceiptRepository = new MariadbRmaReceiptRepository($pdo);
 $electricalInspectionRepository = new MariadbElectricalInspectionRepository($pdo);
 $customerRepository = new MariadbCustomerRepository($pdo);
+$customerContactRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCustomerContactRepository($pdo);
 $caseItemRepository = new MariadbCaseItemRepository($pdo);
 $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
 $caseContentItemRepository = new MariadbCaseContentItemRepository($pdo);
@@ -601,9 +602,9 @@ $commandBus->register(\App\Application\ElectricalInspection\Command\CreateElectr
 $commandBus->register(\App\Application\ElectricalInspection\Command\UpdateElectricalInspection::class, new UpdateElectricalInspectionHandler($electricalInspectionRepository));
 $commandBus->register(\App\Application\ElectricalInspection\Command\DeleteElectricalInspection::class, new DeleteElectricalInspectionHandler($electricalInspectionRepository));
 
-$commandBus->register(\App\Application\Customer\Command\CreateCustomer::class, new CreateCustomerHandler($customerRepository, $documentNumberSequence, $pdo));
+$commandBus->register(\App\Application\Customer\Command\CreateCustomer::class, new CreateCustomerHandler($customerRepository, $documentNumberSequence, $pdo, $customerContactRepository));
 $commandBus->register(\App\Application\Customer\Command\ImportCustomersFromCsv::class, new \App\Application\Customer\Command\ImportCustomersFromCsvHandler($customerRepository, $documentNumberSequence, $pdo));
-$commandBus->register(\App\Application\Customer\Command\UpdateCustomer::class, new UpdateCustomerHandler($customerRepository));
+$commandBus->register(\App\Application\Customer\Command\UpdateCustomer::class, new UpdateCustomerHandler($customerRepository, $customerContactRepository));
 $commandBus->register(\App\Application\Customer\Command\DeleteCustomer::class, new DeleteCustomerHandler($customerRepository));
 
 $commandBus->register(\App\Application\CaseItem\Command\CreateCaseItem::class, new CreateCaseItemHandler($caseItemRepository, $manufacturerRepository));
@@ -1201,7 +1202,7 @@ $articleController = new ArticleController($commandBus, $queryBus, $fileStorage,
 $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
 $electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);
-$customerController = new CustomerController($commandBus, $queryBus);
+$customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
 $caseController = new CaseController($commandBus, $queryBus);
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);

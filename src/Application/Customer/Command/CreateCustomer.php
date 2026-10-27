@@ -8,6 +8,7 @@ use App\Application\Command\CommandInterface;
 
 final class CreateCustomer implements CommandInterface
 {
+    /** @param array<int, array{name?: string, job_title?: string, phone?: string, email?: string}> $contacts */
     public function __construct(
         public readonly string $type,
         public readonly ?string $companyName,
@@ -20,6 +21,7 @@ final class CreateCustomer implements CommandInterface
         public readonly ?string $phone,
         public readonly ?string $email,
         public readonly ?string $telegramChatId = null,
+        public readonly array $contacts = [],
     ) {
     }
 }

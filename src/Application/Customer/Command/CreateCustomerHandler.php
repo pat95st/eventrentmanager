@@ -7,6 +7,8 @@ namespace App\Application\Customer\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerContact;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Numbering\NumberedDocumentType;
@@ -24,6 +26,7 @@ final class CreateCustomerHandler implements CommandHandlerInterface
         private readonly CustomerRepositoryInterface $customers,
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -44,6 +47,9 @@ final class CreateCustomerHandler implements CommandHandlerInterface
             $command->email,
             $command->telegramChatId,
         );
+
+        [$contactErrors, $contacts] = $this->validateCustomerContacts($command->contacts);
+        $errors = array_merge($errors, $contactErrors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -81,6 +87,20 @@ final class CreateCustomerHandler implements CommandHandlerInterface
             );
 
             $this->customers->save($customer);
+
+            $this->customerContacts->replaceForCustomer($customer->id, array_map(
+                static fn (array $contact, int $index) => new CustomerContact(
+                    id: Uuid::v4(),
+                    customerId: $customer->id,
+                    name: $contact['name'],
+                    jobTitle: $contact['jobTitle'],
+                    phone: $contact['phone'],
+                    email: $contact['email'],
+                    sortOrder: $index,
+                ),
+                $contacts,
+                array_keys($contacts),
+            ));
 
             $this->pdo->commit();
         } catch (Throwable $e) {

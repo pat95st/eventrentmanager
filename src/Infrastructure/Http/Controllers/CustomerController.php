@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Controllers;
 use App\Application\Command\CommandBus;
 use App\Application\Customer\Command\CreateCustomer;
 use App\Application\Customer\Command\DeleteCustomer;
+use App\Application\Customer\Command\ImportCustomersFromCsv;
 use App\Application\Customer\Command\UpdateCustomer;
 use App\Application\Customer\Query\GetCustomer;
 use App\Application\Customer\Query\ListCustomers;
@@ -19,6 +20,7 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Messaging\MessagingChannel;
 use App\Domain\Messaging\MessagingSettings;
+use App\Infrastructure\Csv\CustomerCsvTemplate;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Pagination;
@@ -208,6 +210,37 @@ final class CustomerController
         }
 
         Response::redirect('/kunden');
+    }
+
+    /** Zeigt das Formular für den CSV-Massenimport (siehe ImportCustomersFromCsvHandler). */
+    public function importForm(Request $request): void
+    {
+        echo View::page('customers/import', [
+            'errors' => [],
+        ], activeNav: 'customers', title: t('customers.import.title'));
+    }
+
+    /** Liefert die feste CSV-Spaltenvorlage zum Herunterladen (siehe CustomerCsvTemplate). */
+    public function importTemplate(Request $request): void
+    {
+        Response::download(CustomerCsvTemplate::buildTemplate(), 'Kunden-Vorlage.csv', 'text/csv; charset=UTF-8');
+    }
+
+    /** Verarbeitet die hochgeladene CSV-Datei (siehe ImportCustomersFromCsvHandler, "Alles oder nichts"). */
+    public function import(Request $request): void
+    {
+        try {
+            $count = $this->commands->dispatch(new ImportCustomersFromCsv(
+                uploadedFile: $request->file('file') ?? ['name' => '', 'type' => '', 'tmp_name' => '', 'error' => UPLOAD_ERR_NO_FILE, 'size' => 0],
+            ));
+
+            Flash::success($count === 1 ? t('customers.import.flash.saved_one') : t('customers.import.flash.saved_many', ['count' => $count]));
+            Response::redirect('/kunden');
+        } catch (ValidationException $e) {
+            echo View::page('customers/import', [
+                'errors' => $e->errors(),
+            ], activeNav: 'customers', title: t('customers.import.title'));
+        }
     }
 
     /** Verschickt eine freie Einzel-Nachricht an den Kunden über einen der drei Messenger (siehe SendAdHocMessageToCustomerHandler). */

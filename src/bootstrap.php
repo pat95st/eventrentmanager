@@ -602,6 +602,7 @@ $commandBus->register(\App\Application\ElectricalInspection\Command\UpdateElectr
 $commandBus->register(\App\Application\ElectricalInspection\Command\DeleteElectricalInspection::class, new DeleteElectricalInspectionHandler($electricalInspectionRepository));
 
 $commandBus->register(\App\Application\Customer\Command\CreateCustomer::class, new CreateCustomerHandler($customerRepository, $documentNumberSequence, $pdo));
+$commandBus->register(\App\Application\Customer\Command\ImportCustomersFromCsv::class, new \App\Application\Customer\Command\ImportCustomersFromCsvHandler($customerRepository, $documentNumberSequence, $pdo));
 $commandBus->register(\App\Application\Customer\Command\UpdateCustomer::class, new UpdateCustomerHandler($customerRepository));
 $commandBus->register(\App\Application\Customer\Command\DeleteCustomer::class, new DeleteCustomerHandler($customerRepository));
 
@@ -1575,6 +1576,9 @@ $router->get('/kunden', $auth->guard(Permission::Kundenverwaltung, [$customerCon
 $router->get('/kunden/suche', $auth->guard(null, [$customerController, 'search']));
 $router->get('/kunden/neu', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'create']));
 $router->post('/kunden', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'store']));
+$router->get('/kunden/import', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'importForm']));
+$router->get('/kunden/import/vorlage', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'importTemplate']));
+$router->post('/kunden/import', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'import']));
 $router->get('/kunden/{id}/bearbeiten', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'edit']));
 $router->post('/kunden/{id}', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'update']));
 $router->post('/kunden/{id}/loeschen', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'destroy']));

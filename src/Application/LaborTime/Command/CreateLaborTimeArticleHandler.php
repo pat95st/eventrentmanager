@@ -36,6 +36,20 @@ final class CreateLaborTimeArticleHandler implements CommandHandlerInterface
             $errors['hourlyRate'] = 'Bitte einen gültigen Stundensatz größer als 0 angeben.';
         }
 
+        // Tagessatz ist optional — ein leerer Wert bedeutet "kein Tagessatz
+        // hinterlegt" (dailyRate bleibt NULL), nur ein nicht-leerer, aber
+        // ungültiger Wert ist ein Fehler.
+        $dailyRateInput = trim($command->dailyRate);
+        $dailyRate = null;
+        if ($dailyRateInput !== '') {
+            $dailyRateValue = filter_var(str_replace(',', '.', $dailyRateInput), FILTER_VALIDATE_FLOAT);
+            if ($dailyRateValue === false || $dailyRateValue <= 0) {
+                $errors['dailyRate'] = 'Bitte einen gültigen Tagessatz größer als 0 angeben oder das Feld leer lassen.';
+            } else {
+                $dailyRate = number_format($dailyRateValue, 2, '.', '');
+            }
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -47,6 +61,7 @@ final class CreateLaborTimeArticleHandler implements CommandHandlerInterface
             hourlyRate: number_format($hourlyRateValue, 2, '.', ''),
             createdAt: $now,
             updatedAt: $now,
+            dailyRate: $dailyRate,
         );
 
         $this->laborTimeArticles->save($laborTimeArticle);

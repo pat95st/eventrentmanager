@@ -72,6 +72,7 @@ CREATE TABLE labor_time_articles (
     id           CHAR(36)      NOT NULL PRIMARY KEY,
     name         VARCHAR(255)  NOT NULL,
     hourly_rate  DECIMAL(10, 2) NOT NULL,
+    daily_rate   DECIMAL(10, 2) NULL, -- optionaler Tagessatz, siehe Migration 101
     created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_labor_time_articles_name (name)
@@ -1427,6 +1428,7 @@ CREATE TABLE offer_labor_items (
     user_id                 CHAR(36)       NULL, -- Mitarbeiter/Benutzer, siehe Migration 097; optional
     hours                   DECIMAL(6, 2)  NOT NULL,
     unit_rate_per_hour      DECIMAL(10, 2) NOT NULL,
+    billing_unit            ENUM('hour', 'day') NOT NULL DEFAULT 'hour', -- siehe Migration 101
     CONSTRAINT fk_offer_labor_items_offer
         FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
     CONSTRAINT fk_offer_labor_items_labor_time_article
@@ -1638,6 +1640,7 @@ CREATE TABLE invoice_labor_items (
     user_id                 CHAR(36)       NULL, -- Mitarbeiter/Benutzer, siehe Migration 097; optional
     hours                   DECIMAL(6, 2)  NOT NULL,
     unit_rate_per_hour      DECIMAL(10, 2) NOT NULL,
+    billing_unit            ENUM('hour', 'day') NOT NULL DEFAULT 'hour', -- siehe Migration 101
     CONSTRAINT fk_invoice_labor_items_invoice
         FOREIGN KEY (invoice_id) REFERENCES invoices (id) ON DELETE CASCADE,
     CONSTRAINT fk_invoice_labor_items_labor_time_article

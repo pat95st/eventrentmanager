@@ -163,6 +163,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
                 userId: $item['userId'],
                 hours: $item['hours'],
                 unitRatePerHour: $item['unitRatePerHour'],
+                billingUnit: $item['billingUnit'],
             ),
             $data['laborItems']
         );

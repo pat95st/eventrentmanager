@@ -195,10 +195,16 @@ $rows = $detail->orderedRows();
                 <?php foreach ($detail->laborItems as $laborEntry): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3">
+                            <?php
+                                $laborUnit = $laborEntry->item->billingUnit === \App\Domain\LaborTime\LaborTimeBillingUnit::Day
+                                    ? t('offers.show.labor_item_unit_day')
+                                    : t('offers.show.labor_item_unit_hour');
+                            ?>
                             <?php if ($laborEntry->user !== null): ?>
                                 <?= e(t('offers.show.labor_item_with_user', [
                                     'name' => $laborEntry->laborTimeArticle->name,
                                     'hours' => number_format((float) $laborEntry->item->hours, 2, ',', '.'),
+                                    'unit' => $laborUnit,
                                     'rate' => number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.'),
                                     'employee' => $laborEntry->user->displayName(),
                                 ])) ?>
@@ -206,6 +212,7 @@ $rows = $detail->orderedRows();
                                 <?= e(t('offers.show.labor_item', [
                                     'name' => $laborEntry->laborTimeArticle->name,
                                     'hours' => number_format((float) $laborEntry->item->hours, 2, ',', '.'),
+                                    'unit' => $laborUnit,
                                     'rate' => number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.'),
                                 ])) ?>
                             <?php endif; ?>

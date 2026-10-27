@@ -140,6 +140,7 @@ foreach ($laborArticles as $laborArticle) {
     $laborArticlesJson[$laborArticle->id] = [
         'name' => $laborArticle->name,
         'rate' => $laborArticle->hourlyRate,
+        'dailyRate' => $laborArticle->dailyRate,
     ];
 }
 ?>
@@ -498,10 +499,17 @@ foreach ($laborArticles as $laborArticle) {
             <select name="labor_article_id[]" class="offer-labor-item-article mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 <option value=""><?= e(t('offers.form.labor_item_article_placeholder')) ?></option>
                 <?php foreach ($laborArticles as $laborArticle): ?>
-                    <option value="<?= e($laborArticle->id) ?>" data-rate="<?= e($laborArticle->hourlyRate) ?>">
-                        <?= e($laborArticle->name) ?> (<?= e(number_format((float) $laborArticle->hourlyRate, 2, ',', '.')) ?> €/Std.)
+                    <option value="<?= e($laborArticle->id) ?>" data-rate="<?= e($laborArticle->hourlyRate) ?>" data-daily-rate="<?= e($laborArticle->dailyRate ?? '') ?>">
+                        <?= e($laborArticle->name) ?> (<?= e(number_format((float) $laborArticle->hourlyRate, 2, ',', '.')) ?> €/Std.<?php if ($laborArticle->dailyRate !== null): ?>, <?= e(number_format((float) $laborArticle->dailyRate, 2, ',', '.')) ?> €/Tag<?php endif; ?>)
                     </option>
                 <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="w-28">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.labor_item_unit')) ?></label>
+            <select name="labor_billing_unit[]" class="offer-labor-item-unit mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                <option value="hour"><?= e(t('offers.form.labor_item_unit_hour')) ?></option>
+                <option value="day"><?= e(t('offers.form.labor_item_unit_day')) ?></option>
             </select>
         </div>
         <div class="min-w-[160px] flex-1">
@@ -514,7 +522,7 @@ foreach ($laborArticles as $laborArticle) {
             </select>
         </div>
         <div class="w-24">
-            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.labor_item_hours')) ?></label>
+            <label class="offer-labor-item-hours-label block text-xs text-slate-500 dark:text-slate-400"><?= e(t('offers.form.labor_item_hours')) ?></label>
             <input type="text" name="hours[]" inputmode="decimal" class="offer-labor-item-hours mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
         <div class="w-28">
@@ -764,10 +772,10 @@ foreach ($laborArticles as $laborArticle) {
         var laborTemplate = document.getElementById('offer-labor-item-row-template');
         var laborAddButton = document.getElementById('offer-labor-item-add');
 
-        var computeLaborTotal = function (laborArticleId, hours) {
+        var computeLaborTotal = function (laborArticleId, hours, unit) {
             var article = LABOR_ARTICLES[laborArticleId];
             if (!article) { return ''; }
-            var rate = parseFloat(article.rate);
+            var rate = parseFloat(unit === 'day' ? article.dailyRate : article.rate);
             var h = parseFloat(hours);
             if (isNaN(rate) || isNaN(h)) { return ''; }
             return (rate * h).toFixed(2);
@@ -777,8 +785,10 @@ foreach ($laborArticles as $laborArticle) {
             var fragment = laborTemplate.content.cloneNode(true);
             var row = fragment.querySelector('.offer-labor-item-row');
             var articleSelect = row.querySelector('.offer-labor-item-article');
+            var unitSelect = row.querySelector('.offer-labor-item-unit');
             var userSelect = row.querySelector('.offer-labor-item-user');
             var hoursInput = row.querySelector('.offer-labor-item-hours');
+            var hoursLabel = row.querySelector('.offer-labor-item-hours-label');
             var totalInput = row.querySelector('.offer-labor-item-total');
             var removeButton = row.querySelector('.offer-labor-item-remove');
 
@@ -786,13 +796,37 @@ foreach ($laborArticles as $laborArticle) {
             if (data.labor_article_id) { articleSelect.value = data.labor_article_id; }
             if (data.labor_user_id && userSelect) { userSelect.value = data.labor_user_id; }
             if (data.hours) { hoursInput.value = data.hours; }
-            totalInput.value = computeLaborTotal(articleSelect.value, hoursInput.value);
 
-            function refreshTotal() { totalInput.value = computeLaborTotal(articleSelect.value, hoursInput.value); }
-            articleSelect.addEventListener('change', refreshTotal);
+            // Siehe invoices/form.php für die identische Begründung
+            // (Tagesabrechnung nur wählbar, wenn der Artikel einen Tagessatz hat).
+            function refreshUnitAvailability() {
+                var article = LABOR_ARTICLES[articleSelect.value];
+                var dayOption = unitSelect.querySelector('option[value="day"]');
+                var hasDailyRate = !!(article && article.dailyRate);
+                dayOption.disabled = !hasDailyRate;
+                dayOption.hidden = !hasDailyRate;
+                if (!hasDailyRate && unitSelect.value === 'day') { unitSelect.value = 'hour'; }
+            }
+
+            function refreshHoursLabel() {
+                hoursLabel.textContent = unitSelect.value === 'day'
+                    ? <?= json_encode(t('offers.form.labor_item_days')) ?>
+                    : <?= json_encode(t('offers.form.labor_item_hours')) ?>;
+            }
+
+            refreshUnitAvailability();
+            if (data.labor_billing_unit && !unitSelect.querySelector('option[value="' + data.labor_billing_unit + '"]').disabled) {
+                unitSelect.value = data.labor_billing_unit;
+            }
+            refreshHoursLabel();
+
+            function refreshTotal() { totalInput.value = computeLaborTotal(articleSelect.value, hoursInput.value, unitSelect.value); }
+            articleSelect.addEventListener('change', function () { refreshUnitAvailability(); refreshHoursLabel(); refreshTotal(); });
+            unitSelect.addEventListener('change', function () { refreshHoursLabel(); refreshTotal(); });
             hoursInput.addEventListener('input', refreshTotal);
             removeButton.addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
 
+            refreshTotal();
             laborContainer.appendChild(row);
             updateOnlyLaborState();
         };

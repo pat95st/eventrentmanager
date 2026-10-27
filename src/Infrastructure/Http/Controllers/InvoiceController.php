@@ -450,6 +450,7 @@ final class InvoiceController
                     'labor_article_id' => $entry->item->laborTimeArticleId,
                     'labor_user_id' => $entry->item->userId ?? '',
                     'hours' => $entry->item->hours,
+                    'labor_billing_unit' => $entry->item->billingUnit->value,
                 ];
             }
             foreach ($detail->freeTextItems as $item) {
@@ -602,12 +603,13 @@ final class InvoiceController
         return $items;
     }
 
-    /** @return array<int, array{labor_article_id: string, labor_user_id: string, hours: string}> */
+    /** @return array<int, array{labor_article_id: string, labor_user_id: string, hours: string, labor_billing_unit: string}> */
     private function laborItemsFromRequest(Request $request): array
     {
         $laborArticleIds = $request->post['labor_article_id'] ?? [];
         $laborUserIds = $request->post['labor_user_id'] ?? [];
         $hoursValues = $request->post['hours'] ?? [];
+        $billingUnits = $request->post['labor_billing_unit'] ?? [];
 
         if (!is_array($laborArticleIds)) {
             return [];
@@ -619,6 +621,7 @@ final class InvoiceController
                 'labor_article_id' => (string) $laborArticleId,
                 'labor_user_id' => (string) ($laborUserIds[$index] ?? ''),
                 'hours' => (string) ($hoursValues[$index] ?? ''),
+                'labor_billing_unit' => (string) ($billingUnits[$index] ?? ''),
             ];
         }
 

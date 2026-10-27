@@ -65,13 +65,14 @@ final class LaborTimeArticleController
     {
         $name = $request->input('name', '') ?? '';
         $hourlyRate = $request->input('hourly_rate', '') ?? '';
+        $dailyRate = $request->input('daily_rate', '') ?? '';
 
         try {
-            $this->commands->dispatch(new CreateLaborTimeArticle($name, $hourlyRate));
+            $this->commands->dispatch(new CreateLaborTimeArticle($name, $hourlyRate, $dailyRate));
             Flash::success('Arbeitszeit-Artikel wurde angelegt.');
             Response::redirect('/arbeitszeit-artikel');
         } catch (ValidationException $e) {
-            $this->renderWithErrors($e->errors(), ['name' => $name, 'hourly_rate' => $hourlyRate]);
+            $this->renderWithErrors($e->errors(), ['name' => $name, 'hourly_rate' => $hourlyRate, 'daily_rate' => $dailyRate]);
         }
     }
 
@@ -80,13 +81,14 @@ final class LaborTimeArticleController
         $id = $request->param('id');
         $name = $request->input('name', '') ?? '';
         $hourlyRate = $request->input('hourly_rate', '') ?? '';
+        $dailyRate = $request->input('daily_rate', '') ?? '';
 
         try {
-            $this->commands->dispatch(new UpdateLaborTimeArticle($id, $name, $hourlyRate));
+            $this->commands->dispatch(new UpdateLaborTimeArticle($id, $name, $hourlyRate, $dailyRate));
             Flash::success('Arbeitszeit-Artikel wurde aktualisiert.');
             Response::redirect('/arbeitszeit-artikel');
         } catch (ValidationException $e) {
-            $this->renderWithErrors($e->errors(), ['name' => $name, 'hourly_rate' => $hourlyRate], $id);
+            $this->renderWithErrors($e->errors(), ['name' => $name, 'hourly_rate' => $hourlyRate, 'daily_rate' => $dailyRate], $id);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }

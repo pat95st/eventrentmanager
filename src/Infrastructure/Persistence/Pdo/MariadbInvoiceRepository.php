@@ -11,6 +11,7 @@ use App\Domain\Invoice\InvoiceLaborItem;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Invoice\InvoiceSectionText;
 use App\Domain\Invoice\InvoiceStatus;
+use App\Domain\LaborTime\LaborTimeBillingUnit;
 use DateTimeImmutable;
 use PDO;
 
@@ -365,8 +366,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             $delete->execute(['invoice_id' => $invoiceId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO invoice_labor_items (id, invoice_id, labor_time_article_id, user_id, hours, unit_rate_per_hour)
-                 VALUES (:id, :invoice_id, :labor_time_article_id, :user_id, :hours, :unit_rate_per_hour)'
+                'INSERT INTO invoice_labor_items (id, invoice_id, labor_time_article_id, user_id, hours, unit_rate_per_hour, billing_unit)
+                 VALUES (:id, :invoice_id, :labor_time_article_id, :user_id, :hours, :unit_rate_per_hour, :billing_unit)'
             );
 
             foreach ($items as $item) {
@@ -377,6 +378,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                     'user_id' => $item->userId,
                     'hours' => $item->hours,
                     'unit_rate_per_hour' => $item->unitRatePerHour,
+                    'billing_unit' => $item->billingUnit->value,
                 ]);
             }
 
@@ -532,6 +534,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             userId: $row['user_id'],
             hours: $row['hours'],
             unitRatePerHour: $row['unit_rate_per_hour'],
+            billingUnit: LaborTimeBillingUnit::tryFrom($row['billing_unit'] ?? '') ?? LaborTimeBillingUnit::Hour,
         );
     }
 }

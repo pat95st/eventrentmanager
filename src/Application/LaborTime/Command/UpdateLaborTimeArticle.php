@@ -12,6 +12,9 @@ final class UpdateLaborTimeArticle implements CommandInterface
         public readonly string $id,
         public readonly string $name,
         public readonly string $hourlyRate,
+        // Optionaler Tagessatz, leerer String = kein Tagessatz (siehe
+        // LaborTimeArticle::$dailyRate).
+        public readonly string $dailyRate = '',
     ) {
     }
 }

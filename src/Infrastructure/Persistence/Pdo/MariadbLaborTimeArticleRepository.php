@@ -18,19 +18,21 @@ final class MariadbLaborTimeArticleRepository implements LaborTimeArticleReposit
     public function save(LaborTimeArticle $laborTimeArticle): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO labor_time_articles (id, name, hourly_rate, created_at, updated_at)
-             VALUES (:id, :name, :hourly_rate, :created_at, :updated_at)
-             ON DUPLICATE KEY UPDATE name = :name2, hourly_rate = :hourly_rate2, updated_at = :updated_at2'
+            'INSERT INTO labor_time_articles (id, name, hourly_rate, daily_rate, created_at, updated_at)
+             VALUES (:id, :name, :hourly_rate, :daily_rate, :created_at, :updated_at)
+             ON DUPLICATE KEY UPDATE name = :name2, hourly_rate = :hourly_rate2, daily_rate = :daily_rate2, updated_at = :updated_at2'
         );
 
         $stmt->execute([
             'id' => $laborTimeArticle->id,
             'name' => $laborTimeArticle->name,
             'hourly_rate' => $laborTimeArticle->hourlyRate,
+            'daily_rate' => $laborTimeArticle->dailyRate,
             'created_at' => $laborTimeArticle->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $laborTimeArticle->updatedAt->format('Y-m-d H:i:s'),
             'name2' => $laborTimeArticle->name,
             'hourly_rate2' => $laborTimeArticle->hourlyRate,
+            'daily_rate2' => $laborTimeArticle->dailyRate,
             'updated_at2' => $laborTimeArticle->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -98,6 +100,7 @@ final class MariadbLaborTimeArticleRepository implements LaborTimeArticleReposit
             hourlyRate: $row['hourly_rate'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            dailyRate: $row['daily_rate'],
         );
     }
 }

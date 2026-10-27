@@ -12,6 +12,7 @@ use App\Domain\Offer\OfferRepositoryInterface;
 use App\Domain\Offer\OfferSaleItem;
 use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
+use App\Domain\LaborTime\LaborTimeBillingUnit;
 use DateTimeImmutable;
 use PDO;
 
@@ -299,8 +300,8 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             $delete->execute(['offer_id' => $offerId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO offer_labor_items (id, offer_id, labor_time_article_id, user_id, hours, unit_rate_per_hour)
-                 VALUES (:id, :offer_id, :labor_time_article_id, :user_id, :hours, :unit_rate_per_hour)'
+                'INSERT INTO offer_labor_items (id, offer_id, labor_time_article_id, user_id, hours, unit_rate_per_hour, billing_unit)
+                 VALUES (:id, :offer_id, :labor_time_article_id, :user_id, :hours, :unit_rate_per_hour, :billing_unit)'
             );
 
             foreach ($items as $item) {
@@ -311,6 +312,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
                     'user_id' => $item->userId,
                     'hours' => $item->hours,
                     'unit_rate_per_hour' => $item->unitRatePerHour,
+                    'billing_unit' => $item->billingUnit->value,
                 ]);
             }
 
@@ -453,6 +455,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             userId: $row['user_id'],
             hours: $row['hours'],
             unitRatePerHour: $row['unit_rate_per_hour'],
+            billingUnit: LaborTimeBillingUnit::tryFrom($row['billing_unit'] ?? '') ?? LaborTimeBillingUnit::Hour,
         );
     }
 

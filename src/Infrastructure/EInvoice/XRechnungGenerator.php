@@ -265,7 +265,11 @@ final class XRechnungGenerator
         foreach ($detail->laborItems as $entry) {
             $line = $this->appendEl($dom, $root, $cac, 'cac:InvoiceLine');
             $this->append($dom, $line, $cbc, 'cbc:ID', (string) $lineIndex); // BT-126
-            $this->append($dom, $line, $cbc, 'cbc:InvoicedQuantity', $entry->item->hours, ['unitCode' => 'HUR']); // BT-129 (HUR = Stunden, UN/CEFACT Rec. 20)
+            // Einheitencode richtet sich nach der tatsächlichen Abrechnung der
+            // Position (siehe App\Domain\LaborTime\LaborTimeBillingUnit):
+            // HUR = Stunden, DAY = Tage (beide UN/CEFACT Rec. 20).
+            $laborUnitCode = $entry->item->billingUnit === \App\Domain\LaborTime\LaborTimeBillingUnit::Day ? 'DAY' : 'HUR';
+            $this->append($dom, $line, $cbc, 'cbc:InvoicedQuantity', $entry->item->hours, ['unitCode' => $laborUnitCode]); // BT-129
             $this->append($dom, $line, $cbc, 'cbc:LineExtensionAmount', $this->money($entry->lineTotal()), ['currencyID' => 'EUR']); // BT-131
 
             $item = $this->appendEl($dom, $line, $cac, 'cac:Item');

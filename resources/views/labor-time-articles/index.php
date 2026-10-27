@@ -23,6 +23,9 @@ use function App\Infrastructure\Http\e;
                         <span class="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
                             <?= e($laborTimeArticle->name) ?>
                             <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e(number_format((float) $laborTimeArticle->hourlyRate, 2, ',', '.')) ?> €/Std.</span>
+                            <?php if ($laborTimeArticle->dailyRate !== null): ?>
+                                <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e(number_format((float) $laborTimeArticle->dailyRate, 2, ',', '.')) ?> €/Tag</span>
+                            <?php endif; ?>
                         </span>
                         <span class="flex items-center gap-3">
                             <a href="/arbeitszeit-artikel/<?= e($laborTimeArticle->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
@@ -69,6 +72,20 @@ use function App\Infrastructure\Http\e;
                 >
                 <?php if (isset($errors['hourlyRate'])): ?>
                     <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['hourlyRate']) ?></p>
+                <?php endif; ?>
+            </div>
+
+            <div>
+                <label for="daily_rate" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Tagessatz (€)</label>
+                <input
+                    type="text" id="daily_rate" name="daily_rate" inputmode="decimal"
+                    placeholder="optional, z. B. 320,00"
+                    value="<?= e($old['daily_rate'] ?? $editingLaborTimeArticle?->dailyRate ?? '') ?>"
+                    class="mt-1 w-full rounded-md border <?= isset($errors['dailyRate']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                >
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Optional — wenn hinterlegt, kann bei Angeboten/Rechnungen je Position zwischen Stunden- und Tagesabrechnung gewählt werden.</p>
+                <?php if (isset($errors['dailyRate'])): ?>
+                    <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['dailyRate']) ?></p>
                 <?php endif; ?>
             </div>
 

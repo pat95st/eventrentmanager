@@ -8,6 +8,7 @@ use App\Application\Common\VenueResolver;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
+use App\Domain\LaborTime\LaborTimeBillingUnit;
 use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
@@ -26,7 +27,7 @@ trait ValidatesInvoiceInput
 {
     /**
      * @param array<int, array{article_id: string, quantity: string, unit_price: string, line_note: string, sort_order?: string, is_rental_item?: string}> $rawItems
-     * @param array<int, array{labor_article_id: string, labor_user_id?: string, hours: string}> $rawLaborItems
+     * @param array<int, array{labor_article_id: string, labor_user_id?: string, hours: string, labor_billing_unit?: string}> $rawLaborItems
      * @param array<int, array{description: string, quantity: string, unit_price: string, sort_order?: string}> $rawFreeTextItems
      * @param array<int, array{heading: string, sort_order?: string}> $rawSectionTexts
      * @return array{0: array<string, string>, 1: array{
@@ -178,10 +179,23 @@ trait ValidatesInvoiceInput
                 continue;
             }
 
+            // Abrechnungseinheit je Position wählbar (Stunde/Tag), aber nur
+            // wenn für den gewählten Arbeitszeit-Artikel überhaupt ein
+            // Tagessatz hinterlegt ist — sonst fällt die Auswahl auf Stunde
+            // zurück (siehe LaborTimeBillingUnit).
+            $billingUnit = LaborTimeBillingUnit::tryFrom(trim((string) ($rawLaborItem['labor_billing_unit'] ?? ''))) ?? LaborTimeBillingUnit::Hour;
+            if ($billingUnit === LaborTimeBillingUnit::Day && $laborArticle->dailyRate === null) {
+                $errors['laborItems'] = 'Für mindestens einen Arbeitszeit-Artikel ist keine Tagesabrechnung möglich, da kein Tagessatz hinterlegt ist.';
+
+                continue;
+            }
+
             $rawHours = trim((string) ($rawLaborItem['hours'] ?? ''));
             $hours = filter_var(str_replace(',', '.', $rawHours), FILTER_VALIDATE_FLOAT);
             if ($rawHours === '' || $hours === false || $hours <= 0) {
-                $errors['laborItems'] = 'Bitte für jede Arbeitszeit-Position eine gültige Stundenzahl größer als 0 angeben.';
+                $errors['laborItems'] = $billingUnit === LaborTimeBillingUnit::Day
+                    ? 'Bitte für jede Arbeitszeit-Position eine gültige Anzahl Tage größer als 0 angeben.'
+                    : 'Bitte für jede Arbeitszeit-Position eine gültige Stundenzahl größer als 0 angeben.';
 
                 continue;
             }
@@ -197,10 +211,11 @@ trait ValidatesInvoiceInput
                 'laborTimeArticleId' => $laborArticleId,
                 'userId' => $laborUserId !== '' ? $laborUserId : null,
                 'hours' => number_format($hours, 2, '.', ''),
-                // Stundensatz wird beim Speichern gesnapshotet (siehe LaborTimeArticle-
-                // Klassendoc), NICHT frei eingebbar — anders als unitPrice bei den
-                // Mietpositionen.
-                'unitRatePerHour' => $laborArticle->hourlyRate,
+                // Stunden- bzw. Tagessatz wird beim Speichern gesnapshotet
+                // (siehe LaborTimeArticle-Klassendoc), NICHT frei eingebbar —
+                // anders als unitPrice bei den Mietpositionen.
+                'unitRatePerHour' => $billingUnit === LaborTimeBillingUnit::Day ? $laborArticle->dailyRate : $laborArticle->hourlyRate,
+                'billingUnit' => $billingUnit,
             ];
         }
 

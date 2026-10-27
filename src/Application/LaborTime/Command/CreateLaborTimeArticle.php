@@ -11,6 +11,9 @@ final class CreateLaborTimeArticle implements CommandInterface
     public function __construct(
         public readonly string $name,
         public readonly string $hourlyRate,
+        // Optionaler Tagessatz, leerer String = kein Tagessatz (siehe
+        // LaborTimeArticle::$dailyRate).
+        public readonly string $dailyRate = '',
     ) {
     }
 }

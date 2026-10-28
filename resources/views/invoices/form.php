@@ -387,6 +387,17 @@ foreach ($laborArticles as $laborArticle) {
                 <button type="button" id="invoice-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('invoices.form.items_add')) ?>
                 </button>
+                <?php
+                    // Mehrfachauswahl-Modal (siehe public/assets/js/
+                    // article-picker.js): paralleler, zweiter Weg, um
+                    // Positionszeilen zu befüllen — fügt beim Bestätigen
+                    // für jeden angehakten Artikel per addRow() eine
+                    // reguläre Positionszeile hinzu, genau wie die
+                    // Live-Suche je Zeile. Siehe <script> weiter unten.
+                ?>
+                <button type="button" id="invoice-item-picker-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('article_picker.add_button')) ?>
+                </button>
                 <button type="button" id="invoice-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('invoices.form.free_text_items_add')) ?>
                 </button>
@@ -594,6 +605,8 @@ foreach ($laborArticles as $laborArticle) {
 </form>
 
 <?php renderClosingTextTemplatePickerModal(); ?>
+
+<?php renderArticlePickerModal(); ?>
 
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
@@ -865,6 +878,18 @@ foreach ($laborArticles as $laborArticle) {
         var articleInput = addRow();
         window.setTimeout(function () { articleInput.focus(); }, 0);
     });
+
+    var pickerButton = document.getElementById('invoice-item-picker-add');
+    if (pickerButton) {
+        pickerButton.addEventListener('click', function () {
+            window.ArticlePicker.open(function (items) {
+                items.forEach(function (item) {
+                    addRow({ article_id: item.article_id, quantity: item.quantity });
+                });
+            });
+        });
+    }
+
     startInput.addEventListener('change', refreshAllSuggestions);
     endInput.addEventListener('change', refreshAllSuggestions);
 

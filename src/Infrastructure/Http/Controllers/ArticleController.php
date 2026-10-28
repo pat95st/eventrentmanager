@@ -170,21 +170,48 @@ final class ArticleController
         $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true));
 
         Response::json([
-            'items' => array_map(
-                static function (ArticleListItem $item): array {
-                    $sublabel = $item->article->isBillable && $item->article->dailyRentalPrice !== null
-                        ? number_format((float) $item->article->dailyRentalPrice, 2, ',', '.') . ' € / Tag'
-                        : null;
-
-                    return [
-                        'id' => $item->article->id,
-                        'label' => ArticleDisplayName::of($item->article, $item->manufacturer),
-                        'sublabel' => $sublabel,
-                    ];
-                },
-                $result->items
-            ),
+            'items' => array_map(self::toPickerItem(...), $result->items),
         ]);
+    }
+
+    /**
+     * JSON-Listing für das Mehrfachauswahl-Modal ("mehrere Artikel auf
+     * einmal hinzufügen", siehe public/assets/js/article-picker.js) in
+     * Angebots-/Rechnungs-/Auftragsbestätigungsformularen. Im Unterschied
+     * zu search() (Live-Suche einer einzelnen Zeile, feste 20 Treffer ohne
+     * Paginierung) liefert dieser Endpunkt paginierte Seiten, da hier der
+     * komplette Artikelkatalog durchblätterbar sein soll, nicht nur die
+     * besten Treffer. Nutzt denselben Use Case und dieselbe `onlyActive:
+     * true`-Einschränkung wie search(); `null`-Permission aus demselben
+     * Grund (jeder Benutzer, der ein Dokument mit Artikelpositionen
+     * anlegen darf, muss den Picker nutzen können).
+     */
+    public function picker(Request $request): void
+    {
+        $search = $this->nullIfEmpty($request->query('q'));
+        $page = max(1, (int) ($request->query('seite') ?? 1));
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, $page, 20, onlyActive: true));
+
+        Response::json([
+            'items' => array_map(self::toPickerItem(...), $result->items),
+            'page' => $result->page,
+            'totalPages' => $result->totalPages(),
+            'totalCount' => $result->totalCount,
+        ]);
+    }
+
+    /** Gemeinsame JSON-Form für search() und picker() (id/label/sublabel). */
+    private static function toPickerItem(ArticleListItem $item): array
+    {
+        $sublabel = $item->article->isBillable && $item->article->dailyRentalPrice !== null
+            ? number_format((float) $item->article->dailyRentalPrice, 2, ',', '.') . ' € / Tag'
+            : null;
+
+        return [
+            'id' => $item->article->id,
+            'label' => ArticleDisplayName::of($item->article, $item->manufacturer),
+            'sublabel' => $sublabel,
+        ];
     }
 
     public function index(Request $request): void

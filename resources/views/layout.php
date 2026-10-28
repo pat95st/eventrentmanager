@@ -1033,5 +1033,9 @@ $canDocuments = $canRentals;
        (statt pro View), da die Komponente auf vielen, unterschiedlichen
        Seiten verwendet wird. -->
   <script src="/assets/js/live-search.js" defer></script>
+  <!-- Artikel-Mehrfachauswahl-Modal, siehe public/assets/js/article-picker.js
+       und App\Infrastructure\Http\renderArticlePickerModal() — global
+       geladen aus demselben Grund wie live-search.js direkt darüber. -->
+  <script src="/assets/js/article-picker.js" defer></script>
 </body>
 </html>

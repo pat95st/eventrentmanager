@@ -229,6 +229,10 @@ foreach ($articles as $article) {
                 <button type="button" id="oc-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('order_confirmations.form.items_add')) ?>
                 </button>
+                <?php // Mehrfachauswahl-Modal, siehe invoices/form.php für die identische Begründung. ?>
+                <button type="button" id="oc-item-picker-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('article_picker.add_button')) ?>
+                </button>
                 <button type="button" id="oc-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('order_confirmations.form.free_text_items_add')) ?>
                 </button>
@@ -308,6 +312,8 @@ foreach ($articles as $article) {
 </form>
 
 <?php renderClosingTextTemplatePickerModal(); ?>
+
+<?php renderArticlePickerModal(); ?>
 
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
@@ -477,6 +483,17 @@ foreach ($articles as $article) {
         var articleInput = addRow();
         window.setTimeout(function () { articleInput.focus(); }, 0);
     });
+
+    var pickerButton = document.getElementById('oc-item-picker-add');
+    if (pickerButton) {
+        pickerButton.addEventListener('click', function () {
+            window.ArticlePicker.open(function (items) {
+                items.forEach(function (item) {
+                    addRow({ article_id: item.article_id, quantity: item.quantity });
+                });
+            });
+        });
+    }
 
     // --- Freitext-Posten -----------------------------------------------
     // freeTextContainer/sectionContainer sind bewusst DASSELBE Element wie

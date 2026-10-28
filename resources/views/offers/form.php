@@ -284,6 +284,20 @@ foreach ($laborArticles as $laborArticle) {
                 <button type="button" id="offer-item-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('offers.form.items_add')) ?>
                 </button>
+                <?php
+                    // Mehrfachauswahl-Modal, siehe invoices/form.php für die
+                    // identische Begründung. Bedient bewusst NUR diesen
+                    // (Miet-)Positionsbereich, NICHT die weiter unten
+                    // separat gerenderten Verkaufspositionen
+                    // (#offer-sale-items) — die Verkaufsposition hat eine
+                    // eigene, hier nicht abgedeckte Quellenauswahl
+                    // (Inventarnummer vs. Verkaufsbestand, siehe
+                    // ValidatesOfferInput), die sich nicht sinnvoll mit nur
+                    // "Artikel + Menge" aus dem Picker befüllen lässt.
+                ?>
+                <button type="button" id="offer-item-picker-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('article_picker.add_button')) ?>
+                </button>
                 <button type="button" id="offer-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('offers.form.free_text_items_add')) ?>
                 </button>
@@ -440,6 +454,8 @@ foreach ($laborArticles as $laborArticle) {
 </form>
 
 <?php renderClosingTextTemplatePickerModal(); ?>
+
+<?php renderArticlePickerModal(); ?>
 
 <?php require __DIR__ . '/../customers/_quick_create_modal.php'; ?>
 
@@ -761,6 +777,18 @@ foreach ($laborArticles as $laborArticle) {
         var articleInput = addRow();
         window.setTimeout(function () { articleInput.focus(); }, 0);
     });
+
+    var pickerButton = document.getElementById('offer-item-picker-add');
+    if (pickerButton) {
+        pickerButton.addEventListener('click', function () {
+            window.ArticlePicker.open(function (items) {
+                items.forEach(function (item) {
+                    addRow({ article_id: item.article_id, quantity: item.quantity });
+                });
+            });
+        });
+    }
+
     startInput.addEventListener('change', refreshAllSuggestions);
     endInput.addEventListener('change', refreshAllSuggestions);
 

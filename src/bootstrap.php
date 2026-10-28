@@ -21,6 +21,11 @@ require_once __DIR__ . '/Infrastructure/Http/Translator.php';
 // Klassen-Autoloader nicht auslösen würde.
 require_once __DIR__ . '/Infrastructure/Http/LiveSearchField.php';
 
+// ArticlePickerModal.php enthält ausschließlich die globale Helferfunktion
+// renderArticlePickerModal() (keine Klasse) — aus demselben Grund wie bei
+// LiveSearchField.php direkt darüber explizit requiret.
+require_once __DIR__ . '/Infrastructure/Http/ArticlePickerModal.php';
+
 use App\Application\Article\Command\AddArticleAccessoryHandler;
 use App\Application\Article\Command\AddArticleImageHandler;
 use App\Application\Article\Command\AddInventoryNumberHandler;
@@ -1499,6 +1504,10 @@ $router->get('/artikel', $auth->guard(Permission::Artikelverwaltung, [$articleCo
 // Auftragsbestätigungsformularen — `null`-Permission, siehe Begründung bei
 // '/hersteller/suche' oben.
 $router->get('/artikel/suche', $auth->guard(null, [$articleController, 'search']));
+// Paginiertes JSON-Listing für das Mehrfachauswahl-Modal (mehrere Artikel
+// auf einmal zu einem Dokument hinzufügen) — `null`-Permission aus
+// demselben Grund wie bei '/artikel/suche' direkt darüber.
+$router->get('/artikel/mehrfachauswahl', $auth->guard(null, [$articleController, 'picker']));
 $router->get('/artikel/neu', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'create']));
 $router->post('/artikel', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'store']));
 $router->get('/artikel/preisliste.pdf', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'exportPriceListPdf']));

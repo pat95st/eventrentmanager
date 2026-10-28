@@ -2250,4 +2250,11 @@ return [
     'notice_documents.flash.deleted' => 'Notice document was deleted.',
 
     'rentals.flash.notice_documents_sent' => 'Notice documents were sent to {recipient}.',
+
+    // --- Article multi-select modal (see public/assets/js/article-picker.js) ---
+    'article_picker.title' => 'Add multiple articles',
+    'article_picker.search_placeholder' => 'Search articles…',
+    'article_picker.loading' => 'Loading…',
+    'article_picker.insert' => 'Insert',
+    'article_picker.add_button' => '+ Multiple articles',
 ];

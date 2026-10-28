@@ -2251,4 +2251,11 @@ return [
     'notice_documents.flash.deleted' => 'Hinweisdokument wurde gelöscht.',
 
     'rentals.flash.notice_documents_sent' => 'Hinweisdokumente wurden an {recipient} verschickt.',
+
+    // --- Artikel-Mehrfachauswahl-Modal (siehe public/assets/js/article-picker.js) ---
+    'article_picker.title' => 'Mehrere Artikel hinzufügen',
+    'article_picker.search_placeholder' => 'Artikel suchen…',
+    'article_picker.loading' => 'Lädt…',
+    'article_picker.insert' => 'Einfügen',
+    'article_picker.add_button' => '+ Mehrere Artikel',
 ];

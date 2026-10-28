@@ -586,6 +586,16 @@ foreach ($laborArticles as $laborArticle) {
                 <dt><?= e(t('invoices.show.rental_subtotal')) ?></dt>
                 <dd data-total-rental>0,00 €</dd>
             </div>
+            <?php
+                // Nutzerwunsch (Zubehörpauschale auch auf Freitext-Positionen):
+                // Freitext-Posten fließen mit in die Basis für Zubehörpauschale/
+                // Kombirabatt ein (siehe DocumentTotals::calculate()) — daher
+                // hier VOR der Zubehörpauschale-Zeile angezeigt.
+            ?>
+            <div data-total-free-text-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('invoices.form.totals_free_text')) ?></dt>
+                <dd data-total-free-text>0,00 €</dd>
+            </div>
             <div data-total-accessory-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt><?= e(t('invoices.show.accessory_flat_rate', ['rate' => number_format((float) ($pricingSettings->accessoryFlatRatePercent ?? '0'), 2, ',', '.')])) ?></dt>
                 <dd data-total-accessory>0,00 €</dd>
@@ -597,10 +607,6 @@ foreach ($laborArticles as $laborArticle) {
             <div data-total-labor-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt><?= e(t('invoices.form.totals_labor')) ?></dt>
                 <dd data-total-labor>0,00 €</dd>
-            </div>
-            <div data-total-free-text-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
-                <dt><?= e(t('invoices.form.totals_free_text')) ?></dt>
-                <dd data-total-free-text>0,00 €</dd>
             </div>
             <div data-total-sale-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt><?= e(t('invoices.form.totals_sale')) ?></dt>
@@ -1273,9 +1279,24 @@ foreach ($laborArticles as $laborArticle) {
         var flatRateEnabled = !!(flatRateCheckbox && flatRateCheckbox.checked);
         var rentalTotal = flatRateEnabled ? parseAmount(flatRateAmountInput ? flatRateAmountInput.value : '') : actualRentalTotal;
 
+        var freeTextTotal = 0;
+        if (freeTextContainer) {
+            freeTextContainer.querySelectorAll('.invoice-free-text-row').forEach(function (row) {
+                var qty = parseAmount(row.querySelector('.invoice-free-text-quantity').value);
+                var price = parseAmount(row.querySelector('.invoice-free-text-price').value);
+                freeTextTotal += qty * price;
+            });
+        }
+
+        // Nutzerwunsch (Zubehörpauschale auch auf Freitext-Positionen):
+        // Freitext-Posten fließen zusammen mit den Mietpreisen in die Basis
+        // für Zubehörpauschale UND Kombirabatt ein (siehe
+        // DocumentTotals::calculate() für das serverseitige Äquivalent).
+        var accessoryBase = rentalTotal + freeTextTotal;
+
         var accessoryEnabled = !!(accessoryCheckbox && accessoryCheckbox.checked);
-        var accessoryAmount = accessoryEnabled ? round2(rentalTotal * parseAmount(ACCESSORY_PERCENT) / 100) : 0;
-        var subtotalAfterAccessory = rentalTotal + accessoryAmount;
+        var accessoryAmount = accessoryEnabled ? round2(accessoryBase * parseAmount(ACCESSORY_PERCENT) / 100) : 0;
+        var subtotalAfterAccessory = accessoryBase + accessoryAmount;
 
         var discountTypeInput = invoiceForm.querySelector('input[name="discount_type"]:checked');
         var discountType = discountTypeInput ? discountTypeInput.value : '';
@@ -1296,16 +1317,9 @@ foreach ($laborArticles as $laborArticle) {
             });
         }
 
-        var freeTextTotal = 0;
-        if (freeTextContainer) {
-            freeTextContainer.querySelectorAll('.invoice-free-text-row').forEach(function (row) {
-                var qty = parseAmount(row.querySelector('.invoice-free-text-quantity').value);
-                var price = parseAmount(row.querySelector('.invoice-free-text-price').value);
-                freeTextTotal += qty * price;
-            });
-        }
-
-        var netTotal = subtotalAfterDiscount + laborTotal + freeTextTotal + saleTotal;
+        // freeTextTotal steckt bereits in subtotalAfterDiscount (siehe
+        // accessoryBase oben) — hier NICHT nochmal addieren.
+        var netTotal = subtotalAfterDiscount + laborTotal + saleTotal;
         var vatAmount = IS_SMALL_BUSINESS ? 0 : round2(netTotal * parseAmount(VAT_RATE_PERCENT) / 100);
         var grossTotal = netTotal + vatAmount;
 

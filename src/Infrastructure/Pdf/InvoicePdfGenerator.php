@@ -142,6 +142,25 @@ final class InvoicePdfGenerator
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->rentalNetTotal, 2, ',', '.') . ' EUR', 9);
         $y -= 14;
 
+        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
+        // oben zusammen mit den Mietpositionen. Nutzerwunsch (Zubehörpauschale
+        // auch auf Freitext-Positionen): fließen zusammen mit den
+        // Mietpreisen VOR der Zubehörpauschale/dem Kombirabatt in die Basis
+        // ein (siehe DocumentTotals::calculate()), werden hier aber
+        // weiterhin als eigene Zwischensumme ausgewiesen.
+        if ($detail->freeTextTotal() > 0) {
+            if ($y - 14 < self::MARGIN + 90) {
+                $pageNumber++;
+                $writer->addPage();
+                $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                $y -= 20;
+            }
+
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
+            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
+            $y -= 14;
+        }
+
         // Verkaufs-/Sonstige Positionen (InvoiceItem::$isRentalItem = false)
         // — bleiben beim Pauschalpreis unberührt, eigene Zeile wie Freitext-
         // Posten/Arbeitszeit (siehe DocumentTotals::$saleTotal).
@@ -197,23 +216,6 @@ final class InvoicePdfGenerator
                 . number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.') . ' EUR):';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $laborLabel, 9);
             $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($laborEntry->lineTotal(), 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
-
-        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
-        // oben zusammen mit den Mietpositionen, hier im Summenblock aber wie
-        // Arbeitszeit-Positionen als eigene Zeile NACH dem Kombirabatt
-        // (siehe DocumentTotals::$freeTextTotal).
-        if ($detail->freeTextTotal() > 0) {
-            if ($y - 14 < self::MARGIN + 90) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
-
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
             $y -= 14;
         }
 

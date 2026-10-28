@@ -273,6 +273,21 @@ $rows = $detail->orderedRows();
                     </td>
                     <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300"><?= number_format($totals->rentalNetTotal, 2, ',', '.') ?> €</td>
                 </tr>
+                <?php if ($detail->freeTextTotal() > 0): ?>
+                    <?php
+                        // Nutzerwunsch: Zubehörpauschale auch auf
+                        // Freitext-Positionen anwenden — Freitext-Posten
+                        // fließen daher (zusammen mit den Mietpreisen) VOR
+                        // der Zubehörpauschale/dem Kombirabatt in die Basis
+                        // ein (siehe DocumentTotals::calculate()), werden
+                        // hier aber weiterhin als eigene Zwischensumme
+                        // ausgewiesen.
+                    ?>
+                    <tr>
+                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.free_text_total')) ?></td>
+                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->freeTextTotal(), 2, ',', '.') ?> €</td>
+                    </tr>
+                <?php endif; ?>
                 <?php if ($detail->saleItemsTotal() > 0): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.form.totals_sale')) ?></td>
@@ -335,12 +350,6 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($laborEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if ($detail->freeTextTotal() > 0): ?>
-                    <tr>
-                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.free_text_total')) ?></td>
-                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->freeTextTotal(), 2, ',', '.') ?> €</td>
-                    </tr>
-                <?php endif; ?>
                 <?php if ($invoice->shippingAmount !== null): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.shipping')) ?></td>

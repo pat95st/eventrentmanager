@@ -125,6 +125,25 @@ final class OfferPdfGenerator
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->rentalNetTotal, 2, ',', '.') . ' EUR', 9);
         $y -= 14;
 
+        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
+        // oben zusammen mit den Mietpositionen. Nutzerwunsch (Zubehörpauschale
+        // auch auf Freitext-Positionen): fließen zusammen mit den
+        // Mietpreisen VOR der Zubehörpauschale/dem Kombirabatt in die Basis
+        // ein (siehe DocumentTotals::calculate()), werden hier aber
+        // weiterhin als eigene Zwischensumme ausgewiesen.
+        if ($detail->freeTextTotal() > 0) {
+            if ($y - 14 < self::MARGIN + 40) {
+                $pageNumber++;
+                $writer->addPage();
+                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                $y -= 20;
+            }
+
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
+            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
+            $y -= 14;
+        }
+
         if ($detail->offer->accessoryFlatRateEnabled && $detail->offer->accessoryFlatRatePercent !== null) {
             $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zubehörpauschale (' . number_format((float) $detail->offer->accessoryFlatRatePercent, 2, ',', '.') . '%):', 9);
             $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($totals->accessoryFlatRateAmount, 2, ',', '.') . ' EUR', 9);
@@ -204,23 +223,6 @@ final class OfferPdfGenerator
             $saleLabel = $saleEntry->displayName() . ' (' . (string) $saleEntry->item->quantity . 'x, Verkauf):';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $saleLabel, 9);
             $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($saleEntry->lineTotal(), 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
-
-        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
-        // oben zusammen mit den Mietpositionen, hier im Summenblock aber wie
-        // Arbeitszeit-/Verkaufspositionen als eigene Zeile NACH dem
-        // Kombirabatt (siehe DocumentTotals::$freeTextTotal).
-        if ($detail->freeTextTotal() > 0) {
-            if ($y - 14 < self::MARGIN + 40) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
-
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
             $y -= 14;
         }
 

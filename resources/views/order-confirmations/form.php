@@ -402,6 +402,16 @@ foreach ($articles as $article) {
                 <dt><?= e(t('order_confirmations.show.rental_subtotal')) ?></dt>
                 <dd data-total-rental>0,00 €</dd>
             </div>
+            <?php
+                // Nutzerwunsch (Zubehörpauschale auch auf Freitext-Positionen):
+                // Freitext-Posten fließen mit in die Basis für Zubehörpauschale/
+                // Kombirabatt ein (siehe DocumentTotals::calculate()) — daher
+                // hier VOR der Zubehörpauschale-Zeile angezeigt.
+            ?>
+            <div data-total-free-text-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('order_confirmations.form.totals_free_text')) ?></dt>
+                <dd data-total-free-text>0,00 €</dd>
+            </div>
             <div data-total-accessory-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt><?= e(t('order_confirmations.show.accessory_flat_rate', ['rate' => number_format((float) ($pricingSettings->accessoryFlatRatePercent ?? '0'), 2, ',', '.')])) ?></dt>
                 <dd data-total-accessory>0,00 €</dd>
@@ -409,10 +419,6 @@ foreach ($articles as $article) {
             <div data-total-discount-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt data-total-discount-label></dt>
                 <dd data-total-discount>0,00 €</dd>
-            </div>
-            <div data-total-free-text-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
-                <dt><?= e(t('order_confirmations.form.totals_free_text')) ?></dt>
-                <dd data-total-free-text>0,00 €</dd>
             </div>
             <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
                 <dt><?= e(t('order_confirmations.show.grand_total')) ?></dt>
@@ -788,9 +794,22 @@ foreach ($articles as $article) {
             rentalTotal += qty * price;
         });
 
+        var freeTextTotal = 0;
+        container.querySelectorAll('.oc-free-text-row').forEach(function (row) {
+            var qty = parseAmount(row.querySelector('input[name="free_text_quantity[]"]').value);
+            var price = parseAmount(row.querySelector('input[name="free_text_unit_price[]"]').value);
+            freeTextTotal += qty * price;
+        });
+
+        // Nutzerwunsch (Zubehörpauschale auch auf Freitext-Positionen):
+        // Freitext-Posten fließen zusammen mit den Mietpreisen in die Basis
+        // für Zubehörpauschale UND Kombirabatt ein (siehe
+        // DocumentTotals::calculate() für das serverseitige Äquivalent).
+        var accessoryBase = rentalTotal + freeTextTotal;
+
         var accessoryEnabled = !!(accessoryCheckbox && accessoryCheckbox.checked);
-        var accessoryAmount = accessoryEnabled ? round2(rentalTotal * parseAmount(ACCESSORY_PERCENT) / 100) : 0;
-        var subtotalAfterAccessory = rentalTotal + accessoryAmount;
+        var accessoryAmount = accessoryEnabled ? round2(accessoryBase * parseAmount(ACCESSORY_PERCENT) / 100) : 0;
+        var subtotalAfterAccessory = accessoryBase + accessoryAmount;
 
         var discountTypeInput = ocForm.querySelector('input[name="discount_type"]:checked');
         var discountType = discountTypeInput ? discountTypeInput.value : '';
@@ -804,14 +823,9 @@ foreach ($articles as $article) {
         discountAmount = Math.max(0, Math.min(discountAmount, subtotalAfterAccessory));
         var subtotalAfterDiscount = subtotalAfterAccessory - discountAmount;
 
-        var freeTextTotal = 0;
-        container.querySelectorAll('.oc-free-text-row').forEach(function (row) {
-            var qty = parseAmount(row.querySelector('input[name="free_text_quantity[]"]').value);
-            var price = parseAmount(row.querySelector('input[name="free_text_unit_price[]"]').value);
-            freeTextTotal += qty * price;
-        });
-
-        var grandTotal = subtotalAfterDiscount + freeTextTotal;
+        // freeTextTotal steckt bereits in subtotalAfterDiscount (siehe
+        // accessoryBase oben) — hier NICHT nochmal addieren.
+        var grandTotal = subtotalAfterDiscount;
 
         totalRentalEl.textContent = formatEuro(rentalTotal);
 

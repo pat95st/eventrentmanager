@@ -185,6 +185,21 @@ $rows = $detail->orderedRows();
                     <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('offers.show.rental_subtotal')) ?></td>
                     <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300"><?= number_format($totals->rentalNetTotal, 2, ',', '.') ?> €</td>
                 </tr>
+                <?php if ($detail->freeTextTotal() > 0): ?>
+                    <?php
+                        // Nutzerwunsch: Zubehörpauschale auch auf
+                        // Freitext-Positionen anwenden — Freitext-Posten
+                        // fließen daher (zusammen mit den Mietpreisen) VOR
+                        // der Zubehörpauschale/dem Kombirabatt in die Basis
+                        // ein (siehe DocumentTotals::calculate()), werden
+                        // hier aber weiterhin als eigene Zwischensumme
+                        // ausgewiesen.
+                    ?>
+                    <tr>
+                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('offers.show.free_text_total')) ?></td>
+                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->freeTextTotal(), 2, ',', '.') ?> €</td>
+                    </tr>
+                <?php endif; ?>
                 <?php if ($offer->accessoryFlatRateEnabled && $offer->accessoryFlatRatePercent !== null): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('offers.show.accessory_flat_rate', ['rate' => number_format((float) $offer->accessoryFlatRatePercent, 2, ',', '.')])) ?></td>
@@ -267,12 +282,6 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($saleEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endforeach; ?>
-                <?php if ($detail->freeTextTotal() > 0): ?>
-                    <tr>
-                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('offers.show.free_text_total')) ?></td>
-                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->freeTextTotal(), 2, ',', '.') ?> €</td>
-                    </tr>
-                <?php endif; ?>
                 <tr class="border-t border-slate-200 dark:border-slate-700">
                     <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="3"><?= e(t('offers.show.grand_total')) ?></td>
                     <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-slate-100"><?= number_format($totals->grossTotal, 2, ',', '.') ?> €</td>

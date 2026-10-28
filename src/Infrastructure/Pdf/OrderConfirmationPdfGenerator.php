@@ -107,6 +107,18 @@ final class OrderConfirmationPdfGenerator
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->rentalNetTotal, 2, ',', '.') . ' EUR', 9);
         $y -= 14;
 
+        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
+        // oben zusammen mit den Mietpositionen. Nutzerwunsch
+        // (Zubehörpauschale auch auf Freitext-Positionen): fließen
+        // zusammen mit den Mietpreisen VOR der Zubehörpauschale/dem
+        // Kombirabatt in die Basis ein (siehe DocumentTotals::calculate()),
+        // werden hier aber weiterhin als eigene Zwischensumme ausgewiesen.
+        if ($detail->freeTextTotal() > 0) {
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
+            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
+            $y -= 14;
+        }
+
         $orderConfirmation = $detail->orderConfirmation;
         if ($orderConfirmation->accessoryFlatRateEnabled && $orderConfirmation->accessoryFlatRatePercent !== null) {
             $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zubehörpauschale (' . number_format((float) $orderConfirmation->accessoryFlatRatePercent, 2, ',', '.') . '%):', 9);
@@ -120,17 +132,6 @@ final class OrderConfirmationPdfGenerator
                 : 'Kombirabatt (Festbetrag):';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $discountLabel, 9);
             $writer->text($pageWidth - self::MARGIN - 75, $y, '-' . number_format($totals->discountAmount, 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
-
-        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
-        // oben zusammen mit den Mietpositionen, hier im Summenblock aber als
-        // eigene Zeile NACH dem Kombirabatt (siehe DocumentTotals::
-        // $freeTextTotal sowie InvoicePdfGenerator/OfferPdfGenerator für das
-        // identische Muster).
-        if ($detail->freeTextTotal() > 0) {
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
             $y -= 14;
         }
 

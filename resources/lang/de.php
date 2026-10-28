@@ -906,6 +906,7 @@ return [
     'order_confirmations.show.accessory_flat_rate' => 'Zubehörpauschale ({rate} %)',
     'order_confirmations.show.discount_percent' => 'Kombirabatt ({rate} %)',
     'order_confirmations.show.discount_fixed' => 'Kombirabatt (Festbetrag)',
+    'order_confirmations.show.free_text_total' => 'Freitext-Posten (gesamt)',
     'order_confirmations.show.grand_total' => 'Gesamtsumme (netto)',
     'order_confirmations.flash.created' => 'Auftragsbestätigung wurde angelegt.',
     'order_confirmations.flash.created_from_offer' => 'Auftragsbestätigung wurde aus dem Angebot erstellt — bitte prüfen und speichern.',

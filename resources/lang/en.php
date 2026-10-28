@@ -905,6 +905,7 @@ return [
     'order_confirmations.show.accessory_flat_rate' => 'Accessory flat rate ({rate} %)',
     'order_confirmations.show.discount_percent' => 'Combo discount ({rate} %)',
     'order_confirmations.show.discount_fixed' => 'Combo discount (fixed amount)',
+    'order_confirmations.show.free_text_total' => 'Free-text items (total)',
     'order_confirmations.show.grand_total' => 'Total (net)',
     'order_confirmations.flash.created' => 'Order confirmation was created.',
     'order_confirmations.flash.created_from_offer' => 'Order confirmation was created from the offer — please review and save.',

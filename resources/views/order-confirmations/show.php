@@ -153,6 +153,12 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">−<?= number_format($totals->discountAmount, 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endif; ?>
+                <?php if ($detail->freeTextTotal() > 0): ?>
+                    <tr>
+                        <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('order_confirmations.show.free_text_total')) ?></td>
+                        <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($detail->freeTextTotal(), 2, ',', '.') ?> €</td>
+                    </tr>
+                <?php endif; ?>
                 <tr class="border-t border-slate-200 dark:border-slate-700">
                     <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="3"><?= e(t('order_confirmations.show.grand_total')) ?></td>
                     <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-slate-100"><?= number_format($totals->grossTotal, 2, ',', '.') ?> €</td>

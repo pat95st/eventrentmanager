@@ -123,6 +123,17 @@ final class OrderConfirmationPdfGenerator
             $y -= 14;
         }
 
+        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
+        // oben zusammen mit den Mietpositionen, hier im Summenblock aber als
+        // eigene Zeile NACH dem Kombirabatt (siehe DocumentTotals::
+        // $freeTextTotal sowie InvoicePdfGenerator/OfferPdfGenerator für das
+        // identische Muster).
+        if ($detail->freeTextTotal() > 0) {
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
+            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
+            $y -= 14;
+        }
+
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtsumme (netto):', 10, true);
         $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->grossTotal, 2, ',', '.') . ' EUR', 10, true);
         $y -= 30;

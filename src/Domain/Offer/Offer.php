@@ -49,6 +49,12 @@ final class Offer
         // als $note (siehe oben), das im Kopfbereich VOR der Positionsliste
         // steht. Siehe Invoice::$closingText für die identische Begründung.
         public ?string $closingText = null,
+        // Optionale Verknüpfung mit einer bereits bestehenden Veranstaltung
+        // (Rental) über die Live-Suche im Formular — rein informativ, NICHT
+        // zu verwechseln mit $convertedRentalId oben (das wird erst NACH
+        // dem Umwandeln per ConvertOfferToRentalHandler gesetzt). Siehe
+        // Invoice::$sourceRentalId für die identische Begründung/Semantik.
+        public ?string $sourceRentalId = null,
     ) {
     }
 

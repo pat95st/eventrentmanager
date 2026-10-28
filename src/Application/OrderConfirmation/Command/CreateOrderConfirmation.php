@@ -28,6 +28,10 @@ final class CreateOrderConfirmation implements CommandInterface
         // Rohes Rich-Text-HTML aus dem Formular, wird vom Handler über
         // HtmlSanitizer bereinigt (siehe OrderConfirmation::$closingText).
         public readonly ?string $closingText = null,
+        // Optionale Verknüpfung mit einer bestehenden Veranstaltung (Rental)
+        // über die Live-Suche im Formular — siehe
+        // OrderConfirmation::$sourceRentalId.
+        public readonly ?string $rentalId = null,
     ) {
     }
 }

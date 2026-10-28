@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Application\OrderConfirmation\Query\OrderConfirmationDetail $detail */
 /** @var \App\Domain\Venue\Venue|null $venue */
+/** @var \App\Domain\Rental\Rental|null $linkedRental */
 
 use App\Application\OrderConfirmation\Query\OrderConfirmationRow;
 use App\Domain\OrderConfirmation\OrderConfirmationStatus;
@@ -31,6 +32,12 @@ $rows = $detail->orderedRows();
         <?php if ($orderConfirmation->sourceOfferId !== null): ?>
             <p class="text-xs text-slate-400 dark:text-slate-500">
                 <?= t('order_confirmations.show.source_offer_notice', ['link' => '<a href="/angebote/' . e($orderConfirmation->sourceOfferId) . '" class="underline">' . e(t('order_confirmations.show.source_offer_link')) . '</a>']) ?>
+            </p>
+        <?php endif; ?>
+        <?php if ($linkedRental !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('order_confirmations.show.rental_link')) ?>:
+                <a href="/veranstaltungen/<?= e($linkedRental->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedRental->eventName) ?></a>
             </p>
         <?php endif; ?>
     </div>

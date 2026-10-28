@@ -26,8 +26,10 @@ use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\OrderConfirmation\OrderConfirmation;
 use App\Domain\OrderConfirmation\OrderConfirmationStatus;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\RentalPriceCalculator;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
@@ -46,6 +48,8 @@ final class OrderConfirmationController
         private readonly QueryBus $queries,
         private readonly VenueRepositoryInterface $venues,
         private readonly OrderConfirmationPdfGenerator $pdfGenerator,
+        private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerRepositoryInterface $customers,
     ) {
     }
 
@@ -104,6 +108,7 @@ final class OrderConfirmationController
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
+            rentalId: $this->nullIfEmpty($request->input('rental_id')),
         );
 
         try {
@@ -143,9 +148,13 @@ final class OrderConfirmationController
 
         $venue = $detail->orderConfirmation->venueId !== null ? $this->venues->findById($detail->orderConfirmation->venueId) : null;
 
+        // Siehe InvoiceController::show() für die identische Begründung.
+        $linkedRental = $detail->orderConfirmation->sourceRentalId !== null ? $this->rentals->findById($detail->orderConfirmation->sourceRentalId) : null;
+
         echo View::page('order-confirmations/show', [
             'detail' => $detail,
             'venue' => $venue,
+            'linkedRental' => $linkedRental,
         ], activeNav: 'order_confirmations', title: t('order_confirmations.page_title.detail'));
     }
 
@@ -182,6 +191,7 @@ final class OrderConfirmationController
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
+            rentalId: $this->nullIfEmpty($request->input('rental_id')),
         );
 
         try {
@@ -344,9 +354,30 @@ final class OrderConfirmationController
             $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
         }
 
+        // Anzeige-Label der verknüpften Veranstaltung — siehe
+        // InvoiceController::renderForm() für die identische Begründung/das
+        // identische Label-Format.
+        $selectedRentalId = $orderConfirmation?->sourceRentalId;
+        $selectedRentalLabel = null;
+        if ($selectedRentalId !== null) {
+            $rental = $this->rentals->findById($selectedRentalId);
+            $rentalCustomer = $rental !== null ? $this->customers->findById($rental->customerId) : null;
+            if ($rental !== null && $rentalCustomer !== null) {
+                $selectedRentalLabel = sprintf(
+                    '%s – %s (%s – %s)',
+                    $rental->eventName,
+                    $rentalCustomer->displayName(),
+                    $rental->startDate->format('d.m.Y'),
+                    $rental->endDate->format('d.m.Y'),
+                );
+            }
+        }
+
         echo View::page('order-confirmations/form', [
             'orderConfirmation' => $orderConfirmation,
             'customers' => $customers,
+            'selectedRentalId' => $selectedRentalId,
+            'selectedRentalLabel' => $selectedRentalLabel,
             'venues' => $venues,
             'articles' => $articles,
             'articleDisplayNames' => $articleDisplayNames,
@@ -450,6 +481,7 @@ final class OrderConfirmationController
             'free_text_items' => $command->freeTextItems,
             'section_texts' => $command->sectionTexts,
             'closing_text' => $command->closingText ?? '',
+            'rental_id' => $command->rentalId ?? '',
         ];
     }
 

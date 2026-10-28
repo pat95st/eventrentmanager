@@ -7,6 +7,7 @@ namespace App\Application\OrderConfirmation\Command;
 use App\Application\Common\VenueResolver;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use DateTimeImmutable;
 
@@ -29,6 +30,7 @@ trait ValidatesOrderConfirmationInput
      *     freeTextItems: array<int, array{description: string, quantity: string, unitPrice: string, sortOrder: int}>,
      *     sectionTexts: array<int, array{heading: string, sortOrder: int}>,
      *     discountType: ?string, discountValue: ?string,
+     *     rentalId: ?string,
      * }}
      */
     private function validateOrderConfirmationInput(
@@ -45,8 +47,20 @@ trait ValidatesOrderConfirmationInput
         array $rawSectionTexts,
         ?string $rawDiscountType = null,
         ?string $rawDiscountValue = null,
+        ?RentalRepositoryInterface $rentals = null,
+        ?string $rawRentalId = null,
     ): array {
         $errors = [];
+
+        // Optionale Verknüpfung mit einer bestehenden Veranstaltung (Rental)
+        // — siehe ValidatesInvoiceInput::validateInvoiceInput() für die
+        // identische Begründung/Regel (bewusst dupliziert, gleiches Muster
+        // wie der restliche Code dieser Traits).
+        $rentalId = $rawRentalId !== null ? trim($rawRentalId) : '';
+        if ($rentalId !== '' && $rentals !== null && $rentals->findById($rentalId) === null) {
+            $errors['rentalId'] = 'Die gewählte Veranstaltung wurde nicht gefunden.';
+            $rentalId = '';
+        }
 
         $customerId = trim($customerId);
         if ($customerId !== '' && $customers->findById($customerId) === null) {
@@ -201,6 +215,7 @@ trait ValidatesOrderConfirmationInput
             'sectionTexts' => $sectionTexts,
             'discountType' => $discountType,
             'discountValue' => $discountValue,
+            'rentalId' => $rentalId !== '' ? $rentalId : null,
         ]];
     }
 

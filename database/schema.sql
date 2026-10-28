@@ -1355,6 +1355,11 @@ CREATE TABLE offers (
     discount_type         ENUM('percent', 'fixed') NULL,
     discount_value        DECIMAL(10, 2) NULL,
     converted_rental_id   CHAR(36)      NULL,
+    -- Optionale Verknüpfung mit einer bereits bestehenden Veranstaltung
+    -- (Rental) — NICHT zu verwechseln mit converted_rental_id oben (das
+    -- wird erst NACH dem Umwandeln gesetzt). Siehe Migration 103 / App\
+    -- Domain\Offer\Offer::$sourceRentalId.
+    source_rental_id      CHAR(36)      NULL,
     created_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_offers_customer
@@ -1363,6 +1368,8 @@ CREATE TABLE offers (
         FOREIGN KEY (venue_id) REFERENCES venues (id) ON DELETE SET NULL,
     CONSTRAINT fk_offers_converted_rental
         FOREIGN KEY (converted_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT fk_offers_source_rental
+        FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
     CONSTRAINT uq_offers_offer_number UNIQUE (offer_number),
     INDEX idx_offers_customer (customer_id),
     INDEX idx_offers_venue (venue_id),
@@ -1464,6 +1471,10 @@ CREATE TABLE order_confirmations (
     discount_type         ENUM('percent', 'fixed') NULL,
     discount_value        DECIMAL(10, 2) NULL,
     source_offer_id       CHAR(36)      NULL,
+    -- Optionale Verknüpfung mit einer bereits bestehenden Veranstaltung
+    -- (Rental) — siehe Migration 103 / App\Domain\OrderConfirmation\
+    -- OrderConfirmation::$sourceRentalId.
+    source_rental_id      CHAR(36)      NULL,
     created_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT uq_order_confirmations_number UNIQUE (order_confirmation_number),
@@ -1473,6 +1484,8 @@ CREATE TABLE order_confirmations (
         FOREIGN KEY (venue_id) REFERENCES venues (id) ON DELETE SET NULL,
     CONSTRAINT fk_order_confirmations_source_offer
         FOREIGN KEY (source_offer_id) REFERENCES offers (id) ON DELETE SET NULL,
+    CONSTRAINT fk_order_confirmations_source_rental
+        FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
     INDEX idx_order_confirmations_customer (customer_id),
     INDEX idx_order_confirmations_venue (venue_id),
     INDEX idx_order_confirmations_status (status),

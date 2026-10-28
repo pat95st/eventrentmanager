@@ -34,6 +34,7 @@ final class UpdateOffer implements CommandInterface
         // Rohes Rich-Text-HTML aus dem Formular, wird vom Handler über
         // HtmlSanitizer bereinigt (siehe Offer::$closingText).
         public readonly ?string $closingText = null,
+        public readonly ?string $rentalId = null,
     ) {
     }
 }

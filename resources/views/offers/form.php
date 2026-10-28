@@ -217,6 +217,13 @@ foreach ($laborArticles as $laborArticle) {
             <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.event_location')) ?></label>
             <div class="mt-1">
                 <?php
+                // Nutzerwunsch: ist eine Veranstaltung verknüpft (siehe
+                // rental_id weiter unten), wird dieses Feld aus deren
+                // Veranstaltungsort abgeleitet und nicht mehr separat
+                // editiert — siehe <script> beim rental_id-Feld weiter
+                // unten für die Umschaltung (readonly + Hinweistext). Ohne
+                // verknüpfte Veranstaltung bleibt es wie bisher frei als
+                // Freitext editierbar.
                 renderLiveSearchField(
                     'event_location',
                     '/veranstaltungsorte/suche',
@@ -228,7 +235,85 @@ foreach ($laborArticles as $laborArticle) {
                 );
                 ?>
             </div>
+            <p id="event-location-derived-hint" class="mt-1 hidden text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.event_location_derived_hint')) ?></p>
         </div>
+    </div>
+
+    <?php
+        // Veranstaltungs-Verknüpfung (optional): Live-Suche gegen eine
+        // bestehende Veranstaltung (Rental), analog zur Umsetzung bei
+        // Rechnungen. Rein informativ/organisatorisch — ändert NICHT die
+        // Kopfdaten des Angebots (Kunde/Zeitraum bleiben unabhängig
+        // editierbar), leitet aber den Veranstaltungsort oben ab.
+        $selectedRentalIdVal = $val('rental_id', $selectedRentalId);
+    ?>
+    <div>
+        <label for="rental_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.rental')) ?></label>
+        <div class="mt-1 max-w-md">
+            <?php
+            renderLiveSearchField(
+                'rental_id',
+                '/veranstaltungen/suche',
+                $selectedRentalIdVal !== '' ? $selectedRentalIdVal : null,
+                $selectedRentalLabel,
+                t('offers.form.rental_placeholder'),
+                $errors['rentalId'] ?? null,
+                'select',
+            );
+            ?>
+        </div>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.rental_hint')) ?></p>
+        <script>
+            (function () {
+                var rentalHidden = document.querySelector('input[name="rental_id"][data-live-search-value]');
+                var eventLocationInput = document.getElementById('event_location');
+                var eventLocationHint = document.getElementById('event-location-derived-hint');
+
+                // Readonly-Zustand des Veranstaltungsort-Felds umschalten.
+                // readonly statt disabled, damit der Wert weiterhin
+                // mitgesendet wird (siehe renderLiveSearchField() im
+                // freetext-Modus: das sichtbare Feld TRÄGT selbst das
+                // name-Attribut, es gibt kein verstecktes Zweitfeld).
+                function setEventLocationDerived(derived) {
+                    if (!eventLocationInput) { return; }
+                    eventLocationInput.readOnly = derived;
+                    eventLocationInput.classList.toggle('bg-slate-50', derived);
+                    eventLocationInput.classList.toggle('text-slate-500', derived);
+                    eventLocationInput.classList.toggle('dark:bg-slate-800', derived);
+                    eventLocationInput.classList.toggle('dark:text-slate-400', derived);
+                    if (eventLocationHint) { eventLocationHint.classList.toggle('hidden', !derived); }
+                }
+
+                function prefillFromRental(rentalId) {
+                    if (!rentalId) {
+                        // Veranstaltungs-Verknüpfung entfernt — Feld wieder
+                        // frei editierbar machen (Wert bleibt erhalten,
+                        // damit nichts ungewollt verworfen wird).
+                        setEventLocationDerived(false);
+                        return;
+                    }
+                    fetch('/veranstaltungen/' + encodeURIComponent(rentalId) + '/logistik')
+                        .then(function (response) { return response.ok ? response.json() : null; })
+                        .then(function (data) {
+                            if (!data) { return; }
+                            if (eventLocationInput) { eventLocationInput.value = data.eventLocation || ''; }
+                            setEventLocationDerived(true);
+                        })
+                        .catch(function () { /* Verbindungsprobleme ignorieren — Ort bleibt wie zuletzt gesetzt */ });
+                }
+
+                if (rentalHidden) {
+                    rentalHidden.addEventListener('change', function () { prefillFromRental(rentalHidden.value); });
+                    // Beim Bearbeiten eines Angebots mit bereits verknüpfter
+                    // Veranstaltung: Feld direkt beim Laden als abgeleitet
+                    // markieren (der Wert selbst steht server-seitig schon
+                    // korrekt im Feld, siehe $val('event_location', ...)
+                    // oben — hier nur die Readonly-Markierung nachziehen,
+                    // kein erneuter Fetch nötig).
+                    if (rentalHidden.value) { setEventLocationDerived(true); }
+                }
+            })();
+        </script>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

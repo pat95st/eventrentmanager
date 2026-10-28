@@ -16,6 +16,7 @@ use App\Domain\OrderConfirmation\OrderConfirmationItem;
 use App\Domain\OrderConfirmation\OrderConfirmationRepositoryInterface;
 use App\Domain\OrderConfirmation\OrderConfirmationSectionText;
 use App\Domain\OrderConfirmation\OrderConfirmationStatus;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
@@ -38,6 +39,7 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
         private readonly HtmlSanitizer $htmlSanitizer,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -59,6 +61,8 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
             $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
+            $this->rentals,
+            $command->rentalId,
         );
 
         if ($errors !== []) {
@@ -94,6 +98,7 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
                 discountType: $data['discountType'],
                 discountValue: $data['discountValue'],
                 closingText: $this->htmlSanitizer->sanitize($command->closingText),
+                sourceRentalId: $data['rentalId'],
             );
 
             $this->orderConfirmations->save($orderConfirmation);

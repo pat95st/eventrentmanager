@@ -20,6 +20,7 @@ use App\Domain\Offer\OfferRepositoryInterface;
 use App\Domain\Offer\OfferSaleItem;
 use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Sale\SaleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\User\UserRepositoryInterface;
@@ -52,6 +53,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         private readonly SaleRepositoryInterface $sales,
         private readonly UserRepositoryInterface $users,
         private readonly HtmlSanitizer $htmlSanitizer,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -85,6 +87,8 @@ final class UpdateOfferHandler implements CommandHandlerInterface
             $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
+            $this->rentals,
+            $command->rentalId,
         );
 
         // Das Startdatum-/Enddatum-Feld muss auch außerhalb des Entwurfs
@@ -128,6 +132,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         $offer->discountType = $data['discountType'];
         $offer->discountValue = $data['discountValue'];
         $offer->closingText = $this->htmlSanitizer->sanitize($command->closingText);
+        $offer->sourceRentalId = $data['rentalId'];
 
         // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
         // für die identische Begründung (dort bereits für den Kombirabatt

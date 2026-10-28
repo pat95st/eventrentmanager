@@ -759,8 +759,8 @@ $commandBus->register(\App\Application\Printing\Command\DeleteLabelPrinter::clas
 $commandBus->register(\App\Application\Printing\Command\SendTestPrint::class, new SendTestPrintHandler($labelPrinterRepository, $labelPrinterDrivers));
 $commandBus->register(\App\Application\Printing\Command\PrintInventoryNumberLabel::class, new PrintInventoryNumberLabelHandler($inventoryNumberRepository, $labelPrinterRepository, $labelPrinterDrivers, $printerTransport));
 
-$commandBus->register(\App\Application\Offer\Command\CreateOffer::class, new CreateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $documentNumberSequence, $pdo, $htmlSanitizer));
-$commandBus->register(\App\Application\Offer\Command\UpdateOffer::class, new UpdateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $htmlSanitizer));
+$commandBus->register(\App\Application\Offer\Command\CreateOffer::class, new CreateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $documentNumberSequence, $pdo, $htmlSanitizer, $rentalRepository));
+$commandBus->register(\App\Application\Offer\Command\UpdateOffer::class, new UpdateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $htmlSanitizer, $rentalRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferSent::class, new MarkOfferSentHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferAccepted::class, new MarkOfferAcceptedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferDeclined::class, new MarkOfferDeclinedHandler($offerRepository));
@@ -793,6 +793,7 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConf
     $documentNumberSequence,
     $pdo,
     $htmlSanitizer,
+    $rentalRepository,
 ));
 $commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConfirmationFromOffer::class, new \App\Application\OrderConfirmation\Command\CreateOrderConfirmationFromOfferHandler(
     $offerRepository,
@@ -807,6 +808,7 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\UpdateOrderConf
     $articleRepository,
     $pricingSettingsRepository,
     $htmlSanitizer,
+    $rentalRepository,
 ));
 $commandBus->register(\App\Application\OrderConfirmation\Command\DeleteOrderConfirmation::class, new \App\Application\OrderConfirmation\Command\DeleteOrderConfirmationHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationSent::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationSentHandler($orderConfirmationRepository));
@@ -1298,8 +1300,8 @@ $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteP
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
 $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository, $voucherRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
-$offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository);
-$orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator);
+$offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository, $rentalRepository, $customerRepository);
+$orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator, $rentalRepository, $customerRepository);
 $invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository, $userRepository);
 $bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository);
 $invoiceSettingsController = new InvoiceSettingsController($commandBus, $queryBus);

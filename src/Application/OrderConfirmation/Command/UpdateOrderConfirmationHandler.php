@@ -15,6 +15,7 @@ use App\Domain\OrderConfirmation\OrderConfirmationFreeTextItem;
 use App\Domain\OrderConfirmation\OrderConfirmationItem;
 use App\Domain\OrderConfirmation\OrderConfirmationRepositoryInterface;
 use App\Domain\OrderConfirmation\OrderConfirmationSectionText;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\Venue\VenueRepositoryInterface;
 use App\Infrastructure\RichText\HtmlSanitizer;
@@ -32,6 +33,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly HtmlSanitizer $htmlSanitizer,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -62,6 +64,8 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
             $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
+            $this->rentals,
+            $command->rentalId,
         );
 
         if ($errors !== []) {
@@ -81,6 +85,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         $orderConfirmation->discountType = $data['discountType'];
         $orderConfirmation->discountValue = $data['discountValue'];
         $orderConfirmation->closingText = $this->htmlSanitizer->sanitize($command->closingText);
+        $orderConfirmation->sourceRentalId = $data['rentalId'];
         $orderConfirmation->updatedAt = new DateTimeImmutable();
 
         $this->orderConfirmations->save($orderConfirmation);

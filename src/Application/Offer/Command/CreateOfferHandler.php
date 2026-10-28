@@ -20,6 +20,7 @@ use App\Domain\Offer\OfferRepositoryInterface;
 use App\Domain\Offer\OfferSaleItem;
 use App\Domain\Offer\OfferSectionText;
 use App\Domain\Offer\OfferStatus;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Sale\SaleRepositoryInterface;
 use App\Domain\Settings\PricingSettingsRepositoryInterface;
 use App\Domain\User\UserRepositoryInterface;
@@ -48,6 +49,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
         private readonly HtmlSanitizer $htmlSanitizer,
+        private readonly RentalRepositoryInterface $rentals,
     ) {
     }
 
@@ -76,6 +78,8 @@ final class CreateOfferHandler implements CommandHandlerInterface
             $command->sectionTexts,
             $command->discountType,
             $command->discountValue,
+            $this->rentals,
+            $command->rentalId,
         );
 
         if ($errors !== []) {
@@ -130,6 +134,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
                 discountType: $data['discountType'],
                 discountValue: $data['discountValue'],
                 closingText: $this->htmlSanitizer->sanitize($command->closingText),
+                sourceRentalId: $data['rentalId'],
             );
 
             $this->offers->save($offer);

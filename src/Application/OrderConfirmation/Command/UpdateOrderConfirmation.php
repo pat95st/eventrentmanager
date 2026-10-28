@@ -29,6 +29,7 @@ final class UpdateOrderConfirmation implements CommandInterface
         // Rohes Rich-Text-HTML aus dem Formular, wird vom Handler über
         // HtmlSanitizer bereinigt (siehe OrderConfirmation::$closingText).
         public readonly ?string $closingText = null,
+        public readonly ?string $rentalId = null,
     ) {
     }
 }

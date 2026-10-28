@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Application\Offer\Query\OfferDetail $detail */
 /** @var \App\Domain\Venue\Venue|null $venue */
+/** @var \App\Domain\Rental\Rental|null $linkedRental */
 
 use App\Application\Offer\Query\OfferRow;
 
@@ -38,6 +39,12 @@ $rows = $detail->orderedRows();
         </p>
         <?php if ($offer->validUntil !== null): ?>
             <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.show.valid_until', ['date' => $offer->validUntil->format('d.m.Y')])) ?></p>
+        <?php endif; ?>
+        <?php if ($linkedRental !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('offers.show.rental_link')) ?>:
+                <a href="/veranstaltungen/<?= e($linkedRental->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedRental->eventName) ?></a>
+            </p>
         <?php endif; ?>
     </div>
     <div class="flex flex-wrap items-center gap-3">

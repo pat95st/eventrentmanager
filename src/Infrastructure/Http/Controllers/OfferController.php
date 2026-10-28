@@ -31,9 +31,11 @@ use App\Domain\Article\ArticleDisplayName;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Offer\Offer;
 use App\Domain\Offer\OfferStatus;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Settings\RentalPriceCalculator;
 use App\Domain\Stock\SaleStockLotRepositoryInterface;
 use App\Domain\User\UserRepositoryInterface;
@@ -58,6 +60,8 @@ final class OfferController
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly SaleStockLotRepositoryInterface $stockLots,
         private readonly UserRepositoryInterface $users,
+        private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerRepositoryInterface $customers,
     ) {
     }
 
@@ -119,6 +123,7 @@ final class OfferController
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
+            rentalId: $this->nullIfEmpty($request->input('rental_id')),
         );
 
         try {
@@ -144,9 +149,15 @@ final class OfferController
 
         $venue = $detail->offer->venueId !== null ? $this->venues->findById($detail->offer->venueId) : null;
 
+        // Siehe InvoiceController::show() für die identische Begründung
+        // (Veranstaltungs-Verknüpfung wird separat geladen, nicht als Teil
+        // des Query-Ergebnisses — OfferDetail kennt nur das Offer selbst).
+        $linkedRental = $detail->offer->sourceRentalId !== null ? $this->rentals->findById($detail->offer->sourceRentalId) : null;
+
         echo View::page('offers/show', [
             'detail' => $detail,
             'venue' => $venue,
+            'linkedRental' => $linkedRental,
         ], activeNav: 'offers', title: t('offers.page_title.detail'));
     }
 
@@ -202,6 +213,7 @@ final class OfferController
             freeTextItems: $this->freeTextItemsFromRequest($request),
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
+            rentalId: $this->nullIfEmpty($request->input('rental_id')),
         );
 
         try {
@@ -487,9 +499,32 @@ final class OfferController
             $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
         }
 
+        // Anzeige-Label der verknüpften Veranstaltung (siehe
+        // InvoiceController::renderForm() für die identische Begründung/das
+        // identische Label-Format — bewusst dupliziert statt geteilt,
+        // gleiches Muster wie der restliche Code dieser Controller) für die
+        // Vorbelegung der Live-Suche im Formular (siehe offers/form.php).
+        $selectedRentalId = $offer?->sourceRentalId;
+        $selectedRentalLabel = null;
+        if ($selectedRentalId !== null) {
+            $rental = $this->rentals->findById($selectedRentalId);
+            $rentalCustomer = $rental !== null ? $this->customers->findById($rental->customerId) : null;
+            if ($rental !== null && $rentalCustomer !== null) {
+                $selectedRentalLabel = sprintf(
+                    '%s – %s (%s – %s)',
+                    $rental->eventName,
+                    $rentalCustomer->displayName(),
+                    $rental->startDate->format('d.m.Y'),
+                    $rental->endDate->format('d.m.Y'),
+                );
+            }
+        }
+
         echo View::page('offers/form', [
             'offer' => $offer,
             'customers' => $customers,
+            'selectedRentalId' => $selectedRentalId,
+            'selectedRentalLabel' => $selectedRentalLabel,
             'venues' => $venues,
             'articles' => $articles,
             'articleDisplayNames' => $articleDisplayNames,
@@ -657,6 +692,7 @@ final class OfferController
             'free_text_items' => $command->freeTextItems,
             'section_texts' => $command->sectionTexts,
             'closing_text' => $command->closingText ?? '',
+            'rental_id' => $command->rentalId ?? '',
         ];
     }
 

@@ -20,6 +20,7 @@
 /** @var array<string, int> $saleStock Artikel-ID => aktueller Lagerbestand des Verkaufsbestands */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderArticlePickerModal;
 use function App\Infrastructure\Http\renderLiveSearchField;
 use function App\Infrastructure\Http\t;
 
@@ -327,7 +328,7 @@ foreach ($laborArticles as $laborArticle) {
         <label for="contact_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.contact')) ?></label>
         <div class="mt-1">
             <select id="contact_id" name="contact_id" data-contact-select
-                    class="w-full rounded-md border <?= isset($errors['contactId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:bg-slate-950">
+                    class="w-full rounded-md border <?= isset($errors['contactId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
                 <option value=""><?= e(t('offers.form.contact_placeholder')) ?></option>
             </select>
         </div>
@@ -338,7 +339,7 @@ foreach ($laborArticles as $laborArticle) {
             // Dokumentenerstellung anzeigen", Task #84): siehe
             // invoices/form.php für die identische Begründung.
         ?>
-        <div class="mt-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/40" data-address-preview>
+        <div class="mt-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-800/40" data-address-preview>
             <p class="font-medium text-slate-500 dark:text-slate-400"><?= e(t('offers.form.address_preview_label')) ?></p>
             <p class="mt-1 whitespace-pre-line text-slate-600 dark:text-slate-300" data-address-preview-text><?= e(t('offers.form.address_preview_empty')) ?></p>
         </div>

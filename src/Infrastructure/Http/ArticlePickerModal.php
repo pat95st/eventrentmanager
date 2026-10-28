@@ -21,7 +21,10 @@ namespace App\Infrastructure\Http;
  * steckt vollständig in article-picker.js, das jeweilige Formular übergibt
  * beim Öffnen lediglich einen Callback (siehe window.ArticlePicker.open()).
  */
-if (!function_exists('renderArticlePickerModal')) {
+// Guard mit vollqualifiziertem Namen: function_exists() löst NICHT relativ
+// zum aktuellen Namespace auf, ein unqualifiziertes 'renderArticlePickerModal'
+// prüft also die (nie existierende) globale Funktion.
+if (!function_exists(__NAMESPACE__ . '\\renderArticlePickerModal')) {
     function renderArticlePickerModal(): void
     {
         ?>

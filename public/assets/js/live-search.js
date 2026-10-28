@@ -72,6 +72,10 @@
         var items = [];
         var highlightedIndex = -1;
         var activeRequest = null;
+        // Siehe Kommentar in selectItem(): unterdrückt den Selbst-Reset des
+        // versteckten Feldes im 'input'-Listener weiter unten für genau das
+        // eine synthetische Event, das selectItem() selbst auslöst.
+        var suppressOwnInputReset = false;
 
         function hideResults() {
             resultsEl.classList.add('hidden');
@@ -102,7 +106,22 @@
             // resources/views/rentals/form.php, die direkt am
             // #event_location-Feld hängt und sonst nach einer Auswahl aus
             // den Vorschlägen nicht aktualisiert würde).
+            //
+            // WICHTIG (Bugreport "Kunde/Artikel werden beim Speichern nicht
+            // übernommen"): das synthetische 'input'-Event oben landet auch
+            // beim EIGENEN 'input'-Listener dieses Widgets weiter unten, der
+            // bei JEDER Eingabe das versteckte Feld auf '' zurücksetzt (da er
+            // echtes Tippen von einer ungültig gewordenen alten Auswahl
+            // unterscheiden soll) — das hätte den gerade gesetzten
+            // hidden.value hier sofort wieder verworfen, und zwar bei JEDER
+            // Auswahl, nicht nur im zuvor behobenen Submit-Race-Case. Das
+          // Flag unterdrückt diesen Selbst-Reset für genau diesen einen,
+            // synthetischen Event-Durchlauf; externe Listener (die auf das
+            // bubbling-Event lauschen, nicht auf diesen internen Listener)
+            // bekommen das Event unverändert.
+            suppressOwnInputReset = true;
             input.dispatchEvent(new Event('input', { bubbles: true }));
+            suppressOwnInputReset = false;
             input.dispatchEvent(new Event('change', { bubbles: true }));
             hideResults();
         }
@@ -182,6 +201,15 @@
         }, DEBOUNCE_MS);
 
         input.addEventListener('input', function () {
+            if (suppressOwnInputReset) {
+                // Das synthetische 'input'-Event aus selectItem() selbst —
+                // KEIN echtes Tippen, also die soeben gesetzte Auswahl nicht
+                // verwerfen und auch keine neue Suche anstoßen (die würde
+                // die gerade geschlossene Vorschlagsliste 250ms später
+                // wieder öffnen).
+                return;
+            }
+
             var value = input.value;
 
             if (mode === 'select' && hidden) {
@@ -212,9 +240,16 @@
                 event.preventDefault();
                 highlight(Math.max(highlightedIndex - 1, 0));
             } else if (event.key === 'Enter') {
-                if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                // War noch nicht per Pfeiltasten durch die Vorschläge
+                // navigiert worden (häufigster Fall: Name eingetippt, direkt
+                // Enter gedrückt, ohne vorher einen Vorschlag anzuklicken),
+                // zählt der erste/oberste Treffer als gemeint — identisches
+                // Verhalten zu den meisten bekannten Autocomplete-Feldern
+                // (z. B. Google-Suche, GitHub-Suche).
+                var indexToSelect = highlightedIndex >= 0 ? highlightedIndex : 0;
+                if (items[indexToSelect]) {
                     event.preventDefault();
-                    selectItem(items[highlightedIndex]);
+                    selectItem(items[indexToSelect]);
                 }
             } else if (event.key === 'Escape') {
                 hideResults();
@@ -237,12 +272,44 @@
         // Formular, das versteckte Feld würde also mit dem zwischenzeitlich
         // (beim Tippen) auf '' zurückgesetzten Wert gespeichert — siehe
         // Bugreport "Schnellsuche-Auswahl wird nicht korrekt gespeichert".
+        //
+        // WICHTIGER Folgefix (Bugreport "Kunde/Artikel werden beim
+        // Speichern nicht übernommen"): tippt jemand einen Namen EXAKT so
+        // ein, wie ihn ein gerade angezeigter Vorschlag trägt, und klickt
+        // dann direkt auf "Speichern" (statt explizit den Vorschlag
+        // anzuklicken — die naheliegende, aber von diesem Widget bisher
+        // nicht unterstützte Erwartung), sprang das Feld bisher einfach auf
+        // die alte/leere confirmedLabel/confirmedId zurück und verwarf die
+        // Eingabe kommentarlos. Jetzt wird zuerst in den zuletzt geladenen
+        // Treffern (`items`, noch vorhanden, solange die Vorschlagsliste
+        // beim Abschicken noch nicht geschlossen wurde) nach einem exakten
+        // (Groß-/Kleinschreibung ignorierenden) Label-Treffer gesucht und
+        // dieser — genau wie ein echter Klick — als Auswahl übernommen,
+        // statt die Eingabe zu verwerfen.
         function restoreConfirmedIfNeeded() {
-            if (mode === 'select' && input.value !== confirmedLabel) {
-                input.value = confirmedLabel;
-                if (hidden) {
-                    hidden.value = confirmedId;
+            if (mode !== 'select' || input.value === confirmedLabel) {
+                return;
+            }
+
+            var typed = input.value.trim().toLowerCase();
+            var exactMatch = null;
+            if (typed !== '') {
+                for (var i = 0; i < items.length; i++) {
+                    if (items[i].label.trim().toLowerCase() === typed) {
+                        exactMatch = items[i];
+                        break;
+                    }
                 }
+            }
+
+            if (exactMatch) {
+                selectItem(exactMatch);
+                return;
+            }
+
+            input.value = confirmedLabel;
+            if (hidden) {
+                hidden.value = confirmedId;
             }
         }
 
@@ -256,8 +323,14 @@
                     return;
                 }
 
-                hideResults();
+                // WICHTIG: restoreConfirmedIfNeeded() MUSS vor hideResults()
+                // laufen — es gleicht die Eingabe ggf. noch gegen die zuletzt
+                // geladenen Treffer (`items`) ab (siehe Kommentar an der
+                // Funktion selbst), und hideResults() leert genau dieses
+                // Array. Die umgekehrte Reihenfolge (früher hier) hätte den
+                // exakten Treffer immer verfehlt.
                 restoreConfirmedIfNeeded();
+                hideResults();
             }, 0);
         });
 
@@ -266,12 +339,13 @@
         // ein zwischenzeitlich (durch Tippen ohne Auswahl) auf '' gesetztes
         // verstecktes Feld auf keinen Fall mitgeschickt wird. Läuft als
         // regulärer (nicht abbrechender) `submit`-Listener VOR der
-        // eigentlichen, nativen Formularübermittlung.
+        // eigentlichen, nativen Formularübermittlung. Reihenfolge wie beim
+        // focusout-Handler oben: restoreConfirmedIfNeeded() zuerst.
         var ownForm = root.closest('form');
         if (ownForm) {
             ownForm.addEventListener('submit', function () {
-                hideResults();
                 restoreConfirmedIfNeeded();
+                hideResults();
             });
         }
 

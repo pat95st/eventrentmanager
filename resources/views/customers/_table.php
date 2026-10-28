@@ -19,11 +19,11 @@ use function App\Infrastructure\Http\t;
         <table class="w-full min-w-[760px] table-fixed text-left text-sm">
             <colgroup>
                 <col style="width: 10%">
-                <col style="width: 8%">
+                <col style="width: 14%">
+                <col style="width: 19%">
                 <col style="width: 20%">
-                <col style="width: 22%">
-                <col style="width: 12%">
-                <col style="width: 16%">
+                <col style="width: 10%">
+                <col style="width: 15%">
                 <col style="width: 12%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -43,8 +43,8 @@ use function App\Infrastructure\Http\t;
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                             <?= e($customer->customerNumber) ?>
                         </td>
-                        <td class="break-words px-4 py-3">
-                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $customer->type === \App\Domain\Customer\CustomerType::Geschaeftlich ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800' : 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600' ?>">
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium <?= $customer->type === \App\Domain\Customer\CustomerType::Geschaeftlich ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800' : 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600' ?>">
                                 <?= e($customer->type->label()) ?>
                             </span>
                         </td>

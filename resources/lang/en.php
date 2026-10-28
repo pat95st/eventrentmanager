@@ -1020,6 +1020,7 @@ return [
     'invoices.form.customer_placeholder' => 'Please select…',
     'invoices.form.customer_hint' => 'Optional — an invoice can be started as a draft without a final customer assignment. A customer is required before sending.',
     'invoices.form.event_location' => 'Event location',
+    'invoices.form.event_location_derived_hint' => 'Taken from the selected rental event. To change it, remove the rental event link or pick a different event.',
     'invoices.form.start_date' => 'Start date',
     'invoices.form.end_date' => 'End date',
     'invoices.form.buyer_reference' => 'Customer reference',

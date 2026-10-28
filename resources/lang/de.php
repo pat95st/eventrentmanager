@@ -1021,6 +1021,7 @@ return [
     'invoices.form.customer_placeholder' => 'Bitte wählen…',
     'invoices.form.customer_hint' => 'Optional — eine Rechnung kann auch ohne endgültige Kundenzuordnung als Entwurf begonnen werden. Vor dem Versenden ist ein Kunde zwingend erforderlich.',
     'invoices.form.event_location' => 'Veranstaltungsort',
+    'invoices.form.event_location_derived_hint' => 'Wird aus der ausgewählten Veranstaltung übernommen. Zum Ändern die Veranstaltungs-Verknüpfung entfernen oder eine andere Veranstaltung wählen.',
     'invoices.form.start_date' => 'Startdatum',
     'invoices.form.end_date' => 'Enddatum',
     'invoices.form.buyer_reference' => 'Referenz des Kunden',

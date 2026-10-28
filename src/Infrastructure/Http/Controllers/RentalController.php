@@ -115,13 +115,17 @@ final class RentalController
     }
 
     /**
-     * Abhol-/Rückgabetermin der Veranstaltung als JSON (siehe
-     * Rental::$pickupAt/$returnAt) — wird von invoices/form.php per Fetch
-     * abgerufen, um die Logistik-Termine beim Auswählen einer Veranstaltung
-     * vorzubelegen (siehe Invoice::$logisticsDate1/$logisticsDate2-Klassendoc).
-     * Keine Fehlerseite bei unbekannter ID — liefert einfach leere Termine,
-     * damit ein knapp daneben liegender/veralteter Aufruf das Formular nicht
-     * stört.
+     * Abhol-/Rückgabetermin UND Veranstaltungsort der Veranstaltung als JSON
+     * (siehe Rental::$pickupAt/$returnAt/$eventLocation) — wird von
+     * invoices/form.php per Fetch abgerufen, um beim Auswählen einer
+     * Veranstaltung die Logistik-Termine vorzubelegen (siehe
+     * Invoice::$logisticsDate1/$logisticsDate2-Klassendoc) UND den
+     * Veranstaltungsort aus der Veranstaltung abzuleiten (Nutzerwunsch: der
+     * Veranstaltungsort soll bei verknüpfter Veranstaltung nicht mehr
+     * separat zur Auswahl stehen, sondern sich danach richten, siehe
+     * entsprechendes <script> in invoices/form.php). Keine Fehlerseite bei
+     * unbekannter ID — liefert einfach leere Werte, damit ein knapp daneben
+     * liegender/veralteter Aufruf das Formular nicht stört.
      */
     public function logistics(Request $request): void
     {
@@ -131,6 +135,7 @@ final class RentalController
         Response::json([
             'pickupAt' => $rental?->pickupAt?->format('Y-m-d\TH:i'),
             'returnAt' => $rental?->returnAt?->format('Y-m-d\TH:i'),
+            'eventLocation' => $rental?->eventLocation,
         ]);
     }
 

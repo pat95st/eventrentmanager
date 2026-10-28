@@ -199,6 +199,13 @@ foreach ($laborArticles as $laborArticle) {
             <label for="event_location" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.event_location')) ?></label>
             <div class="mt-1">
                 <?php
+                // Nutzerwunsch: ist eine Veranstaltung verknüpft (siehe
+                // rental_id weiter unten), wird dieses Feld aus deren
+                // Veranstaltungsort abgeleitet und nicht mehr separat
+                // editiert — siehe <script> beim rental_id-Feld weiter
+                // unten für die Umschaltung (readonly + Hinweistext). Ohne
+                // verknüpfte Veranstaltung bleibt es wie bisher frei als
+                // Freitext editierbar.
                 renderLiveSearchField(
                     'event_location',
                     '/veranstaltungsorte/suche',
@@ -210,6 +217,7 @@ foreach ($laborArticles as $laborArticle) {
                 );
                 ?>
             </div>
+            <p id="event-location-derived-hint" class="mt-1 hidden text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.event_location_derived_hint')) ?></p>
         </div>
     </div>
 
@@ -329,27 +337,62 @@ foreach ($laborArticles as $laborArticle) {
                 applyLabels();
 
                 // Vorbelegung aus der verknüpften Veranstaltung (siehe
-                // RentalController::logistics()) — nur wenn beide Felder
-                // noch leer sind, damit eine bereits getroffene eigene
-                // Eingabe nicht überschrieben wird.
+                // RentalController::logistics()): Logistik-Termine nur
+                // wenn beide Felder noch leer sind (damit eine bereits
+                // getroffene eigene Eingabe nicht überschrieben wird) — der
+                // Veranstaltungsort dagegen IMMER (Nutzerwunsch: soll sich
+                // nach der Veranstaltung richten, nicht separat editierbar
+                // sein, solange eine Veranstaltung verknüpft ist).
                 var rentalHidden = document.querySelector('input[name="rental_id"][data-live-search-value]');
                 var date1Input = document.getElementById('logistics_date1');
                 var date2Input = document.getElementById('logistics_date2');
+                var eventLocationInput = document.getElementById('event_location');
+                var eventLocationHint = document.getElementById('event-location-derived-hint');
+
+                // Readonly-Zustand des Veranstaltungsort-Felds umschalten.
+                // readonly statt disabled, damit der Wert weiterhin
+                // mitgesendet wird (siehe renderLiveSearchField() im
+                // freetext-Modus: das sichtbare Feld TRÄGT selbst das
+                // name-Attribut, es gibt kein verstecktes Zweitfeld).
+                function setEventLocationDerived(derived) {
+                    if (!eventLocationInput) { return; }
+                    eventLocationInput.readOnly = derived;
+                    eventLocationInput.classList.toggle('bg-slate-50', derived);
+                    eventLocationInput.classList.toggle('text-slate-500', derived);
+                    eventLocationInput.classList.toggle('dark:bg-slate-800', derived);
+                    eventLocationInput.classList.toggle('dark:text-slate-400', derived);
+                    if (eventLocationHint) { eventLocationHint.classList.toggle('hidden', !derived); }
+                }
 
                 function prefillFromRental(rentalId) {
-                    if (!rentalId || date1Input.value || date2Input.value) { return; }
+                    if (!rentalId) {
+                        // Veranstaltungs-Verknüpfung entfernt — Feld wieder
+                        // frei editierbar machen (Wert bleibt erhalten,
+                        // damit nichts ungewollt verworfen wird).
+                        setEventLocationDerived(false);
+                        return;
+                    }
                     fetch('/veranstaltungen/' + encodeURIComponent(rentalId) + '/logistik')
                         .then(function (response) { return response.ok ? response.json() : null; })
                         .then(function (data) {
                             if (!data) { return; }
                             if (data.pickupAt && !date1Input.value) { date1Input.value = data.pickupAt; }
                             if (data.returnAt && !date2Input.value) { date2Input.value = data.returnAt; }
+                            if (eventLocationInput) { eventLocationInput.value = data.eventLocation || ''; }
+                            setEventLocationDerived(true);
                         })
-                        .catch(function () { /* Verbindungsprobleme ignorieren — Termine bleiben frei editierbar */ });
+                        .catch(function () { /* Verbindungsprobleme ignorieren — Termine/Ort bleiben wie zuletzt gesetzt */ });
                 }
 
                 if (rentalHidden) {
                     rentalHidden.addEventListener('change', function () { prefillFromRental(rentalHidden.value); });
+                    // Beim Bearbeiten einer Rechnung mit bereits verknüpfter
+                    // Veranstaltung: Feld direkt beim Laden als abgeleitet
+                    // markieren (der Wert selbst steht server-seitig schon
+                    // korrekt im Feld, siehe $val('event_location', ...)
+                    // oben — hier nur die Readonly-Markierung nachziehen,
+                    // kein erneuter Fetch nötig).
+                    if (rentalHidden.value) { setEventLocationDerived(true); }
                 }
             })();
         </script>

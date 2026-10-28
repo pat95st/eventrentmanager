@@ -288,21 +288,54 @@ foreach ($articles as $article) {
         </div>
         <?php if (isset($errors['contactId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['contactId']) ?></p><?php endif; ?>
         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('order_confirmations.form.contact_hint')) ?></p>
+        <?php
+            // Adressvorschau (Nutzerwunsch "Kundenadresse in
+            // Dokumentenerstellung anzeigen", Task #84): siehe
+            // invoices/form.php für die identische Begründung.
+        ?>
+        <div class="mt-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs dark:border-slate-700 dark:bg-slate-900/40" data-address-preview>
+            <p class="font-medium text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.form.address_preview_label')) ?></p>
+            <p class="mt-1 whitespace-pre-line text-slate-600 dark:text-slate-300" data-address-preview-text><?= e(t('order_confirmations.form.address_preview_empty')) ?></p>
+        </div>
         <script>
             (function () {
                 var customerHidden = document.querySelector('input[name="customer_id"][data-live-search-value]');
                 var contactSelect = document.querySelector('[data-contact-select]');
+                var addressPreviewText = document.querySelector('[data-address-preview-text]');
                 var selectedContactId = <?= json_encode($selectedContactIdVal !== '' ? $selectedContactIdVal : null) ?>;
                 var placeholderLabel = <?= json_encode(t('order_confirmations.form.contact_placeholder')) ?>;
+                var addressEmptyLabel = <?= json_encode(t('order_confirmations.form.address_preview_empty')) ?>;
+                var contactsById = {};
+                var customerAddress = null;
+
+                function formatAddress(addr) {
+                    if (!addr) { return null; }
+                    var lines = [];
+                    if (addr.name) { lines.push(addr.name); }
+                    if (addr.street) { lines.push(addr.street); }
+                    if (addr.addressLine2) { lines.push(addr.addressLine2); }
+                    var cityLine = [addr.postalCode, addr.city].filter(Boolean).join(' ');
+                    if (cityLine) { lines.push(cityLine); }
+                    return lines.length ? lines.join('\n') : null;
+                }
+
+                function renderAddressPreview() {
+                    if (!addressPreviewText) { return; }
+                    var contact = contactSelect && contactSelect.value ? contactsById[contactSelect.value] : null;
+                    var source = contact && contact.hasOwnAddress ? contact : customerAddress;
+                    addressPreviewText.textContent = formatAddress(source) || addressEmptyLabel;
+                }
 
                 function renderOptions(items, keepSelection) {
                     if (!contactSelect) { return; }
                     contactSelect.innerHTML = '';
+                    contactsById = {};
                     var placeholderOption = document.createElement('option');
                     placeholderOption.value = '';
                     placeholderOption.textContent = placeholderLabel;
                     contactSelect.appendChild(placeholderOption);
                     items.forEach(function (item) {
+                        contactsById[item.id] = item;
                         var option = document.createElement('option');
                         option.value = item.id;
                         option.textContent = item.label;
@@ -311,6 +344,7 @@ foreach ($articles as $article) {
                         }
                         contactSelect.appendChild(option);
                     });
+                    renderAddressPreview();
                 }
 
                 function loadContacts(customerId, keepSelection) {
@@ -324,9 +358,31 @@ foreach ($articles as $article) {
                         .catch(function () { renderOptions([], false); });
                 }
 
+                function loadCustomerAddress(customerId) {
+                    if (!customerId) {
+                        customerAddress = null;
+                        renderAddressPreview();
+                        return;
+                    }
+                    fetch('/kunden/' + encodeURIComponent(customerId) + '/adresse')
+                        .then(function (response) { return response.ok ? response.json() : null; })
+                        .then(function (data) { customerAddress = data && data.item ? data.item : null; renderAddressPreview(); })
+                        .catch(function () { customerAddress = null; renderAddressPreview(); });
+                }
+
+                if (contactSelect) {
+                    contactSelect.addEventListener('change', renderAddressPreview);
+                }
+
                 if (customerHidden) {
-                    customerHidden.addEventListener('change', function () { loadContacts(customerHidden.value, false); });
-                    if (customerHidden.value) { loadContacts(customerHidden.value, true); }
+                    customerHidden.addEventListener('change', function () {
+                        loadContacts(customerHidden.value, false);
+                        loadCustomerAddress(customerHidden.value);
+                    });
+                    if (customerHidden.value) {
+                        loadContacts(customerHidden.value, true);
+                        loadCustomerAddress(customerHidden.value);
+                    }
                 }
             })();
         </script>

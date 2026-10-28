@@ -1592,6 +1592,10 @@ $router->get('/kunden/suche', $auth->guard(null, [$customerController, 'search']
 // in Angebots-/Rechnungs-/Auftragsbestätigungsformularen — `null`-Permission,
 // identische Begründung wie bei '/kunden/suche' oben.
 $router->get('/kunden/{id}/ansprechpartner', $auth->guard(null, [$customerController, 'contacts']));
+// Adressvorschau in Dokumentenformularen (Nutzerwunsch "Kundenadresse in
+// Dokumentenerstellung anzeigen") — identische Begründung wie bei
+// '/kunden/{id}/ansprechpartner' oben.
+$router->get('/kunden/{id}/adresse', $auth->guard(null, [$customerController, 'address']));
 $router->get('/kunden/neu', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'create']));
 $router->post('/kunden', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'store']));
 $router->get('/kunden/import', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'importForm']));

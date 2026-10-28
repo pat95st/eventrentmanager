@@ -87,12 +87,55 @@ final class CustomerController
 
         Response::json([
             'items' => array_map(
+                // Adressfelder zusätzlich zu id/label mitgeben (Nutzerwunsch
+                // "Kundenadresse in Dokumentenerstellung anzeigen"): das
+                // Formular-JS kann so die Adressvorschau direkt beim
+                // Ansprechpartner-Wechsel aktualisieren, ohne einen weiteren
+                // Request abzusetzen (siehe renderAddressPreview() in den
+                // Formularen).
                 static fn (\App\Domain\Customer\CustomerContact $contact): array => [
                     'id' => $contact->id,
                     'label' => $contact->name . ($contact->jobTitle !== null && trim($contact->jobTitle) !== '' ? ' (' . $contact->jobTitle . ')' : ''),
+                    'hasOwnAddress' => $contact->hasOwnAddress(),
+                    'name' => $contact->name,
+                    'street' => $contact->street,
+                    'addressLine2' => $contact->addressLine2,
+                    'postalCode' => $contact->postalCode,
+                    'city' => $contact->city,
                 ],
                 $contacts
             ),
+        ]);
+    }
+
+    /**
+     * JSON-Adresse eines Kunden, für die Adressvorschau in Angebots-/
+     * Rechnungs-/Auftragsbestätigungsformularen (Nutzerwunsch "Kundenadresse
+     * in Dokumentenerstellung anzeigen") — das Frontend fragt dies bei jeder
+     * Kundenauswahl per fetch() neu ab, analog zu contacts() oben. `null`
+     * als Permission aus demselben Grund wie bei contacts()/search().
+     */
+    public function address(Request $request): void
+    {
+        $customerId = (string) $request->param('id');
+
+        try {
+            /** @var \App\Domain\Customer\Customer $customer */
+            $customer = $this->queries->ask(new GetCustomer($customerId));
+        } catch (NotFoundException) {
+            Response::json(['item' => null]);
+
+            return;
+        }
+
+        Response::json([
+            'item' => [
+                'name' => $customer->displayName(),
+                'street' => $customer->street,
+                'addressLine2' => $customer->addressLine2,
+                'postalCode' => $customer->postalCode,
+                'city' => $customer->city,
+            ],
         ]);
     }
 

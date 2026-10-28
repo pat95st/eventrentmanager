@@ -753,6 +753,11 @@ foreach ($laborArticles as $laborArticle) {
         container.appendChild(row);
         window.LiveSearch.init(row);
         updateOnlyLaborState();
+        // Siehe invoices/form.php für die identische Begründung: nötig für
+        // das Artikel-Mehrfachauswahl-Modal, dessen "Einfügen"-Klick außerhalb
+        // von #offer-form liegt und daher nicht zum delegierten Listener
+        // durchbubbelt. updateTotals() ist weiter unten gehoisted.
+        updateTotals();
         return articleInput;
     }
 

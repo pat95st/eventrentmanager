@@ -294,6 +294,48 @@ foreach ($articles as $article) {
         </script>
     </div>
 
+    <?php
+        // Live-Gesamtsumme (rein clientseitige Vorschau per JavaScript, siehe
+        // Script-Block unten): spiegelt App\Domain\Pricing\DocumentTotals
+        // wider (Mietpreise -> Zubehörpauschale -> Kombirabatt -> Freitext-
+        // Posten -> Gesamtsumme). NICHT die verbindliche Berechnung — die
+        // bleibt serverseitig bei ValidatesOrderConfirmationInput/
+        // DocumentTotals beim Speichern; diese Anzeige dient ausschließlich
+        // der sofortigen Rückmeldung beim Ausfüllen des Formulars.
+        // Auftragsbestätigungen sind, anders als Rechnungen/Angebote, IMMER
+        // Kleinunternehmer-Vorschau ohne USt-Aufschlüsselung und ohne
+        // Pauschalpreis-/Arbeitszeit-/Verkaufspositionen — siehe
+        // OrderConfirmationDetail::totals() (isSmallBusiness: true,
+        // vatRatePercent: '0' fest verdrahtet), daher das vereinfachte
+        // Markup gegenüber invoices/form.php und offers/form.php.
+    ?>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.form.totals_title')) ?></h2>
+        <dl class="max-w-sm space-y-1 text-sm">
+            <div class="flex items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('order_confirmations.show.rental_subtotal')) ?></dt>
+                <dd data-total-rental>0,00 €</dd>
+            </div>
+            <div data-total-accessory-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('order_confirmations.show.accessory_flat_rate', ['rate' => number_format((float) ($pricingSettings->accessoryFlatRatePercent ?? '0'), 2, ',', '.')])) ?></dt>
+                <dd data-total-accessory>0,00 €</dd>
+            </div>
+            <div data-total-discount-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt data-total-discount-label></dt>
+                <dd data-total-discount>0,00 €</dd>
+            </div>
+            <div data-total-free-text-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('order_confirmations.form.totals_free_text')) ?></dt>
+                <dd data-total-free-text>0,00 €</dd>
+            </div>
+            <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
+                <dt><?= e(t('order_confirmations.show.grand_total')) ?></dt>
+                <dd data-total-grand>0,00 €</dd>
+            </div>
+        </dl>
+        <p class="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('order_confirmations.form.totals_hint')) ?></p>
+    </div>
+
     <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
         <div class="flex items-baseline justify-between">
             <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.form.closing_text')) ?></label>
@@ -471,11 +513,18 @@ foreach ($articles as $article) {
             var suggested = suggestPrice(articleHidden.value);
             if (suggested !== null) { priceInput.value = suggested; }
         });
-        removeButton.addEventListener('click', function () { row.remove(); });
+        removeButton.addEventListener('click', function () { row.remove(); updateTotals(); });
 
         enableRowDrag(row);
         container.appendChild(row);
         window.LiveSearch.init(row);
+        // Siehe invoices/form.php für die identische Begründung: nötig für
+        // das Artikel-Mehrfachauswahl-Modal, dessen "Einfügen"-Klick außerhalb
+        // von #order-confirmation-form liegt und daher nicht zum delegierten
+        // Listener durchbubbelt. updateTotals() ist weiter unten im selben
+        // IIFE gehoisted und beim allerersten Aufruf (Rendern vorhandener
+        // Zeilen) ein harmloser No-Op, siehe Guard-Klausel darin.
+        updateTotals();
         return articleInput;
     }
 
@@ -512,9 +561,10 @@ foreach ($articles as $article) {
         if (data.quantity) { row.querySelector('input[name="free_text_quantity[]"]').value = data.quantity; }
         if (data.unit_price !== undefined) { row.querySelector('input[name="free_text_unit_price[]"]').value = data.unit_price; }
         row.querySelector('.oc-free-text-sort').value = 0;
-        row.querySelector('.oc-free-text-remove').addEventListener('click', function () { row.remove(); });
+        row.querySelector('.oc-free-text-remove').addEventListener('click', function () { row.remove(); updateTotals(); });
         enableRowDrag(row);
         freeTextContainer.appendChild(row);
+        updateTotals();
     }
 
     freeTextAddButton.addEventListener('click', function () { addFreeTextRow(); });
@@ -592,6 +642,122 @@ foreach ($articles as $article) {
     } else {
         addRow();
     }
+
+    // --- Live-Gesamtsumme -------------------------------------------------
+    // Siehe invoices/form.php für die identische Begründung/Funktionsweise
+    // (bewusst dupliziert, gleiches Muster wie der restliche Formularcode
+    // dieser Views). Gegenüber Rechnungen/Angeboten vereinfacht: keine
+    // Pauschalpreis-, Arbeitszeit- oder Verkaufspositionen, keine Netto/USt-
+    // Aufschlüsselung (siehe Kommentar beim Markup weiter oben).
+    var ACCESSORY_PERCENT = <?= json_encode($pricingSettings->accessoryFlatRatePercent ?? '0') ?>;
+    var DISCOUNT_PERCENT_LABEL = <?= json_encode(t('order_confirmations.show.discount_percent')) ?>;
+    var DISCOUNT_FIXED_LABEL = <?= json_encode(t('order_confirmations.show.discount_fixed')) ?>;
+
+    var accessoryCheckbox = document.getElementById('accessory_flat_rate_enabled');
+    var discountValueInput = document.getElementById('discount_value');
+
+    var totalRentalEl = document.querySelector('[data-total-rental]');
+    var totalAccessoryRow = document.querySelector('[data-total-accessory-row]');
+    var totalAccessoryEl = document.querySelector('[data-total-accessory]');
+    var totalDiscountRow = document.querySelector('[data-total-discount-row]');
+    var totalDiscountLabelEl = document.querySelector('[data-total-discount-label]');
+    var totalDiscountEl = document.querySelector('[data-total-discount]');
+    var totalFreeTextRow = document.querySelector('[data-total-free-text-row]');
+    var totalFreeTextEl = document.querySelector('[data-total-free-text]');
+    var totalGrandEl = document.querySelector('[data-total-grand]');
+
+    function parseAmount(value) {
+        var n = parseFloat(String(value || '').replace(',', '.'));
+        return isNaN(n) ? 0 : n;
+    }
+
+    function round2(n) {
+        return Math.round(n * 100) / 100;
+    }
+
+    function formatEuro(n) {
+        var fixed = round2(n).toFixed(2);
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return intPart + ',' + parts[1] + ' €';
+    }
+
+    function formatRate(n) {
+        return round2(n).toFixed(2).replace('.', ',');
+    }
+
+    function toggleRow(rowEl, visible) {
+        if (!rowEl) { return; }
+        rowEl.classList.toggle('hidden', !visible);
+        rowEl.classList.toggle('flex', visible);
+    }
+
+    function updateTotals() {
+        if (!totalRentalEl || !ocForm) { return; }
+
+        var rentalTotal = 0;
+        container.querySelectorAll('.oc-item-row').forEach(function (row) {
+            var qty = parseAmount(row.querySelector('.oc-item-quantity').value);
+            var price = parseAmount(row.querySelector('.oc-item-price').value);
+            rentalTotal += qty * price;
+        });
+
+        var accessoryEnabled = !!(accessoryCheckbox && accessoryCheckbox.checked);
+        var accessoryAmount = accessoryEnabled ? round2(rentalTotal * parseAmount(ACCESSORY_PERCENT) / 100) : 0;
+        var subtotalAfterAccessory = rentalTotal + accessoryAmount;
+
+        var discountTypeInput = ocForm.querySelector('input[name="discount_type"]:checked');
+        var discountType = discountTypeInput ? discountTypeInput.value : '';
+        var discountRaw = parseAmount(discountValueInput ? discountValueInput.value : '');
+        var discountAmount = 0;
+        if (discountType === 'percent') {
+            discountAmount = round2(subtotalAfterAccessory * discountRaw / 100);
+        } else if (discountType === 'fixed') {
+            discountAmount = discountRaw;
+        }
+        discountAmount = Math.max(0, Math.min(discountAmount, subtotalAfterAccessory));
+        var subtotalAfterDiscount = subtotalAfterAccessory - discountAmount;
+
+        var freeTextTotal = 0;
+        container.querySelectorAll('.oc-free-text-row').forEach(function (row) {
+            var qty = parseAmount(row.querySelector('input[name="free_text_quantity[]"]').value);
+            var price = parseAmount(row.querySelector('input[name="free_text_unit_price[]"]').value);
+            freeTextTotal += qty * price;
+        });
+
+        var grandTotal = subtotalAfterDiscount + freeTextTotal;
+
+        totalRentalEl.textContent = formatEuro(rentalTotal);
+
+        toggleRow(totalAccessoryRow, accessoryEnabled);
+        if (accessoryEnabled) {
+            totalAccessoryEl.textContent = '+' + formatEuro(accessoryAmount);
+        }
+
+        var discountVisible = discountType === 'percent' || discountType === 'fixed';
+        toggleRow(totalDiscountRow, discountVisible);
+        if (discountVisible) {
+            totalDiscountLabelEl.textContent = discountType === 'percent'
+                ? DISCOUNT_PERCENT_LABEL.replace('{rate}', formatRate(discountRaw))
+                : DISCOUNT_FIXED_LABEL;
+            totalDiscountEl.textContent = '−' + formatEuro(discountAmount);
+        }
+
+        toggleRow(totalFreeTextRow, freeTextTotal > 0);
+        if (freeTextTotal > 0) {
+            totalFreeTextEl.textContent = '+' + formatEuro(freeTextTotal);
+        }
+
+        totalGrandEl.textContent = formatEuro(grandTotal);
+    }
+
+    if (ocForm) {
+        ocForm.addEventListener('input', updateTotals);
+        ocForm.addEventListener('change', updateTotals);
+        ocForm.addEventListener('click', updateTotals);
+    }
+
+    updateTotals();
 })();
 </script>
 

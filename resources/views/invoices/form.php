@@ -854,6 +854,18 @@ foreach ($laborArticles as $laborArticle) {
         // hidden.value als zunächst "bestätigten" Zustand.
         window.LiveSearch.init(row);
         updateOnlyLaborState();
+        // updateTotals() ist als function-Deklaration weiter unten im
+        // selben IIFE gehoisted, hier also bereits aufrufbar. Nötig, damit
+        // die Live-Gesamtsumme auch dann aktualisiert wird, wenn addRow()
+        // NICHT durch einen Klick innerhalb von #invoice-form ausgelöst
+        // wurde — z. B. durch das Artikel-Mehrfachauswahl-Modal, dessen
+        // "Einfügen"-Klick außerhalb des <form>-Elements liegt und daher
+        // nicht zum delegierten input/change/click-Listener auf
+        // invoiceForm durchbubbelt. Beim allerersten Aufruf (Rendern
+        // vorhandener Zeilen, bevor totalRentalEl etc. zugewiesen sind)
+        // ist dies ein harmloser No-Op, siehe Guard-Klausel in
+        // updateTotals().
+        updateTotals();
         return articleInput;
     }
 

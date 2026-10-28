@@ -201,6 +201,18 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">−<?= number_format($totals->discountAmount, 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endif; ?>
+                <?php if ($detail->laborItems !== []): ?>
+                    <?php
+                        // Nutzerwunsch: Arbeitszeit-Positionen optisch von der
+                        // Postenliste (und den übrigen Berechnungszeilen wie
+                        // Zubehörpauschale/Kombirabatt) trennen — eigene
+                        // kleine Zwischenüberschrift statt kommentarloser
+                        // Einreihung in die Summenzeilen.
+                    ?>
+                    <tr>
+                        <td class="px-2 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500" colspan="4"><?= e(t('offers.show.labor_items_title')) ?></td>
+                    </tr>
+                <?php endif; ?>
                 <?php foreach ($detail->laborItems as $laborEntry): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3">
@@ -229,6 +241,16 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($laborEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if ($detail->saleItems !== []): ?>
+                    <?php
+                        // Nutzerwunsch: Verkaufspositionen ebenfalls optisch
+                        // von der Postenliste und den übrigen Summenzeilen
+                        // trennen (siehe Arbeitszeit-Abschnitt oben).
+                    ?>
+                    <tr>
+                        <td class="px-2 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500" colspan="4"><?= e(t('offers.show.sale_items_title')) ?></td>
+                    </tr>
+                <?php endif; ?>
                 <?php foreach ($detail->saleItems as $saleEntry): ?>
                     <tr>
                         <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3">

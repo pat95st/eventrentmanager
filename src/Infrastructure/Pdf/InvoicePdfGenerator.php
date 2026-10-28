@@ -166,6 +166,23 @@ final class InvoicePdfGenerator
             $y -= 14;
         }
 
+        if ($detail->laborItems !== []) {
+            // Nutzerwunsch: Arbeitszeit-Positionen optisch von der
+            // Postenliste (und den übrigen Berechnungszeilen wie
+            // Zubehörpauschale/Kombirabatt) trennen — kleine
+            // Zwischenüberschrift vor den Arbeitszeit-Zeilen, analog zur
+            // Umsetzung in invoices/show.php.
+            if ($y - 14 < self::MARGIN + 90) {
+                $pageNumber++;
+                $writer->addPage();
+                $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+                $y -= 20;
+            }
+            $y -= 4;
+            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Arbeitszeit', 8, true, color: '0.45 0.45 0.45');
+            $y -= 14;
+        }
+
         foreach ($detail->laborItems as $laborEntry) {
             if ($y - 14 < self::MARGIN + 90) {
                 $pageNumber++;

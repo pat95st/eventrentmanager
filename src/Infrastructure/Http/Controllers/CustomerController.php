@@ -71,6 +71,31 @@ final class CustomerController
         ]);
     }
 
+    /**
+     * JSON-Liste der Ansprechpartner eines Kunden, für die
+     * Ansprechpartner-Auswahl in Angebots-/Rechnungs-/
+     * Auftragsbestätigungsformularen (Nutzerwunsch "Ansprechpartner-Auswahl
+     * + eigene Adresse/Telefon je Ansprechpartner", Migration 104) — das
+     * Frontend fragt dies bei jeder Kundenauswahl per fetch() neu ab, um die
+     * Ansprechpartner-Auswahlliste neu zu befüllen (analog zu
+     * RentalController::logistics()).
+     */
+    public function contacts(Request $request): void
+    {
+        $customerId = (string) $request->param('id');
+        $contacts = $this->customerContacts->findByCustomerId($customerId);
+
+        Response::json([
+            'items' => array_map(
+                static fn (\App\Domain\Customer\CustomerContact $contact): array => [
+                    'id' => $contact->id,
+                    'label' => $contact->name . ($contact->jobTitle !== null && trim($contact->jobTitle) !== '' ? ' (' . $contact->jobTitle . ')' : ''),
+                ],
+                $contacts
+            ),
+        ]);
+    }
+
     public function index(Request $request): void
     {
         $search = $request->query('q');
@@ -298,6 +323,10 @@ final class CustomerController
                     'job_title' => $contact->jobTitle ?? '',
                     'phone' => $contact->phone ?? '',
                     'email' => $contact->email ?? '',
+                    'street' => $contact->street ?? '',
+                    'address_line2' => $contact->addressLine2 ?? '',
+                    'postal_code' => $contact->postalCode ?? '',
+                    'city' => $contact->city ?? '',
                 ],
                 $this->customerContacts->findByCustomerId($customer->id),
             ) : []);
@@ -331,7 +360,7 @@ final class CustomerController
         ];
     }
 
-    /** @return array<int, array{name: string, job_title: string, phone: string, email: string}> */
+    /** @return array<int, array{name: string, job_title: string, phone: string, email: string, street: string, address_line2: string, postal_code: string, city: string}> */
     private function contactsFromRequest(Request $request): array
     {
         $names = $request->post['contact_name'] ?? [];
@@ -342,6 +371,11 @@ final class CustomerController
         $jobTitles = $request->post['contact_job_title'] ?? [];
         $phones = $request->post['contact_phone'] ?? [];
         $emails = $request->post['contact_email'] ?? [];
+        // Nutzerwunsch "eigene Adresse je Ansprechpartner" (Migration 104):
+        $streets = $request->post['contact_street'] ?? [];
+        $addressLine2s = $request->post['contact_address_line2'] ?? [];
+        $postalCodes = $request->post['contact_postal_code'] ?? [];
+        $cities = $request->post['contact_city'] ?? [];
 
         $contacts = [];
         foreach ($names as $index => $name) {
@@ -350,6 +384,10 @@ final class CustomerController
                 'job_title' => (string) ($jobTitles[$index] ?? ''),
                 'phone' => (string) ($phones[$index] ?? ''),
                 'email' => (string) ($emails[$index] ?? ''),
+                'street' => (string) ($streets[$index] ?? ''),
+                'address_line2' => (string) ($addressLine2s[$index] ?? ''),
+                'postal_code' => (string) ($postalCodes[$index] ?? ''),
+                'city' => (string) ($cities[$index] ?? ''),
             ];
         }
 

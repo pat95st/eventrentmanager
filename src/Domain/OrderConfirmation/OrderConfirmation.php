@@ -47,6 +47,9 @@ final class OrderConfirmation
         // (Rental) über die Live-Suche im Formular — rein informativ. Siehe
         // Invoice::$sourceRentalId für die identische Begründung/Semantik.
         public ?string $sourceRentalId = null,
+        // Optionale Auswahl EINES Ansprechpartners des Kunden, siehe
+        // Invoice::$contactId für die identische Begründung/Semantik.
+        public ?string $contactId = null,
     ) {
     }
 

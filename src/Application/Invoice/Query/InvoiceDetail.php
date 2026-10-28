@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Invoice\Query;
 
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerContact;
 use App\Domain\Invoice\Invoice;
 use App\Domain\Pricing\DocumentTotals;
 use App\Domain\Settings\InvoiceSettings;
@@ -24,6 +25,11 @@ final class InvoiceDetail
         public readonly array $laborItems,
         public readonly array $freeTextItems = [],
         public readonly array $sectionTexts = [],
+        // Ansprechpartner-Auswahl (Migration 104): hat dieser Ansprechpartner
+        // eine eigene Adresse (CustomerContact::hasOwnAddress()), zeigen
+        // Detailansicht/PDF diese statt der Kundenadresse an — siehe
+        // GetInvoiceHandler, InvoicePdfGenerator.
+        public readonly ?CustomerContact $contact = null,
     ) {
     }
 

@@ -7,6 +7,7 @@ namespace App\Application\Offer\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
@@ -50,6 +51,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
         private readonly PDO $pdo,
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -80,6 +82,8 @@ final class CreateOfferHandler implements CommandHandlerInterface
             $command->discountValue,
             $this->rentals,
             $command->rentalId,
+            $this->customerContacts,
+            $command->contactId,
         );
 
         if ($errors !== []) {
@@ -135,6 +139,7 @@ final class CreateOfferHandler implements CommandHandlerInterface
                 discountValue: $data['discountValue'],
                 closingText: $this->htmlSanitizer->sanitize($command->closingText),
                 sourceRentalId: $data['rentalId'],
+                contactId: $data['contactId'],
             );
 
             $this->offers->save($offer);

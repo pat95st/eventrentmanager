@@ -103,6 +103,15 @@ final class Invoice
         public ?string $logisticsMethod = null, // 'pickup'|'delivery'|null
         public ?DateTimeImmutable $logisticsDate1 = null,
         public ?DateTimeImmutable $logisticsDate2 = null,
+        // Optionale Auswahl EINES Ansprechpartners des Kunden (Migration
+        // 104): hat dieser Ansprechpartner eine eigene Adresse
+        // (CustomerContact::hasOwnAddress()), wird sie statt der
+        // Kundenadresse im Dokument/PDF angezeigt — siehe
+        // InvoicePdfGenerator. Rein optional und unabhängig von $customerId;
+        // bei Kundenwechsel im Formular wird die Auswahl im Frontend
+        // zurückgesetzt, serverseitig verwirft ValidatesInvoiceInput eine
+        // nicht mehr zum Kunden passende Auswahl stillschweigend.
+        public ?string $contactId = null,
     ) {
     }
 

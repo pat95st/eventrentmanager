@@ -36,6 +36,9 @@ final class CreateOffer implements CommandInterface
         // Optionale Verknüpfung mit einer bestehenden Veranstaltung (Rental)
         // über die Live-Suche im Formular — siehe Offer::$sourceRentalId.
         public readonly ?string $rentalId = null,
+        // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
+        // Offer::$contactId.
+        public readonly ?string $contactId = null,
     ) {
     }
 }

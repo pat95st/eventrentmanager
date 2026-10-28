@@ -7,6 +7,7 @@ namespace App\Application\OrderConfirmation\Query;
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
@@ -19,6 +20,7 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
         private readonly CustomerRepositoryInterface $customers,
         private readonly ArticleRepositoryInterface $articles,
         private readonly ManufacturerRepositoryInterface $manufacturers,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -32,6 +34,7 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
         }
 
         $customer = $orderConfirmation->customerId !== null ? $this->customers->findById($orderConfirmation->customerId) : null;
+        $contact = $orderConfirmation->contactId !== null ? $this->customerContacts->findById($orderConfirmation->contactId) : null;
 
         // Siehe GetInvoiceHandler für die identische Begründung des
         // kleinen Hersteller-Caches.
@@ -57,6 +60,6 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
         $freeTextItems = $this->orderConfirmations->findFreeTextItemsByOrderConfirmation($orderConfirmation->id);
         $sectionTexts = $this->orderConfirmations->findSectionTextsByOrderConfirmation($orderConfirmation->id);
 
-        return new OrderConfirmationDetail($orderConfirmation, $customer, $items, $freeTextItems, $sectionTexts);
+        return new OrderConfirmationDetail($orderConfirmation, $customer, $items, $freeTextItems, $sectionTexts, $contact);
     }
 }

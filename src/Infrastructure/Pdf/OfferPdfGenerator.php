@@ -7,6 +7,7 @@ namespace App\Infrastructure\Pdf;
 use App\Application\Offer\Query\OfferDetail;
 use App\Application\Offer\Query\OfferRow;
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerContact;
 use App\Domain\Offer\OfferFreeTextItem;
 use App\Domain\Offer\OfferSectionText;
 use App\Domain\Settings\CompanySettings;
@@ -526,7 +527,7 @@ final class OfferPdfGenerator
             $addressFontSize = $addressOverride->fontSize ?? 10.0;
         }
 
-        foreach ($this->buildCustomerAddressLines($detail->customer) as $line) {
+        foreach ($this->buildCustomerAddressLines($detail->customer, $detail->contact) as $line) {
             $writer->text($addressX, $y, $line, $addressFontSize);
             $y -= 12.5;
         }
@@ -550,8 +551,14 @@ final class OfferPdfGenerator
         return $parts === [] ? null : implode(', ', $parts);
     }
 
-    /** @return string[] */
-    private function buildCustomerAddressLines(?Customer $customer): array
+    /**
+     * Ansprechpartner-Auswahl (Migration 104): siehe
+     * InvoicePdfGenerator::buildCustomerAddressLines() für die identische
+     * Begründung/Semantik.
+     *
+     * @return string[]
+     */
+    private function buildCustomerAddressLines(?Customer $customer, ?CustomerContact $contact = null): array
     {
         if ($customer === null) {
             return ['Noch nicht zugeordnet'];
@@ -559,13 +566,23 @@ final class OfferPdfGenerator
 
         $lines = [$customer->displayName()];
 
-        if ($customer->addressLine2 !== null && trim($customer->addressLine2) !== '') {
-            $lines[] = trim($customer->addressLine2);
+        $useContactAddress = $contact !== null && $contact->hasOwnAddress();
+        if ($contact !== null) {
+            $lines[] = $contact->name;
         }
-        if ($customer->street !== null && trim($customer->street) !== '') {
-            $lines[] = trim($customer->street);
+
+        $addressLine2 = $useContactAddress ? $contact->addressLine2 : $customer->addressLine2;
+        $street = $useContactAddress ? $contact->street : $customer->street;
+        $postalCode = $useContactAddress ? $contact->postalCode : $customer->postalCode;
+        $city = $useContactAddress ? $contact->city : $customer->city;
+
+        if ($addressLine2 !== null && trim($addressLine2) !== '') {
+            $lines[] = trim($addressLine2);
         }
-        $cityLine = trim(($customer->postalCode ?? '') . ' ' . ($customer->city ?? ''));
+        if ($street !== null && trim($street) !== '') {
+            $lines[] = trim($street);
+        }
+        $cityLine = trim(($postalCode ?? '') . ' ' . ($city ?? ''));
         if ($cityLine !== '') {
             $lines[] = $cityLine;
         }

@@ -6,6 +6,7 @@ namespace App\Application\Offer\Command;
 
 use App\Application\Common\VenueResolver;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
@@ -41,6 +42,7 @@ trait ValidatesOfferInput
      *     sectionTexts: array<int, array{heading: string, sortOrder: int}>,
      *     discountType: ?string, discountValue: ?string,
      *     rentalId: ?string,
+     *     contactId: ?string,
      * }}
      */
     private function validateOfferInput(
@@ -66,6 +68,8 @@ trait ValidatesOfferInput
         ?string $rawDiscountValue = null,
         ?RentalRepositoryInterface $rentals = null,
         ?string $rawRentalId = null,
+        ?CustomerContactRepositoryInterface $customerContacts = null,
+        ?string $rawContactId = null,
     ): array {
         $errors = [];
 
@@ -77,6 +81,18 @@ trait ValidatesOfferInput
         if ($rentalId !== '' && $rentals !== null && $rentals->findById($rentalId) === null) {
             $errors['rentalId'] = 'Die gewählte Veranstaltung wurde nicht gefunden.';
             $rentalId = '';
+        }
+
+        // Ansprechpartner-Auswahl (Migration 104) — siehe
+        // ValidatesInvoiceInput::validateInvoiceInput() für die identische
+        // Begründung/Regel (bewusst dupliziert, gleiches Muster wie der
+        // restliche Code dieser Traits).
+        $contactId = $rawContactId !== null ? trim($rawContactId) : '';
+        if ($contactId !== '' && $customerContacts !== null) {
+            $contact = $customerContacts->findById($contactId);
+            if ($contact === null || (trim($customerId) !== '' && $contact->customerId !== trim($customerId))) {
+                $contactId = '';
+            }
         }
 
         $customerId = trim($customerId);
@@ -380,6 +396,7 @@ trait ValidatesOfferInput
             'discountType' => $discountType,
             'discountValue' => $discountValue,
             'rentalId' => $rentalId !== '' ? $rentalId : null,
+            'contactId' => $contactId !== '' ? $contactId : null,
         ]];
     }
 

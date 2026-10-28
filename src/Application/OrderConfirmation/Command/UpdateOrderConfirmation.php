@@ -30,6 +30,9 @@ final class UpdateOrderConfirmation implements CommandInterface
         // HtmlSanitizer bereinigt (siehe OrderConfirmation::$closingText).
         public readonly ?string $closingText = null,
         public readonly ?string $rentalId = null,
+        // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
+        // OrderConfirmation::$contactId.
+        public readonly ?string $contactId = null,
     ) {
     }
 }

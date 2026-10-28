@@ -35,6 +35,9 @@ final class UpdateOffer implements CommandInterface
         // HtmlSanitizer bereinigt (siehe Offer::$closingText).
         public readonly ?string $closingText = null,
         public readonly ?string $rentalId = null,
+        // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
+        // Offer::$contactId.
+        public readonly ?string $contactId = null,
     ) {
     }
 }

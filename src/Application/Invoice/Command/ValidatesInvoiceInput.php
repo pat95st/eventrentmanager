@@ -6,6 +6,7 @@ namespace App\Application\Invoice\Command;
 
 use App\Application\Common\VenueResolver;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeArticleRepositoryInterface;
 use App\Domain\LaborTime\LaborTimeBillingUnit;
@@ -39,6 +40,7 @@ trait ValidatesInvoiceInput
      *     sectionTexts: array<int, array{heading: string, sortOrder: int}>,
      *     discountType: ?string, discountValue: ?string,
      *     rentalId: ?string,
+     *     contactId: ?string,
      *     flatRateAmount: ?string,
      *     logisticsMethod: ?string, logisticsDate1: ?DateTimeImmutable, logisticsDate2: ?DateTimeImmutable,
      * }}
@@ -63,6 +65,8 @@ trait ValidatesInvoiceInput
         ?string $rawDiscountValue = null,
         ?RentalRepositoryInterface $rentals = null,
         ?string $rawRentalId = null,
+        ?CustomerContactRepositoryInterface $customerContacts = null,
+        ?string $rawContactId = null,
         bool $flatRateEnabled = false,
         ?string $rawFlatRateAmount = null,
         ?string $rawLogisticsMethod = null,
@@ -75,6 +79,21 @@ trait ValidatesInvoiceInput
         if ($rentalId !== '' && $rentals !== null && $rentals->findById($rentalId) === null) {
             $errors['rentalId'] = 'Die gewählte Veranstaltung wurde nicht gefunden.';
             $rentalId = '';
+        }
+
+        // Nutzerwunsch "Ansprechpartner-Auswahl" (Migration 104): wie bei
+        // rentalId oben wird nur auf Existenz geprüft, nicht zwingend auf
+        // Zugehörigkeit zum gewählten Kunden — das Frontend befüllt die
+        // Auswahlliste zwar immer anhand des aktuell gewählten Kunden
+        // (CustomerController::contacts()), ein Wechsel des Kunden NACH der
+        // Ansprechpartner-Auswahl soll aber nicht zu einem harten Fehler
+        // führen, sondern die (dann nicht mehr passende) Auswahl stillschweigend verwerfen.
+        $contactId = $rawContactId !== null ? trim($rawContactId) : '';
+        if ($contactId !== '' && $customerContacts !== null) {
+            $contact = $customerContacts->findById($contactId);
+            if ($contact === null || (trim($customerId) !== '' && $contact->customerId !== trim($customerId))) {
+                $contactId = '';
+            }
         }
 
         $flatRateAmount = null;
@@ -335,6 +354,7 @@ trait ValidatesInvoiceInput
             'discountType' => $discountType,
             'discountValue' => $discountValue,
             'rentalId' => $rentalId !== '' ? $rentalId : null,
+            'contactId' => $contactId !== '' ? $contactId : null,
             'flatRateAmount' => $flatRateAmount,
             'logisticsMethod' => $logisticsMethod,
             'logisticsDate1' => $logisticsDate1,

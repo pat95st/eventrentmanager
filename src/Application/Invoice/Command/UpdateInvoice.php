@@ -33,6 +33,9 @@ final class UpdateInvoice implements CommandInterface
         // HtmlSanitizer bereinigt (siehe Invoice::$closingText).
         public readonly ?string $closingText = null,
         public readonly ?string $rentalId = null,
+        // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
+        // Invoice::$contactId.
+        public readonly ?string $contactId = null,
         public readonly bool $flatRateEnabled = false,
         public readonly ?string $flatRateAmount = null,
         public readonly ?string $logisticsMethod = null,

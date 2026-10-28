@@ -32,7 +32,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 flat_rate_enabled, flat_rate_amount,
                 shipping_amount,
                 paid_at, note, closing_text,
-                source_offer_id, source_rental_id,
+                source_offer_id, source_rental_id, contact_id,
                 logistics_method, logistics_date1, logistics_date2,
                 created_at, updated_at
              ) VALUES (
@@ -43,7 +43,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 :flat_rate_enabled, :flat_rate_amount,
                 :shipping_amount,
                 :paid_at, :note, :closing_text,
-                :source_offer_id, :source_rental_id,
+                :source_offer_id, :source_rental_id, :contact_id,
                 :logistics_method, :logistics_date1, :logistics_date2,
                 :created_at, :updated_at
              )
@@ -59,7 +59,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                 flat_rate_enabled = :flat_rate_enabled2, flat_rate_amount = :flat_rate_amount2,
                 shipping_amount = :shipping_amount2,
                 paid_at = :paid_at2, note = :note2, closing_text = :closing_text2,
-                source_offer_id = :source_offer_id2, source_rental_id = :source_rental_id2,
+                source_offer_id = :source_offer_id2, source_rental_id = :source_rental_id2, contact_id = :contact_id2,
                 logistics_method = :logistics_method2, logistics_date1 = :logistics_date12, logistics_date2 = :logistics_date22,
                 updated_at = :updated_at2'
         );
@@ -99,6 +99,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'closing_text' => $invoice->closingText,
             'source_offer_id' => $invoice->sourceOfferId,
             'source_rental_id' => $invoice->sourceRentalId,
+            'contact_id' => $invoice->contactId,
             'logistics_method' => $invoice->logisticsMethod,
             'logistics_date1' => $logisticsDate1,
             'logistics_date2' => $logisticsDate2,
@@ -128,6 +129,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             'closing_text2' => $invoice->closingText,
             'source_offer_id2' => $invoice->sourceOfferId,
             'source_rental_id2' => $invoice->sourceRentalId,
+            'contact_id2' => $invoice->contactId,
             'logistics_method2' => $invoice->logisticsMethod,
             'logistics_date12' => $logisticsDate1,
             'logistics_date22' => $logisticsDate2,
@@ -486,6 +488,7 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             logisticsMethod: $row['logistics_method'] ?? null,
             logisticsDate1: ($row['logistics_date1'] ?? null) !== null ? new DateTimeImmutable($row['logistics_date1']) : null,
             logisticsDate2: ($row['logistics_date2'] ?? null) !== null ? new DateTimeImmutable($row['logistics_date2']) : null,
+            contactId: $row['contact_id'] ?? null,
         );
     }
 

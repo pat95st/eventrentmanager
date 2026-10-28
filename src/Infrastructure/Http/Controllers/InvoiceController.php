@@ -123,6 +123,7 @@ final class InvoiceController
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
+            contactId: $this->nullIfEmpty($request->input('contact_id')),
             flatRateEnabled: $request->input('flat_rate_enabled') === '1',
             flatRateAmount: $request->input('flat_rate_amount'),
             logisticsMethod: $this->nullIfEmpty($request->input('logistics_method')),
@@ -156,6 +157,9 @@ final class InvoiceController
         $dunningNotices = $this->queries->ask(new ListDunningNoticesForInvoice($id));
         $dunningLevels = $this->queries->ask(new ListDunningLevels());
         $linkedRental = $detail->invoice->sourceRentalId !== null ? $this->rentals->findById($detail->invoice->sourceRentalId) : null;
+        // Siehe InvoiceDetail::$contact (GetInvoiceHandler) — bereits dort
+        // aufgelöst, hier nur noch für die View weitergegeben.
+        $selectedContact = $detail->contact;
 
         echo View::page('invoices/show', [
             'detail' => $detail,
@@ -164,6 +168,7 @@ final class InvoiceController
             'dunningNotices' => $dunningNotices,
             'dunningLevels' => $dunningLevels,
             'linkedRental' => $linkedRental,
+            'selectedContact' => $selectedContact,
         ], activeNav: 'invoices', title: t('invoices.page_title.detail'));
     }
 
@@ -203,6 +208,7 @@ final class InvoiceController
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
+            contactId: $this->nullIfEmpty($request->input('contact_id')),
             flatRateEnabled: $request->input('flat_rate_enabled') === '1',
             flatRateAmount: $request->input('flat_rate_amount'),
             logisticsMethod: $this->nullIfEmpty($request->input('logistics_method')),
@@ -501,6 +507,13 @@ final class InvoiceController
             }
         }
 
+        // Ansprechpartner-Auswahl (Migration 104): Vorbelegung für das
+        // Formular-Dropdown — siehe invoices/form.php, das die Liste der
+        // Ansprechpartner des aktuell gewählten Kunden per
+        // CustomerController::contacts() nachlädt, hier aber (wie bei
+        // $selectedRentalId/-Label oben) bereits serverseitig vorbelegt.
+        $selectedContactId = $invoice?->contactId;
+
         echo View::page('invoices/form', [
             'invoice' => $invoice,
             'customers' => $customers,
@@ -522,6 +535,7 @@ final class InvoiceController
             'vatRatePercentPreview' => $vatRatePercentPreview,
             'selectedRentalId' => $selectedRentalId,
             'selectedRentalLabel' => $selectedRentalLabel,
+            'selectedContactId' => $selectedContactId,
         ], activeNav: 'invoices', title: $invoice !== null ? t('invoices.edit') : t('invoices.new'));
     }
 
@@ -647,6 +661,7 @@ final class InvoiceController
             'section_texts' => $command->sectionTexts,
             'closing_text' => $command->closingText ?? '',
             'rental_id' => $command->rentalId ?? '',
+            'contact_id' => $command->contactId ?? '',
             'flat_rate_enabled' => $command->flatRateEnabled ? '1' : '',
             'flat_rate_amount' => $command->flatRateAmount ?? '',
             'logistics_method' => $command->logisticsMethod ?? '',

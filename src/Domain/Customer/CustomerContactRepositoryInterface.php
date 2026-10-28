@@ -10,6 +10,13 @@ interface CustomerContactRepositoryInterface
     public function findByCustomerId(string $customerId): array;
 
     /**
+     * Für die Ansprechpartner-Auswahl auf Dokumenten (Rechnung/Angebot/
+     * Auftragsbestätigung, siehe Migration 104) — null, wenn kein
+     * Ansprechpartner mit dieser ID existiert (z. B. inzwischen gelöscht).
+     */
+    public function findById(string $id): ?CustomerContact;
+
+    /**
      * Ersetzt ALLE Ansprechpartner eines Kunden durch die übergebene Liste
      * (identisches Muster wie z. B. InvoiceRepositoryInterface::replaceItems()) —
      * einfacher und robuster als ein Diff aus hinzugefügten/entfernten/

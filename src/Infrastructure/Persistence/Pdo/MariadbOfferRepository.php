@@ -29,12 +29,12 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
                 id, offer_number, customer_id, event_location, venue_id, start_date, end_date, valid_until,
                 status, note, closing_text,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
-                converted_rental_id, source_rental_id, created_at, updated_at
+                converted_rental_id, source_rental_id, contact_id, created_at, updated_at
              ) VALUES (
                 :id, :offer_number, :customer_id, :event_location, :venue_id, :start_date, :end_date, :valid_until,
                 :status, :note, :closing_text,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
-                :converted_rental_id, :source_rental_id, :created_at, :updated_at
+                :converted_rental_id, :source_rental_id, :contact_id, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, event_location = :event_location2, venue_id = :venue_id2,
@@ -45,6 +45,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
                 discount_type = :discount_type2, discount_value = :discount_value2,
                 converted_rental_id = :converted_rental_id2,
                 source_rental_id = :source_rental_id2,
+                contact_id = :contact_id2,
                 updated_at = :updated_at2'
         );
 
@@ -68,6 +69,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             'discount_value' => $offer->discountValue,
             'converted_rental_id' => $offer->convertedRentalId,
             'source_rental_id' => $offer->sourceRentalId,
+            'contact_id' => $offer->contactId,
             'created_at' => $offer->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $offer->updatedAt->format('Y-m-d H:i:s'),
             'customer_id2' => $offer->customerId,
@@ -85,6 +87,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             'discount_value2' => $offer->discountValue,
             'converted_rental_id2' => $offer->convertedRentalId,
             'source_rental_id2' => $offer->sourceRentalId,
+            'contact_id2' => $offer->contactId,
             'updated_at2' => $offer->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -412,6 +415,7 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             discountType: $row['discount_type'],
             discountValue: $row['discount_value'],
             sourceRentalId: $row['source_rental_id'] ?? null,
+            contactId: $row['contact_id'] ?? null,
         );
     }
 

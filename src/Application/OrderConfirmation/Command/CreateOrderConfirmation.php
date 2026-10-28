@@ -32,6 +32,9 @@ final class CreateOrderConfirmation implements CommandInterface
         // über die Live-Suche im Formular — siehe
         // OrderConfirmation::$sourceRentalId.
         public readonly ?string $rentalId = null,
+        // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
+        // OrderConfirmation::$contactId.
+        public readonly ?string $contactId = null,
     ) {
     }
 }

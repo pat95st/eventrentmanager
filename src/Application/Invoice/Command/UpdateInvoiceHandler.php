@@ -7,6 +7,7 @@ namespace App\Application\Invoice\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -49,6 +50,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         private readonly UserRepositoryInterface $users,
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -85,6 +87,8 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
             $command->discountValue,
             $this->rentals,
             $command->rentalId,
+            $this->customerContacts,
+            $command->contactId,
             $command->flatRateEnabled,
             $command->flatRateAmount,
             $command->logisticsMethod,
@@ -107,6 +111,7 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         $invoice->discountValue = $data['discountValue'];
         $invoice->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $invoice->sourceRentalId = $data['rentalId'];
+        $invoice->contactId = $data['contactId'];
         $invoice->logisticsMethod = $data['logisticsMethod'];
         $invoice->logisticsDate1 = $data['logisticsDate1'];
         $invoice->logisticsDate2 = $data['logisticsDate2'];

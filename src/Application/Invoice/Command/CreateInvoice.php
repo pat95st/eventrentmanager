@@ -34,6 +34,9 @@ final class CreateInvoice implements CommandInterface
         // Optionale Verknüpfung mit einer bestehenden Veranstaltung
         // (Rental) über die Live-Suche im Formular — siehe Invoice::$sourceRentalId.
         public readonly ?string $rentalId = null,
+        // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
+        // Invoice::$contactId.
+        public readonly ?string $contactId = null,
         // Pauschalpreis für die Mietpositionen, siehe Invoice::$flatRateEnabled.
         public readonly bool $flatRateEnabled = false,
         public readonly ?string $flatRateAmount = null,

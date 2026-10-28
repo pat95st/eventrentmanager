@@ -7,6 +7,7 @@ namespace App\Application\Offer\Query;
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
@@ -25,6 +26,7 @@ final class GetOfferHandler implements QueryHandlerInterface
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly UserRepositoryInterface $users,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -38,6 +40,7 @@ final class GetOfferHandler implements QueryHandlerInterface
         }
 
         $customer = $offer->customerId !== null ? $this->customers->findById($offer->customerId) : null;
+        $contact = $offer->contactId !== null ? $this->customerContacts->findById($offer->contactId) : null;
 
         // Siehe GetInvoiceHandler für die identische Begründung des
         // kleinen Herstellen-Caches (mehrfach vorkommende Artikel in
@@ -106,6 +109,6 @@ final class GetOfferHandler implements QueryHandlerInterface
         $freeTextItems = $this->offers->findFreeTextItemsByOffer($offer->id);
         $sectionTexts = $this->offers->findSectionTextsByOffer($offer->id);
 
-        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts);
+        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts, $contact);
     }
 }

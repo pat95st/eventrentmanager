@@ -7,6 +7,7 @@ namespace App\Application\OrderConfirmation\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -34,6 +35,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -66,6 +68,8 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
             $command->discountValue,
             $this->rentals,
             $command->rentalId,
+            $this->customerContacts,
+            $command->contactId,
         );
 
         if ($errors !== []) {
@@ -86,6 +90,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         $orderConfirmation->discountValue = $data['discountValue'];
         $orderConfirmation->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $orderConfirmation->sourceRentalId = $data['rentalId'];
+        $orderConfirmation->contactId = $data['contactId'];
         $orderConfirmation->updatedAt = new DateTimeImmutable();
 
         $this->orderConfirmations->save($orderConfirmation);

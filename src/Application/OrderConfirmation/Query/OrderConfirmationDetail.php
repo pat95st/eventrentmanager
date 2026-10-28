@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\OrderConfirmation\Query;
 
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerContact;
 use App\Domain\OrderConfirmation\OrderConfirmation;
 use App\Domain\OrderConfirmation\OrderConfirmationFreeTextItem;
 use App\Domain\OrderConfirmation\OrderConfirmationSectionText;
@@ -23,6 +24,9 @@ final class OrderConfirmationDetail
         public readonly array $items,
         public readonly array $freeTextItems = [],
         public readonly array $sectionTexts = [],
+        // Ansprechpartner-Auswahl (Migration 104), siehe
+        // InvoiceDetail::$contact für die identische Begründung/Semantik.
+        public readonly ?CustomerContact $contact = null,
     ) {
     }
 

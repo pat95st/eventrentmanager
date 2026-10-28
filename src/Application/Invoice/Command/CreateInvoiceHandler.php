@@ -7,6 +7,7 @@ namespace App\Application\Invoice\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\Invoice;
@@ -45,6 +46,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         private readonly UserRepositoryInterface $users,
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -72,6 +74,8 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             $command->discountValue,
             $this->rentals,
             $command->rentalId,
+            $this->customerContacts,
+            $command->contactId,
             $command->flatRateEnabled,
             $command->flatRateAmount,
             $command->logisticsMethod,
@@ -125,6 +129,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             note: $data['note'],
             sourceOfferId: null,
             sourceRentalId: $data['rentalId'],
+            contactId: $data['contactId'],
             createdAt: $now,
             updatedAt: $now,
             accessoryFlatRateEnabled: $accessoryFlatRateEnabled,

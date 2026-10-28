@@ -124,8 +124,8 @@ trait ValidatesCustomerInput
      * übersprungen (= eine leere Vorlagenzeile, die nicht abgeschickt
      * wurde), statt einen Validierungsfehler auszulösen.
      *
-     * @param array<int, array{name?: string, job_title?: string, phone?: string, email?: string}> $rawContacts
-     * @return array{0: array<string, string>, 1: array<int, array{name: string, jobTitle: ?string, phone: ?string, email: ?string}>}
+     * @param array<int, array{name?: string, job_title?: string, phone?: string, email?: string, street?: string, address_line2?: string, postal_code?: string, city?: string}> $rawContacts
+     * @return array{0: array<string, string>, 1: array<int, array{name: string, jobTitle: ?string, phone: ?string, email: ?string, street: ?string, addressLine2: ?string, postalCode: ?string, city: ?string}>}
      */
     private function validateCustomerContacts(array $rawContacts): array
     {
@@ -141,6 +141,14 @@ trait ValidatesCustomerInput
             $jobTitle = trim((string) ($rawContact['job_title'] ?? ''));
             $phone = trim((string) ($rawContact['phone'] ?? ''));
             $email = trim((string) ($rawContact['email'] ?? ''));
+            // Nutzerwunsch "eigene Adresse je Ansprechpartner" (Migration
+            // 104): alle optional, bleiben sie leer, gilt auf Dokumenten
+            // weiterhin die Adresse des Kunden (siehe CustomerContact::
+            // hasOwnAddress()).
+            $street = trim((string) ($rawContact['street'] ?? ''));
+            $addressLine2 = trim((string) ($rawContact['address_line2'] ?? ''));
+            $postalCode = trim((string) ($rawContact['postal_code'] ?? ''));
+            $city = trim((string) ($rawContact['city'] ?? ''));
 
             if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
                 $errors['contacts'] = 'Bitte bei jedem Ansprechpartner eine gültige E-Mail-Adresse angeben (oder das Feld leer lassen).';
@@ -153,6 +161,10 @@ trait ValidatesCustomerInput
                 'jobTitle' => $jobTitle !== '' ? $jobTitle : null,
                 'phone' => $phone !== '' ? $phone : null,
                 'email' => $email !== '' ? $email : null,
+                'street' => $street !== '' ? $street : null,
+                'addressLine2' => $addressLine2 !== '' ? $addressLine2 : null,
+                'postalCode' => $postalCode !== '' ? $postalCode : null,
+                'city' => $city !== '' ? $city : null,
             ];
         }
 

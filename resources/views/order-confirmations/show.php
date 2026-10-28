@@ -2,6 +2,7 @@
 /** @var \App\Application\OrderConfirmation\Query\OrderConfirmationDetail $detail */
 /** @var \App\Domain\Venue\Venue|null $venue */
 /** @var \App\Domain\Rental\Rental|null $linkedRental */
+/** @var \App\Domain\Customer\CustomerContact|null $selectedContact */
 
 use App\Application\OrderConfirmation\Query\OrderConfirmationRow;
 use App\Domain\OrderConfirmation\OrderConfirmationStatus;
@@ -38,6 +39,12 @@ $rows = $detail->orderedRows();
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
                 <?= e(t('order_confirmations.show.rental_link')) ?>:
                 <a href="/veranstaltungen/<?= e($linkedRental->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedRental->eventName) ?></a>
+            </p>
+        <?php endif; ?>
+        <?php if ($selectedContact !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('order_confirmations.show.contact_link')) ?>:
+                <?= e($selectedContact->name) ?><?= $selectedContact->phone !== null && trim($selectedContact->phone) !== '' ? ' · ' . e($selectedContact->phone) : '' ?>
             </p>
         <?php endif; ?>
     </div>

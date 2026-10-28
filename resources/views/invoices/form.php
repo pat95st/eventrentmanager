@@ -251,6 +251,68 @@ foreach ($laborArticles as $laborArticle) {
         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.rental_hint')) ?></p>
     </div>
 
+    <?php
+        // Ansprechpartner-Auswahl (Migration 104): Optionen werden per JS
+        // anhand des gewählten Kunden nachgeladen (siehe
+        // CustomerController::contacts()) — hier serverseitig nur die
+        // aktuelle Auswahl vorgehalten, damit sie beim erneuten Laden der
+        // Kontaktliste wiederhergestellt werden kann.
+        $selectedContactIdVal = $val('contact_id', $selectedContactId);
+    ?>
+    <div class="max-w-md">
+        <label for="contact_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.contact')) ?></label>
+        <div class="mt-1">
+            <select id="contact_id" name="contact_id" data-contact-select
+                    class="w-full rounded-md border <?= isset($errors['contactId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:bg-slate-950">
+                <option value=""><?= e(t('invoices.form.contact_placeholder')) ?></option>
+            </select>
+        </div>
+        <?php if (isset($errors['contactId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['contactId']) ?></p><?php endif; ?>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.contact_hint')) ?></p>
+        <script>
+            (function () {
+                var customerHidden = document.querySelector('input[name="customer_id"][data-live-search-value]');
+                var contactSelect = document.querySelector('[data-contact-select]');
+                var selectedContactId = <?= json_encode($selectedContactIdVal !== '' ? $selectedContactIdVal : null) ?>;
+                var placeholderLabel = <?= json_encode(t('invoices.form.contact_placeholder')) ?>;
+
+                function renderOptions(items, keepSelection) {
+                    if (!contactSelect) { return; }
+                    contactSelect.innerHTML = '';
+                    var placeholderOption = document.createElement('option');
+                    placeholderOption.value = '';
+                    placeholderOption.textContent = placeholderLabel;
+                    contactSelect.appendChild(placeholderOption);
+                    items.forEach(function (item) {
+                        var option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.label;
+                        if (keepSelection && item.id === selectedContactId) {
+                            option.selected = true;
+                        }
+                        contactSelect.appendChild(option);
+                    });
+                }
+
+                function loadContacts(customerId, keepSelection) {
+                    if (!customerId) {
+                        renderOptions([], false);
+                        return;
+                    }
+                    fetch('/kunden/' + encodeURIComponent(customerId) + '/ansprechpartner')
+                        .then(function (response) { return response.ok ? response.json() : null; })
+                        .then(function (data) { renderOptions(data && data.items ? data.items : [], keepSelection); })
+                        .catch(function () { renderOptions([], false); });
+                }
+
+                if (customerHidden) {
+                    customerHidden.addEventListener('change', function () { loadContacts(customerHidden.value, false); });
+                    if (customerHidden.value) { loadContacts(customerHidden.value, true); }
+                }
+            })();
+        </script>
+    </div>
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
             <label for="start_date" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.start_date')) ?></label>

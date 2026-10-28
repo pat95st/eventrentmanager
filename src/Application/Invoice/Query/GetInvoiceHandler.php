@@ -7,6 +7,7 @@ namespace App\Application\Invoice\Query;
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
@@ -23,6 +24,7 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         private readonly LaborTimeArticleRepositoryInterface $laborTimeArticles,
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly UserRepositoryInterface $users,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -36,6 +38,7 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         }
 
         $customer = $invoice->customerId !== null ? $this->customers->findById($invoice->customerId) : null;
+        $contact = $invoice->contactId !== null ? $this->customerContacts->findById($invoice->contactId) : null;
 
         // Hersteller je Artikel wird über einen kleinen Cache (statt pro
         // Position neu) aufgelöst, damit mehrfach vorkommende Artikel in
@@ -91,6 +94,6 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         $freeTextItems = $this->invoices->findFreeTextItemsByInvoice($invoice->id);
         $sectionTexts = $this->invoices->findSectionTextsByInvoice($invoice->id);
 
-        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts);
+        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts, $contact);
     }
 }

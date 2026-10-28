@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Offer\Query;
 
 use App\Domain\Customer\Customer;
+use App\Domain\Customer\CustomerContact;
 use App\Domain\Offer\Offer;
 use App\Domain\Pricing\DocumentTotals;
 
@@ -25,6 +26,9 @@ final class OfferDetail
         public readonly array $saleItems = [],
         public readonly array $freeTextItems = [],
         public readonly array $sectionTexts = [],
+        // Ansprechpartner-Auswahl (Migration 104), siehe
+        // InvoiceDetail::$contact für die identische Begründung/Semantik.
+        public readonly ?CustomerContact $contact = null,
     ) {
     }
 

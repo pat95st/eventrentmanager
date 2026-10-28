@@ -55,6 +55,9 @@ final class Offer
         // dem Umwandeln per ConvertOfferToRentalHandler gesetzt). Siehe
         // Invoice::$sourceRentalId für die identische Begründung/Semantik.
         public ?string $sourceRentalId = null,
+        // Optionale Auswahl EINES Ansprechpartners des Kunden, siehe
+        // Invoice::$contactId für die identische Begründung/Semantik.
+        public ?string $contactId = null,
     ) {
     }
 

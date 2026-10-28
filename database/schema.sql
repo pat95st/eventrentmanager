@@ -537,6 +537,10 @@ CREATE TABLE customer_contacts (
     job_title   VARCHAR(150) NULL,
     phone       VARCHAR(50)  NULL,
     email       VARCHAR(255) NULL,
+    street        VARCHAR(255) NULL,
+    address_line2  VARCHAR(255) NULL,
+    postal_code    VARCHAR(20)  NULL,
+    city           VARCHAR(255) NULL,
     sort_order  INT          NOT NULL DEFAULT 0,
     CONSTRAINT fk_customer_contacts_customer
         FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
@@ -1338,6 +1342,7 @@ CREATE TABLE offers (
     -- als invoices.invoice_number daher NOT NULL.
     offer_number          VARCHAR(50)   NOT NULL,
     customer_id           CHAR(36)      NULL,
+    contact_id            CHAR(36)      NULL, -- Ansprechpartner-Auswahl, siehe Migration 104
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
     start_date            DATE          NULL, -- optional seit Migration 102
@@ -1370,6 +1375,8 @@ CREATE TABLE offers (
         FOREIGN KEY (converted_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
     CONSTRAINT fk_offers_source_rental
         FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT fk_offers_contact
+        FOREIGN KEY (contact_id) REFERENCES customer_contacts (id) ON DELETE SET NULL,
     CONSTRAINT uq_offers_offer_number UNIQUE (offer_number),
     INDEX idx_offers_customer (customer_id),
     INDEX idx_offers_venue (venue_id),
@@ -1457,6 +1464,7 @@ CREATE TABLE order_confirmations (
     id                    CHAR(36)      NOT NULL PRIMARY KEY,
     order_confirmation_number VARCHAR(50) NOT NULL,
     customer_id           CHAR(36)      NULL,
+    contact_id            CHAR(36)      NULL, -- Ansprechpartner-Auswahl, siehe Migration 104
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
     start_date            DATE          NULL, -- optional seit Migration 102
@@ -1486,6 +1494,8 @@ CREATE TABLE order_confirmations (
         FOREIGN KEY (source_offer_id) REFERENCES offers (id) ON DELETE SET NULL,
     CONSTRAINT fk_order_confirmations_source_rental
         FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT fk_order_confirmations_contact
+        FOREIGN KEY (contact_id) REFERENCES customer_contacts (id) ON DELETE SET NULL,
     INDEX idx_order_confirmations_customer (customer_id),
     INDEX idx_order_confirmations_venue (venue_id),
     INDEX idx_order_confirmations_status (status),
@@ -1538,6 +1548,7 @@ CREATE TABLE order_confirmation_section_texts (
 CREATE TABLE invoices (
     id                  CHAR(36)       NOT NULL PRIMARY KEY,
     customer_id         CHAR(36)       NULL,
+    contact_id          CHAR(36)       NULL, -- Ansprechpartner-Auswahl, siehe Migration 104
     event_location      VARCHAR(255)   NULL,
     venue_id            CHAR(36)       NULL,
     start_date          DATE           NULL, -- optional seit Migration 102
@@ -1589,6 +1600,8 @@ CREATE TABLE invoices (
         FOREIGN KEY (source_offer_id) REFERENCES offers (id) ON DELETE SET NULL,
     CONSTRAINT fk_invoices_source_rental
         FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT fk_invoices_contact
+        FOREIGN KEY (contact_id) REFERENCES customer_contacts (id) ON DELETE SET NULL,
     INDEX idx_invoices_customer (customer_id),
     INDEX idx_invoices_venue (venue_id),
     INDEX idx_invoices_status (status),

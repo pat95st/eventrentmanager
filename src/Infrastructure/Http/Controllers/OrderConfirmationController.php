@@ -109,6 +109,7 @@ final class OrderConfirmationController
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
+            contactId: $this->nullIfEmpty($request->input('contact_id')),
         );
 
         try {
@@ -155,6 +156,7 @@ final class OrderConfirmationController
             'detail' => $detail,
             'venue' => $venue,
             'linkedRental' => $linkedRental,
+            'selectedContact' => $detail->contact,
         ], activeNav: 'order_confirmations', title: t('order_confirmations.page_title.detail'));
     }
 
@@ -192,6 +194,7 @@ final class OrderConfirmationController
             sectionTexts: $this->sectionTextsFromRequest($request),
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
+            contactId: $this->nullIfEmpty($request->input('contact_id')),
         );
 
         try {
@@ -373,11 +376,16 @@ final class OrderConfirmationController
             }
         }
 
+        // Ansprechpartner-Auswahl (Migration 104), siehe
+        // InvoiceController::renderForm() für die identische Begründung.
+        $selectedContactId = $orderConfirmation?->contactId;
+
         echo View::page('order-confirmations/form', [
             'orderConfirmation' => $orderConfirmation,
             'customers' => $customers,
             'selectedRentalId' => $selectedRentalId,
             'selectedRentalLabel' => $selectedRentalLabel,
+            'selectedContactId' => $selectedContactId,
             'venues' => $venues,
             'articles' => $articles,
             'articleDisplayNames' => $articleDisplayNames,
@@ -482,6 +490,7 @@ final class OrderConfirmationController
             'section_texts' => $command->sectionTexts,
             'closing_text' => $command->closingText ?? '',
             'rental_id' => $command->rentalId ?? '',
+            'contact_id' => $command->contactId ?? '',
         ];
     }
 

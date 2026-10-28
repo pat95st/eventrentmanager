@@ -7,6 +7,7 @@ namespace App\Application\Offer\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Customer\CustomerContactRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -54,6 +55,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         private readonly UserRepositoryInterface $users,
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly CustomerContactRepositoryInterface $customerContacts,
     ) {
     }
 
@@ -89,6 +91,8 @@ final class UpdateOfferHandler implements CommandHandlerInterface
             $command->discountValue,
             $this->rentals,
             $command->rentalId,
+            $this->customerContacts,
+            $command->contactId,
         );
 
         // Das Startdatum-/Enddatum-Feld muss auch außerhalb des Entwurfs
@@ -133,6 +137,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         $offer->discountValue = $data['discountValue'];
         $offer->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $offer->sourceRentalId = $data['rentalId'];
+        $offer->contactId = $data['contactId'];
 
         // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
         // für die identische Begründung (dort bereits für den Kombirabatt

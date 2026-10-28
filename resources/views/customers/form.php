@@ -170,6 +170,33 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
         <button type="button" class="contact-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('offers.form.item_remove')) ?>
         </button>
+        <?php
+            // Nutzerwunsch "eigene Adresse je Ansprechpartner" (Migration
+            // 104): optional, bleibt alles leer, gilt auf Dokumenten
+            // weiterhin die Adresse des Kunden selbst (siehe
+            // CustomerContact::hasOwnAddress()).
+        ?>
+        <div class="mt-1 w-full border-t border-slate-100 pt-2 dark:border-slate-800">
+            <p class="mb-1.5 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('customers.form.contact_own_address_hint')) ?></p>
+            <div class="flex flex-wrap gap-2">
+                <div class="min-w-[200px] flex-1">
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_street')) ?></label>
+                    <input type="text" name="contact_street[]" class="contact-street mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div class="min-w-[160px] flex-1">
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_address_line2')) ?></label>
+                    <input type="text" name="contact_address_line2[]" class="contact-address-line2 mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div class="min-w-[90px] flex-1">
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_postal_code')) ?></label>
+                    <input type="text" name="contact_postal_code[]" class="contact-postal-code mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div class="min-w-[140px] flex-1">
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_city')) ?></label>
+                    <input type="text" name="contact_city[]" class="contact-city mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -217,6 +244,10 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
         if (data.job_title) { row.querySelector('.contact-job-title').value = data.job_title; }
         if (data.phone) { row.querySelector('.contact-phone').value = data.phone; }
         if (data.email) { row.querySelector('.contact-email').value = data.email; }
+        if (data.street) { row.querySelector('.contact-street').value = data.street; }
+        if (data.address_line2) { row.querySelector('.contact-address-line2').value = data.address_line2; }
+        if (data.postal_code) { row.querySelector('.contact-postal-code').value = data.postal_code; }
+        if (data.city) { row.querySelector('.contact-city').value = data.city; }
 
         row.querySelector('.contact-remove').addEventListener('click', function () { row.remove(); });
 

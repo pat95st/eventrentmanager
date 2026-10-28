@@ -41,7 +41,7 @@ final class OrderConfirmationDetail
         return $total;
     }
 
-    /** Summe aller Freitext-Posten — erscheint wie Offer::laborTimeTotal() immer NACH dem Kombirabatt, siehe totals(). */
+    /** Summe aller Freitext-Posten — fließt mit in die Basis für Zubehörpauschale/Kombirabatt ein, siehe totals(). */
     public function freeTextTotal(): float
     {
         $total = 0.0;
@@ -67,9 +67,15 @@ final class OrderConfirmationDetail
             accessoryFlatRatePercent: $this->orderConfirmation->accessoryFlatRatePercent,
             discountType: $this->orderConfirmation->discountType,
             discountValue: $this->orderConfirmation->discountValue,
-            laborTimeTotal: $this->freeTextTotal(),
+            laborTimeTotal: 0.0, // Auftragsbestätigungen kennen keine Arbeitszeit-Positionen
             isSmallBusiness: true,
             vatRatePercent: '0',
+            // Freitext-Posten gehören wie bei Angebot/Rechnung zur Basis für
+            // Zubehörpauschale/Kombirabatt (Nutzerentscheidung, siehe
+            // DocumentTotals::calculate()) — wurden hier zuvor fälschlich
+            // als laborTimeTotal NACH dem Rabatt addiert, abweichend von der
+            // Live-Summe im Formular.
+            freeTextTotal: $this->freeTextTotal(),
         );
     }
 

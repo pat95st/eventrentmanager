@@ -105,49 +105,39 @@ final class OfferPdfGenerator
             $y -= $rowHeight;
         }
 
-        // Reservierter Platz für den Summenblock: Zwischensumme + ggf.
-        // Zubehörpauschale-/Kombirabatt-Zeile + Gesamtsumme (bis zu 4 Zeilen).
-        if ($y - 70 < self::MARGIN + 60) {
+        // Seitenumbruch-Helfer für den Summen-/Tabellenbereich unterhalb
+        // der Positionsliste (Folgeseite mit verkürztem Kopf).
+        $newPage = function () use ($writer, $detail, $pageWidth, $pageHeight, $pdfDesignSettings, &$pageNumber): float {
             $pageNumber++;
             $writer->addPage();
-            $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
+
+            return $this->drawHeader($writer, $detail, null, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings) - 20;
+        };
+
+        // Reservierter Platz für den Summenblock: Zwischensumme + ggf.
+        // Zubehörpauschale-/Kombirabatt-Zeile.
+        if ($y - 70 < self::MARGIN + 60) {
+            $y = $newPage() + 20;
         }
 
         // Zentrale Summenberechnung (Mietpreise -> Zubehörpauschale ->
-        // Kombirabatt -> Nettosumme), siehe App\Domain\Pricing\DocumentTotals
-        // — ersetzt die vormals hier duplizierte Ad-hoc-Berechnung.
+        // Kombirabatt -> Nettosumme), siehe App\Domain\Pricing\DocumentTotals.
         $totals = $detail->totals();
 
         $y -= 6;
         $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, $pdfDesignSettings?->accentColorLinePdfString() ?? '0.4 0.4 0.4');
         $y -= 20;
 
-        $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zwischensumme Mietpreise:', 9);
-        $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->rentalNetTotal, 2, ',', '.') . ' EUR', 9);
+        // Nutzerwunsch: EINE "Zwischensumme" über alle Positionen der
+        // Tabelle oben — Mietpositionen UND Freitext-Posten (die ohnehin
+        // gemeinsam in die Basis für Zubehörpauschale/Kombirabatt
+        // eingehen, siehe DocumentTotals::calculate()); keine eigene
+        // "Freitext-Posten"-Zeile mehr.
+        $this->drawSummaryLine($writer, $pageWidth, $y, 'Zwischensumme:', $this->formatAmount($totals->rentalNetTotal + $totals->freeTextTotal));
         $y -= 14;
 
-        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
-        // oben zusammen mit den Mietpositionen. Nutzerwunsch (Zubehörpauschale
-        // auch auf Freitext-Positionen): fließen zusammen mit den
-        // Mietpreisen VOR der Zubehörpauschale/dem Kombirabatt in die Basis
-        // ein (siehe DocumentTotals::calculate()), werden hier aber
-        // weiterhin als eigene Zwischensumme ausgewiesen.
-        if ($detail->freeTextTotal() > 0) {
-            if ($y - 14 < self::MARGIN + 40) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
-
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
-
         if ($detail->offer->accessoryFlatRateEnabled && $detail->offer->accessoryFlatRatePercent !== null) {
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zubehörpauschale (' . number_format((float) $detail->offer->accessoryFlatRatePercent, 2, ',', '.') . '%):', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($totals->accessoryFlatRateAmount, 2, ',', '.') . ' EUR', 9);
+            $this->drawSummaryLine($writer, $pageWidth, $y, 'Zubehörpauschale (' . number_format((float) $detail->offer->accessoryFlatRatePercent, 2, ',', '.') . '%):', '+' . $this->formatAmount($totals->accessoryFlatRateAmount));
             $y -= 14;
         }
 
@@ -155,80 +145,38 @@ final class OfferPdfGenerator
             $discountLabel = $detail->offer->discountType === 'percent'
                 ? 'Kombirabatt (' . number_format((float) $detail->offer->discountValue, 2, ',', '.') . '%):'
                 : 'Kombirabatt (Festbetrag):';
-            $writer->text($pageWidth - self::MARGIN - 230, $y, $discountLabel, 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '-' . number_format($totals->discountAmount, 2, ',', '.') . ' EUR', 9);
+            $this->drawSummaryLine($writer, $pageWidth, $y, $discountLabel, '-' . $this->formatAmount($totals->discountAmount));
             $y -= 14;
         }
 
-        if ($detail->laborItems !== []) {
-            // Nutzerwunsch: Arbeitszeit-Positionen optisch von der
-            // Postenliste (und den übrigen Berechnungszeilen wie
-            // Zubehörpauschale/Kombirabatt) trennen — kleine
-            // Zwischenüberschrift vor den Arbeitszeit-Zeilen, analog zur
-            // Umsetzung in offers/show.php.
-            if ($y - 14 < self::MARGIN + 40) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
+        // Nutzerwunsch: Arbeitszeit- und Verkaufspositionen als eigene
+        // Tabellen (analog zur Artikeltabelle) statt als lange
+        // Summenzeilen, die sich mit den Beträgen überschnitten haben.
+        $hasExtraTables = false;
+        $laborRows = $this->buildLaborRows($detail);
+        if ($laborRows !== []) {
+            $y = $this->drawTableSection($writer, $y, $pageWidth, 'Arbeitszeit', ['Leistung', 'Menge', 'Einzelpreis', 'Summe'], $laborRows, $newPage, $pdfDesignSettings);
+            $hasExtraTables = true;
+        }
+
+        $saleRows = $this->buildSaleRows($detail);
+        if ($saleRows !== []) {
+            $y = $this->drawTableSection($writer, $y, $pageWidth, 'Verkaufspositionen', ['Artikel', 'Menge', 'Einzelpreis', 'Summe'], $saleRows, $newPage, $pdfDesignSettings);
+            $hasExtraTables = true;
+        }
+
+        if ($y - 40 < self::MARGIN + 20) {
+            $y = $newPage();
+        }
+        if ($hasExtraTables) {
+            $y -= 6;
+            $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, $pdfDesignSettings?->accentColorLinePdfString() ?? '0.4 0.4 0.4');
+            $y -= 20;
+        } else {
             $y -= 4;
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Arbeitszeit', 8, true, color: '0.45 0.45 0.45');
-            $y -= 14;
         }
 
-        foreach ($detail->laborItems as $laborEntry) {
-            if ($y - 14 < self::MARGIN + 40) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
-
-            $laborLabel = $laborEntry->laborTimeArticle->name
-                . ($laborEntry->user !== null ? ' – ' . $laborEntry->user->displayName() : '')
-                . ' (' . number_format((float) $laborEntry->item->hours, 2, ',', '.') . ' ' . $laborEntry->item->billingUnit->shortLabel() . ' à '
-                . number_format((float) $laborEntry->item->unitRatePerHour, 2, ',', '.') . ' EUR):';
-            $writer->text($pageWidth - self::MARGIN - 230, $y, $laborLabel, 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($laborEntry->lineTotal(), 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
-
-        // Verkaufspositionen (siehe App\Domain\Offer\OfferSaleItem) erscheinen,
-        // wie die Arbeitszeit-Positionen, als eigene Zeile NACH dem
-        // Kombirabatt — sie sind Einmalpreise und nicht Teil der
-        // Mietpreis-Zwischensumme (siehe DocumentTotals-Klassen-Doc).
-        if ($detail->saleItems !== []) {
-            // Nutzerwunsch: Verkaufspositionen ebenfalls optisch von der
-            // Postenliste und den übrigen Summenzeilen trennen (siehe
-            // Arbeitszeit-Abschnitt oben).
-            if ($y - 14 < self::MARGIN + 40) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
-            $y -= 4;
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Verkaufspositionen', 8, true, color: '0.45 0.45 0.45');
-            $y -= 14;
-        }
-
-        foreach ($detail->saleItems as $saleEntry) {
-            if ($y - 14 < self::MARGIN + 40) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $detail, $companySettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
-                $y -= 20;
-            }
-
-            $saleLabel = $saleEntry->displayName() . ' (' . (string) $saleEntry->item->quantity . 'x, Verkauf):';
-            $writer->text($pageWidth - self::MARGIN - 230, $y, $saleLabel, 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($saleEntry->lineTotal(), 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
-
-        $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtsumme (netto):', 10, true);
-        $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->grossTotal, 2, ',', '.') . ' EUR', 10, true);
+        $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtsumme (netto):', $this->formatAmount($totals->grossTotal), 10, true);
         $y -= 30;
 
         $closingBlocks = $this->richTextRenderer->parse($offerPdfSettings?->closingHtml);
@@ -601,15 +549,17 @@ final class OfferPdfGenerator
         ];
     }
 
-    private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, ?PdfDesignSettings $pdfDesignSettings = null): float
+    /** @param string[] $labels Spaltenüberschriften: Bezeichnung, Menge, Einzelpreis, Summe */
+    private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, ?PdfDesignSettings $pdfDesignSettings = null, array $labels = ['Artikel', 'Menge', 'Einzelpreis', 'Summe']): float
     {
         $columns = $this->columnLayout();
 
         $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, $pdfDesignSettings?->accentColorTintPdfString() ?? '0.92 0.92 0.92');
-        $writer->text($columns['article']['x'] + 2, $y - 8, 'Artikel', 9, true);
-        $writer->text($columns['quantity']['x'] + 2, $y - 8, 'Menge', 9, true);
-        $writer->text($columns['unitPrice']['x'] + 2, $y - 8, 'Einzelpreis', 9, true);
-        $writer->text($columns['lineTotal']['x'] + 2, $y - 8, 'Summe', 9, true);
+        $writer->text($columns['article']['x'] + 2, $y - 8, $labels[0], 9, true);
+        $writer->text($columns['quantity']['x'] + 2, $y - 8, $labels[1], 9, true);
+        // Preisspalten rechtsbündig (Nutzerwunsch), Überschriften passend dazu.
+        $writer->textRight($this->columnRight($columns['unitPrice']), $y - 8, $labels[2], 9, true);
+        $writer->textRight($this->columnRight($columns['lineTotal']), $y - 8, $labels[3], 9, true);
 
         return $y - 22;
     }
@@ -626,9 +576,102 @@ final class OfferPdfGenerator
 
         if (!$row['isSection']) {
             $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
-            $writer->text($columns['unitPrice']['x'] + 2, $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
-            $writer->text($columns['lineTotal']['x'] + 2, $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
+            $writer->textRight($this->columnRight($columns['unitPrice']), $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
+            $writer->textRight($this->columnRight($columns['lineTotal']), $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
         }
+    }
+
+    /** @param array{x: float, width: float} $column */
+    private function columnRight(array $column): float
+    {
+        return $column['x'] + $column['width'] - 2;
+    }
+
+    private function formatAmount(float $amount): string
+    {
+        return number_format($amount, 2, ',', '.') . ' EUR';
+    }
+
+    /**
+     * Summenzeile unterhalb der Tabellen: Bezeichnung links im Summenblock,
+     * Betrag rechtsbündig an derselben Kante wie die "Summe"-Spalte.
+     */
+    private function drawSummaryLine(SimplePdfWriter $writer, float $pageWidth, float $y, string $label, string $amount, float $fontSize = 9, bool $bold = false): void
+    {
+        $writer->text($pageWidth - self::MARGIN - 230, $y, $label, $fontSize, $bold);
+        $writer->textRight($this->columnRight($this->columnLayout()['lineTotal']), $y, $amount, $fontSize, $bold);
+    }
+
+    /**
+     * Zeichnet eine zusätzliche Tabelle (Arbeitszeit, Verkaufspositionen)
+     * mit Überschrift und Tabellenkopf im selben Raster wie die
+     * Artikeltabelle; bei Seitenumbruch wird der Tabellenkopf wiederholt.
+     *
+     * @param string[] $labels
+     * @param array<int, array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}> $rows
+     * @param callable(): float $newPage
+     */
+    private function drawTableSection(SimplePdfWriter $writer, float $y, float $pageWidth, string $title, array $labels, array $rows, callable $newPage, ?PdfDesignSettings $pdfDesignSettings): float
+    {
+        $y -= 16;
+        $firstRowHeight = max(count($rows[0]['nameLines']), 1) * self::TABLE_LINE_HEIGHT + self::TABLE_ROW_PADDING;
+        if ($y - 36 - $firstRowHeight < self::MARGIN + 60) {
+            $y = $newPage();
+        }
+
+        $writer->text(self::MARGIN, $y, $title, 10, true);
+        $y -= 8;
+        $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
+
+        foreach ($rows as $row) {
+            $rowHeight = max(count($row['nameLines']), 1) * self::TABLE_LINE_HEIGHT + self::TABLE_ROW_PADDING;
+            if ($y - $rowHeight < self::MARGIN + 60) {
+                $y = $newPage();
+                $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
+            }
+            $this->drawRow($writer, $y, $row);
+            $y -= $rowHeight;
+        }
+
+        return $y;
+    }
+
+    /** @return array<int, array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}> */
+    private function buildLaborRows(OfferDetail $detail): array
+    {
+        $columns = $this->columnLayout();
+        $rows = [];
+        foreach ($detail->laborItems as $laborEntry) {
+            $name = $laborEntry->laborTimeArticle->name
+                . ($laborEntry->user !== null ? ' – ' . $laborEntry->user->displayName() : '');
+            $rows[] = [
+                'nameLines' => $this->wrapText($name, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                'quantity' => number_format((float) $laborEntry->item->hours, 2, ',', '.') . ' ' . $laborEntry->item->billingUnit->shortLabel(),
+                'unitPrice' => $this->formatAmount((float) $laborEntry->item->unitRatePerHour),
+                'lineTotal' => $this->formatAmount($laborEntry->lineTotal()),
+                'isSection' => false,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /** @return array<int, array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}> */
+    private function buildSaleRows(OfferDetail $detail): array
+    {
+        $columns = $this->columnLayout();
+        $rows = [];
+        foreach ($detail->saleItems as $saleEntry) {
+            $rows[] = [
+                'nameLines' => $this->wrapText($saleEntry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+                'quantity' => (string) $saleEntry->item->quantity,
+                'unitPrice' => $this->formatAmount((float) $saleEntry->item->unitPrice),
+                'lineTotal' => $this->formatAmount($saleEntry->lineTotal()),
+                'isSection' => false,
+            ];
+        }
+
+        return $rows;
     }
 
     private function drawTerms(SimplePdfWriter $writer, OfferDetail $detail, string $termsText, float $y, float $pageWidth, float $pageHeight, int $pageNumber, ?PdfDesignSettings $pdfDesignSettings = null): float

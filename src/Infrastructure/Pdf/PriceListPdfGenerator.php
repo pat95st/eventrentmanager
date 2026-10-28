@@ -136,7 +136,8 @@ final class PriceListPdfGenerator
 
         foreach ($tiers as $tier) {
             $label = $tier->dayCount . ($tier->dayCount === 1 ? ' Tag' : ' Tage');
-            $writer->text($columns['tiers'][$tier->dayCount]['x'] + 2, $y - 8, $label, 9, true);
+            // Preisspalten rechtsbündig (Nutzerwunsch, gilt für alle Dokumente).
+            $writer->textRight($columns['tiers'][$tier->dayCount]['x'] + $columns['tiers'][$tier->dayCount]['width'] - 4, $y - 8, $label, 9, true);
         }
 
         return $y - 22;
@@ -170,7 +171,7 @@ final class PriceListPdfGenerator
 
         $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers, $roundingStep, $roundingDirection);
         foreach ($prices as $dayCount => $price) {
-            $writer->text($columns['tiers'][$dayCount]['x'] + 2, $baseline, number_format((float) $price, 2, ',', '.') . ' €', self::TABLE_FONT_SIZE);
+            $writer->textRight($columns['tiers'][$dayCount]['x'] + $columns['tiers'][$dayCount]['width'] - 4, $baseline, number_format((float) $price, 2, ',', '.') . ' €', self::TABLE_FONT_SIZE);
         }
     }
 }

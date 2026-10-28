@@ -102,18 +102,18 @@ final class DunningPdfGenerator
         $y -= 20;
 
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Offener Rechnungsbetrag:', 10);
-        $writer->text($pageWidth - self::MARGIN - 75, $y, number_format((float) $notice->invoiceGrossTotal, 2, ',', '.') . ' EUR', 10);
+        $writer->textRight($pageWidth - self::MARGIN - 2, $y, number_format((float) $notice->invoiceGrossTotal, 2, ',', '.') . ' EUR', 10);
         $y -= 16;
 
         if ($notice->feeAmount !== '0.00' && (float) $notice->feeAmount > 0.0) {
             $feeLabel = 'Mahngebühr:';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $feeLabel, 10);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format((float) $notice->feeAmount, 2, ',', '.') . ' EUR', 10);
+            $writer->textRight($pageWidth - self::MARGIN - 2, $y, '+' . number_format((float) $notice->feeAmount, 2, ',', '.') . ' EUR', 10);
             $y -= 16;
         }
 
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtbetrag fällig:', 11, true);
-        $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($notice->totalDue(), 2, ',', '.') . ' EUR', 11, true);
+        $writer->textRight($pageWidth - self::MARGIN - 2, $y, number_format($notice->totalDue(), 2, ',', '.') . ' EUR', 11, true);
         $y -= 30;
 
         $writer->text(self::MARGIN, $y, 'Sollten Sie den Betrag bereits beglichen haben, betrachten Sie dieses Schreiben als gegenstandslos.', 8.5);

@@ -104,26 +104,16 @@ final class OrderConfirmationPdfGenerator
         $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, $pdfDesignSettings?->accentColorLinePdfString() ?? '0.4 0.4 0.4');
         $y -= 20;
 
-        $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zwischensumme Positionen:', 9);
-        $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->rentalNetTotal, 2, ',', '.') . ' EUR', 9);
+        // Nutzerwunsch: EINE "Zwischensumme" über alle Positionen der
+        // Tabelle oben — Mietpositionen UND Freitext-Posten (gemeinsame Basis
+        // für Zubehörpauschale/Kombirabatt, siehe DocumentTotals::calculate());
+        // keine eigene "Freitext-Posten"-Zeile mehr.
+        $this->drawSummaryLine($writer, $pageWidth, $y, 'Zwischensumme:', $this->formatAmount($totals->rentalNetTotal + $totals->freeTextTotal));
         $y -= 14;
-
-        // Freitext-Posten (orderedRows()-Konzept): erscheinen in der Tabelle
-        // oben zusammen mit den Mietpositionen. Nutzerwunsch
-        // (Zubehörpauschale auch auf Freitext-Positionen): fließen
-        // zusammen mit den Mietpreisen VOR der Zubehörpauschale/dem
-        // Kombirabatt in die Basis ein (siehe DocumentTotals::calculate()),
-        // werden hier aber weiterhin als eigene Zwischensumme ausgewiesen.
-        if ($detail->freeTextTotal() > 0) {
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Freitext-Posten:', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($detail->freeTextTotal(), 2, ',', '.') . ' EUR', 9);
-            $y -= 14;
-        }
 
         $orderConfirmation = $detail->orderConfirmation;
         if ($orderConfirmation->accessoryFlatRateEnabled && $orderConfirmation->accessoryFlatRatePercent !== null) {
-            $writer->text($pageWidth - self::MARGIN - 230, $y, 'Zubehörpauschale (' . number_format((float) $orderConfirmation->accessoryFlatRatePercent, 2, ',', '.') . '%):', 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '+' . number_format($totals->accessoryFlatRateAmount, 2, ',', '.') . ' EUR', 9);
+            $this->drawSummaryLine($writer, $pageWidth, $y, 'Zubehörpauschale (' . number_format((float) $orderConfirmation->accessoryFlatRatePercent, 2, ',', '.') . '%):', '+' . $this->formatAmount($totals->accessoryFlatRateAmount));
             $y -= 14;
         }
 
@@ -131,13 +121,12 @@ final class OrderConfirmationPdfGenerator
             $discountLabel = $orderConfirmation->discountType === 'percent'
                 ? 'Kombirabatt (' . number_format((float) $orderConfirmation->discountValue, 2, ',', '.') . '%):'
                 : 'Kombirabatt (Festbetrag):';
-            $writer->text($pageWidth - self::MARGIN - 230, $y, $discountLabel, 9);
-            $writer->text($pageWidth - self::MARGIN - 75, $y, '-' . number_format($totals->discountAmount, 2, ',', '.') . ' EUR', 9);
+            $this->drawSummaryLine($writer, $pageWidth, $y, $discountLabel, '-' . $this->formatAmount($totals->discountAmount));
             $y -= 14;
         }
 
-        $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtsumme (netto):', 10, true);
-        $writer->text($pageWidth - self::MARGIN - 75, $y, number_format($totals->grossTotal, 2, ',', '.') . ' EUR', 10, true);
+        $y -= 4;
+        $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtsumme (netto):', $this->formatAmount($totals->grossTotal), 10, true);
         $y -= 30;
 
         // Dokumenteigener Schlusstext (OrderConfirmation::$closingText) —
@@ -425,15 +414,17 @@ final class OrderConfirmationPdfGenerator
         ];
     }
 
-    private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, ?PdfDesignSettings $pdfDesignSettings = null): float
+    /** @param string[] $labels Spaltenüberschriften: Bezeichnung, Menge, Einzelpreis, Summe */
+    private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, ?PdfDesignSettings $pdfDesignSettings = null, array $labels = ['Bezeichnung', 'Menge', 'Einzelpreis', 'Summe']): float
     {
         $columns = $this->columnLayout();
 
         $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, $pdfDesignSettings?->accentColorTintPdfString() ?? '0.92 0.92 0.92');
-        $writer->text($columns['article']['x'] + 2, $y - 8, 'Bezeichnung', 9, true);
-        $writer->text($columns['quantity']['x'] + 2, $y - 8, 'Menge', 9, true);
-        $writer->text($columns['unitPrice']['x'] + 2, $y - 8, 'Einzelpreis', 9, true);
-        $writer->text($columns['lineTotal']['x'] + 2, $y - 8, 'Summe', 9, true);
+        $writer->text($columns['article']['x'] + 2, $y - 8, $labels[0], 9, true);
+        $writer->text($columns['quantity']['x'] + 2, $y - 8, $labels[1], 9, true);
+        // Preisspalten rechtsbündig (Nutzerwunsch), Überschriften passend dazu.
+        $writer->textRight($this->columnRight($columns['unitPrice']), $y - 8, $labels[2], 9, true);
+        $writer->textRight($this->columnRight($columns['lineTotal']), $y - 8, $labels[3], 9, true);
 
         return $y - 22;
     }
@@ -450,9 +441,30 @@ final class OrderConfirmationPdfGenerator
 
         if (!$row['isSection']) {
             $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
-            $writer->text($columns['unitPrice']['x'] + 2, $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
-            $writer->text($columns['lineTotal']['x'] + 2, $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
+            $writer->textRight($this->columnRight($columns['unitPrice']), $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
+            $writer->textRight($this->columnRight($columns['lineTotal']), $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
         }
+    }
+
+    /** @param array{x: float, width: float} $column */
+    private function columnRight(array $column): float
+    {
+        return $column['x'] + $column['width'] - 2;
+    }
+
+    private function formatAmount(float $amount): string
+    {
+        return number_format($amount, 2, ',', '.') . ' EUR';
+    }
+
+    /**
+     * Summenzeile unterhalb der Tabellen: Bezeichnung links im Summenblock,
+     * Betrag rechtsbündig an derselben Kante wie die "Summe"-Spalte.
+     */
+    private function drawSummaryLine(SimplePdfWriter $writer, float $pageWidth, float $y, string $label, string $amount, float $fontSize = 9, bool $bold = false): void
+    {
+        $writer->text($pageWidth - self::MARGIN - 230, $y, $label, $fontSize, $bold);
+        $writer->textRight($this->columnRight($this->columnLayout()['lineTotal']), $y, $amount, $fontSize, $bold);
     }
 
     /** @return string[] */

@@ -101,6 +101,62 @@ final class SimplePdfWriter
         ));
     }
 
+    /**
+     * Wie text(), aber rechtsbündig: $xRight ist die rechte Kante des
+     * Textes (z. B. für Preisspalten und Summenzeilen, damit Beträge
+     * untereinander an der Dezimalstelle bzw. "EUR" ausgerichtet sind).
+     */
+    public function textRight(float $xRight, float $y, string $text, float $fontSize = 10.0, bool $bold = false, bool $italic = false, string $color = '0 0 0'): void
+    {
+        $this->text($xRight - $this->textWidth($text, $fontSize, $bold), $y, $text, $fontSize, $bold, $italic, $color);
+    }
+
+    /**
+     * Breite eines Textes in Punkt anhand der Standard-Zeichenbreiten
+     * (AFM-Metriken) von Helvetica bzw. Helvetica-Bold — die beiden
+     * Standard-14-Schriften, die dieser Writer verwendet (kursiv hat
+     * dieselben Breiten wie normal). Zeichen außerhalb von ASCII (Umlaute,
+     * €, Gedankenstrich …) werden mit einer typischen Breite angenähert;
+     * für die Rechtsbündigkeit von Beträgen ("1.234,56 EUR") ist das exakt.
+     */
+    public function textWidth(string $text, float $fontSize, bool $bold = false): float
+    {
+        $widths = $bold ? self::HELVETICA_BOLD_WIDTHS : self::HELVETICA_WIDTHS;
+        $units = 0;
+        foreach (mb_str_split($text) as $char) {
+            $code = ord($char);
+            if (strlen($char) === 1 && $code >= 32 && $code <= 126) {
+                $units += $widths[$code - 32];
+            } elseif (in_array($char, ['Ä', 'Ö', 'Ü'], true)) {
+                $units += $bold ? 722 : 667;
+            } else {
+                $units += $bold ? 611 : 556;
+            }
+        }
+
+        return $units * $fontSize / 1000;
+    }
+
+    /** Helvetica-Zeichenbreiten (1/1000 em) für ASCII 32–126. */
+    private const HELVETICA_WIDTHS = [
+        278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278,
+        556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556,
+        1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778,
+        667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556,
+        333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500, 222, 833, 556, 556,
+        556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584,
+    ];
+
+    /** Helvetica-Bold-Zeichenbreiten (1/1000 em) für ASCII 32–126. */
+    private const HELVETICA_BOLD_WIDTHS = [
+        278, 333, 474, 556, 556, 889, 722, 238, 333, 333, 389, 584, 278, 333, 278, 278,
+        556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 333, 333, 584, 584, 584, 611,
+        975, 722, 722, 722, 722, 667, 611, 778, 722, 278, 556, 722, 611, 833, 722, 778,
+        667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 333, 278, 333, 584, 556,
+        333, 556, 611, 556, 611, 556, 333, 611, 611, 278, 278, 556, 278, 889, 611, 611,
+        611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584,
+    ];
+
     /** Zieht eine Linie von (x1, y1) nach (x2, y2). */
     public function line(float $x1, float $y1, float $x2, float $y2, float $lineWidth = 0.5, string $strokeColor = '0.7 0.7 0.7'): void
     {

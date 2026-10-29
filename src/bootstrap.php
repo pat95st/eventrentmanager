@@ -578,6 +578,7 @@ $commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new
 $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, new \App\Application\Article\Command\SetArticleActiveHandler($articleRepository));
 $commandBus->register(\App\Application\Article\Command\AddArticleImage::class, new AddArticleImageHandler($articleRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\DeleteArticleImage::class, new DeleteArticleImageHandler($articleRepository, $fileStorage));
+$commandBus->register(\App\Application\Article\Command\SetArticleDocumentImage::class, new \App\Application\Article\Command\SetArticleDocumentImageHandler($articleRepository));
 $commandBus->register(\App\Application\Article\Command\AddInventoryNumber::class, new AddInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $manufacturerRepository, $supplierRepository, $receiptRepository, $firmwareVersionRepository));
 $commandBus->register(\App\Application\Article\Command\UpdateInventoryNumber::class, new UpdateInventoryNumberHandler($inventoryNumberRepository, $supplierRepository, $receiptRepository, $articleRepository, $firmwareVersionRepository));
 $commandBus->register(\App\Application\Article\Command\AddFirmwareVersion::class, new \App\Application\Article\Command\AddFirmwareVersionHandler($firmwareVersionRepository, $articleRepository));
@@ -1549,6 +1550,7 @@ $router->post('/artikel/{id}/loeschen', $auth->guard(Permission::Artikelverwaltu
 $router->post('/artikel/{id}/aktivieren', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'activate']));
 $router->post('/artikel/{id}/deaktivieren', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deactivate']));
 $router->post('/artikel/{id}/bilder', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'uploadImage']));
+$router->post('/artikel/{id}/dokumentbild', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'setDocumentImage']));
 $router->post('/artikelbilder/{imageId}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteImage']));
 $router->get('/artikel-bilder/{id}/{filename}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'showImage']));
 

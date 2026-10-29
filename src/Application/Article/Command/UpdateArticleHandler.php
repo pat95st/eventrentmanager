@@ -86,6 +86,11 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $errors['protectionClass'] = 'Bitte eine gültige Schutzklasse auswählen.';
         }
 
+        $documentShortText = $command->documentShortText !== null ? trim(preg_replace('/\s+/u', ' ', $command->documentShortText) ?? '') : '';
+        if (mb_strlen($documentShortText) > 500) {
+            $errors['documentShortText'] = 'Der Kurztext darf höchstens 500 Zeichen lang sein.';
+        }
+
         [$bundleErrors, $components] = ValidatesBundleInput::validate(
             $command->isBundle, $command->isBillable, $command->dailyRentalPrice, $command->bundleComponents,
             $article->id, $article->isBundle, $this->articles, $this->bundleComponents, $this->rentalBundles,
@@ -115,6 +120,9 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $article->dailyRentalPrice = $command->isBillable ? (Money::normalize($command->dailyRentalPrice) ?: null) : null;
         $article->isRentableIndividually = $command->isBundle || $command->isRentableIndividually;
         $article->isBundle = $command->isBundle;
+        if ($command->documentShortText !== null) {
+            $article->documentShortText = $documentShortText !== '' ? $documentShortText : null;
+        }
         $article->updatedAt = new DateTimeImmutable();
 
         $this->articles->save($article);

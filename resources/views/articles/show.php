@@ -205,6 +205,12 @@ $availabilityStatusMeta = [
                     <dd class="mt-1 whitespace-pre-line text-sm text-slate-700 dark:text-slate-300"><?= e($article->description) ?></dd>
                 </div>
             <?php endif; ?>
+            <?php if ($article->documentShortText !== null): ?>
+                <div class="mt-4">
+                    <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.document_short_text')) ?></dt>
+                    <dd class="mt-1 text-sm italic text-slate-700 dark:text-slate-300"><?= e($article->documentShortText) ?></dd>
+                </div>
+            <?php endif; ?>
         </div>
 
         <?php if ($rentalPricesByDay !== null): ?>
@@ -236,16 +242,30 @@ $availabilityStatusMeta = [
 
         <!-- Bilder -->
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.images_title')) ?></h2>
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.images_title')) ?></h2>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.document_image_hint')) ?></p>
             <div class="flex flex-wrap gap-3">
                 <?php foreach ($article->images as $image): ?>
-                    <div class="relative h-24 w-24 overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
+                    <?php $isDocumentImage = $article->documentImageId === $image->id; ?>
+                    <div class="flex flex-col items-center gap-1">
+                    <div class="relative h-24 w-24 overflow-hidden rounded-md <?= $isDocumentImage ? 'ring-2 ring-brand-500' : 'ring-1 ring-slate-200 dark:ring-slate-700' ?>">
                         <img src="/artikel-bilder/<?= e($image->filePath) ?>" alt="" class="h-full w-full object-cover">
                         <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                             <button type="submit" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
                         </form>
+                    </div>
+                    <!-- Dokumentbild (Migration 109): erscheint klein links neben dem Artikelnamen auf Angebot, AB und Rechnung -->
+                    <form method="post" action="/artikel/<?= e($article->id) ?>/dokumentbild">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <input type="hidden" name="image_id" value="<?= $isDocumentImage ? '' : e($image->id) ?>">
+                        <?php if ($isDocumentImage): ?>
+                            <button type="submit" title="<?= e(t('articles.show.document_image_remove')) ?>" class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400">✓ <?= e(t('articles.show.document_image_selected')) ?></button>
+                        <?php else: ?>
+                            <button type="submit" class="text-[11px] text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.show.document_image_select')) ?></button>
+                        <?php endif; ?>
+                    </form>
                     </div>
                 <?php endforeach; ?>
 

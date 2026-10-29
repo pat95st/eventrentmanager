@@ -29,6 +29,13 @@ final class DeleteArticleImageHandler implements CommandHandlerInterface
 
         $this->fileStorage->delete('articles', $image->filePath);
 
+        // War es das Dokumentbild (Migration 109), Auswahl zurücksetzen.
+        $article = $this->articles->findById($image->articleId);
+        if ($article !== null && $article->documentImageId === $image->id) {
+            $article->documentImageId = null;
+            $this->articles->save($article);
+        }
+
         return null;
     }
 }

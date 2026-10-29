@@ -88,6 +88,8 @@ CREATE TABLE articles (
     prefix              VARCHAR(20)     NULL, -- Präfix für Inventurnummern, z. B. "AKS" (siehe inventory_numbers)
     category_id         CHAR(36)        NULL,
     description         TEXT            NULL,
+    document_short_text VARCHAR(500)    NULL, -- Kurztext für Dokumente, kursiv unter dem Namen (Migration 109)
+    document_image_id   CHAR(36)        NULL, -- Galeriebild (article_images.id) für Dokumente, ohne FK (Migration 109)
     weight_value        DECIMAL(10, 3)  NULL,
     weight_unit         ENUM('g','kg')  NULL,
     dimensions          VARCHAR(255)    NULL,

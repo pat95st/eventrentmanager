@@ -14,6 +14,7 @@ use App\Application\Article\Command\DeleteArticle;
 use App\Application\Article\Command\DeleteArticleAccessory;
 use App\Application\Article\Command\DeleteArticleAdImage;
 use App\Application\Article\Command\DeleteArticleImage;
+use App\Application\Article\Command\SetArticleDocumentImage;
 use App\Application\Article\Command\DeleteArticlePreIssueCheck;
 use App\Application\Article\Command\GenerateArticleAdImage;
 use App\Application\NoticeDocument\Command\RemoveNoticeDocumentFromArticle;
@@ -372,6 +373,7 @@ final class ArticleController
             isRentableIndividually: $request->input('not_rentable_individually') === null,
             isBundle: $request->input('is_bundle') !== null,
             bundleComponents: $this->bundleComponentsFromRequest($request),
+            documentShortText: $request->input('document_short_text', '') ?? '',
         );
 
         try {
@@ -545,6 +547,7 @@ final class ArticleController
             isRentableIndividually: $request->input('not_rentable_individually') === null,
             isBundle: $request->input('is_bundle') !== null,
             bundleComponents: $this->bundleComponentsFromRequest($request),
+            documentShortText: $request->input('document_short_text', '') ?? '',
         );
 
         try {
@@ -627,6 +630,26 @@ final class ArticleController
             $this->commands->dispatch(new DeleteArticleImage($imageId));
         } catch (NotFoundException $e) {
             Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    /** Dokumentbild wählen bzw. (leere image_id) entfernen, siehe SetArticleDocumentImage. */
+    public function setDocumentImage(Request $request): void
+    {
+        $articleId = $request->param('id');
+        $imageId = $request->input('image_id');
+
+        try {
+            $this->commands->dispatch(new SetArticleDocumentImage($articleId, $imageId !== null && $imageId !== '' ? $imageId : null));
+            Flash::success(t($imageId !== null && $imageId !== '' ? 'articles.show.document_image_flash_selected' : 'articles.show.document_image_flash_removed'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
         }
 
         Response::redirect('/artikel/' . $articleId);
@@ -1095,6 +1118,7 @@ final class ArticleController
             'not_rentable_individually' => !$command->isRentableIndividually,
             'is_bundle' => $command->isBundle,
             'bundle_components' => $command->bundleComponents,
+            'document_short_text' => $command->documentShortText,
         ];
     }
 

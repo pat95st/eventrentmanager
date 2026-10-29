@@ -335,6 +335,16 @@ $bundleComponentRows ??= [];
         ><?= e($val('description', $article?->description)) ?></textarea>
     </div>
 
+    <div>
+        <label for="document_short_text" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.document_short_text')) ?></label>
+        <input type="text" id="document_short_text" name="document_short_text" maxlength="500"
+               value="<?= e((string) $val('document_short_text', $article?->documentShortText)) ?>"
+               placeholder="<?= e(t('articles.form.document_short_text_placeholder')) ?>"
+               class="mt-1 w-full rounded-md border <?= isset($errors['documentShortText']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+        <?php if (isset($errors['documentShortText'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['documentShortText']) ?></p><?php endif; ?>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.document_short_text_hint')) ?></p>
+    </div>
+
     <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>

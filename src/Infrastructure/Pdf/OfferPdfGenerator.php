@@ -95,8 +95,7 @@ final class OfferPdfGenerator
         }
 
         foreach ($rows as $row) {
-            $rowLineCount = max(count($row['nameLines']), 1);
-            $rowHeight = $rowLineCount * self::TABLE_LINE_HEIGHT + self::TABLE_ROW_PADDING;
+            $rowHeight = ArticlePdfRow::contentHeight($row, self::TABLE_LINE_HEIGHT) + self::TABLE_ROW_PADDING;
 
             if ($y - $rowHeight < self::MARGIN + 60) {
                 $pageNumber++;
@@ -320,15 +319,25 @@ final class OfferPdfGenerator
             }
 
             $entry = $row->data;
-            $rows[] = [
-                // Bundles (Migration 107): Bestandteile als Zusatzzeile(n)
-                // unter dem Bundle-Namen ("enthält: 2× …, 1× …").
-                'nameLines' => array_merge(
-                    $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+            // Bundles (Migration 107): Bestandteile als Zusatzzeile(n)
+            // unter dem Bundle-Namen ("enthält: 2× …, 1× …"); Migration 109:
+            // Dokumentbild links und Kurztext kursiv darunter.
+            $nameColumn = $this->articleRow()->nameColumn(
+                $entry->article,
+                [
+                    $entry->displayName(),
                     isset($detail->bundleComponents[$entry->article->id])
-                        ? $this->wrapText(\App\Application\Article\Query\BundleComponentResolver::describe($detail->bundleComponents[$entry->article->id], (int) $entry->item->quantity), $columns['article']['width'], self::TABLE_FONT_SIZE)
-                        : [],
-                ),
+                        ? \App\Application\Article\Query\BundleComponentResolver::describe($detail->bundleComponents[$entry->article->id], (int) $entry->item->quantity)
+                        : null,
+                ],
+                $columns['article']['width'],
+                self::TABLE_FONT_SIZE,
+                fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize),
+            );
+            $rows[] = [
+                'nameLines' => $nameColumn['nameLines'],
+                'shortTextLines' => $nameColumn['shortTextLines'],
+                'image' => $nameColumn['image'],
                 'quantity' => (string) $entry->item->quantity,
                 'unitPrice' => number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR',
                 'lineTotal' => number_format($entry->lineTotal(), 2, ',', '.') . ' EUR',
@@ -636,15 +645,20 @@ final class OfferPdfGenerator
         $columns = $this->columnLayout();
         $baseline = $topY - self::TABLE_LINE_HEIGHT + 2;
 
-        foreach ($row['nameLines'] as $i => $line) {
-            $writer->text($columns['article']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE, $row['isSection']);
-        }
+        ArticlePdfRow::drawNameColumn($writer, $columns['article']['x'] + 2, $topY, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT, $row['isSection']);
 
         if (!$row['isSection']) {
             $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
             $writer->textRight($this->columnRight($columns['unitPrice']), $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
             $writer->textRight($this->columnRight($columns['lineTotal']), $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
         }
+    }
+
+    private ?ArticlePdfRow $articleRow = null;
+
+    private function articleRow(): ArticlePdfRow
+    {
+        return $this->articleRow ??= new ArticlePdfRow($this->fileStorage);
     }
 
     /** @param array{x: float, width: float} $column */
@@ -680,7 +694,7 @@ final class OfferPdfGenerator
     private function drawTableSection(SimplePdfWriter $writer, float $y, float $pageWidth, string $title, array $labels, array $rows, callable $newPage, ?PdfDesignSettings $pdfDesignSettings): float
     {
         $y -= 16;
-        $firstRowHeight = max(count($rows[0]['nameLines']), 1) * self::TABLE_LINE_HEIGHT + self::TABLE_ROW_PADDING;
+        $firstRowHeight = ArticlePdfRow::contentHeight($rows[0], self::TABLE_LINE_HEIGHT) + self::TABLE_ROW_PADDING;
         if ($y - 36 - $firstRowHeight < self::MARGIN + 60) {
             $y = $newPage();
         }
@@ -690,7 +704,7 @@ final class OfferPdfGenerator
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
 
         foreach ($rows as $row) {
-            $rowHeight = max(count($row['nameLines']), 1) * self::TABLE_LINE_HEIGHT + self::TABLE_ROW_PADDING;
+            $rowHeight = ArticlePdfRow::contentHeight($row, self::TABLE_LINE_HEIGHT) + self::TABLE_ROW_PADDING;
             if ($y - $rowHeight < self::MARGIN + 60) {
                 $y = $newPage();
                 $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
@@ -728,8 +742,17 @@ final class OfferPdfGenerator
         $columns = $this->columnLayout();
         $rows = [];
         foreach ($detail->saleItems as $saleEntry) {
+            $nameColumn = $this->articleRow()->nameColumn(
+                $saleEntry->article,
+                [$saleEntry->displayName()],
+                $columns['article']['width'],
+                self::TABLE_FONT_SIZE,
+                fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize),
+            );
             $rows[] = [
-                'nameLines' => $this->wrapText($saleEntry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+                'nameLines' => $nameColumn['nameLines'],
+                'shortTextLines' => $nameColumn['shortTextLines'],
+                'image' => $nameColumn['image'],
                 'quantity' => (string) $saleEntry->item->quantity,
                 'unitPrice' => $this->formatAmount((float) $saleEntry->item->unitPrice),
                 'lineTotal' => $this->formatAmount($saleEntry->lineTotal()),

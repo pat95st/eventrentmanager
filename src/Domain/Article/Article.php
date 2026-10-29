@@ -43,6 +43,26 @@ final class Article
         // Bestandteile siehe ArticleBundleComponent); hat keinen eigenen
         // physischen Bestand/Inventarnummern.
         public bool $isBundle = false,
+        // Migration 109: optionaler Kurztext für Dokumente (klein/kursiv
+        // unter dem Artikelnamen im PDF) und gewähltes Galeriebild
+        // (ArticleImage::$id), das im PDF klein links neben dem Namen steht.
+        public ?string $documentShortText = null,
+        public ?string $documentImageId = null,
     ) {
+    }
+
+    /** Das für Dokumente gewählte Galeriebild, falls es (noch) existiert. */
+    public function documentImage(): ?ArticleImage
+    {
+        if ($this->documentImageId === null) {
+            return null;
+        }
+        foreach ($this->images as $image) {
+            if ($image->id === $this->documentImageId) {
+                return $image;
+            }
+        }
+
+        return null;
     }
 }

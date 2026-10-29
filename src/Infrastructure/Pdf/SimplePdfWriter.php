@@ -46,6 +46,9 @@ final class SimplePdfWriter
 
     private int $nextImageNameSuffix = 1;
 
+    /** @var array<string, int> md5 der JPEG-Bytes => Objektnummer */
+    private array $imageObjectsByHash = [];
+
     public function __construct(float $pageWidth = 595.28, float $pageHeight = 841.89)
     {
         $this->pageWidth = $pageWidth;
@@ -260,7 +263,17 @@ final class SimplePdfWriter
             throw new RuntimeException('Nur JPEG-Bilddaten können eingebettet werden.');
         }
 
+        // Gleiche Bilddaten (z. B. dasselbe Artikelbild in mehreren
+        // Positionen) nur einmal einbetten und das XObject wiederverwenden.
+        $hash = md5($jpegBytes);
+        if (isset($this->imageObjectsByHash[$hash])) {
+            $this->placeImageObject($this->imageObjectsByHash[$hash], $x, $y, $width, $height);
+
+            return;
+        }
+
         $imageObjectNumber = $this->nextObjectNumber++;
+        $this->imageObjectsByHash[$hash] = $imageObjectNumber;
         $channels = $size['channels'] ?? 3;
         $colorSpace = $channels === 1 ? '/DeviceGray' : '/DeviceRGB';
 
@@ -273,6 +286,11 @@ final class SimplePdfWriter
         );
         $this->objects[$imageObjectNumber] = $dict . "\nstream\n" . $jpegBytes . "\nendstream";
 
+        $this->placeImageObject($imageObjectNumber, $x, $y, $width, $height);
+    }
+
+    private function placeImageObject(int $imageObjectNumber, float $x, float $y, float $width, float $height): void
+    {
         $imageName = 'Im' . ($this->nextImageNameSuffix++);
         $this->pageXObjects[$this->currentPageIndex][$imageName] = $imageObjectNumber;
 

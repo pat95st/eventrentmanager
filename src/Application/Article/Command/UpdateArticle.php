@@ -33,6 +33,8 @@ final class UpdateArticle implements CommandInterface
         public readonly bool $isBundle = false,
         /** @var array<int, array{article_id: string, quantity: string}> */
         public readonly array $bundleComponents = [],
+        // Migration 109: Kurztext für Dokumente (null = Feld nicht übermittelt).
+        public readonly ?string $documentShortText = null,
     ) {
     }
 }

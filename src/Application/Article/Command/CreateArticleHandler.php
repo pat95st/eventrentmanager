@@ -35,6 +35,11 @@ final class CreateArticleHandler implements CommandHandlerInterface
         assert($command instanceof CreateArticle);
 
         $errors = $this->validate($command);
+        $documentShortText = $command->documentShortText !== null ? trim(preg_replace('/\s+/u', ' ', $command->documentShortText) ?? '') : '';
+        if (mb_strlen($documentShortText) > 500) {
+            $errors['documentShortText'] = 'Der Kurztext darf höchstens 500 Zeichen lang sein.';
+        }
+
         [$bundleErrors, $components] = ValidatesBundleInput::validate(
             $command->isBundle, $command->isBillable, $command->dailyRentalPrice, $command->bundleComponents,
             null, false, $this->articles, $this->bundleComponents, $this->rentalBundles,
@@ -71,6 +76,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
             // betrifft nur normale Artikel.
             isRentableIndividually: $command->isBundle || $command->isRentableIndividually,
             isBundle: $command->isBundle,
+            documentShortText: $documentShortText !== '' ? $documentShortText : null,
         );
 
         $this->articles->save($article);

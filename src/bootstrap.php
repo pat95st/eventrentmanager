@@ -762,6 +762,8 @@ $commandBus->register(\App\Application\Settings\Command\UploadCompanyLogo::class
 $commandBus->register(\App\Application\Settings\Command\DeleteCompanyLogo::class, new DeleteCompanyLogoHandler($companySettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\UploadCompanyDarkLogo::class, new UploadCompanyDarkLogoHandler($companySettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\DeleteCompanyDarkLogo::class, new DeleteCompanyDarkLogoHandler($companySettingsRepository, $fileStorage));
+$commandBus->register(\App\Application\Settings\Command\UploadCompanyFavicon::class, new \App\Application\Settings\Command\UploadCompanyFaviconHandler($companySettingsRepository, $fileStorage));
+$commandBus->register(\App\Application\Settings\Command\DeleteCompanyFavicon::class, new \App\Application\Settings\Command\DeleteCompanyFaviconHandler($companySettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\UploadCompanyBackgroundImage::class, new UploadCompanyBackgroundImageHandler($companySettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\DeleteCompanyBackgroundImage::class, new DeleteCompanyBackgroundImageHandler($companySettingsRepository, $fileStorage));
 
@@ -1034,6 +1036,7 @@ $queryBus->register(\App\Application\Article\Query\GetArticle::class, new GetArt
     $articleChannelListingRepository,
     $saleRepository,
     $firmwareVersionRepository,
+    $articleBundleComponentRepository,
 ));
 $queryBus->register(\App\Application\Article\Query\GetInventoryNumberContext::class, new GetInventoryNumberContextHandler(
     $inventoryNumberRepository,
@@ -1124,7 +1127,7 @@ $getNoticeDocumentsForArticleIdsHandler = new \App\Application\NoticeDocument\Qu
 $queryBus->register(\App\Application\NoticeDocument\Query\GetNoticeDocumentsForArticleIds::class, $getNoticeDocumentsForArticleIdsHandler);
 $queryBus->register(\App\Application\NoticeDocument\Query\ListNoticeDocuments::class, new \App\Application\NoticeDocument\Query\ListNoticeDocumentsHandler($noticeDocumentRepository));
 $queryBus->register(\App\Application\NoticeDocument\Query\GetNoticeDocumentDetail::class, new \App\Application\NoticeDocument\Query\GetNoticeDocumentDetailHandler($noticeDocumentRepository, $noticeDocumentArticleRepository));
-$commandBus->register(\App\Application\Rental\Command\SendNoticeDocumentsToCustomer::class, new \App\Application\Rental\Command\SendNoticeDocumentsToCustomerHandler($getRentalHandler, $getNoticeDocumentsForArticleIdsHandler, $fileStorage, $mailer));
+$commandBus->register(\App\Application\Rental\Command\SendNoticeDocumentsToCustomer::class, new \App\Application\Rental\Command\SendNoticeDocumentsToCustomerHandler($getRentalHandler, $getNoticeDocumentsForArticleIdsHandler, $fileStorage, $mailer, $rentalBundleRepository));
 $queryBus->register(\App\Application\Rental\Query\ListRentalsInRange::class, new ListRentalsInRangeHandler(
     $rentalRepository,
     $customerRepository,
@@ -1443,6 +1446,7 @@ $router->post('/sprache', [$localeController, 'switch']);
 // geschützt, siehe CompanySettingsController::showLogo()).
 $router->get('/firmenlogo', [$companySettingsController, 'showLogo']);
 $router->get('/firmenlogo-dark', [$companySettingsController, 'showDarkLogo']);
+$router->get('/firmen-favicon', [$companySettingsController, 'showFavicon']);
 $router->get('/firmenhintergrund', [$companySettingsController, 'showBackgroundImage']);
 
 // Passkey-Anmeldung (öffentlich, kein Benutzer angemeldet — siehe
@@ -1541,6 +1545,7 @@ $router->get('/artikel/suche/vermietung', $auth->guard(null, [$articleController
 // demselben Grund wie bei '/artikel/suche' direkt darüber.
 $router->get('/artikel/mehrfachauswahl', $auth->guard(null, [$articleController, 'picker']));
 $router->get('/artikel/neu', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'create']));
+$router->get('/artikel/neues-bundle', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'createBundle']));
 $router->post('/artikel', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'store']));
 $router->get('/artikel/preisliste.pdf', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'exportPriceListPdf']));
 $router->get('/artikel/preisliste.csv', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'exportPriceListCsv']));
@@ -1934,6 +1939,8 @@ $router->post('/einstellungen/firma/logo/loeschen', $auth->guard(Permission::Adm
 $router->get('/einstellungen/firma/logo', $auth->guard(Permission::Administration, [$companySettingsController, 'showLogo']));
 $router->post('/einstellungen/firma/logo-dunkel', $auth->guard(Permission::Administration, [$companySettingsController, 'uploadDarkLogo']));
 $router->post('/einstellungen/firma/logo-dunkel/loeschen', $auth->guard(Permission::Administration, [$companySettingsController, 'deleteDarkLogo']));
+$router->post('/einstellungen/firma/favicon', $auth->guard(Permission::Administration, [$companySettingsController, 'uploadFavicon']));
+$router->post('/einstellungen/firma/favicon/loeschen', $auth->guard(Permission::Administration, [$companySettingsController, 'deleteFavicon']));
 $router->get('/einstellungen/firma/logo-dunkel', $auth->guard(Permission::Administration, [$companySettingsController, 'showDarkLogo']));
 $router->post('/einstellungen/firma/hintergrundbild', $auth->guard(Permission::Administration, [$companySettingsController, 'uploadBackgroundImage']));
 $router->post('/einstellungen/firma/hintergrundbild/loeschen', $auth->guard(Permission::Administration, [$companySettingsController, 'deleteBackgroundImage']));

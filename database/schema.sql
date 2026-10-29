@@ -973,7 +973,8 @@ CREATE TABLE company_settings (
     logo_filename VARCHAR(255) NULL,
     logo_max_height_px SMALLINT NULL,
     dark_logo_filename VARCHAR(255) NULL,
-    background_image_filename VARCHAR(255) NULL, -- optionales Hintergrundbild für die gesamte Oberfläche, siehe App\Infrastructure\Http\CompanyBranding::backgroundImageUrl()
+    background_image_filename VARCHAR(255) NULL,
+    favicon_filename VARCHAR(255) NULL, -- eigenes Favicon (Migration 112) -- optionales Hintergrundbild für die gesamte Oberfläche, siehe App\Infrastructure\Http\CompanyBranding::backgroundImageUrl()
     updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_company_settings_singleton CHECK (id = 1),
     CONSTRAINT chk_company_settings_logo_max_height_px

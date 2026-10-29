@@ -159,6 +159,37 @@ use function App\Infrastructure\Http\t;
     <?php if (isset($errors['darkLogo'])): ?><p class="text-xs text-red-600 dark:text-red-400"><?= e($errors['darkLogo']) ?></p><?php endif; ?>
 </div>
 
+<!-- Favicon (Migration 112) -->
+<div class="space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.company.favicon.title')) ?></h2>
+    <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.company.favicon.hint')) ?></p>
+
+    <?php if ($settings->faviconFilename !== null): ?>
+        <div class="flex items-center gap-4">
+            <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700">
+                <img src="<?= e(\App\Infrastructure\Http\CompanyBranding::faviconUrl() ?? '/firmen-favicon') ?>" alt="<?= e(t('settings.company.favicon.title')) ?>" class="max-h-full max-w-full object-contain">
+            </div>
+            <form method="post" action="/einstellungen/firma/favicon/loeschen" data-confirm="<?= e(t('settings.company.favicon.confirm_remove')) ?>" data-confirm-style="danger">
+                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+                    <?= e(t('settings.company.favicon.remove')) ?>
+                </button>
+            </form>
+        </div>
+    <?php else: ?>
+        <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.company.favicon.none')) ?></p>
+    <?php endif; ?>
+
+    <form method="post" action="/einstellungen/firma/favicon" enctype="multipart/form-data" class="flex items-center gap-3">
+        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+        <input type="file" name="favicon" accept=".ico,.png,.svg,image/x-icon,image/png,image/svg+xml"
+               class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-800 dark:file:text-slate-300 dark:hover:file:bg-slate-700">
+        <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+            <?= e(t('settings.company.favicon.upload')) ?>
+        </button>
+    </form>
+</div>
+
 <div class="space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.company.background_image.title')) ?></h2>
     <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.company.background_image.hint')) ?></p>

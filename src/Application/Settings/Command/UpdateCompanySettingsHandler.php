@@ -45,6 +45,7 @@ final class UpdateCompanySettingsHandler implements CommandHandlerInterface
             phone: $command->phone === null ? $current->phone : $this->nullIfEmpty($command->phone),
             email: $command->email === null ? $current->email : $this->nullIfEmpty($command->email),
             website: $command->website === null ? $current->website : $this->nullIfEmpty($command->website),
+            faviconFilename: $current->faviconFilename,
         );
 
         $this->settingsRepository->save($settings);

@@ -71,4 +71,15 @@ final class CompanyBranding
     {
         return self::$settings?->backgroundImageFilename !== null ? '/firmenhintergrund' : null;
     }
+
+    /**
+     * URL des eigenen Favicons (Migration 112) inkl. Cache-Buster, oder null
+     * — dann gilt das Standard-Favicon public/favicon.ico.
+     */
+    public static function faviconUrl(): ?string
+    {
+        $filename = self::$settings?->faviconFilename;
+
+        return $filename !== null ? '/firmen-favicon?v=' . substr(md5($filename), 0, 8) : null;
+    }
 }

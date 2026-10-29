@@ -350,6 +350,12 @@ final class ArticleController
         $this->renderForm(null, [], []);
     }
 
+    /** Eigene Seite zum Anlegen eines Bundles (articles/bundle-form.php). */
+    public function createBundle(Request $request): void
+    {
+        $this->renderForm(null, [], ['is_bundle' => true]);
+    }
+
     public function store(Request $request): void
     {
         $command = new CreateArticle(
@@ -1082,7 +1088,10 @@ final class ArticleController
             $bundleComponentRows = $this->bundleComponentRows($article->id);
         }
 
-        echo View::page('articles/form', [
+        // Bundles haben ein eigenes, schlankes Formular (Nutzerwunsch).
+        $bundleMode = ($article?->isBundle ?? false) || !empty($old['is_bundle']);
+
+        echo View::page($bundleMode ? 'articles/bundle-form' : 'articles/form', [
             'article' => $article,
             'bundleComponentRows' => $bundleComponentRows,
             'manufacturers' => $manufacturers,
@@ -1090,7 +1099,7 @@ final class ArticleController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
-        ], activeNav: 'articles', title: $article !== null ? t('articles.edit') : t('articles.new'));
+        ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 
     /** @return array<string, mixed> */

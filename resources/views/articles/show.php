@@ -350,8 +350,26 @@ $availabilityStatusMeta = [
                 <?= t('articles.show.notice_documents_hint', ['link' => '<a href="/hinweisdokumente" class="underline">' . e(t('articles.show.notice_documents_settings_link')) . '</a>']) ?>
             </p>
 
-            <?php if ($detail->noticeDocuments === []): ?>
+            <?php if ($detail->inheritedNoticeDocuments !== []): ?>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_inherited')) ?></p>
+                <div class="mb-3 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->inheritedNoticeDocuments as $inherited): ?>
+                        <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                            <p class="text-sm text-slate-700 dark:text-slate-300">
+                                <?= e($inherited['document']->name) ?>
+                                <span class="text-xs text-slate-400 dark:text-slate-500">· <a href="/artikel/<?= e($inherited['sourceArticleId']) ?>" class="hover:underline"><?= e($inherited['sourceLabel']) ?></a></span>
+                            </p>
+                            <a href="/hinweisdokumente/<?= e($inherited['document']->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php if ($detail->noticeDocuments !== []): ?>
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_own')) ?></p>
+                <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($detail->noticeDocuments === [] && $detail->inheritedNoticeDocuments === []): ?>
                 <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_none')) ?></p>
+            <?php elseif ($detail->noticeDocuments === []): ?>
             <?php else: ?>
                 <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
                     <?php foreach ($detail->noticeDocuments as $noticeDocument): ?>

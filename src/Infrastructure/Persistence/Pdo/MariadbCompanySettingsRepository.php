@@ -41,6 +41,7 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             phone: $row['phone'] ?? null,
             email: $row['email'] ?? null,
             website: $row['website'] ?? null,
+            faviconFilename: $row['favicon_filename'] ?? null,
         );
     }
 
@@ -52,7 +53,7 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
                 country = :country, logo_filename = :logo_filename,
                 logo_max_height_px = :logo_max_height_px, dark_logo_filename = :dark_logo_filename,
                 background_image_filename = :background_image_filename,
-                phone = :phone, email = :email, website = :website
+                phone = :phone, email = :email, website = :website, favicon_filename = :favicon_filename
              WHERE id = 1'
         );
 
@@ -70,6 +71,7 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             'phone' => $settings->phone,
             'email' => $settings->email,
             'website' => $settings->website,
+            'favicon_filename' => $settings->faviconFilename,
         ]);
     }
 }

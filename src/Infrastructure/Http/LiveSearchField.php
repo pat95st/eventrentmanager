@@ -61,7 +61,7 @@ function renderLiveSearchField(
     <?php if ($mode !== 'freetext'): ?>
     <input type="hidden" name="<?= e($name) ?>" data-live-search-value value="<?= e($selectedId ?? '') ?>">
     <?php endif; ?>
-    <div data-live-search-results class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-64 overflow-y-auto rounded-md border border-slate-300 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"></div>
+    <div data-live-search-results style="z-index: 30; max-height: 16rem;" class="absolute left-0 right-0 top-full z-20 mt-1 hidden max-h-64 overflow-y-auto rounded-md border border-slate-300 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"></div>
     <?php if ($error !== null): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($error) ?></p><?php endif; ?>
 </div>
     <?php

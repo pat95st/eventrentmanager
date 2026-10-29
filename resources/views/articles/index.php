@@ -25,6 +25,9 @@ use function App\Infrastructure\Http\t;
         <a href="/artikel/preisliste.csv" class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('articles.price_list.export_csv')) ?>
         </a>
+        <a href="/artikel/neues-bundle" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
+            + <?= e(t('articles.bundle.new')) ?>
+        </a>
         <a href="/artikel/neu" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             + <?= e(t('articles.new')) ?>
         </a>

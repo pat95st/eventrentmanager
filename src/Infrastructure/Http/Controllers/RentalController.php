@@ -246,9 +246,11 @@ final class RentalController
         $voucher = $voucherRedemption !== null ? $this->queries->ask(new GetVoucher($voucherRedemption->voucherId)) : null;
         $minutePrograms = $this->queries->ask(new ListMinuteProgramsForRental($id));
 
-        $bookedArticleIds = array_values(array_unique(array_map(
-            static fn ($entry) => $entry->article->id,
-            $detail->items,
+        $bookedArticleIds = array_values(array_unique(array_merge(
+            array_map(static fn ($entry) => $entry->article->id, $detail->items),
+            // Zusätzliche Hinweisdokumente gebuchter Bundles (Bestandteile
+            // stecken bereits in $detail->items).
+            array_map(static fn ($rentalBundle) => $rentalBundle->bundleArticleId, $this->rentalBundles?->findByRental($id) ?? []),
         )));
         $noticeDocuments = $this->queries->ask(new GetNoticeDocumentsForArticleIds($bookedArticleIds));
 

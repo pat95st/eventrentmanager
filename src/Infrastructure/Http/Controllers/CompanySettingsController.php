@@ -192,4 +192,48 @@ final class CompanySettingsController
 
         Response::file($absolutePath, basename($settings->backgroundImageFilename), $mimeType);
     }
+
+    public function uploadFavicon(Request $request): void
+    {
+        $file = $request->file('favicon');
+
+        if ($file !== null) {
+            try {
+                $this->commands->dispatch(new \App\Application\Settings\Command\UploadCompanyFavicon($file));
+                Flash::success(t('settings.company.favicon.flash.uploaded'));
+            } catch (ValidationException $e) {
+                Flash::error(implode(' ', $e->errors()));
+            }
+        }
+
+        Response::redirect('/einstellungen/firma');
+    }
+
+    public function deleteFavicon(Request $request): void
+    {
+        $this->commands->dispatch(new \App\Application\Settings\Command\DeleteCompanyFavicon());
+        Flash::success(t('settings.company.favicon.flash.removed'));
+        Response::redirect('/einstellungen/firma');
+    }
+
+    /** Liefert das eigene Favicon aus (öffentlich, auch für die Login-Seite), sonst das Standard-Favicon. */
+    public function showFavicon(Request $request): void
+    {
+        $settings = $this->queries->ask(new GetCompanySettings());
+
+        if ($settings->faviconFilename === null) {
+            Response::redirect('/favicon.ico');
+
+            return;
+        }
+
+        $absolutePath = $this->fileStorage->absolutePath('company', $settings->faviconFilename);
+        $mimeType = match (strtolower(pathinfo($settings->faviconFilename, PATHINFO_EXTENSION))) {
+            'svg' => 'image/svg+xml',
+            'png' => 'image/png',
+            default => 'image/x-icon',
+        };
+
+        Response::file($absolutePath, basename($settings->faviconFilename), $mimeType);
+    }
 }

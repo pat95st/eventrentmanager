@@ -30,6 +30,8 @@ final class CompanySettings
         public ?string $phone = null,
         public ?string $email = null,
         public ?string $website = null,
+        // Migration 112: eigenes Favicon (Einstellungen › Firma)
+        public ?string $faviconFilename = null,
     ) {
     }
 }

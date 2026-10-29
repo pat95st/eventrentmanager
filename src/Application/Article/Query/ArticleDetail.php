@@ -42,6 +42,8 @@ final class ArticleDetail
         public readonly array $preIssueChecks = [],
         public readonly array $adImages = [],
         public readonly array $noticeDocuments = [],
+        /** @var list<array{document: NoticeDocument, sourceArticleId: string, sourceLabel: string}> Bundles: Dokumente der Bestandteile */
+        public readonly array $inheritedNoticeDocuments = [],
     ) {
     }
 }

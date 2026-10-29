@@ -435,7 +435,7 @@ $canDocuments = $canRentals;
           </svg>
           <span class="sr-only"><?= e(t('nav.user_menu')) ?></span>
         </summary>
-        <div data-dropdown-menu class="absolute right-0 top-full z-20 mt-1 w-60 rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+        <div data-dropdown-menu style="z-index: 30;" class="absolute right-0 top-full z-20 mt-1 w-60 rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-800 dark:bg-slate-900">
           <div class="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
           <a href="/profil/sicherheit" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
           <a href="/profil/sitzungen" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
@@ -522,54 +522,85 @@ $canDocuments = $canRentals;
 
     <!-- Mobile-Navigation: unterhalb von lg (1024px) per Hamburger-Button
          ein-/ausklappbar. Da es auf Touch-Geräten kein ":hover" gibt, wird
-         die Artikel-Untergruppe hier nicht als Hover-Dropdown, sondern
-         direkt eingerückt als flache Liste angezeigt. -->
+         die Unterpunkte hier nicht als Hover-Dropdown angezeigt. Standardmäßig
+         sind nur die Oberpunkte zu sehen; die Unterpunkte einer Gruppe klappt
+         der Pfeil rechts auf (die Gruppe der aktuellen Seite ist offen). -->
     <nav id="mobile-nav" class="hidden border-t border-slate-200 px-2 py-2 lg:hidden dark:border-slate-800">
       <?php if ($canArticles): ?>
-      <a
-        href="/artikel"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $isArticlesGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.articles')) ?></a>
-      <?php foreach ($articlesChildren as $child): ?>
-        <a
-          href="<?= e($child['href']) ?>"
-          class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e($child['label']) ?></a>
-      <?php endforeach; ?>
+      <div data-mobile-group>
+        <div class="flex items-center gap-1">
+          <a
+            href="/artikel"
+            class="block min-w-0 flex-1 rounded-md px-3 py-2.5 text-sm font-medium <?= $isArticlesGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          ><?= e(t('nav.articles')) ?></a>
+          <button type="button" data-mobile-group-toggle aria-expanded="<?= $isArticlesGroupActive ? 'true' : 'false' ?>" aria-label="<?= e(t('nav.toggle_subitems')) ?>"
+                  class="rounded-md px-3 py-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="transition: transform .15s;<?= $isArticlesGroupActive ? ' transform: rotate(180deg);' : '' ?>"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div data-mobile-group-children class="<?= $isArticlesGroupActive ? '' : 'hidden' ?>">
+          <?php foreach ($articlesChildren as $child): ?>
+            <a
+              href="<?= e($child['href']) ?>"
+              class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            ><?= e($child['label']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <?php endif; ?>
 
       <?php if ($canContacts): ?>
-      <a
-        href="/kunden"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.contacts')) ?></a>
-      <?php foreach ($contactsChildren as $child): ?>
-        <a
-          href="<?= e($child['href']) ?>"
-          class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e($child['label']) ?></a>
-      <?php endforeach; ?>
+      <div data-mobile-group>
+        <div class="flex items-center gap-1">
+          <a
+            href="/kunden"
+            class="block min-w-0 flex-1 rounded-md px-3 py-2.5 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          ><?= e(t('nav.contacts')) ?></a>
+          <button type="button" data-mobile-group-toggle aria-expanded="<?= $isContactsGroupActive ? 'true' : 'false' ?>" aria-label="<?= e(t('nav.toggle_subitems')) ?>"
+                  class="rounded-md px-3 py-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="transition: transform .15s;<?= $isContactsGroupActive ? ' transform: rotate(180deg);' : '' ?>"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div data-mobile-group-children class="<?= $isContactsGroupActive ? '' : 'hidden' ?>">
+          <?php foreach ($contactsChildren as $child): ?>
+            <a
+              href="<?= e($child['href']) ?>"
+              class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            ><?= e($child['label']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <?php endif; ?>
 
       <?php if ($canProcurement): ?>
-      <a
-        href="/belege"
-        class="relative block rounded-md px-3 py-2.5 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.procurement')) ?>
-        <?php if (\App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
-          <span class="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
-        <?php endif; ?>
-      </a>
-      <?php foreach ($procurementChildren as $child): ?>
-        <a
-          href="<?= e($child['href']) ?>"
-          class="relative block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e($child['label']) ?>
-          <?php if ($child['key'] === 'receipts' && \App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
-            <span class="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
-          <?php endif; ?>
-        </a>
-      <?php endforeach; ?>
+      <div data-mobile-group>
+        <div class="flex items-center gap-1">
+          <a
+            href="/belege"
+            class="relative block min-w-0 flex-1 rounded-md px-3 py-2.5 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          ><?= e(t('nav.procurement')) ?>
+            <?php if (\App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
+              <span class="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
+            <?php endif; ?>
+          </a>
+          <button type="button" data-mobile-group-toggle aria-expanded="<?= $isProcurementGroupActive ? 'true' : 'false' ?>" aria-label="<?= e(t('nav.toggle_subitems')) ?>"
+                  class="rounded-md px-3 py-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="transition: transform .15s;<?= $isProcurementGroupActive ? ' transform: rotate(180deg);' : '' ?>"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div data-mobile-group-children class="<?= $isProcurementGroupActive ? '' : 'hidden' ?>">
+          <?php foreach ($procurementChildren as $child): ?>
+            <a
+              href="<?= e($child['href']) ?>"
+              class="relative block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            ><?= e($child['label']) ?>
+              <?php if ($child['key'] === 'receipts' && \App\Infrastructure\Http\ReceiptInboxBadge::pendingCount() > 0): ?>
+                <span class="absolute right-3 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-red-500"></span>
+              <?php endif; ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <?php endif; ?>
 
       <?php if ($canArticles): ?>
@@ -580,29 +611,49 @@ $canDocuments = $canRentals;
       <?php endif; ?>
 
       <?php if ($canDocuments): ?>
-      <a
-        href="/angebote"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.documents')) ?></a>
-      <?php foreach ($documentsChildren as $child): ?>
-        <a
-          href="<?= e($child['href']) ?>"
-          class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e($child['label']) ?></a>
-      <?php endforeach; ?>
+      <div data-mobile-group>
+        <div class="flex items-center gap-1">
+          <a
+            href="/angebote"
+            class="block min-w-0 flex-1 rounded-md px-3 py-2.5 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          ><?= e(t('nav.documents')) ?></a>
+          <button type="button" data-mobile-group-toggle aria-expanded="<?= $isDocumentsGroupActive ? 'true' : 'false' ?>" aria-label="<?= e(t('nav.toggle_subitems')) ?>"
+                  class="rounded-md px-3 py-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="transition: transform .15s;<?= $isDocumentsGroupActive ? ' transform: rotate(180deg);' : '' ?>"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div data-mobile-group-children class="<?= $isDocumentsGroupActive ? '' : 'hidden' ?>">
+          <?php foreach ($documentsChildren as $child): ?>
+            <a
+              href="<?= e($child['href']) ?>"
+              class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            ><?= e($child['label']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <?php endif; ?>
 
       <?php if ($canRentals): ?>
-      <a
-        href="/veranstaltungen"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $isRentalsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.rentals')) ?></a>
-      <?php foreach ($rentalsChildren as $child): ?>
-        <a
-          href="<?= e($child['href']) ?>"
-          class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e($child['label']) ?></a>
-      <?php endforeach; ?>
+      <div data-mobile-group>
+        <div class="flex items-center gap-1">
+          <a
+            href="/veranstaltungen"
+            class="block min-w-0 flex-1 rounded-md px-3 py-2.5 text-sm font-medium <?= $isRentalsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          ><?= e(t('nav.rentals')) ?></a>
+          <button type="button" data-mobile-group-toggle aria-expanded="<?= $isRentalsGroupActive ? 'true' : 'false' ?>" aria-label="<?= e(t('nav.toggle_subitems')) ?>"
+                  class="rounded-md px-3 py-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="transition: transform .15s;<?= $isRentalsGroupActive ? ' transform: rotate(180deg);' : '' ?>"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div data-mobile-group-children class="<?= $isRentalsGroupActive ? '' : 'hidden' ?>">
+          <?php foreach ($rentalsChildren as $child): ?>
+            <a
+              href="<?= e($child['href']) ?>"
+              class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            ><?= e($child['label']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <?php endif; ?>
 
       <?php if ($canRentals): ?>
@@ -690,6 +741,22 @@ $canDocuments = $canRentals;
         iconOpen.classList.toggle('hidden', !isOpen);
         iconClose.classList.toggle('hidden', isOpen);
         toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+      });
+    })();
+
+    // Aufklappbare Gruppen im mobilen Menü (Nutzerwunsch): Pfeil rechts
+    // neben einem Oberpunkt blendet dessen Unterpunkte ein/aus.
+    (function () {
+      document.querySelectorAll('[data-mobile-group-toggle]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var group = button.closest('[data-mobile-group]');
+          var children = group.querySelector('[data-mobile-group-children]');
+          var open = children.classList.contains('hidden');
+          children.classList.toggle('hidden', !open);
+          button.setAttribute('aria-expanded', open ? 'true' : 'false');
+          var icon = button.querySelector('svg');
+          if (icon) { icon.style.transform = open ? 'rotate(180deg)' : ''; }
+        });
       });
     })();
 

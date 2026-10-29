@@ -33,6 +33,7 @@ final class SendNoticeDocumentsToCustomerHandler implements CommandHandlerInterf
         private readonly GetNoticeDocumentsForArticleIdsHandler $getNoticeDocumentsForArticleIdsHandler,
         private readonly LocalFileStorage $fileStorage,
         private readonly MailerInterface $mailer,
+        private readonly ?\App\Domain\Rental\RentalBundleRepositoryInterface $rentalBundles = null,
     ) {
     }
 
@@ -48,9 +49,10 @@ final class SendNoticeDocumentsToCustomerHandler implements CommandHandlerInterf
         // Wirft NotFoundException, falls die Veranstaltung nicht existiert.
         $detail = $this->getRentalHandler->handle(new GetRental($command->rentalId));
 
-        $articleIds = array_values(array_unique(array_map(
-            static fn ($entry) => $entry->article->id,
-            $detail->items,
+        $articleIds = array_values(array_unique(array_merge(
+            array_map(static fn ($entry) => $entry->article->id, $detail->items),
+            // zusätzliche Dokumente gebuchter Bundles
+            array_map(static fn ($rentalBundle) => $rentalBundle->bundleArticleId, $this->rentalBundles?->findByRental($command->rentalId) ?? []),
         )));
 
         $documents = $this->getNoticeDocumentsForArticleIdsHandler->handle(new GetNoticeDocumentsForArticleIds($articleIds));

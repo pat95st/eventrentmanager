@@ -15,8 +15,13 @@
 ?>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="theme-color" content="#2563eb">
+<?php $customFaviconUrl = class_exists(\App\Infrastructure\Http\CompanyBranding::class) ? \App\Infrastructure\Http\CompanyBranding::faviconUrl() : null; ?>
+<?php if ($customFaviconUrl !== null): /* eigenes Favicon aus Einstellungen › Firma (Migration 112) */ ?>
+<link rel="icon" href="<?= htmlspecialchars($customFaviconUrl, ENT_QUOTES) ?>">
+<?php else: ?>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/img/icons/icon-192.png">
+<?php endif; ?>
 <link rel="apple-touch-icon" href="/assets/img/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Materialverleih">

@@ -39,6 +39,7 @@ final class GetArticleHandler implements QueryHandlerInterface
         private readonly ArticleChannelListingRepositoryInterface $channelListings,
         private readonly SaleRepositoryInterface $sales,
         private readonly FirmwareVersionRepositoryInterface $firmwareVersions,
+        private readonly ?\App\Domain\Article\ArticleBundleComponentRepositoryInterface $bundleComponents = null,
     ) {
     }
 
@@ -105,6 +106,31 @@ final class GetArticleHandler implements QueryHandlerInterface
         $noticeDocuments = $this->noticeDocuments->findByIds($noticeDocumentIds);
         $channelListings = $this->channelListings->findByArticle($article->id);
 
-        return new ArticleDetail($article, $manufacturer, $category, $inventoryNumbers, $nextInventoryNumberPreview, $accessories, $channelListings, $firmwareVersions, $preIssueChecks, $adImages, $noticeDocuments);
+        // Bundles: Hinweisdokumente der Bestandteile gehören fest dazu
+        // (Nutzerwunsch); eigene Dokumente des Bundles kommen zusätzlich.
+        $inheritedNoticeDocuments = [];
+        if ($article->isBundle && $this->bundleComponents !== null) {
+            $ownIds = array_flip($noticeDocumentIds);
+            foreach ($this->bundleComponents->findByBundle($article->id) as $component) {
+                $componentArticle = $this->articles->findById($component->componentArticleId);
+                if ($componentArticle === null) {
+                    continue;
+                }
+                $componentManufacturer = $componentArticle->manufacturerId !== null ? $this->manufacturers->findById($componentArticle->manufacturerId) : null;
+                $componentDocumentIds = array_values(array_filter(
+                    $this->noticeDocumentArticles->findDocumentIdsByArticleIds([$componentArticle->id]),
+                    static fn (string $id) => !isset($ownIds[$id]),
+                ));
+                foreach ($this->noticeDocuments->findByIds($componentDocumentIds) as $document) {
+                    $inheritedNoticeDocuments[$document->id] ??= [
+                        'document' => $document,
+                        'sourceArticleId' => $componentArticle->id,
+                        'sourceLabel' => \App\Domain\Article\ArticleDisplayName::of($componentArticle, $componentManufacturer),
+                    ];
+                }
+            }
+        }
+
+        return new ArticleDetail($article, $manufacturer, $category, $inventoryNumbers, $nextInventoryNumberPreview, $accessories, $channelListings, $firmwareVersions, $preIssueChecks, $adImages, $noticeDocuments, array_values($inheritedNoticeDocuments));
     }
 }

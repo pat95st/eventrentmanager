@@ -42,6 +42,7 @@ final class DeleteCompanyDarkLogoHandler implements CommandHandlerInterface
             phone: $current->phone,
             email: $current->email,
             website: $current->website,
+            faviconFilename: $current->faviconFilename,
         );
 
         $this->settingsRepository->save($settings);

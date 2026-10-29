@@ -49,6 +49,11 @@ use function App\Infrastructure\Http\t;
                                 <?php if (!$article->isActive): ?>
                                     <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-300 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-700"><?= e(t('articles.table.inactive_badge')) ?></span>
                                 <?php endif; ?>
+                                <?php if ($article->isBundle): ?>
+                                    <span class="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800"><?= e(t('articles.badge.bundle')) ?></span>
+                                <?php elseif (!$article->isRentableIndividually): ?>
+                                    <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700"><?= e(t('articles.badge.not_rentable_individually')) ?></span>
+                                <?php endif; ?>
                             </div>
                         </td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">

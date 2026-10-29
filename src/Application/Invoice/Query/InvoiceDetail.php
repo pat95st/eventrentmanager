@@ -6,6 +6,8 @@ namespace App\Application\Invoice\Query;
 
 use App\Domain\Customer\Customer;
 use App\Domain\Customer\CustomerContact;
+use App\Domain\Settings\BankAccount;
+use App\Domain\Settings\PaymentMethod;
 use App\Domain\Invoice\Invoice;
 use App\Domain\Pricing\DocumentTotals;
 use App\Domain\Settings\InvoiceSettings;
@@ -30,6 +32,15 @@ final class InvoiceDetail
         // Detailansicht/PDF diese statt der Kundenadresse an — siehe
         // GetInvoiceHandler, InvoicePdfGenerator.
         public readonly ?CustomerContact $contact = null,
+        // Aufgelöste Zahlungsart (gewählt oder Standard, siehe
+        // PaymentSelection) — für Detailansicht und PDF.
+        public readonly ?PaymentMethod $paymentMethod = null,
+        // Aufgelöste Bankverbindung (gewählt oder Standardkonto).
+        public readonly ?BankAccount $bankAccount = null,
+        // Bundles (Migration 107): bundleArticleId => Bestandteile
+        // (siehe BundleComponentResolver), für "enthält …" unter der Position.
+        /** @var array<string, list<array{articleId: string, label: string, quantity: int}>> */
+        public readonly array $bundleComponents = [],
     ) {
     }
 

@@ -53,6 +53,11 @@ $rows = $detail->orderedRows();
                 <?= e($selectedContact->name) ?><?= $selectedContact->phone !== null && trim($selectedContact->phone) !== '' ? ' · ' . e($selectedContact->phone) : '' ?>
             </p>
         <?php endif; ?>
+        <?php if ($detail->paymentMethod !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('offers.show.payment_method')) ?>: <?= e($detail->paymentMethod->name) ?> · <?= e($detail->paymentMethod->termLabel()) ?>
+            </p>
+        <?php endif; ?>
     </div>
     <div class="flex flex-wrap items-center gap-3">
         <?php if ($offer->status === \App\Domain\Offer\OfferStatus::Draft): ?>
@@ -176,6 +181,9 @@ $rows = $detail->orderedRows();
                         <tr>
                             <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
                                 <?= e($entry->displayName()) ?>
+                                <?php if (isset($detail->bundleComponents[$entry->article->id])): ?>
+                                    <span class="block text-xs text-slate-500 dark:text-slate-400"><?= e(\App\Application\Article\Query\BundleComponentResolver::describe($detail->bundleComponents[$entry->article->id], (int) $entry->item->quantity)) ?></span>
+                                <?php endif; ?>
                                 <?php if ($entry->item->lineNote !== null && trim($entry->item->lineNote) !== ''): ?>
                                     <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->item->lineNote) ?></span>
                                 <?php endif; ?>
@@ -289,10 +297,30 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($saleEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endforeach; ?>
+                <?php if ($detail->isSmallBusiness ?? true): ?>
                 <tr class="border-t border-slate-200 dark:border-slate-700">
                     <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="3"><?= e(t('offers.show.grand_total')) ?></td>
                     <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-slate-100"><?= number_format($totals->grossTotal, 2, ',', '.') ?> €</td>
                 </tr>
+                <?php if ($detail->isSmallBusiness === true): ?>
+                <tr>
+                    <td class="px-2 py-1 text-xs text-slate-400 dark:text-slate-500" colspan="4"><?= e(t('invoices.show.small_business_notice')) ?></td>
+                </tr>
+                <?php endif; ?>
+                <?php else: ?>
+                <tr class="border-t border-slate-200 dark:border-slate-700">
+                    <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.net_total')) ?></td>
+                    <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300"><?= number_format($totals->netTotal, 2, ',', '.') ?> €</td>
+                </tr>
+                <tr>
+                    <td class="px-2 py-1 text-slate-600 dark:text-slate-400" colspan="3"><?= e(t('invoices.show.vat_amount', ['rate' => number_format((float) ($detail->vatRatePercent ?? '0'), 2, ',', '.')])) ?></td>
+                    <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300"><?= number_format($totals->taxAmount, 2, ',', '.') ?> €</td>
+                </tr>
+                <tr>
+                    <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="3"><?= e(t('invoices.show.gross_total')) ?></td>
+                    <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-slate-100"><?= number_format($totals->grossTotal, 2, ',', '.') ?> €</td>
+                </tr>
+                <?php endif; ?>
             </tfoot>
         </table>
         </div>

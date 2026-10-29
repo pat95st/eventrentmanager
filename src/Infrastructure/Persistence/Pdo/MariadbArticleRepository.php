@@ -21,9 +21,9 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO articles
-                (id, name, manufacturer_id, prefix, category_id, description, weight_value, weight_unit, dimensions, is_19_inch, height_units, install_depth_cm, purchase_price, requires_electrical_inspection, protection_class, has_firmware, is_billable, is_active, daily_rental_price, created_at, updated_at)
+                (id, name, manufacturer_id, prefix, category_id, description, weight_value, weight_unit, dimensions, is_19_inch, height_units, install_depth_cm, purchase_price, requires_electrical_inspection, protection_class, has_firmware, is_billable, is_rentable_individually, is_bundle, is_active, daily_rental_price, created_at, updated_at)
              VALUES
-                (:id, :name, :manufacturer_id, :prefix, :category_id, :description, :weight_value, :weight_unit, :dimensions, :is_19_inch, :height_units, :install_depth_cm, :purchase_price, :requires_electrical_inspection, :protection_class, :has_firmware, :is_billable, :is_active, :daily_rental_price, :created_at, :updated_at)
+                (:id, :name, :manufacturer_id, :prefix, :category_id, :description, :weight_value, :weight_unit, :dimensions, :is_19_inch, :height_units, :install_depth_cm, :purchase_price, :requires_electrical_inspection, :protection_class, :has_firmware, :is_billable, :is_rentable_individually, :is_bundle, :is_active, :daily_rental_price, :created_at, :updated_at)
              ON DUPLICATE KEY UPDATE
                 name = :name2, manufacturer_id = :manufacturer_id2, prefix = :prefix2, category_id = :category_id2,
                 description = :description2, weight_value = :weight_value2, weight_unit = :weight_unit2,
@@ -31,7 +31,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
                 install_depth_cm = :install_depth_cm2, purchase_price = :purchase_price2,
                 requires_electrical_inspection = :requires_electrical_inspection2, protection_class = :protection_class2,
                 has_firmware = :has_firmware2,
-                is_billable = :is_billable2, is_active = :is_active2, daily_rental_price = :daily_rental_price2, updated_at = :updated_at2'
+                is_billable = :is_billable2, is_rentable_individually = :is_rentable_individually2, is_bundle = :is_bundle2, is_active = :is_active2, daily_rental_price = :daily_rental_price2, updated_at = :updated_at2'
         );
 
         $stmt->execute([
@@ -52,6 +52,8 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             'protection_class' => $article->protectionClass?->value,
             'has_firmware' => $article->hasFirmware ? 1 : 0,
             'is_billable' => $article->isBillable ? 1 : 0,
+            'is_rentable_individually' => $article->isRentableIndividually ? 1 : 0,
+            'is_bundle' => $article->isBundle ? 1 : 0,
             'is_active' => $article->isActive ? 1 : 0,
             'daily_rental_price' => $article->dailyRentalPrice,
             'created_at' => $article->createdAt->format('Y-m-d H:i:s'),
@@ -72,6 +74,8 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             'protection_class2' => $article->protectionClass?->value,
             'has_firmware2' => $article->hasFirmware ? 1 : 0,
             'is_billable2' => $article->isBillable ? 1 : 0,
+            'is_rentable_individually2' => $article->isRentableIndividually ? 1 : 0,
+            'is_bundle2' => $article->isBundle ? 1 : 0,
             'is_active2' => $article->isActive ? 1 : 0,
             'daily_rental_price2' => $article->dailyRentalPrice,
             'updated_at2' => $article->updatedAt->format('Y-m-d H:i:s'),
@@ -91,9 +95,9 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
         return $this->hydrate($row, $this->loadImages($id));
     }
 
-    public function search(?string $searchTerm, ?string $manufacturerId, array $categoryIds, int $limit, int $offset, bool $onlyActive = false): array
+    public function search(?string $searchTerm, ?string $manufacturerId, array $categoryIds, int $limit, int $offset, bool $onlyActive = false, array $manufacturerIds = [], bool $onlyRentableIndividually = false, bool $excludeBundles = false): array
     {
-        [$where, $params] = $this->buildSearchWhere($searchTerm, $manufacturerId, $categoryIds, $onlyActive);
+        [$where, $params] = $this->buildSearchWhere($searchTerm, $manufacturerId, $categoryIds, $onlyActive, $manufacturerIds, $onlyRentableIndividually, $excludeBundles);
 
         $sql = 'SELECT * FROM articles' . $where . ' ORDER BY name ASC LIMIT :limit OFFSET :offset';
 
@@ -119,9 +123,9 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
         );
     }
 
-    public function countSearch(?string $searchTerm, ?string $manufacturerId, array $categoryIds, bool $onlyActive = false): int
+    public function countSearch(?string $searchTerm, ?string $manufacturerId, array $categoryIds, bool $onlyActive = false, array $manufacturerIds = [], bool $onlyRentableIndividually = false, bool $excludeBundles = false): int
     {
-        [$where, $params] = $this->buildSearchWhere($searchTerm, $manufacturerId, $categoryIds, $onlyActive);
+        [$where, $params] = $this->buildSearchWhere($searchTerm, $manufacturerId, $categoryIds, $onlyActive, $manufacturerIds, $onlyRentableIndividually, $excludeBundles);
 
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM articles' . $where);
         $stmt->execute($params);
@@ -131,15 +135,24 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
 
     /**
      * @param string[] $categoryIds
+     * @param string[] $manufacturerIds
      * @return array{0: string, 1: array<string, string>} [WHERE-Klausel (inkl. führendem Leerzeichen), Parameter]
      */
-    private function buildSearchWhere(?string $searchTerm, ?string $manufacturerId, array $categoryIds, bool $onlyActive = false): array
+    private function buildSearchWhere(?string $searchTerm, ?string $manufacturerId, array $categoryIds, bool $onlyActive = false, array $manufacturerIds = [], bool $onlyRentableIndividually = false, bool $excludeBundles = false): array
     {
         $sql = ' WHERE 1 = 1';
         $params = [];
 
         if ($onlyActive) {
             $sql .= ' AND is_active = 1';
+        }
+
+        // Bundles (Migration 107), siehe ListArticles::$onlyRentableIndividually.
+        if ($onlyRentableIndividually) {
+            $sql .= ' AND is_rentable_individually = 1';
+        }
+        if ($excludeBundles) {
+            $sql .= ' AND is_bundle = 0';
         }
 
         if ($searchTerm !== null && $searchTerm !== '') {
@@ -150,6 +163,16 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
         if ($manufacturerId !== null) {
             $sql .= ' AND manufacturer_id = :manufacturer_id';
             $params['manufacturer_id'] = $manufacturerId;
+        }
+
+        if ($manufacturerIds !== []) {
+            $placeholders = [];
+            foreach (array_values($manufacturerIds) as $i => $id) {
+                $key = "man{$i}";
+                $placeholders[] = ":{$key}";
+                $params[$key] = $id;
+            }
+            $sql .= ' AND manufacturer_id IN (' . implode(', ', $placeholders) . ')';
         }
 
         if ($categoryIds !== []) {
@@ -318,6 +341,8 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
             images: $images,
+            isRentableIndividually: (bool) ($row['is_rentable_individually'] ?? true),
+            isBundle: (bool) ($row['is_bundle'] ?? false),
         );
     }
 }

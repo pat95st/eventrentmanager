@@ -39,6 +39,8 @@ final class CreateOffer implements CommandInterface
         // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
         // Offer::$contactId.
         public readonly ?string $contactId = null,
+        // Zahlungsart (Migration 106), leer = Standard-Zahlungsart.
+        public readonly ?string $paymentMethodId = null,
     ) {
     }
 }

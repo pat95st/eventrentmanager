@@ -112,6 +112,13 @@ final class Invoice
         // zurückgesetzt, serverseitig verwirft ValidatesInvoiceInput eine
         // nicht mehr zum Kunden passende Auswahl stillschweigend.
         public ?string $contactId = null,
+        // Gewählte Bankverbindung (Migration 105) bzw. Zahlungsart
+        // (Migration 106); null = jeweiliger Standard. Beim Versenden
+        // (MarkInvoiceSentHandler) wird der dann gültige Standard fest
+        // eingetragen, damit sich eine versendete Rechnung nicht mehr
+        // durch spätere Änderungen des Standards verändert.
+        public ?string $bankAccountId = null,
+        public ?string $paymentMethodId = null,
     ) {
     }
 

@@ -8,6 +8,10 @@ use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Application\Article\Query\BundleComponentResolver;
+use App\Domain\Settings\BankAccountRepositoryInterface;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
@@ -25,6 +29,9 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly UserRepositoryInterface $users,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
+        private readonly ?BankAccountRepositoryInterface $bankAccounts = null,
+        private readonly ?BundleComponentResolver $bundleResolver = null,
     ) {
     }
 
@@ -39,6 +46,8 @@ final class GetInvoiceHandler implements QueryHandlerInterface
 
         $customer = $invoice->customerId !== null ? $this->customers->findById($invoice->customerId) : null;
         $contact = $invoice->contactId !== null ? $this->customerContacts->findById($invoice->contactId) : null;
+        $paymentMethod = PaymentSelection::resolvePaymentMethod($this->paymentMethods, $invoice->paymentMethodId);
+        $bankAccount = PaymentSelection::resolveBankAccount($this->bankAccounts, $invoice->bankAccountId);
 
         // Hersteller je Artikel wird über einen kleinen Cache (statt pro
         // Position neu) aufgelöst, damit mehrfach vorkommende Artikel in
@@ -94,6 +103,7 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         $freeTextItems = $this->invoices->findFreeTextItemsByInvoice($invoice->id);
         $sectionTexts = $this->invoices->findSectionTextsByInvoice($invoice->id);
 
-        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts, $contact);
+        $bundleComponents = $this->bundleResolver?->resolve(array_map(static fn ($entry) => $entry->article, $items)) ?? [];
+        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts, $contact, $paymentMethod, $bankAccount, bundleComponents: $bundleComponents);
     }
 }

@@ -122,6 +122,10 @@ final class CreateInvoiceFromOfferHandler implements CommandHandlerInterface
             accessoryFlatRatePercent: $offer->accessoryFlatRatePercent,
             discountType: $offer->discountType,
             discountValue: $offer->discountValue,
+            // Ansprechpartner und Zahlungsart werden ebenfalls vom Angebot
+            // übernommen (Migrationen 104/106).
+            contactId: $offer->contactId,
+            paymentMethodId: $offer->paymentMethodId,
         );
         $this->invoices->save($invoice);
 

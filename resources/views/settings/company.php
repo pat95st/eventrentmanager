@@ -67,6 +67,19 @@ use function App\Infrastructure\Http\t;
         <?php if (isset($errors['country'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['country']) ?></p><?php endif; ?>
     </div>
 
+    <?php // Kontaktdaten für die Fußzeile der Dokumente (Migration 108). ?>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <?php foreach (['phone' => ['tel', '09825/927026'], 'email' => ['email', 'info@beispiel.de'], 'website' => ['text', 'www.beispiel.de']] as $contactField => [$inputType, $placeholder]): ?>
+            <div>
+                <label for="<?= $contactField ?>" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.company.field.' . $contactField)) ?></label>
+                <input type="<?= $inputType ?>" id="<?= $contactField ?>" name="<?= $contactField ?>"
+                       value="<?= e($settings->{$contactField}) ?>" placeholder="<?= e($placeholder) ?>"
+                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <p class="-mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.company.field.contact_hint')) ?></p>
+
     <div>
         <label for="logo_max_height_px" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.company.field.logo_max_height_px')) ?></label>
         <p class="mb-2 mt-0.5 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.company.field.logo_max_height_px_hint')) ?></p>

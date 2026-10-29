@@ -7,7 +7,9 @@ namespace App\Application\Article\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\Article;
+use App\Domain\Article\ArticleBundleComponentRepositoryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Rental\RentalBundleRepositoryInterface;
 use App\Domain\Article\ProtectionClass;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\ValidationException;
@@ -23,6 +25,8 @@ final class CreateArticleHandler implements CommandHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly CategoryRepositoryInterface $categories,
+        private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
+        private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
     ) {
     }
 
@@ -31,6 +35,11 @@ final class CreateArticleHandler implements CommandHandlerInterface
         assert($command instanceof CreateArticle);
 
         $errors = $this->validate($command);
+        [$bundleErrors, $components] = ValidatesBundleInput::validate(
+            $command->isBundle, $command->isBillable, $command->dailyRentalPrice, $command->bundleComponents,
+            null, false, $this->articles, $this->bundleComponents, $this->rentalBundles,
+        );
+        $errors = array_merge($errors, $bundleErrors);
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -58,9 +67,16 @@ final class CreateArticleHandler implements CommandHandlerInterface
             dailyRentalPrice: $command->isBillable ? (Money::normalize($command->dailyRentalPrice) ?: null) : null,
             createdAt: $now,
             updatedAt: $now,
+            // Ein Bundle ist immer selbst wählbar; "nicht einzeln vermietbar"
+            // betrifft nur normale Artikel.
+            isRentableIndividually: $command->isBundle || $command->isRentableIndividually,
+            isBundle: $command->isBundle,
         );
 
         $this->articles->save($article);
+        if ($command->isBundle && $this->bundleComponents !== null) {
+            $this->bundleComponents->replaceForBundle($article->id, $components);
+        }
 
         return $article->id;
     }

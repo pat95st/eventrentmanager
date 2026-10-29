@@ -12,7 +12,10 @@ use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Invoice\InvoiceStatus;
 use App\Domain\Numbering\NumberedDocumentType;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\BankAccountRepositoryInterface;
 use App\Domain\Settings\InvoiceSettingsRepositoryInterface;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
 use DateTimeImmutable;
 use PDO;
@@ -42,6 +45,8 @@ final class MarkInvoiceSentHandler implements CommandHandlerInterface
         private readonly InvoiceSettingsRepositoryInterface $invoiceSettings,
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
+        private readonly ?BankAccountRepositoryInterface $bankAccounts = null,
     ) {
     }
 
@@ -77,7 +82,17 @@ final class MarkInvoiceSentHandler implements CommandHandlerInterface
 
             $invoice->invoiceNumber = $invoiceNumber;
             $invoice->invoiceDate = $now;
-            $invoice->dueDate = $now->modify('+' . $settings->paymentTermDays . ' days');
+            // Zahlungsziel aus der gewählten (bzw. Standard-)Zahlungsart
+            // (Migration 106); nur ohne angelegte Zahlungsart greift noch das
+            // alte firmenweite Zahlungsziel aus InvoiceSettings. Zahlungsart
+            // und Bankverbindung werden dabei fest auf die Rechnung
+            // geschrieben, damit spätere Änderungen des Standards eine
+            // versendete Rechnung nicht mehr verändern.
+            $paymentMethod = PaymentSelection::resolvePaymentMethod($this->paymentMethods, $invoice->paymentMethodId);
+            $paymentTermDays = $paymentMethod?->paymentTermDays ?? $settings->paymentTermDays;
+            $invoice->paymentMethodId = $paymentMethod?->id;
+            $invoice->bankAccountId = PaymentSelection::resolveBankAccount($this->bankAccounts, $invoice->bankAccountId)?->id;
+            $invoice->dueDate = $now->modify('+' . $paymentTermDays . ' days');
             $invoice->isSmallBusiness = $settings->isSmallBusiness;
             $invoice->vatRatePercent = $settings->vatRatePercent;
             $invoice->status = InvoiceStatus::Sent;

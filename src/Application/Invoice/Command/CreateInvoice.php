@@ -44,6 +44,9 @@ final class CreateInvoice implements CommandInterface
         public readonly ?string $logisticsMethod = null,
         public readonly ?string $logisticsDate1 = null,
         public readonly ?string $logisticsDate2 = null,
+        // Zahlungsart/Bankverbindung (Migrationen 105/106), leer = Standard.
+        public readonly ?string $paymentMethodId = null,
+        public readonly ?string $bankAccountId = null,
     ) {
     }
 }

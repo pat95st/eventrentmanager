@@ -66,6 +66,16 @@ $rows = $detail->orderedRows();
                 <?= e($selectedContact->name) ?><?= $selectedContact->phone !== null && trim($selectedContact->phone) !== '' ? ' · ' . e($selectedContact->phone) : '' ?>
             </p>
         <?php endif; ?>
+        <?php if ($detail->paymentMethod !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('invoices.show.payment_method')) ?>: <?= e($detail->paymentMethod->name) ?> · <?= e($detail->paymentMethod->termLabel()) ?>
+            </p>
+        <?php endif; ?>
+        <?php if ($detail->bankAccount !== null): ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('invoices.show.bank_account')) ?>: <?= e($detail->bankAccount->label) ?> · <span class="font-mono"><?= e($detail->bankAccount->formattedIban()) ?></span>
+            </p>
+        <?php endif; ?>
         <?php if ($invoice->logisticsDate1 !== null || $invoice->logisticsDate2 !== null): ?>
             <?php $isDelivery = $invoice->logisticsMethod === 'delivery'; ?>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
@@ -257,6 +267,9 @@ $rows = $detail->orderedRows();
                         <tr>
                             <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
                                 <?= e($entry->displayName()) ?>
+                                <?php if (isset($detail->bundleComponents[$entry->article->id])): ?>
+                                    <span class="block text-xs text-slate-500 dark:text-slate-400"><?= e(\App\Application\Article\Query\BundleComponentResolver::describe($detail->bundleComponents[$entry->article->id], (int) $entry->item->quantity)) ?></span>
+                                <?php endif; ?>
                                 <?php if ($entry->item->lineNote !== null && trim($entry->item->lineNote) !== ''): ?>
                                     <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($entry->item->lineNote) ?></span>
                                 <?php endif; ?>

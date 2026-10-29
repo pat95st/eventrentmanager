@@ -73,6 +73,8 @@ final class ArticleController
         private readonly PriceListCsvExporter $priceListCsvExporter,
         private readonly SaleStockLotRepositoryInterface $stockLots,
         private readonly CustomerRepositoryInterface $customers,
+        // Bundles (Migration 107): Bestandteile fürs Formular/die Detailseite.
+        private readonly ?\App\Domain\Article\ArticleBundleComponentRepositoryInterface $bundleComponents = null,
     ) {
     }
 
@@ -84,7 +86,9 @@ final class ArticleController
         $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::PriceList));
         $pricingSettings = $this->queries->ask(new GetPricingSettings());
 
-        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers, $layout, $pricingSettings->priceRoundingStep, $pricingSettings->priceRoundingDirection);
+        $companySettings = $this->queries->ask(new \App\Application\Settings\Query\GetCompanySettings());
+
+        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers, $layout, $pricingSettings->priceRoundingStep, $pricingSettings->priceRoundingDirection, $companySettings);
 
         Response::download($pdf, 'Preisliste.pdf', 'application/pdf');
     }
@@ -110,7 +114,9 @@ final class ArticleController
     {
         $items = $this->queries->ask(new ListArticlesForDisplay(onlyActive: true))->items;
 
-        $billable = array_values(array_filter($items, static fn ($item) => $item->article->isBillable));
+        // Nicht einzeln vermietbare Artikel (nur im Bundle, Migration 107)
+        // gehören nicht in die Preisliste — das Bundle selbst steht dort.
+        $billable = array_values(array_filter($items, static fn ($item) => $item->article->isBillable && $item->article->isRentableIndividually));
         usort($billable, static fn ($a, $b) => \App\Domain\Article\ArticleDisplayName::of($a->article, $a->manufacturer) <=> \App\Domain\Article\ArticleDisplayName::of($b->article, $b->manufacturer));
 
         return $billable;
@@ -167,7 +173,25 @@ final class ArticleController
     public function search(Request $request): void
     {
         $search = $request->query('q');
-        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true));
+        // Allgemeine Artikelsuche (Einkauf, Verkaufspositionen, Bundle-
+        // Bestandteile …): Bundles haben keinen physischen Bestand und werden
+        // hier ausgeblendet (Migration 107).
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true, excludeBundles: true));
+
+        Response::json([
+            'items' => array_map(self::toPickerItem(...), $result->items),
+        ]);
+    }
+
+    /**
+     * Artikelsuche für Miet-Positionen (Angebote, Auftragsbestätigungen,
+     * Rechnungen): enthält Bundles, blendet aber nicht einzeln vermietbare
+     * Artikel aus (Migration 107) — diese sind nur über ihr Bundle wählbar.
+     */
+    public function searchForRental(Request $request): void
+    {
+        $search = $request->query('q');
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true, onlyRentableIndividually: true));
 
         Response::json([
             'items' => array_map(self::toPickerItem(...), $result->items),
@@ -190,14 +214,71 @@ final class ArticleController
     {
         $search = $this->nullIfEmpty($request->query('q'));
         $page = max(1, (int) ($request->query('seite') ?? 1));
-        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, $page, 20, onlyActive: true));
+        // Mehrfachfilter Hersteller/Kategorie (kommagetrennte IDs, siehe
+        // article-picker.js).
+        $manufacturerIds = $this->idListFromQuery($request->query('hersteller'));
+        $categoryIds = $this->idListFromQuery($request->query('kategorien'));
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, $page, 20, onlyActive: true, manufacturerIds: $manufacturerIds, categoryIds: $categoryIds, onlyRentableIndividually: true));
 
-        Response::json([
+        $response = [
             'items' => array_map(self::toPickerItem(...), $result->items),
             'page' => $result->page,
             'totalPages' => $result->totalPages(),
             'totalCount' => $result->totalCount,
-        ]);
+        ];
+
+        // Filteroptionen nur auf Anfrage (einmal beim Öffnen des Modals),
+        // damit die drei Dokumentformulare dafür keine eigenen Daten an
+        // renderArticlePickerModal() durchreichen müssen.
+        if ($request->query('optionen') === '1') {
+            $response['manufacturers'] = array_map(
+                static fn ($manufacturer) => ['id' => $manufacturer->id, 'label' => $manufacturer->name],
+                $this->queries->ask(new ListManufacturers())
+            );
+            $response['categories'] = self::categoryOptions($this->queries->ask(new ListCategories()));
+        }
+
+        Response::json($response);
+    }
+
+    /** @return string[] */
+    private function idListFromQuery(?string $raw): array
+    {
+        if ($raw === null || trim($raw) === '') {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('trim', explode(',', $raw)), static fn (string $id) => $id !== ''));
+    }
+
+    /**
+     * Kategorien als flache, nach Pfad sortierte Liste ("Ton › Mikrofone"),
+     * damit Unterkategorien im Filter eindeutig erkennbar sind.
+     *
+     * @param \App\Domain\Category\Category[] $categories
+     * @return list<array{id: string, label: string}>
+     */
+    private static function categoryOptions(array $categories): array
+    {
+        $byId = [];
+        foreach ($categories as $category) {
+            $byId[$category->id] = $category;
+        }
+
+        $options = [];
+        foreach ($categories as $category) {
+            $path = [$category->name];
+            $parentId = $category->parentId;
+            $guard = 0;
+            while ($parentId !== null && isset($byId[$parentId]) && $guard++ < 20) {
+                array_unshift($path, $byId[$parentId]->name);
+                $parentId = $byId[$parentId]->parentId;
+            }
+            $options[] = ['id' => $category->id, 'label' => implode(' › ', $path)];
+        }
+        usort($options, static fn (array $a, array $b) => strcasecmp($a['label'], $b['label']));
+
+        return $options;
     }
 
     /** Gemeinsame JSON-Form für search() und picker() (id/label/sublabel). */
@@ -206,6 +287,10 @@ final class ArticleController
         $sublabel = $item->article->isBillable && $item->article->dailyRentalPrice !== null
             ? number_format((float) $item->article->dailyRentalPrice, 2, ',', '.') . ' € / Tag'
             : null;
+
+        if ($item->article->isBundle) {
+            $sublabel = 'Bundle' . ($sublabel !== null ? ' · ' . $sublabel : '');
+        }
 
         return [
             'id' => $item->article->id,
@@ -284,6 +369,9 @@ final class ArticleController
             heightUnits: $this->nullIfEmpty($request->input('height_units')),
             installDepthCm: $this->nullIfEmpty($request->input('install_depth_cm')),
             hasFirmware: $request->input('has_firmware') !== null,
+            isRentableIndividually: $request->input('not_rentable_individually') === null,
+            isBundle: $request->input('is_bundle') !== null,
+            bundleComponents: $this->bundleComponentsFromRequest($request),
         );
 
         try {
@@ -357,6 +445,8 @@ final class ArticleController
 
         echo View::page('articles/show', [
             'detail' => $detail,
+            'bundleComponentRows' => $detail->article->isBundle ? $this->bundleComponentRows($detail->article->id) : [],
+            'containingBundles' => $this->containingBundles($detail->article->id),
             'editInventoryId' => $editInventoryId,
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
@@ -452,6 +542,9 @@ final class ArticleController
             heightUnits: $this->nullIfEmpty($request->input('height_units')),
             installDepthCm: $this->nullIfEmpty($request->input('install_depth_cm')),
             hasFirmware: $request->input('has_firmware') !== null,
+            isRentableIndividually: $request->input('not_rentable_individually') === null,
+            isBundle: $request->input('is_bundle') !== null,
+            bundleComponents: $this->bundleComponentsFromRequest($request),
         );
 
         try {
@@ -947,8 +1040,29 @@ final class ArticleController
         $manufacturers = $this->queries->ask(new ListManufacturers());
         $categories = $this->queries->ask(new ListCategories());
 
+        // Bundle-Bestandteile: bei Validierungsfehler die eingegebenen Zeilen
+        // (Labels nachgeschlagen), sonst die gespeicherten.
+        $bundleComponentRows = [];
+        if (array_key_exists('bundle_components', $old)) {
+            foreach ($old['bundle_components'] as $row) {
+                if (trim($row['article_id']) === '') {
+                    continue;
+                }
+                try {
+                    $componentDetail = $this->queries->ask(new GetArticle($row['article_id']));
+                    $label = ArticleDisplayName::of($componentDetail->article, $componentDetail->manufacturer);
+                } catch (NotFoundException) {
+                    $label = '';
+                }
+                $bundleComponentRows[] = ['article_id' => $row['article_id'], 'label' => $label, 'quantity' => (int) $row['quantity']];
+            }
+        } elseif ($article !== null && $article->isBundle) {
+            $bundleComponentRows = $this->bundleComponentRows($article->id);
+        }
+
         echo View::page('articles/form', [
             'article' => $article,
+            'bundleComponentRows' => $bundleComponentRows,
             'manufacturers' => $manufacturers,
             'categories' => $categories,
             'errors' => $errors,
@@ -978,7 +1092,73 @@ final class ArticleController
             'height_units' => $command->heightUnits,
             'install_depth_cm' => $command->installDepthCm,
             'has_firmware' => $command->hasFirmware,
+            'not_rentable_individually' => !$command->isRentableIndividually,
+            'is_bundle' => $command->isBundle,
+            'bundle_components' => $command->bundleComponents,
         ];
+    }
+
+    /**
+     * Bundles, in denen dieser Artikel als Bestandteil steckt (für die
+     * Detailseite).
+     *
+     * @return list<array{id: string, label: string}>
+     */
+    private function containingBundles(string $articleId): array
+    {
+        if ($this->bundleComponents === null) {
+            return [];
+        }
+
+        $bundles = [];
+        foreach ($this->bundleComponents->findBundleIdsContaining($articleId) as $bundleId) {
+            try {
+                $bundleDetail = $this->queries->ask(new GetArticle($bundleId));
+                $bundles[] = ['id' => $bundleId, 'label' => ArticleDisplayName::of($bundleDetail->article, $bundleDetail->manufacturer)];
+            } catch (NotFoundException) {
+            }
+        }
+
+        return $bundles;
+    }
+
+    /** @return array<int, array{article_id: string, quantity: string}> */
+    private function bundleComponentsFromRequest(Request $request): array
+    {
+        $articleIds = $request->post['bundle_component_article_id'] ?? [];
+        $quantities = $request->post['bundle_component_quantity'] ?? [];
+        $rows = [];
+        foreach ((array) $articleIds as $i => $articleId) {
+            $rows[] = ['article_id' => (string) $articleId, 'quantity' => (string) ($quantities[$i] ?? '1')];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Bestandteile eines Bundles mit Anzeige-Label ("Hersteller Name") für
+     * Formular und Detailseite.
+     *
+     * @return list<array{article_id: string, label: string, quantity: int}>
+     */
+    private function bundleComponentRows(string $bundleArticleId): array
+    {
+        if ($this->bundleComponents === null) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($this->bundleComponents->findByBundle($bundleArticleId) as $component) {
+            try {
+                $componentDetail = $this->queries->ask(new GetArticle($component->componentArticleId));
+                $label = ArticleDisplayName::of($componentDetail->article, $componentDetail->manufacturer);
+            } catch (NotFoundException) {
+                $label = $component->componentArticleId;
+            }
+            $rows[] = ['article_id' => $component->componentArticleId, 'label' => $label, 'quantity' => $component->quantity];
+        }
+
+        return $rows;
     }
 
     private function nullIfEmpty(?string $value): ?string

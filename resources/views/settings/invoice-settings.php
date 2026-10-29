@@ -52,41 +52,13 @@ $checkedSmallBusiness = array_key_exists('is_small_business', $old) ? $old['is_s
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-            <label for="payment_term_days" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.invoice_settings.field.payment_term_days')) ?></label>
-            <input type="number" id="payment_term_days" name="payment_term_days" min="1" step="1"
-                   value="<?= e($val('payment_term_days', (string) $settings->paymentTermDays)) ?>"
-                   class="mt-1 w-full rounded-md border <?= isset($errors['paymentTermDays']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <?php if (isset($errors['paymentTermDays'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['paymentTermDays']) ?></p><?php endif; ?>
-        </div>
-    </div>
-
     <p class="text-xs text-slate-400 dark:text-slate-500"><?= t('settings.invoice_settings.numbering_hint', ['link' => '<a href="/einstellungen/nummerierung" class="underline">' . e(t('nav.numbering_settings')) . '</a>']) ?></p>
 
-    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-        <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.invoice_settings.bank.title')) ?></h2>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-                <label for="bank_name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.invoice_settings.field.bank_name')) ?></label>
-                <input type="text" id="bank_name" name="bank_name"
-                       value="<?= e($val('bank_name', $settings->bankName)) ?>"
-                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-            </div>
-            <div>
-                <label for="iban" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.invoice_settings.field.iban')) ?></label>
-                <input type="text" id="iban" name="iban"
-                       value="<?= e($val('iban', $settings->iban)) ?>"
-                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-            </div>
-            <div>
-                <label for="bic" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.invoice_settings.field.bic')) ?></label>
-                <input type="text" id="bic" name="bic"
-                       value="<?= e($val('bic', $settings->bic)) ?>"
-                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-            </div>
-        </div>
-    </div>
+    <p class="border-t border-slate-100 pt-4 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+        <?= e(t('settings.invoice_settings.moved_hint')) ?>
+        <a href="/einstellungen/bankverbindungen" class="text-brand-700 hover:underline dark:text-brand-400"><?= e(t('nav.bank_accounts')) ?></a>,
+        <a href="/einstellungen/zahlungsarten" class="text-brand-700 hover:underline dark:text-brand-400"><?= e(t('nav.payment_methods')) ?></a>
+    </p>
 
     <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">

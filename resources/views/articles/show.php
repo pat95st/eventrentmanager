@@ -1,5 +1,7 @@
 <?php
 /** @var \App\Application\Article\Query\ArticleDetail $detail */
+/** @var list<array{article_id: string, label: string, quantity: int}> $bundleComponentRows */
+/** @var list<array{id: string, label: string}> $containingBundles */
 /** @var string|null $editInventoryId */
 /** @var string|null $editAccessoryId */
 /** @var string|null $editPreIssueCheckId */
@@ -98,6 +100,15 @@ $availabilityStatusMeta = [
                     <?= e(t('articles.show.has_firmware_badge')) ?>
                 </span>
             <?php endif; ?>
+            <?php if ($article->isBundle): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800">
+                    <?= e(t('articles.badge.bundle')) ?>
+                </span>
+            <?php elseif (!$article->isRentableIndividually): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700">
+                    <?= e(t('articles.badge.not_rentable_individually')) ?>
+                </span>
+            <?php endif; ?>
             <?php if ($article->isBillable): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800">
                     <?= e(t('articles.show.own_line_item_badge')) ?><?= $article->dailyRentalPrice !== null ? ' · ' . e($article->dailyRentalPrice) . ' ' . e(t('articles.show.per_rental_day_short')) : '' ?>
@@ -108,6 +119,22 @@ $availabilityStatusMeta = [
                 </span>
             <?php endif; ?>
         </div>
+        <?php if (($bundleComponentRows ?? []) !== []): ?>
+            <div class="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                <span class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.bundle_components')) ?>:</span>
+                <?php foreach ($bundleComponentRows as $i => $componentRow): ?>
+                    <?= $i > 0 ? ' · ' : '' ?><?= (int) $componentRow['quantity'] ?>× <a href="/artikel/<?= e($componentRow['article_id']) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($componentRow['label']) ?></a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <?php if (($containingBundles ?? []) !== []): ?>
+            <div class="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                <span class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.part_of_bundles')) ?>:</span>
+                <?php foreach ($containingBundles as $i => $bundleRow): ?>
+                    <?= $i > 0 ? ' · ' : '' ?><a href="/artikel/<?= e($bundleRow['id']) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($bundleRow['label']) ?></a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
     <div class="flex items-center gap-3">
         <a href="/artikel/<?= e($article->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">

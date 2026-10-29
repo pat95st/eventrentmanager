@@ -57,6 +57,9 @@ final class UploadCompanyBackgroundImageHandler implements CommandHandlerInterfa
             darkLogoFilename: $current->darkLogoFilename,
             brandName: $current->brandName,
             backgroundImageFilename: $stored['storedFilename'],
+            phone: $current->phone,
+            email: $current->email,
+            website: $current->website,
         );
 
         $this->settingsRepository->save($settings);

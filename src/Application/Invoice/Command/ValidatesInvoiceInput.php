@@ -167,8 +167,17 @@ trait ValidatesInvoiceInput
                 continue;
             }
 
-            if ($articles->findById($articleId) === null) {
+            $itemArticle = $articles->findById($articleId);
+            if ($itemArticle === null) {
                 $errors['items'] = 'Mindestens eine Position enthält einen unbekannten Artikel.';
+
+                continue;
+            }
+
+            // Bundles (Migration 107): nicht einzeln vermietbare Artikel
+            // dürfen nur über ihr Bundle in Miet-Positionen auftauchen.
+            if (!$itemArticle->isRentableIndividually && (($rawItem['is_rental_item'] ?? '1') === '1')) {
+                $errors['items'] = 'Mindestens eine Position enthält einen Artikel, der nicht einzeln vermietbar ist (nur als Bestandteil eines Bundles) — bitte stattdessen das passende Bundle wählen.';
 
                 continue;
             }

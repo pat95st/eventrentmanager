@@ -6,6 +6,8 @@ namespace App\Application\Offer\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Application\Rental\RentalBundlePlanner;
+use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -40,6 +42,10 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly RentalItemRepositoryInterface $rentalItems,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
+        // Bundles (Migration 107): Bundle-Positionen werden in ihre
+        // Bestandteile aufgelöst.
+        private readonly ?ArticleRepositoryInterface $articles = null,
+        private readonly ?RentalBundlePlanner $bundlePlanner = null,
     ) {
     }
 
@@ -69,12 +75,35 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
 
         $items = $this->offers->findItemsByOffer($offer->id);
 
+        // Einzelpositionen (je Artikel zusammengefasst) und Bundle-Positionen
+        // trennen; Bundles werden über RentalBundlePlanner in ihre
+        // Bestandteile aufgelöst (Migration 107).
+        $individualQuantities = [];
+        $bundleItems = [];
         foreach ($items as $item) {
-            $availableInventoryNumbers = count($this->inventoryNumbers->findActiveByArticle($item->articleId));
-            if ($item->quantity > $availableInventoryNumbers) {
+            $article = $this->articles?->findById($item->articleId);
+            if ($article !== null && $article->isBundle && $this->bundlePlanner !== null) {
+                $bundleItems[] = [$article, $item->quantity];
+                continue;
+            }
+            $individualQuantities[$item->articleId] = ($individualQuantities[$item->articleId] ?? 0) + $item->quantity;
+        }
+
+        foreach ($individualQuantities as $articleId => $quantity) {
+            $availableInventoryNumbers = count($this->inventoryNumbers->findActiveByArticle($articleId));
+            if ($quantity > $availableInventoryNumbers) {
                 throw new ValidationException([
                     'items' => "Für einen Artikel existieren nur {$availableInventoryNumbers} Inventarnummer(n) — die Menge im Angebot übersteigt diese Anzahl.",
                 ]);
+            }
+        }
+
+        // Bestandteil-Bedarf aller Bundles zusammen mit den Einzelpositionen
+        // prüfen, bevor irgendetwas gespeichert wird.
+        $plannedSoFar = $individualQuantities;
+        foreach ($bundleItems as [$bundleArticle, $bundleQuantity]) {
+            foreach ($this->bundlePlanner->checkAdd('', $bundleArticle, $bundleQuantity, $plannedSoFar) as $componentId => $demand) {
+                $plannedSoFar[$componentId] = ($plannedSoFar[$componentId] ?? 0) + $demand;
             }
         }
 
@@ -97,16 +126,19 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         );
         $this->rentals->save($rental);
 
-        foreach ($items as $item) {
+        foreach ($individualQuantities as $articleId => $quantity) {
             $this->rentalItems->save(new RentalItem(
                 id: Uuid::v4(),
                 rentalId: $rental->id,
-                articleId: $item->articleId,
-                quantity: $item->quantity,
+                articleId: $articleId,
+                quantity: $quantity,
                 accessoryChecked: false,
                 createdAt: $now,
                 updatedAt: $now,
             ));
+        }
+        foreach ($bundleItems as [$bundleArticle, $bundleQuantity]) {
+            $this->bundlePlanner->add($rental->id, $bundleArticle, $bundleQuantity);
         }
 
         $offer->convertedRentalId = $rental->id;

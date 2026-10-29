@@ -62,6 +62,24 @@ final class SimplePdfWriter
         return $this->pageHeight;
     }
 
+    public function pageCount(): int
+    {
+        return count($this->pageObjectNumbers);
+    }
+
+    /**
+     * Macht eine bereits angelegte Seite (0-basiert) wieder zur aktuellen
+     * Zeichenfläche — z. B. um nach dem Erzeugen aller Seiten auf jeder Seite
+     * die Fußzeile zu zeichnen (siehe DocumentFooter).
+     */
+    public function selectPage(int $index): void
+    {
+        if ($index < 0 || $index >= count($this->pageObjectNumbers)) {
+            throw new RuntimeException("Seite {$index} existiert nicht.");
+        }
+        $this->currentPageIndex = $index;
+    }
+
     /** Beginnt eine neue Seite und macht sie zur aktuellen Zeichenfläche. */
     public function addPage(): void
     {

@@ -7,6 +7,8 @@
 /** @var array<int, string> $tierMultipliers Einsatztage (1..7) => Faktor bezogen auf Tagesmietsatz "1" */
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
+/** @var \App\Domain\Settings\PaymentMethod[] $paymentMethods */
+/** @var string|null $selectedPaymentMethodId */
 /** @var string|null $editingId */
 /** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string, sort_order: int|string}> $existingItems */
 /** @var \App\Domain\LaborTime\LaborTimeArticle[] $laborArticles */
@@ -434,6 +436,33 @@ foreach ($laborArticles as $laborArticle) {
         </script>
     </div>
 
+    <?php
+        // Zahlungsart (und bei Rechnungen Bankverbindung), Migrationen
+        // 105/106: leere Auswahl = jeweiliger Standard (siehe
+        // App\Application\Settings\PaymentSelection).
+        $selectedPaymentMethodIdVal = $val('payment_method_id', $selectedPaymentMethodId);
+        $defaultPaymentMethod = null;
+        foreach ($paymentMethods as $paymentMethodOption) {
+            if ($paymentMethodOption->isDefault) { $defaultPaymentMethod = $paymentMethodOption; }
+        }
+    ?>
+    <div class="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="payment_method_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.payment_method')) ?></label>
+            <select id="payment_method_id" name="payment_method_id"
+                    class="mt-1 w-full rounded-md border <?= isset($errors['paymentMethodId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e($defaultPaymentMethod !== null
+                    ? t('offers.form.payment_method_default', ['name' => $defaultPaymentMethod->name . ' – ' . $defaultPaymentMethod->termLabel()])
+                    : t('offers.form.payment_method_none')) ?></option>
+                <?php foreach ($paymentMethods as $paymentMethodOption): ?>
+                    <option value="<?= e($paymentMethodOption->id) ?>" <?= $selectedPaymentMethodIdVal === $paymentMethodOption->id ? 'selected' : '' ?>><?= e($paymentMethodOption->name . ' – ' . $paymentMethodOption->termLabel()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors['paymentMethodId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['paymentMethodId']) ?></p><?php endif; ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.payment_method_hint')) ?></p>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
             <label for="start_date" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.start_date')) ?></label>
@@ -637,10 +666,28 @@ foreach ($laborArticles as $laborArticle) {
                 <dt><?= e(t('offers.form.totals_sale')) ?></dt>
                 <dd data-total-sale>0,00 €</dd>
             </div>
+            <?php if ($isSmallBusinessPreview ?? true): ?>
             <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
                 <dt><?= e(t('offers.show.grand_total')) ?></dt>
                 <dd data-total-grand>0,00 €</dd>
             </div>
+            <?php if (($isSmallBusinessPreview ?? null) === true): ?>
+            <p class="pt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('invoices.show.small_business_notice')) ?></p>
+            <?php endif; ?>
+            <?php else: ?>
+            <div class="flex items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('invoices.show.net_total')) ?></dt>
+                <dd data-total-net>0,00 €</dd>
+            </div>
+            <div class="flex items-baseline justify-between text-slate-600 dark:text-slate-400">
+                <dt><?= e(t('invoices.show.vat_amount', ['rate' => number_format((float) ($vatRatePercentPreview ?? '0'), 2, ',', '.')])) ?></dt>
+                <dd data-total-vat>0,00 €</dd>
+            </div>
+            <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
+                <dt><?= e(t('invoices.show.gross_total')) ?></dt>
+                <dd data-total-grand>0,00 €</dd>
+            </div>
+            <?php endif; ?>
         </dl>
         <p class="mt-1.5 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('offers.form.totals_hint')) ?></p>
     </div>
@@ -685,7 +732,7 @@ foreach ($laborArticles as $laborArticle) {
                 <?php
                 renderLiveSearchField(
                     'article_id[]',
-                    '/artikel/suche',
+                    '/artikel/suche/vermietung',
                     null,
                     null,
                     t('offers.show.article_placeholder'),
@@ -1330,6 +1377,12 @@ foreach ($laborArticles as $laborArticle) {
     var totalFreeTextRow = document.querySelector('[data-total-free-text-row]');
     var totalFreeTextEl = document.querySelector('[data-total-free-text]');
     var totalGrandEl = document.querySelector('[data-total-grand]');
+    // USt-Vorschau: Kleinunternehmer-Status/USt-Satz stammen aus den
+    // Rechnungseinstellungen und gelten für alle Dokumente.
+    var IS_SMALL_BUSINESS = <?= json_encode($isSmallBusinessPreview ?? true) ?>;
+    var VAT_RATE_PERCENT = <?= json_encode((string) ($vatRatePercentPreview ?? '0')) ?>;
+    var totalNetEl = document.querySelector('[data-total-net]');
+    var totalVatEl = document.querySelector('[data-total-vat]');
 
     function parseAmount(value) {
         var n = parseFloat(String(value || '').replace(',', '.'));
@@ -1484,7 +1537,10 @@ foreach ($laborArticles as $laborArticle) {
             totalFreeTextEl.textContent = '+' + formatEuro(freeTextTotal);
         }
 
-        totalGrandEl.textContent = formatEuro(netTotal);
+        var vatAmount = IS_SMALL_BUSINESS ? 0 : round2(netTotal * parseAmount(VAT_RATE_PERCENT) / 100);
+        if (totalNetEl) { totalNetEl.textContent = formatEuro(netTotal); }
+        if (totalVatEl) { totalVatEl.textContent = formatEuro(vatAmount); }
+        totalGrandEl.textContent = formatEuro(round2(netTotal + vatAmount));
     }
 
     if (offerForm) {

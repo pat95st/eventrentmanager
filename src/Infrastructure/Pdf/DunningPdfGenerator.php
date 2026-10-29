@@ -23,6 +23,10 @@ final class DunningPdfGenerator
 {
     private const MARGIN = 50.0;
 
+    public function __construct(private readonly ?DocumentFooter $footer = null)
+    {
+    }
+
     public function generate(DunningNoticeDetail $detail, CompanySettings $companySettings, ?PdfLayoutSettings $layout = null): string
     {
         $writer = new SimplePdfWriter();
@@ -34,28 +38,35 @@ final class DunningPdfGenerator
 
         $returnLine = $this->buildReturnAddressLine($companySettings);
         $returnOverride = $layout?->get('return_address');
-        $returnX = self::MARGIN;
-        $returnFontSize = 7.5;
-        if ($returnOverride !== null) {
-            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
-            $returnX = $returnPoint['x'];
-            $y = $returnPoint['y'];
-            $returnFontSize = $returnOverride->fontSize ?? 7.5;
-        }
-        if ($returnLine !== null) {
-            $writer->text($returnX, $y, $returnLine, $returnFontSize);
-            $y -= 24;
-        }
-
         $addressOverride = $layout?->get('customer_address');
+
         $addressX = self::MARGIN;
+        $addressY = $y - ($returnLine !== null ? 24 : 0);
         $addressFontSize = 10.0;
         if ($addressOverride !== null) {
             $addressPoint = $addressOverride->toPdfPoint($pageHeight);
             $addressX = $addressPoint['x'];
-            $y = $addressPoint['y'];
+            $addressY = $addressPoint['y'];
             $addressFontSize = $addressOverride->fontSize ?? 10.0;
         }
+
+        // Absenderzeile über der Empfängeradresse, siehe
+        // OfferPdfGenerator::drawWindowEnvelopeAddress() für die Begründung.
+        $returnFontSize = $returnOverride?->fontSize ?? 7.5;
+        if ($returnOverride !== null) {
+            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
+            $returnX = $returnPoint['x'];
+            $returnY = $returnPoint['y'];
+        } else {
+            $returnX = $addressX;
+            $returnY = $addressY + 24.0;
+        }
+        if ($returnLine !== null) {
+            $writer->text($returnX, $returnY, $returnLine, $returnFontSize);
+            $writer->line($returnX, $returnY - 2.0, $returnX + $writer->textWidth($returnLine, $returnFontSize), $returnY - 2.0, 0.4, '0.3 0.3 0.3');
+        }
+
+        $y = $addressY;
 
         foreach ($this->buildCustomerAddressLines($detail->customer) as $line) {
             $writer->text($addressX, $y, $line, $addressFontSize);
@@ -117,6 +128,9 @@ final class DunningPdfGenerator
         $y -= 30;
 
         $writer->text(self::MARGIN, $y, 'Sollten Sie den Betrag bereits beglichen haben, betrachten Sie dieses Schreiben als gegenstandslos.', 8.5);
+
+        // Fußzeile mit der Bankverbindung der gemahnten Rechnung.
+        $this->footer?->drawOnAllPages($writer, null, $detail->invoice->bankAccountId);
 
         return $writer->output();
     }

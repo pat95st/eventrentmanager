@@ -8,6 +8,9 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\BankAccountRepositoryInterface;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\Invoice;
@@ -47,6 +50,8 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
+        private readonly ?BankAccountRepositoryInterface $bankAccounts = null,
     ) {
     }
 
@@ -82,6 +87,10 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             $command->logisticsDate1,
             $command->logisticsDate2,
         );
+
+        // Zahlungsart/Bankverbindung (Migrationen 105/106), siehe PaymentSelection.
+        [$paymentErrors, $paymentMethodId, $bankAccountId] = PaymentSelection::validate($this->paymentMethods, $command->paymentMethodId, $this->bankAccounts, $command->bankAccountId);
+        $errors = array_merge($errors, $paymentErrors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -130,6 +139,8 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
             sourceOfferId: null,
             sourceRentalId: $data['rentalId'],
             contactId: $data['contactId'],
+            paymentMethodId: $paymentMethodId,
+            bankAccountId: $bankAccountId,
             createdAt: $now,
             updatedAt: $now,
             accessoryFlatRateEnabled: $accessoryFlatRateEnabled,

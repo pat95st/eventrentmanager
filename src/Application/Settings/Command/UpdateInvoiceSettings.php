@@ -13,10 +13,13 @@ final class UpdateInvoiceSettings implements CommandInterface
         public readonly string $vatRatePercent,
         public readonly ?string $taxNumber,
         public readonly ?string $vatId,
-        public readonly string $paymentTermDays, // als String, wird im Handler validiert/geparst (siehe UpdateInvoiceSettingsHandler)
-        public readonly ?string $bankName,
-        public readonly ?string $iban,
-        public readonly ?string $bic,
+        // Zahlungsziel und Bankverbindung werden seit Migration 105/106 über
+        // Zahlungsarten bzw. Bankverbindungen gepflegt — null = bisherigen
+        // (nur noch als Fallback genutzten) Wert unverändert lassen.
+        public readonly ?string $paymentTermDays = null, // als String, wird im Handler validiert/geparst
+        public readonly ?string $bankName = null,
+        public readonly ?string $iban = null,
+        public readonly ?string $bic = null,
     ) {
     }
 }

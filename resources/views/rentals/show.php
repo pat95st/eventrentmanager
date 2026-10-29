@@ -1,5 +1,7 @@
 <?php
 /** @var \App\Application\Rental\Query\RentalDetail $detail */
+/** @var list<array{id: string, label: string, quantity: int, description: string}> $bookedBundles */
+/** @var array<string, int> $bundleRequiredByArticle */
 /** @var \App\Domain\Article\Article[] $articles */
 /** @var array<string, string> $articleDisplayNames Artikel-ID => "Hersteller Artikelbezeichnung" */
 /** @var \App\Domain\Venue\Venue|null $venue */
@@ -305,6 +307,36 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('rentals.show.planned_items_title')) ?></h2>
 
+    <?php
+        // Gebuchte Bundles (Migration 107): ihre Bestandteile stehen unten als
+        // geplante Artikel und werden wie gewohnt ausgegeben; entfernt wird
+        // ein Bundle nur als Ganzes.
+        $bookedBundles ??= [];
+        $bundleRequiredByArticle ??= [];
+    ?>
+    <?php if ($bookedBundles !== []): ?>
+        <div class="mb-4 rounded-md border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950/40">
+            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-brand-700 dark:text-brand-400"><?= e(t('rentals.show.bundles_title')) ?></p>
+            <div class="divide-y divide-brand-100 dark:divide-brand-900">
+                <?php foreach ($bookedBundles as $bookedBundle): ?>
+                    <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                        <div>
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= (int) $bookedBundle['quantity'] ?>× <?= e($bookedBundle['label']) ?></p>
+                            <?php if ($bookedBundle['description'] !== ''): ?>
+                                <p class="text-xs text-slate-500 dark:text-slate-400"><?= e($bookedBundle['description']) ?></p>
+                            <?php endif; ?>
+                        </div>
+                        <form method="post" action="/veranstaltungsbundles/<?= e($bookedBundle['id']) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_remove_bundle')) ?>" data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
+                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.show.remove')) ?></button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <?php if ($detail->items === []): ?>
         <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.no_items_planned')) ?></p>
     <?php else: ?>
@@ -315,6 +347,9 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
                         <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($entry->displayName()) ?></p>
                         <p class="text-xs text-slate-400 dark:text-slate-500">
                             <?= e(t('rentals.show.planned_label')) ?>: <?= $entry->item->quantity ?> · <?= e(t('rentals.show.issued_label')) ?>: <?= $entry->issuedCount ?>
+                            <?php if (($bundleRequiredByArticle[$entry->article->id] ?? 0) > 0): ?>
+                                · <?= e(t('rentals.show.of_which_bundle', ['count' => (string) $bundleRequiredByArticle[$entry->article->id]])) ?>
+                            <?php endif; ?>
                         </p>
                     </div>
                     <div class="flex items-center gap-3">
@@ -343,7 +378,7 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
             <select name="article_id" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 <option value=""><?= e(t('rentals.show.article_placeholder')) ?></option>
                 <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e($articleDisplayNames[$article->id] ?? $article->name) ?></option>
+                    <option value="<?= e($article->id) ?>"><?= e(($articleDisplayNames[$article->id] ?? $article->name) . ($article->isBundle ? ' (' . t('articles.badge.bundle') . ')' : '')) ?></option>
                 <?php endforeach; ?>
             </select>
         </div>

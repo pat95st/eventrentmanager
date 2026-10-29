@@ -51,6 +51,9 @@ final class CompanySettingsController
             city: $request->input('city'),
             country: $request->input('country'),
             logoMaxHeightPx: $request->input('logo_max_height_px'),
+            phone: $request->input('phone') ?? '',
+            email: $request->input('email') ?? '',
+            website: $request->input('website') ?? '',
         );
 
         try {

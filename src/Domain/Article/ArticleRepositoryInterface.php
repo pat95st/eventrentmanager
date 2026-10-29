@@ -18,10 +18,12 @@ interface ArticleRepositoryInterface
      *        vom Status (Artikelverwaltung selbst, siehe ArticleController::index).
      * @return Article[] Höchstens $limit Zeilen, ab $offset (siehe countSearch() für die Gesamtanzahl).
      */
-    public function search(?string $searchTerm, ?string $manufacturerId, array $categoryIds, int $limit, int $offset, bool $onlyActive = false): array;
+    /** @param string[] $manufacturerIds zusätzlicher Mehrfachfilter (ODER-verknüpft), siehe ListArticles::$manufacturerIds */
+    public function search(?string $searchTerm, ?string $manufacturerId, array $categoryIds, int $limit, int $offset, bool $onlyActive = false, array $manufacturerIds = [], bool $onlyRentableIndividually = false, bool $excludeBundles = false): array;
 
     /** Gesamtanzahl der Treffer für dieselben Filter wie search(), ohne LIMIT/OFFSET (für die Paginierung). */
-    public function countSearch(?string $searchTerm, ?string $manufacturerId, array $categoryIds, bool $onlyActive = false): int;
+    /** @param string[] $manufacturerIds siehe search() */
+    public function countSearch(?string $searchTerm, ?string $manufacturerId, array $categoryIds, bool $onlyActive = false, array $manufacturerIds = [], bool $onlyRentableIndividually = false, bool $excludeBundles = false): int;
 
     public function countByCategory(string $categoryId): int;
 

@@ -46,6 +46,8 @@ final class SettingsSections
                 'label' => t('nav.settings_group_billing'),
                 'pages' => [
                     ['key' => 'settings-rechnung', 'href' => '/einstellungen/rechnung', 'label' => t('nav.invoice_settings')],
+                    ['key' => 'settings-bankverbindungen', 'href' => '/einstellungen/bankverbindungen', 'label' => t('nav.bank_accounts')],
+                    ['key' => 'settings-zahlungsarten', 'href' => '/einstellungen/zahlungsarten', 'label' => t('nav.payment_methods')],
                     ['key' => 'settings-nummerierung', 'href' => '/einstellungen/nummerierung', 'label' => t('nav.numbering_settings')],
                     ['key' => 'settings-rechnungsvorlage', 'href' => '/einstellungen/rechnungsvorlage', 'label' => t('nav.invoice_pdf_template')],
                     ['key' => 'settings-angebotsvorlage', 'href' => '/einstellungen/angebotsvorlage', 'label' => t('nav.offer_pdf_template')],

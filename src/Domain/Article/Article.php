@@ -34,6 +34,15 @@ final class Article
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
         public array $images = [],
+        // Nutzerwunsch Bundles (Migration 107): false = darf in Vermietungen
+        // und Miet-Positionen von Dokumenten nicht einzeln gewählt werden,
+        // nur als Bestandteil eines Bundles (z. B. passiver Lautsprecher, der
+        // nur mit passender Endstufe vermietet wird).
+        public bool $isRentableIndividually = true,
+        // true = Artikel ist ein Bundle (eigener Name/Tagesmietsatz,
+        // Bestandteile siehe ArticleBundleComponent); hat keinen eigenen
+        // physischen Bestand/Inventarnummern.
+        public bool $isBundle = false,
     ) {
     }
 }

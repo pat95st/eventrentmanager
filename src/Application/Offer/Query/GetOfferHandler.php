@@ -8,6 +8,10 @@ use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\InvoiceSettingsRepositoryInterface;
+use App\Application\Article\Query\BundleComponentResolver;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
@@ -27,6 +31,9 @@ final class GetOfferHandler implements QueryHandlerInterface
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly UserRepositoryInterface $users,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
+        private readonly ?BundleComponentResolver $bundleResolver = null,
+        private readonly ?InvoiceSettingsRepositoryInterface $invoiceSettings = null,
     ) {
     }
 
@@ -41,6 +48,7 @@ final class GetOfferHandler implements QueryHandlerInterface
 
         $customer = $offer->customerId !== null ? $this->customers->findById($offer->customerId) : null;
         $contact = $offer->contactId !== null ? $this->customerContacts->findById($offer->contactId) : null;
+        $paymentMethod = PaymentSelection::resolvePaymentMethod($this->paymentMethods, $offer->paymentMethodId);
 
         // Siehe GetInvoiceHandler für die identische Begründung des
         // kleinen Herstellen-Caches (mehrfach vorkommende Artikel in
@@ -109,6 +117,8 @@ final class GetOfferHandler implements QueryHandlerInterface
         $freeTextItems = $this->offers->findFreeTextItemsByOffer($offer->id);
         $sectionTexts = $this->offers->findSectionTextsByOffer($offer->id);
 
-        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts, $contact);
+        $taxSettings = $this->invoiceSettings?->get();
+        $bundleComponents = $this->bundleResolver?->resolve(array_map(static fn ($entry) => $entry->article, $items)) ?? [];
+        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts, $contact, $paymentMethod, bundleComponents: $bundleComponents, isSmallBusiness: $taxSettings?->isSmallBusiness, vatRatePercent: $taxSettings?->vatRatePercent);
     }
 }

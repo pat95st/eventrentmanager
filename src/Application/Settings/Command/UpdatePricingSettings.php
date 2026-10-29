@@ -10,8 +10,11 @@ final class UpdatePricingSettings implements CommandInterface
 {
     public function __construct(
         public readonly string $accessoryFlatRatePercent,
-        public readonly string $priceRoundingStep,
-        public readonly string $priceRoundingDirection,
+        // Optional: die Rundung wird seit dem Nutzerwunsch "Rundung direkt
+        // bei der Preisstaffelung" über UpdatePriceRounding gepflegt; null
+        // = bestehende Rundungseinstellung unverändert übernehmen.
+        public readonly ?string $priceRoundingStep = null,
+        public readonly ?string $priceRoundingDirection = null,
     ) {
     }
 }

@@ -7,6 +7,10 @@
 /** @var array<int, string> $tierMultipliers Einsatztage (1..7) => Faktor bezogen auf Tagesmietsatz "1" */
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
+/** @var \App\Domain\Settings\PaymentMethod[] $paymentMethods */
+/** @var string|null $selectedPaymentMethodId */
+/** @var \App\Domain\Settings\BankAccount[] $bankAccounts */
+/** @var string|null $selectedBankAccountId */
 /** @var string|null $editingId */
 /** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string, sort_order: int|string}> $existingItems */
 /** @var \App\Domain\LaborTime\LaborTimeArticle[] $laborArticles */
@@ -373,6 +377,52 @@ foreach ($laborArticles as $laborArticle) {
                 }
             })();
         </script>
+    </div>
+
+    <?php
+        // Zahlungsart (und bei Rechnungen Bankverbindung), Migrationen
+        // 105/106: leere Auswahl = jeweiliger Standard (siehe
+        // App\Application\Settings\PaymentSelection).
+        $selectedPaymentMethodIdVal = $val('payment_method_id', $selectedPaymentMethodId);
+        $defaultPaymentMethod = null;
+        foreach ($paymentMethods as $paymentMethodOption) {
+            if ($paymentMethodOption->isDefault) { $defaultPaymentMethod = $paymentMethodOption; }
+        }
+        $selectedBankAccountIdVal = $val('bank_account_id', $selectedBankAccountId);
+        $defaultBankAccount = null;
+        foreach ($bankAccounts as $bankAccountOption) {
+            if ($bankAccountOption->isDefault) { $defaultBankAccount = $bankAccountOption; }
+        }
+    ?>
+    <div class="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+            <label for="payment_method_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.payment_method')) ?></label>
+            <select id="payment_method_id" name="payment_method_id"
+                    class="mt-1 w-full rounded-md border <?= isset($errors['paymentMethodId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e($defaultPaymentMethod !== null
+                    ? t('invoices.form.payment_method_default', ['name' => $defaultPaymentMethod->name . ' – ' . $defaultPaymentMethod->termLabel()])
+                    : t('invoices.form.payment_method_none')) ?></option>
+                <?php foreach ($paymentMethods as $paymentMethodOption): ?>
+                    <option value="<?= e($paymentMethodOption->id) ?>" <?= $selectedPaymentMethodIdVal === $paymentMethodOption->id ? 'selected' : '' ?>><?= e($paymentMethodOption->name . ' – ' . $paymentMethodOption->termLabel()) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors['paymentMethodId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['paymentMethodId']) ?></p><?php endif; ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.payment_method_hint')) ?></p>
+        </div>
+        <div>
+            <label for="bank_account_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.bank_account')) ?></label>
+            <select id="bank_account_id" name="bank_account_id"
+                    class="mt-1 w-full rounded-md border <?= isset($errors['bankAccountId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value=""><?= e($defaultBankAccount !== null
+                    ? t('invoices.form.bank_account_default', ['name' => $defaultBankAccount->label])
+                    : t('invoices.form.bank_account_none')) ?></option>
+                <?php foreach ($bankAccounts as $bankAccountOption): ?>
+                    <option value="<?= e($bankAccountOption->id) ?>" <?= $selectedBankAccountIdVal === $bankAccountOption->id ? 'selected' : '' ?>><?= e($bankAccountOption->label . ' (' . $bankAccountOption->formattedIban() . ')') ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors['bankAccountId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['bankAccountId']) ?></p><?php endif; ?>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.bank_account_hint')) ?></p>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -801,7 +851,7 @@ foreach ($laborArticles as $laborArticle) {
                 <?php
                 renderLiveSearchField(
                     'article_id[]',
-                    '/artikel/suche',
+                    '/artikel/suche/vermietung',
                     null,
                     null,
                     t('invoices.show.article_placeholder'),

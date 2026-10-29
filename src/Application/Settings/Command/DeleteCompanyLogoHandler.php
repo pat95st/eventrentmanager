@@ -43,6 +43,9 @@ final class DeleteCompanyLogoHandler implements CommandHandlerInterface
             darkLogoFilename: $current->darkLogoFilename,
             brandName: $current->brandName,
             backgroundImageFilename: $current->backgroundImageFilename,
+            phone: $current->phone,
+            email: $current->email,
+            website: $current->website,
         );
 
         $this->settingsRepository->save($settings);

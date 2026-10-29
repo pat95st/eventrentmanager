@@ -6,6 +6,7 @@ namespace App\Application\Offer\Query;
 
 use App\Domain\Customer\Customer;
 use App\Domain\Customer\CustomerContact;
+use App\Domain\Settings\PaymentMethod;
 use App\Domain\Offer\Offer;
 use App\Domain\Pricing\DocumentTotals;
 
@@ -29,6 +30,19 @@ final class OfferDetail
         // Ansprechpartner-Auswahl (Migration 104), siehe
         // InvoiceDetail::$contact für die identische Begründung/Semantik.
         public readonly ?CustomerContact $contact = null,
+        // Aufgelöste Zahlungsart (gewählt oder Standard, siehe
+        // PaymentSelection) — für Detailansicht und PDF.
+        public readonly ?PaymentMethod $paymentMethod = null,
+        // Bundles (Migration 107): bundleArticleId => Bestandteile
+        // (siehe BundleComponentResolver), für "enthält …" unter der Position.
+        /** @var array<string, list<array{articleId: string, label: string, quantity: int}>> */
+        public readonly array $bundleComponents = [],
+        // Umsatzsteuer (Nutzerwunsch Regelbesteuerung): aktueller Stand der
+        // Rechnungseinstellungen (Kleinunternehmer ja/nein, Steuersatz),
+        // gesetzt von Get*Handler. Angebote/AB werden — anders als versendete
+        // Rechnungen — nicht gesnapshotet. null = wie bisher Kleinunternehmer.
+        public readonly ?bool $isSmallBusiness = null,
+        public readonly ?string $vatRatePercent = null,
     ) {
     }
 
@@ -95,8 +109,8 @@ final class OfferDetail
             discountType: $this->offer->discountType,
             discountValue: $this->offer->discountValue,
             laborTimeTotal: $this->laborTimeTotal(),
-            isSmallBusiness: true,
-            vatRatePercent: '0',
+            isSmallBusiness: $this->isSmallBusiness ?? true,
+            vatRatePercent: $this->vatRatePercent ?? '0',
             saleTotal: $this->saleTotal(),
             freeTextTotal: $this->freeTextTotal(),
         );

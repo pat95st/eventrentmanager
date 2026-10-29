@@ -38,6 +38,9 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             darkLogoFilename: $row['dark_logo_filename'],
             brandName: $row['brand_name'],
             backgroundImageFilename: $row['background_image_filename'],
+            phone: $row['phone'] ?? null,
+            email: $row['email'] ?? null,
+            website: $row['website'] ?? null,
         );
     }
 
@@ -48,7 +51,8 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
                 name = :name, brand_name = :brand_name, street = :street, postal_code = :postal_code, city = :city,
                 country = :country, logo_filename = :logo_filename,
                 logo_max_height_px = :logo_max_height_px, dark_logo_filename = :dark_logo_filename,
-                background_image_filename = :background_image_filename
+                background_image_filename = :background_image_filename,
+                phone = :phone, email = :email, website = :website
              WHERE id = 1'
         );
 
@@ -63,6 +67,9 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             'logo_max_height_px' => $settings->logoMaxHeightPx,
             'dark_logo_filename' => $settings->darkLogoFilename,
             'background_image_filename' => $settings->backgroundImageFilename,
+            'phone' => $settings->phone,
+            'email' => $settings->email,
+            'website' => $settings->website,
         ]);
     }
 }

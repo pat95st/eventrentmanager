@@ -38,8 +38,6 @@ final class PricingSettingsController
     {
         $command = new UpdatePricingSettings(
             accessoryFlatRatePercent: $request->input('accessory_flat_rate_percent', '') ?? '',
-            priceRoundingStep: $request->input('price_rounding_step', '') ?? '',
-            priceRoundingDirection: $request->input('price_rounding_direction', '') ?? '',
         );
 
         try {

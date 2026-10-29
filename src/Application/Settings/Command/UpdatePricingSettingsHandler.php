@@ -38,12 +38,18 @@ final class UpdatePricingSettingsHandler implements CommandHandlerInterface
             $errors['accessoryFlatRatePercent'] = 'Bitte einen gültigen Prozentsatz zwischen 0 und 100 angeben.';
         }
 
-        $roundingStep = PriceRoundingStep::tryFrom($command->priceRoundingStep);
+        $current = $this->settingsRepository->get();
+
+        $roundingStep = $command->priceRoundingStep === null
+            ? $current->priceRoundingStep
+            : PriceRoundingStep::tryFrom($command->priceRoundingStep);
         if ($roundingStep === null) {
             $errors['priceRoundingStep'] = 'Bitte einen gültigen Rundungsschritt auswählen.';
         }
 
-        $roundingDirection = PriceRoundingDirection::tryFrom($command->priceRoundingDirection);
+        $roundingDirection = $command->priceRoundingDirection === null
+            ? $current->priceRoundingDirection
+            : PriceRoundingDirection::tryFrom($command->priceRoundingDirection);
         if ($roundingDirection === null) {
             $errors['priceRoundingDirection'] = 'Bitte eine gültige Rundungsrichtung auswählen.';
         }

@@ -42,6 +42,31 @@ if (!function_exists(__NAMESPACE__ . '\\renderArticlePickerModal')) {
                 placeholder="<?= e(t('article_picker.search_placeholder')) ?>"
                 class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700"
             >
+            <?php
+                // Mehrfachfilter Hersteller/Kategorie (Nutzerwunsch): je ein
+                // Aufklapp-Button mit Checkbox-Liste; Optionen lädt
+                // article-picker.js beim ersten Öffnen (GET
+                // /artikel/mehrfachauswahl?optionen=1).
+            ?>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+                <?php foreach (['manufacturers' => 'article_picker.filter_manufacturer', 'categories' => 'article_picker.filter_category'] as $filterKey => $labelKey): ?>
+                    <div class="relative" data-article-picker-filter="<?= e($filterKey) ?>">
+                        <button type="button" data-article-picker-filter-toggle
+                                class="flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <span><?= e(t($labelKey)) ?></span>
+                            <span data-article-picker-filter-count class="hidden rounded-full bg-brand-600 px-1.5 text-xs font-semibold text-white"></span>
+                            <span aria-hidden="true">▾</span>
+                        </button>
+                        <div data-article-picker-filter-panel class="absolute left-0 top-full z-10 mt-1 hidden w-72 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                            <input type="text" data-article-picker-filter-search autocomplete="off"
+                                   placeholder="<?= e(t('article_picker.filter_search')) ?>"
+                                   class="mb-2 w-full rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700">
+                            <div data-article-picker-filter-options class="max-h-48 overflow-y-auto text-xs"></div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <button type="button" data-article-picker-filter-reset class="hidden text-xs text-brand-700 hover:underline dark:text-brand-400"><?= e(t('article_picker.filter_reset')) ?></button>
+            </div>
         </div>
         <div data-article-picker-results class="flex-1 overflow-y-auto px-4 py-2 text-sm">
             <p class="py-6 text-center text-slate-400 dark:text-slate-500"><?= e(t('article_picker.loading')) ?></p>

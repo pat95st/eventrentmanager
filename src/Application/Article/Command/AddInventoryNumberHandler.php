@@ -47,6 +47,12 @@ final class AddInventoryNumberHandler implements CommandHandlerInterface
             throw new NotFoundException("Artikel \"{$command->articleId}\" wurde nicht gefunden.");
         }
 
+        // Ein Bundle (Migration 107) hat keinen eigenen physischen Bestand —
+        // Inventarnummern gehören an seine Bestandteile.
+        if ($article->isBundle) {
+            throw new ValidationException(['number' => 'Ein Bundle hat keine eigenen Inventarnummern — bitte die Bestandteile inventarisieren.']);
+        }
+
         $installedFirmwareVersionId = $this->resolveInstalledFirmwareVersionId($article->id, $article->hasFirmware, $command->installedFirmwareVersionId);
 
         if ($command->supplierId !== null && $command->supplierId !== '' && $this->suppliers->findById($command->supplierId) === null) {

@@ -58,6 +58,9 @@ final class Offer
         // Optionale Auswahl EINES Ansprechpartners des Kunden, siehe
         // Invoice::$contactId für die identische Begründung/Semantik.
         public ?string $contactId = null,
+        // Gewählte Zahlungsart (Migration 106), null = Standard-Zahlungsart.
+        // Wird beim Umwandeln in eine Rechnung/Auftragsbestätigung übernommen.
+        public ?string $paymentMethodId = null,
     ) {
     }
 

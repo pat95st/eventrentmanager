@@ -110,7 +110,8 @@ final class CaseController
         }
 
         $editInventoryId = $this->nullIfEmpty($request->query('edit_inventory'));
-        $articles = $this->queries->ask(new ListArticles(onlyActive: true))->items;
+        // Case-Inhalte sind physische Geräte — Bundles (Migration 107) ausblenden.
+        $articles = $this->queries->ask(new ListArticles(onlyActive: true, excludeBundles: true))->items;
 
         // Anzeige-Label "Hersteller Artikelbezeichnung" je Artikel-ID
         // (Nutzerwunsch). Siehe OfferController::renderForm() für die

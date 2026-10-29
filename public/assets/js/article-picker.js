@@ -40,6 +40,7 @@ window.ArticlePicker = (function () {
         nextPage: 'Weiter →',
         pageInfo: 'Seite {page} von {totalPages}',
         selectedCount: '{count} ausgewählt',
+        noFilterOptions: 'Keine Einträge vorhanden.',
     };
 
     var modal = null;
@@ -57,6 +58,14 @@ window.ArticlePicker = (function () {
     var currentTotalPages = 1;
     var activeRequest = null;
     var debounceTimer = null;
+
+    // Mehrfachfilter Hersteller/Kategorie: gewählte IDs je Filter (bleiben
+    // beim erneuten Öffnen des Modals innerhalb derselben Seite erhalten),
+    // Optionen werden einmalig mit der ersten Suche geladen.
+    var filterState = { manufacturers: {}, categories: {} };
+    var filterOptionsLoaded = false;
+    var filterEls = {};
+    var filterResetButton = null;
 
     function ensureInit() {
         if (modal) {
@@ -78,6 +87,47 @@ window.ArticlePicker = (function () {
         insertButton = modal.querySelector('[data-article-picker-insert]');
         cancelButton = modal.querySelector('[data-article-picker-cancel]');
         closeButton = modal.querySelector('[data-article-picker-close]');
+        filterResetButton = modal.querySelector('[data-article-picker-filter-reset]');
+
+        modal.querySelectorAll('[data-article-picker-filter]').forEach(function (wrapper) {
+            var key = wrapper.getAttribute('data-article-picker-filter');
+            var els = {
+                wrapper: wrapper,
+                toggle: wrapper.querySelector('[data-article-picker-filter-toggle]'),
+                count: wrapper.querySelector('[data-article-picker-filter-count]'),
+                panel: wrapper.querySelector('[data-article-picker-filter-panel]'),
+                search: wrapper.querySelector('[data-article-picker-filter-search]'),
+                options: wrapper.querySelector('[data-article-picker-filter-options]'),
+            };
+            filterEls[key] = els;
+
+            els.toggle.addEventListener('click', function () {
+                var willOpen = els.panel.classList.contains('hidden');
+                closeFilterPanels();
+                if (willOpen) {
+                    els.panel.classList.remove('hidden');
+                    els.search.value = '';
+                    applyOptionSearch(els);
+                    els.search.focus();
+                }
+            });
+            els.search.addEventListener('input', function () { applyOptionSearch(els); });
+        });
+        if (filterResetButton) {
+            filterResetButton.addEventListener('click', function () {
+                filterState = { manufacturers: {}, categories: {} };
+                Object.keys(filterEls).forEach(function (key) {
+                    filterEls[key].options.querySelectorAll('input[type="checkbox"]').forEach(function (cb) { cb.checked = false; });
+                });
+                updateFilterBadges();
+                currentPage = 1;
+                search();
+            });
+        }
+        // Klick außerhalb eines Filter-Panels schließt es.
+        modal.addEventListener('mousedown', function (event) {
+            if (!event.target.closest('[data-article-picker-filter]')) { closeFilterPanels(); }
+        });
 
         searchInput.addEventListener('input', function () {
             currentPage = 1;
@@ -91,7 +141,10 @@ window.ArticlePicker = (function () {
             if (event.target === modal) { close(); }
         });
         document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && !modal.classList.contains('hidden')) { close(); }
+            if (event.key !== 'Escape' || modal.classList.contains('hidden')) { return; }
+            // Erst ein offenes Filter-Panel schließen, erst beim zweiten Escape das Modal.
+            if (anyFilterPanelOpen()) { closeFilterPanels(); return; }
+            close();
         });
 
         return true;
@@ -115,6 +168,7 @@ window.ArticlePicker = (function () {
     }
 
     function close() {
+        closeFilterPanels();
         if (activeRequest) { activeRequest.abort(); }
         modal.classList.add('hidden');
         modal.classList.remove('flex');
@@ -129,12 +183,20 @@ window.ArticlePicker = (function () {
         resultsEl.innerHTML = '<p class="py-6 text-center text-slate-400 dark:text-slate-500">' + TEXT.loading + '</p>';
         paginationEl.innerHTML = '';
 
-        var url = '/artikel/mehrfachauswahl?q=' + encodeURIComponent(searchInput.value) + '&seite=' + currentPage;
+        var url = '/artikel/mehrfachauswahl?q=' + encodeURIComponent(searchInput.value) + '&seite=' + currentPage
+            + '&hersteller=' + encodeURIComponent(Object.keys(filterState.manufacturers).join(','))
+            + '&kategorien=' + encodeURIComponent(Object.keys(filterState.categories).join(','))
+            + (filterOptionsLoaded ? '' : '&optionen=1');
 
         fetch(url, { headers: { 'Accept': 'application/json' }, signal: controller.signal })
             .then(function (response) { return response.json(); })
             .then(function (data) {
                 activeRequest = null;
+                if (!filterOptionsLoaded && data.manufacturers && data.categories) {
+                    renderFilterOptions('manufacturers', data.manufacturers);
+                    renderFilterOptions('categories', data.categories);
+                    filterOptionsLoaded = true;
+                }
                 renderResults(data);
             })
             .catch(function (error) {
@@ -244,6 +306,75 @@ window.ArticlePicker = (function () {
         paginationEl.appendChild(prev);
         paginationEl.appendChild(info);
         paginationEl.appendChild(next);
+    }
+
+    function renderFilterOptions(key, options) {
+        var els = filterEls[key];
+        if (!els) { return; }
+        els.options.innerHTML = '';
+        if (options.length === 0) {
+            var empty = document.createElement('p');
+            empty.className = 'px-1 py-2 text-slate-400 dark:text-slate-500';
+            empty.textContent = TEXT.noFilterOptions;
+            els.options.appendChild(empty);
+            return;
+        }
+        options.forEach(function (option) {
+            var row = document.createElement('label');
+            row.className = 'flex cursor-pointer items-center gap-2 rounded px-1 py-1 hover:bg-slate-50 dark:hover:bg-slate-800';
+            row.setAttribute('data-option-label', option.label.toLowerCase());
+
+            var checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'h-3.5 w-3.5 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600';
+            checkbox.checked = !!filterState[key][option.id];
+            checkbox.addEventListener('change', function () {
+                if (checkbox.checked) {
+                    filterState[key][option.id] = true;
+                } else {
+                    delete filterState[key][option.id];
+                }
+                updateFilterBadges();
+                currentPage = 1;
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(search, DEBOUNCE_MS);
+            });
+
+            var text = document.createElement('span');
+            text.className = 'min-w-0 flex-1 truncate';
+            text.textContent = option.label;
+            text.title = option.label;
+
+            row.appendChild(checkbox);
+            row.appendChild(text);
+            els.options.appendChild(row);
+        });
+    }
+
+    function applyOptionSearch(els) {
+        var term = els.search.value.trim().toLowerCase();
+        els.options.querySelectorAll('[data-option-label]').forEach(function (row) {
+            row.classList.toggle('hidden', term !== '' && row.getAttribute('data-option-label').indexOf(term) === -1);
+        });
+    }
+
+    function updateFilterBadges() {
+        var total = 0;
+        Object.keys(filterEls).forEach(function (key) {
+            var count = Object.keys(filterState[key]).length;
+            total += count;
+            filterEls[key].count.textContent = String(count);
+            filterEls[key].count.classList.toggle('hidden', count === 0);
+        });
+        if (filterResetButton) { filterResetButton.classList.toggle('hidden', total === 0); }
+    }
+
+    function closeFilterPanels() {
+        Object.keys(filterEls).forEach(function (key) { filterEls[key].panel.classList.add('hidden'); });
+    }
+
+    function anyFilterPanelOpen() {
+        return Object.keys(filterEls).some(function (key) { return !filterEls[key].panel.classList.contains('hidden'); });
     }
 
     function updateCount() {

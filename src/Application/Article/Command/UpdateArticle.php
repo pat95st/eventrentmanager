@@ -27,6 +27,12 @@ final class UpdateArticle implements CommandInterface
         public readonly ?string $heightUnits = null,
         public readonly ?string $installDepthCm = null,
         public readonly bool $hasFirmware = false,
+        // Bundles (Migration 107): nicht einzeln vermietbar / ist Bundle +
+        // rohe Bestandteil-Zeilen aus dem Formular ([article_id, quantity]).
+        public readonly bool $isRentableIndividually = true,
+        public readonly bool $isBundle = false,
+        /** @var array<int, array{article_id: string, quantity: string}> */
+        public readonly array $bundleComponents = [],
     ) {
     }
 }

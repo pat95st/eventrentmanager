@@ -26,6 +26,10 @@ final class CompanySettings
         // dargestellt (siehe resources/css/app.css, Abschnitt
         // "Hintergrundbild"), damit das Bild durchscheint.
         public ?string $backgroundImageFilename = null,
+        // Kontaktdaten für die Fußzeile der Dokumente (Migration 108).
+        public ?string $phone = null,
+        public ?string $email = null,
+        public ?string $website = null,
     ) {
     }
 }

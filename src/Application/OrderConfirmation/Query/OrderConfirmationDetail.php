@@ -6,6 +6,7 @@ namespace App\Application\OrderConfirmation\Query;
 
 use App\Domain\Customer\Customer;
 use App\Domain\Customer\CustomerContact;
+use App\Domain\Settings\PaymentMethod;
 use App\Domain\OrderConfirmation\OrderConfirmation;
 use App\Domain\OrderConfirmation\OrderConfirmationFreeTextItem;
 use App\Domain\OrderConfirmation\OrderConfirmationSectionText;
@@ -27,6 +28,19 @@ final class OrderConfirmationDetail
         // Ansprechpartner-Auswahl (Migration 104), siehe
         // InvoiceDetail::$contact für die identische Begründung/Semantik.
         public readonly ?CustomerContact $contact = null,
+        // Aufgelöste Zahlungsart (gewählt oder Standard, siehe
+        // PaymentSelection) — für Detailansicht und PDF.
+        public readonly ?PaymentMethod $paymentMethod = null,
+        // Bundles (Migration 107): bundleArticleId => Bestandteile
+        // (siehe BundleComponentResolver), für "enthält …" unter der Position.
+        /** @var array<string, list<array{articleId: string, label: string, quantity: int}>> */
+        public readonly array $bundleComponents = [],
+        // Umsatzsteuer (Nutzerwunsch Regelbesteuerung): aktueller Stand der
+        // Rechnungseinstellungen (Kleinunternehmer ja/nein, Steuersatz),
+        // gesetzt von Get*Handler. Angebote/AB werden — anders als versendete
+        // Rechnungen — nicht gesnapshotet. null = wie bisher Kleinunternehmer.
+        public readonly ?bool $isSmallBusiness = null,
+        public readonly ?string $vatRatePercent = null,
     ) {
     }
 
@@ -68,8 +82,8 @@ final class OrderConfirmationDetail
             discountType: $this->orderConfirmation->discountType,
             discountValue: $this->orderConfirmation->discountValue,
             laborTimeTotal: 0.0, // Auftragsbestätigungen kennen keine Arbeitszeit-Positionen
-            isSmallBusiness: true,
-            vatRatePercent: '0',
+            isSmallBusiness: $this->isSmallBusiness ?? true,
+            vatRatePercent: $this->vatRatePercent ?? '0',
             // Freitext-Posten gehören wie bei Angebot/Rechnung zur Basis für
             // Zubehörpauschale/Kombirabatt (Nutzerentscheidung, siehe
             // DocumentTotals::calculate()) — wurden hier zuvor fälschlich

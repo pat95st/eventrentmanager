@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Rental\Command;
 
+use App\Application\Rental\RentalBundlePlanner;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Exception\NotFoundException;
@@ -19,6 +20,7 @@ final class UpdateRentalItemHandler implements CommandHandlerInterface
         private readonly RentalItemRepositoryInterface $items,
         private readonly RentalIssuedItemRepositoryInterface $issuedItems,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
+        private readonly ?RentalBundlePlanner $bundlePlanner = null,
     ) {
     }
 
@@ -40,6 +42,15 @@ final class UpdateRentalItemHandler implements CommandHandlerInterface
         if ($quantity < $alreadyIssued) {
             throw new ValidationException([
                 'quantity' => "Es sind bereits {$alreadyIssued} Exemplare dieses Artikels ausgegeben — die Menge kann nicht darunter gesenkt werden.",
+            ]);
+        }
+
+        // Bundles (Migration 107): durch gebuchte Bundles belegte Menge darf
+        // nicht unterschritten werden (stattdessen das Bundle entfernen).
+        $requiredByBundles = $this->bundlePlanner?->requiredQuantity($item->rentalId, $item->articleId) ?? 0;
+        if ($quantity < $requiredByBundles) {
+            throw new ValidationException([
+                'quantity' => "{$requiredByBundles} Exemplare dieses Artikels gehören zu gebuchten Bundles — die Menge kann nicht darunter gesenkt werden. Bitte stattdessen das Bundle entfernen.",
             ]);
         }
 

@@ -36,6 +36,9 @@ use App\Infrastructure\FileStorage\LocalFileStorage;
 final class OrderConfirmationPdfGenerator
 {
     private const MARGIN = 40.0;
+    // Unterste Grenze für Inhalt (Summen, Texte, Bedingungen) — darunter
+    // liegt die Fußzeile (siehe DocumentFooter::TOP_Y).
+    private const CONTENT_BOTTOM = DocumentFooter::TOP_Y + 12.0;
     private const LOGO_MAX_WIDTH = 120.0;
     private const LOGO_MAX_HEIGHT = 50.0;
     private const TABLE_FONT_SIZE = 8.5;
@@ -53,6 +56,7 @@ final class OrderConfirmationPdfGenerator
     public function __construct(
         private readonly LocalFileStorage $fileStorage,
         private readonly RichTextPdfRenderer $richTextRenderer,
+        private readonly ?DocumentFooter $footer = null,
     ) {
     }
 
@@ -126,8 +130,53 @@ final class OrderConfirmationPdfGenerator
         }
 
         $y -= 4;
-        $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtsumme (netto):', $this->formatAmount($totals->grossTotal), 10, true);
-        $y -= 30;
+        // Umsatzsteuer (Rechnungseinstellungen): Kleinunternehmer → eine
+        // Gesamtsumme + §19-Hinweis, sonst Netto/USt/Brutto wie auf Rechnungen.
+        if ($detail->isSmallBusiness ?? true) {
+            $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtsumme:', $this->formatAmount($totals->grossTotal), 10, true);
+            $y -= 16;
+            if ($detail->isSmallBusiness === true) {
+                $writer->text(self::MARGIN, $y, 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.', 8.5);
+                $y -= 14;
+            }
+            $y -= 14;
+        } else {
+            $this->drawSummaryLine($writer, $pageWidth, $y, 'Nettosumme:', $this->formatAmount($totals->netTotal));
+            $y -= 14;
+            $this->drawSummaryLine($writer, $pageWidth, $y, 'zzgl. ' . number_format((float) $detail->vatRatePercent, 2, ',', '.') . '% USt:', $this->formatAmount($totals->taxAmount));
+            $y -= 16;
+            $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtbetrag (brutto):', $this->formatAmount($totals->grossTotal), 10, true);
+            $y -= 30;
+        }
+
+        // Seitenumbruch-Helfer für den Zahlungsbedingungen-Block.
+        $newPage = function () use ($writer, $detail, $pageWidth, $pageHeight, $pdfDesignSettings, &$pageNumber): float {
+            $pageNumber++;
+            $writer->addPage();
+
+            return $this->drawHeader($writer, $detail, null, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings) - 20;
+        };
+
+        // Zahlungsbedingungen (Zahlungsart mit Zahlungsziel, Migration 106)
+        // unter der Summe — das Zahlungsziel gilt ab Rechnungsstellung.
+        if ($detail->paymentMethod !== null) {
+            $paymentMethod = $detail->paymentMethod;
+            $paymentLines = ['Zahlungsbedingungen: ' . $paymentMethod->name . ' – ' . $paymentMethod->termLabel() . ($paymentMethod->paymentTermDays > 0 ? ' nach Rechnungsstellung' : '')];
+            $note = $paymentMethod->renderNote();
+            if ($note !== null) {
+                foreach ($this->wrapText(str_replace(["\r\n", "\n"], ' ', $note), $pageWidth - 2 * self::MARGIN, 8.5) as $noteLine) {
+                    $paymentLines[] = $noteLine;
+                }
+            }
+            foreach ($paymentLines as $paymentLine) {
+                if ($y < self::CONTENT_BOTTOM) {
+                    $y = $newPage();
+                }
+                $writer->text(self::MARGIN, $y, $paymentLine, 8.5);
+                $y -= 12;
+            }
+            $y -= 10;
+        }
 
         // Dokumenteigener Schlusstext (OrderConfirmation::$closingText) —
         // siehe Klassen-Doc oben: einziger Rich-Text-Anwendungsfall dieser
@@ -142,7 +191,7 @@ final class OrderConfirmationPdfGenerator
                 self::MARGIN,
                 $y - 10.0,
                 $pageWidth - 2 * self::MARGIN,
-                self::MARGIN + 20,
+                self::CONTENT_BOTTOM,
                 function () use ($writer, $detail, $companySettings, $pageWidth, $pageHeight, $pdfDesignSettings, &$documentClosingPageNumber): float {
                     $documentClosingPageNumber++;
                     $writer->addPage();
@@ -151,6 +200,9 @@ final class OrderConfirmationPdfGenerator
                 }
             );
         }
+
+        // Fußzeile (Firma | Kontakt/Steuernummer | Bank) auf jeder Seite.
+        $this->footer?->drawOnAllPages($writer, null);
 
         return $writer->output();
     }
@@ -192,7 +244,14 @@ final class OrderConfirmationPdfGenerator
 
             $entry = $row->data;
             $rows[] = [
-                'nameLines' => $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+                // Bundles (Migration 107): Bestandteile als Zusatzzeile(n)
+                // unter dem Bundle-Namen ("enthält: 2× …, 1× …").
+                'nameLines' => array_merge(
+                    $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+                    isset($detail->bundleComponents[$entry->article->id])
+                        ? $this->wrapText(\App\Application\Article\Query\BundleComponentResolver::describe($detail->bundleComponents[$entry->article->id], (int) $entry->item->quantity), $columns['article']['width'], self::TABLE_FONT_SIZE)
+                        : [],
+                ),
                 'quantity' => (string) $entry->item->quantity,
                 'unitPrice' => number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR',
                 'lineTotal' => number_format($entry->lineTotal(), 2, ',', '.') . ' EUR',
@@ -317,29 +376,42 @@ final class OrderConfirmationPdfGenerator
 
         $returnLine = $this->buildReturnAddressLine($companySettings);
         $returnOverride = $layout?->get('return_address');
-        $returnX = $zoneX;
-        $returnFontSize = 7.5;
-        $y = $zoneTopY - 7.0;
-        if ($returnOverride !== null) {
-            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
-            $returnX = $returnPoint['x'];
-            $y = $returnPoint['y'];
-            $returnFontSize = $returnOverride->fontSize ?? 7.5;
-        }
-        if ($returnLine !== null) {
-            $writer->text($returnX, $y, $returnLine, $returnFontSize);
-        }
-        $y -= 18.0;
-
         $addressOverride = $layout?->get('customer_address');
+
+        // Empfängeradresse: Standard direkt unter der Absenderzeile in der
+        // DIN-5008-Fensterzone, per Layout-Editor überschreibbar.
         $addressX = $zoneX;
+        $addressY = $zoneTopY - 25.0;
         $addressFontSize = 10.0;
         if ($addressOverride !== null) {
             $addressPoint = $addressOverride->toPdfPoint($pageHeight);
             $addressX = $addressPoint['x'];
-            $y = $addressPoint['y'];
+            $addressY = $addressPoint['y'];
             $addressFontSize = $addressOverride->fontSize ?? 10.0;
         }
+
+        // Einzeilige Absenderangabe (Rücksendeadresse) über der
+        // Empfängeradresse. Nutzerhinweis "fehlt über der Kundenadresse":
+        // wurde nur die Kundenadresse im Layout-Editor verschoben, wandert
+        // die Absenderzeile jetzt mit (statt allein an der Standardposition
+        // zurückzubleiben); eine eigene Position der Absenderzeile im
+        // Layout-Editor hat weiterhin Vorrang. Dünne Unterstreichung wie bei
+        // DIN-5008-Rücksendeangaben üblich.
+        $returnFontSize = $returnOverride?->fontSize ?? 7.5;
+        if ($returnOverride !== null) {
+            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
+            $returnX = $returnPoint['x'];
+            $returnY = $returnPoint['y'];
+        } else {
+            $returnX = $addressX;
+            $returnY = $addressY + 18.0;
+        }
+        if ($returnLine !== null) {
+            $writer->text($returnX, $returnY, $returnLine, $returnFontSize);
+            $writer->line($returnX, $returnY - 2.0, $returnX + $writer->textWidth($returnLine, $returnFontSize), $returnY - 2.0, 0.4, '0.3 0.3 0.3');
+        }
+
+        $y = $addressY;
 
         foreach ($this->buildCustomerAddressLines($detail->customer, $detail->contact) as $line) {
             $writer->text($addressX, $y, $line, $addressFontSize);

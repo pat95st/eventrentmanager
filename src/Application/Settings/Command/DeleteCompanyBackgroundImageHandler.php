@@ -39,6 +39,9 @@ final class DeleteCompanyBackgroundImageHandler implements CommandHandlerInterfa
             darkLogoFilename: $current->darkLogoFilename,
             brandName: $current->brandName,
             backgroundImageFilename: null,
+            phone: $current->phone,
+            email: $current->email,
+            website: $current->website,
         );
 
         $this->settingsRepository->save($settings);

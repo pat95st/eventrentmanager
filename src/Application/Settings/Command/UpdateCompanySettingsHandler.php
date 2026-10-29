@@ -42,6 +42,9 @@ final class UpdateCompanySettingsHandler implements CommandHandlerInterface
             logoMaxHeightPx: $logoMaxHeightPx,
             darkLogoFilename: $current->darkLogoFilename,
             backgroundImageFilename: $current->backgroundImageFilename,
+            phone: $command->phone === null ? $current->phone : $this->nullIfEmpty($command->phone),
+            email: $command->email === null ? $current->email : $this->nullIfEmpty($command->email),
+            website: $command->website === null ? $current->website : $this->nullIfEmpty($command->website),
         );
 
         $this->settingsRepository->save($settings);

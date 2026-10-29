@@ -29,7 +29,11 @@ final class UpdateInvoiceSettingsHandler implements CommandHandlerInterface
             $errors['vatRatePercent'] = 'Bitte einen gültigen Steuersatz zwischen 0 und 100 angeben.';
         }
 
-        $paymentTermDays = filter_var(trim($command->paymentTermDays), FILTER_VALIDATE_INT);
+        $current = $this->settingsRepository->get();
+
+        $paymentTermDays = $command->paymentTermDays === null
+            ? $current->paymentTermDays
+            : filter_var(trim($command->paymentTermDays), FILTER_VALIDATE_INT);
         if ($paymentTermDays === false || $paymentTermDays < 1) {
             $errors['paymentTermDays'] = 'Bitte ein Zahlungsziel von mindestens 1 Tag angeben.';
         }
@@ -44,9 +48,9 @@ final class UpdateInvoiceSettingsHandler implements CommandHandlerInterface
             taxNumber: $this->nullIfEmpty($command->taxNumber),
             vatId: $this->nullIfEmpty($command->vatId),
             paymentTermDays: (int) $paymentTermDays,
-            bankName: $this->nullIfEmpty($command->bankName),
-            iban: $this->nullIfEmpty($command->iban),
-            bic: $this->nullIfEmpty($command->bic),
+            bankName: $command->bankName === null ? $current->bankName : $this->nullIfEmpty($command->bankName),
+            iban: $command->iban === null ? $current->iban : $this->nullIfEmpty($command->iban),
+            bic: $command->bic === null ? $current->bic : $this->nullIfEmpty($command->bic),
         ));
 
         return null;

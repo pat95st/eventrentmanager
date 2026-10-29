@@ -8,6 +8,8 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Numbering\NumberedDocumentType;
@@ -42,6 +44,7 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
     ) {
     }
 
@@ -68,6 +71,10 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
             $this->customerContacts,
             $command->contactId,
         );
+
+        // Zahlungsart (Migration 106), siehe PaymentSelection.
+        [$paymentErrors, $paymentMethodId] = PaymentSelection::validate($this->paymentMethods, $command->paymentMethodId);
+        $errors = array_merge($errors, $paymentErrors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -104,6 +111,7 @@ final class CreateOrderConfirmationHandler implements CommandHandlerInterface
                 closingText: $this->htmlSanitizer->sanitize($command->closingText),
                 sourceRentalId: $data['rentalId'],
                 contactId: $data['contactId'],
+                paymentMethodId: $paymentMethodId,
             );
 
             $this->orderConfirmations->save($orderConfirmation);

@@ -6,8 +6,10 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
 use App\Application\Query\QueryBus;
+use App\Application\Settings\Command\UpdatePriceRounding;
 use App\Application\Settings\Command\UpdatePriceTiers;
 use App\Application\Settings\Query\GetPriceTiers;
+use App\Application\Settings\Query\GetPricingSettings;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Settings\PriceTier;
 use App\Infrastructure\Http\Flash;
@@ -40,6 +42,7 @@ final class PriceTierSettingsController
         echo View::page('settings/price-tiers', [
             'tiers' => $tiers,
             'maxDays' => $maxDays,
+            'pricingSettings' => $this->queries->ask(new GetPricingSettings()),
             'errors' => [],
             'old' => [],
         ], activeNav: 'settings-preisstaffelung', title: t('settings.price_tiers.title'));
@@ -57,19 +60,38 @@ final class PriceTierSettingsController
             $old["percentage_{$day}"] = $value;
         }
 
+        // Nutzerwunsch: Preisrundung wird direkt hier (gemeinsam mit der
+        // Staffelung) gepflegt — beide Teile werden mit EINEM Speichern
+        // übernommen, Fehler beider Teile gemeinsam angezeigt.
+        $old['price_rounding_step'] = $request->input('price_rounding_step', '') ?? '';
+        $old['price_rounding_direction'] = $request->input('price_rounding_direction', '') ?? '';
+
+        $errors = [];
         try {
             $this->commands->dispatch(new UpdatePriceTiers($maxDays, $percentages));
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+        }
+        try {
+            $this->commands->dispatch(new UpdatePriceRounding($old['price_rounding_step'], $old['price_rounding_direction']));
+        } catch (ValidationException $e) {
+            $errors = array_merge($errors, $e->errors());
+        }
+
+        if ($errors === []) {
             Flash::success(t('settings.price_tiers.flash.saved'));
             Response::redirect('/einstellungen/preisstaffelung');
-        } catch (ValidationException $e) {
-            $tiers = $this->queries->ask(new GetPriceTiers());
-            echo View::page('settings/price-tiers', [
-                'tiers' => $tiers,
-                'maxDays' => $maxDays,
-                'errors' => $e->errors(),
-                'old' => $old,
-            ], activeNav: 'settings-preisstaffelung', title: t('settings.price_tiers.title'));
+
+            return;
         }
+
+        echo View::page('settings/price-tiers', [
+            'tiers' => $this->queries->ask(new GetPriceTiers()),
+            'maxDays' => $maxDays,
+            'pricingSettings' => $this->queries->ask(new GetPricingSettings()),
+            'errors' => $errors,
+            'old' => $old,
+        ], activeNav: 'settings-preisstaffelung', title: t('settings.price_tiers.title'));
     }
 
     /** @param PriceTier[] $tiers */

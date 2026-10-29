@@ -6,7 +6,9 @@ namespace App\Application\Invoice\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Article\ArticleBundleComponentRepositoryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Rental\RentalBundleRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Invoice\Invoice;
@@ -48,6 +50,10 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         private readonly PriceTierRepositoryInterface $priceTiers,
         private readonly InvoiceRepositoryInterface $invoices,
         private readonly PricingSettingsRepositoryInterface $pricingSettings,
+        // Bundles (Migration 107): gebuchte Bundles werden zum Bundle-Preis
+        // abgerechnet, ihre Bestandteile nicht noch einmal einzeln.
+        private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
+        private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
     ) {
     }
 
@@ -112,31 +118,64 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         $deploymentDays = min(max($rental->maxDeploymentDays(), 1), 7);
         $tiers = $this->priceTiers->getAll();
 
+        $priceFor = function ($article) use ($tiers, $pricingSettings, $deploymentDays): string {
+            if (!$article->isBillable || $article->dailyRentalPrice === null) {
+                return '0.00';
+            }
+            $pricesByDay = RentalPriceCalculator::calculate(
+                $article->dailyRentalPrice,
+                $tiers,
+                $pricingSettings->priceRoundingStep,
+                $pricingSettings->priceRoundingDirection,
+            );
+
+            return $pricesByDay[$deploymentDays] ?? $article->dailyRentalPrice;
+        };
+
         $items = [];
+
+        // Gebuchte Bundles zuerst, je eine Position zum Bundle-Preis; die
+        // dadurch belegten Bestandteil-Mengen werden unten abgezogen.
+        $coveredByBundles = [];
+        foreach ($this->rentalBundles?->findByRental($rental->id) ?? [] as $rentalBundle) {
+            $bundleArticle = $this->articles->findById($rentalBundle->bundleArticleId);
+            if ($bundleArticle === null) {
+                continue;
+            }
+            foreach ($this->bundleComponents?->findByBundle($bundleArticle->id) ?? [] as $component) {
+                $coveredByBundles[$component->componentArticleId] = ($coveredByBundles[$component->componentArticleId] ?? 0)
+                    + $component->quantity * $rentalBundle->quantity;
+            }
+            $items[] = new InvoiceItem(
+                id: Uuid::v4(),
+                invoiceId: $invoice->id,
+                articleId: $bundleArticle->id,
+                quantity: $rentalBundle->quantity,
+                unitPricePerDay: $priceFor($bundleArticle),
+                lineNote: null,
+                sortOrder: count($items),
+            );
+        }
+
         foreach ($rentalItems as $rentalItem) {
             $article = $this->articles->findById($rentalItem->articleId);
             if ($article === null) {
                 continue;
             }
 
-            $unitPrice = '0.00';
-            if ($article->isBillable && $article->dailyRentalPrice !== null) {
-                $pricesByDay = RentalPriceCalculator::calculate(
-                    $article->dailyRentalPrice,
-                    $tiers,
-                    $pricingSettings->priceRoundingStep,
-                    $pricingSettings->priceRoundingDirection,
-                );
-                $unitPrice = $pricesByDay[$deploymentDays] ?? $article->dailyRentalPrice;
+            $quantity = $rentalItem->quantity - ($coveredByBundles[$rentalItem->articleId] ?? 0);
+            if ($quantity <= 0) {
+                continue;
             }
 
             $items[] = new InvoiceItem(
                 id: Uuid::v4(),
                 invoiceId: $invoice->id,
                 articleId: $rentalItem->articleId,
-                quantity: $rentalItem->quantity,
-                unitPricePerDay: $unitPrice,
+                quantity: $quantity,
+                unitPricePerDay: $priceFor($article),
                 lineNote: null,
+                sortOrder: count($items),
             );
         }
 

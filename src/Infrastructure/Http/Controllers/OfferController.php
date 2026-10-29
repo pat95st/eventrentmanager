@@ -22,6 +22,7 @@ use App\Application\Offer\Query\GetOffer;
 use App\Application\Offer\Query\ListOffers;
 use App\Application\Query\QueryBus;
 use App\Application\Settings\Query\GetCompanySettings;
+use App\Application\Settings\Query\GetInvoiceSettings;
 use App\Application\Settings\Query\GetLegalSettings;
 use App\Application\Settings\Query\GetOfferPdfSettings;
 use App\Application\Settings\Query\GetPdfDesignSettings;
@@ -125,6 +126,7 @@ final class OfferController
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
             contactId: $this->nullIfEmpty($request->input('contact_id')),
+            paymentMethodId: $this->nullIfEmpty($request->input('payment_method_id')),
         );
 
         try {
@@ -217,6 +219,7 @@ final class OfferController
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
             contactId: $this->nullIfEmpty($request->input('contact_id')),
+            paymentMethodId: $this->nullIfEmpty($request->input('payment_method_id')),
         );
 
         try {
@@ -527,12 +530,23 @@ final class OfferController
         // InvoiceController::renderForm() für die identische Begründung.
         $selectedContactId = $offer?->contactId;
 
+        // Zahlungsart-/Bankkonto-Auswahl (Migrationen 105/106): leere Auswahl
+        // = jeweiliger Standard, siehe PaymentSelection.
+        $paymentMethods = $this->queries->ask(new \App\Application\Settings\Query\ListPaymentMethods());
+
+        // USt-Vorschau für die Live-Summen im Formular (gilt für alle Dokumente,
+        // Quelle: Rechnungseinstellungen).
+        $taxSettings = $this->queries->ask(new GetInvoiceSettings());
         echo View::page('offers/form', [
+            'isSmallBusinessPreview' => $taxSettings->isSmallBusiness,
+            'vatRatePercentPreview' => $taxSettings->vatRatePercent,
             'offer' => $offer,
             'customers' => $customers,
             'selectedRentalId' => $selectedRentalId,
             'selectedRentalLabel' => $selectedRentalLabel,
             'selectedContactId' => $selectedContactId,
+            'paymentMethods' => $paymentMethods,
+            'selectedPaymentMethodId' => $offer?->paymentMethodId,
             'venues' => $venues,
             'articles' => $articles,
             'articleDisplayNames' => $articleDisplayNames,
@@ -702,6 +716,7 @@ final class OfferController
             'closing_text' => $command->closingText ?? '',
             'rental_id' => $command->rentalId ?? '',
             'contact_id' => $command->contactId ?? '',
+            'payment_method_id' => $command->paymentMethodId ?? '',
         ];
     }
 

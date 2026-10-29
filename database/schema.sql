@@ -99,6 +99,8 @@ CREATE TABLE articles (
     protection_class    ENUM('I','II','III') NULL, -- Schutzklasse, nur relevant/gepflegt, wenn requires_electrical_inspection = 1, siehe Migration 096
     has_firmware        TINYINT(1)      NOT NULL DEFAULT 0, -- Gerät besitzt eine aktualisierbare Firmware? siehe firmware_versions
     is_billable         TINYINT(1)      NOT NULL DEFAULT 1, -- bei einer Vermietung als eigener Posten abgerechnet (sonst Zubehör, z. B. Kabel)
+    is_rentable_individually TINYINT(1)  NOT NULL DEFAULT 1, -- 0 = nur als Bestandteil eines Bundles vermietbar (Migration 107)
+    is_bundle           TINYINT(1)      NOT NULL DEFAULT 0, -- Artikel ist ein Bundle aus anderen Artikeln (Migration 107)
     is_active           TINYINT(1)      NOT NULL DEFAULT 1, -- deaktivierte Artikel bleiben in der Artikelverwaltung sichtbar, verschwinden aber aus der Artikelauswahl (siehe 054_add_article_active_flag.sql)
     daily_rental_price  DECIMAL(10, 2)  NULL, -- Preis pro Einsatztag in Euro; nur relevant, wenn is_billable = 1
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -111,6 +113,21 @@ CREATE TABLE articles (
     INDEX idx_articles_category (category_id),
     UNIQUE KEY uq_articles_manufacturer_prefix (manufacturer_id, prefix),
     FULLTEXT INDEX ftx_articles_search (name, description)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Bestandteile eines Bundle-Artikels (Migration 107).
+CREATE TABLE article_bundle_components (
+    id                   CHAR(36)     NOT NULL PRIMARY KEY,
+    bundle_article_id    CHAR(36)     NOT NULL,
+    component_article_id CHAR(36)     NOT NULL,
+    quantity             INT UNSIGNED NOT NULL,
+    sort_order           INT          NOT NULL DEFAULT 0,
+    CONSTRAINT fk_article_bundle_components_bundle
+        FOREIGN KEY (bundle_article_id) REFERENCES articles (id) ON DELETE CASCADE,
+    CONSTRAINT fk_article_bundle_components_component
+        FOREIGN KEY (component_article_id) REFERENCES articles (id) ON DELETE RESTRICT,
+    UNIQUE KEY uq_article_bundle_components (bundle_article_id, component_article_id),
+    INDEX idx_article_bundle_components_component (component_article_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -678,6 +695,22 @@ CREATE TABLE rental_items (
     INDEX idx_rental_items_article (article_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- In einer Vermietung gebuchte Bundles (Migration 107); die physischen
+-- Bestandteile stehen zusätzlich als rental_items.
+CREATE TABLE rental_bundles (
+    id                CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id         CHAR(36)     NOT NULL,
+    bundle_article_id CHAR(36)     NOT NULL,
+    quantity          INT UNSIGNED NOT NULL,
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_bundles_rental
+        FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_bundles_article
+        FOREIGN KEY (bundle_article_id) REFERENCES articles (id) ON DELETE RESTRICT,
+    UNIQUE KEY uq_rental_bundles (rental_id, bundle_article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------------
 -- Tatsächlich ausgegebenes Material je Vermietung, anhand der konkreten
 -- Inventurnummer (Ausgabe-Checkliste). inventory_number_id bleibt RESTRICT,
@@ -904,6 +937,9 @@ CREATE TABLE company_settings (
     postal_code   VARCHAR(20)  NULL,
     city          VARCHAR(255) NULL,
     country       VARCHAR(255) NULL,
+    phone         VARCHAR(64)  NULL, -- für die Dokument-Fußzeile (Migration 108)
+    email         VARCHAR(255) NULL,
+    website       VARCHAR(255) NULL,
     logo_filename VARCHAR(255) NULL,
     logo_max_height_px SMALLINT NULL,
     dark_logo_filename VARCHAR(255) NULL,
@@ -1154,6 +1190,36 @@ CREATE TABLE pricing_settings (
 INSERT INTO invoice_settings (id, is_small_business, vat_rate_percent, tax_number, vat_id, payment_term_days, bank_name, iban, bic)
 VALUES (1, 0, 19.00, NULL, NULL, 14, NULL, NULL, NULL);
 
+-- ---------------------------------------------------------------------
+-- Bankverbindungen (mehrere, eine davon Standard) und Zahlungsarten mit
+-- Zahlungsziel — siehe Migrationen 105/106, App\Domain\Settings\BankAccount
+-- und App\Domain\Settings\PaymentMethod. Die Bank-/Zahlungsziel-Spalten in
+-- invoice_settings oben sind seitdem nur noch Fallback.
+-- ---------------------------------------------------------------------
+CREATE TABLE bank_accounts (
+    id             CHAR(36)     NOT NULL PRIMARY KEY,
+    label          VARCHAR(255) NOT NULL,
+    account_holder VARCHAR(255) NULL,
+    bank_name      VARCHAR(255) NULL,
+    iban           VARCHAR(34)  NOT NULL,
+    bic            VARCHAR(11)  NULL,
+    is_default     TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE payment_methods (
+    id                CHAR(36)     NOT NULL PRIMARY KEY,
+    name              VARCHAR(255) NOT NULL,
+    payment_term_days INT          NOT NULL DEFAULT 14,
+    note_text         TEXT         NULL,
+    is_default        TINYINT(1)   NOT NULL DEFAULT 0,
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO payment_methods (id, name, payment_term_days, note_text, is_default) VALUES (UUID(), 'Überweisung', 14, NULL, 1);
+
 -- Singleton-Zeile für pricing_settings fehlte hier bislang (siehe
 -- database/migrations/037_add_pricing_settings_and_invoice_discounts.sql,
 -- wo sie korrekt enthalten ist) — ohne sie wirft
@@ -1343,6 +1409,7 @@ CREATE TABLE offers (
     offer_number          VARCHAR(50)   NOT NULL,
     customer_id           CHAR(36)      NULL,
     contact_id            CHAR(36)      NULL, -- Ansprechpartner-Auswahl, siehe Migration 104
+    payment_method_id     CHAR(36)      NULL, -- Zahlungsart, NULL = Standard-Zahlungsart (Migration 106)
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
     start_date            DATE          NULL, -- optional seit Migration 102
@@ -1377,6 +1444,8 @@ CREATE TABLE offers (
         FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
     CONSTRAINT fk_offers_contact
         FOREIGN KEY (contact_id) REFERENCES customer_contacts (id) ON DELETE SET NULL,
+    CONSTRAINT fk_offers_payment_method
+        FOREIGN KEY (payment_method_id) REFERENCES payment_methods (id) ON DELETE SET NULL,
     CONSTRAINT uq_offers_offer_number UNIQUE (offer_number),
     INDEX idx_offers_customer (customer_id),
     INDEX idx_offers_venue (venue_id),
@@ -1465,6 +1534,7 @@ CREATE TABLE order_confirmations (
     order_confirmation_number VARCHAR(50) NOT NULL,
     customer_id           CHAR(36)      NULL,
     contact_id            CHAR(36)      NULL, -- Ansprechpartner-Auswahl, siehe Migration 104
+    payment_method_id     CHAR(36)      NULL, -- Zahlungsart, NULL = Standard-Zahlungsart (Migration 106)
     event_location        VARCHAR(255)  NULL,
     venue_id              CHAR(36)      NULL,
     start_date            DATE          NULL, -- optional seit Migration 102
@@ -1496,6 +1566,8 @@ CREATE TABLE order_confirmations (
         FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
     CONSTRAINT fk_order_confirmations_contact
         FOREIGN KEY (contact_id) REFERENCES customer_contacts (id) ON DELETE SET NULL,
+    CONSTRAINT fk_order_confirmations_payment_method
+        FOREIGN KEY (payment_method_id) REFERENCES payment_methods (id) ON DELETE SET NULL,
     INDEX idx_order_confirmations_customer (customer_id),
     INDEX idx_order_confirmations_venue (venue_id),
     INDEX idx_order_confirmations_status (status),
@@ -1549,6 +1621,8 @@ CREATE TABLE invoices (
     id                  CHAR(36)       NOT NULL PRIMARY KEY,
     customer_id         CHAR(36)       NULL,
     contact_id          CHAR(36)       NULL, -- Ansprechpartner-Auswahl, siehe Migration 104
+    bank_account_id     CHAR(36)       NULL, -- gewählte Bankverbindung, NULL = Standardkonto (Migration 105)
+    payment_method_id   CHAR(36)       NULL, -- Zahlungsart, NULL = Standard-Zahlungsart (Migration 106)
     event_location      VARCHAR(255)   NULL,
     venue_id            CHAR(36)       NULL,
     start_date          DATE           NULL, -- optional seit Migration 102
@@ -1602,6 +1676,10 @@ CREATE TABLE invoices (
         FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
     CONSTRAINT fk_invoices_contact
         FOREIGN KEY (contact_id) REFERENCES customer_contacts (id) ON DELETE SET NULL,
+    CONSTRAINT fk_invoices_bank_account
+        FOREIGN KEY (bank_account_id) REFERENCES bank_accounts (id) ON DELETE SET NULL,
+    CONSTRAINT fk_invoices_payment_method
+        FOREIGN KEY (payment_method_id) REFERENCES payment_methods (id) ON DELETE SET NULL,
     INDEX idx_invoices_customer (customer_id),
     INDEX idx_invoices_venue (venue_id),
     INDEX idx_invoices_status (status),

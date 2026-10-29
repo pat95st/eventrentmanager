@@ -5,6 +5,7 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
+/** @var list<array{article_id: string, label: string, quantity: int}> $bundleComponentRows */
 
 use App\Domain\Article\ProtectionClass;
 use function App\Infrastructure\Http\e;
@@ -32,6 +33,14 @@ $is19Inch = array_key_exists('is_19_inch', $old)
 $hasFirmware = array_key_exists('has_firmware', $old)
     ? (bool) $old['has_firmware']
     : ($article?->hasFirmware ?? false);
+// Bundles (Migration 107)
+$notRentableIndividually = array_key_exists('not_rentable_individually', $old)
+    ? (bool) $old['not_rentable_individually']
+    : !($article?->isRentableIndividually ?? true);
+$isBundle = array_key_exists('is_bundle', $old)
+    ? (bool) $old['is_bundle']
+    : ($article?->isBundle ?? false);
+$bundleComponentRows ??= [];
 ?>
 
 <div class="mb-6">
@@ -219,6 +228,104 @@ $hasFirmware = array_key_exists('has_firmware', $old)
                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.daily_rental_price_hint')) ?></p>
             <?php endif; ?>
         </div>
+    </div>
+
+    <?php
+        // Vermietung: "nicht einzeln vermietbar" und Bundle (Migration 107).
+        // Ein Bundle ist ein eigener Artikel mit eigenem Tagesmietsatz, dessen
+        // Bestandteile beim Vermieten automatisch mit eingeplant werden.
+    ?>
+    <div class="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <h2 class="text-sm font-medium text-slate-700 dark:text-slate-300"><?= e(t('articles.form.rental_section')) ?></h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div data-not-rentable-wrapper class="<?= $isBundle ? 'opacity-50' : '' ?>">
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" name="not_rentable_individually" value="1" data-not-rentable <?= $notRentableIndividually && !$isBundle ? 'checked' : '' ?> <?= $isBundle ? 'disabled' : '' ?>>
+                    <?= e(t('articles.form.not_rentable_individually')) ?>
+                </label>
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.not_rentable_individually_hint')) ?></p>
+            </div>
+            <div>
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" name="is_bundle" value="1" data-is-bundle <?= $isBundle ? 'checked' : '' ?>>
+                    <?= e(t('articles.form.is_bundle')) ?>
+                </label>
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.is_bundle_hint')) ?></p>
+                <?php if (isset($errors['isBundle'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['isBundle']) ?></p><?php endif; ?>
+            </div>
+        </div>
+
+        <div data-bundle-section class="<?= $isBundle ? '' : 'hidden' ?> rounded-md border border-slate-200 p-4 dark:border-slate-700">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300"><?= e(t('articles.form.bundle_components')) ?></h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.bundle_components_hint')) ?></p>
+                </div>
+                <button type="button" data-bundle-add class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('articles.form.bundle_component_add')) ?>
+                </button>
+            </div>
+            <?php if (isset($errors['bundleComponents'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['bundleComponents']) ?></p><?php endif; ?>
+            <div data-bundle-rows class="space-y-2">
+                <?php foreach ($bundleComponentRows as $componentRow): ?>
+                    <div data-bundle-row class="flex flex-wrap items-end gap-2">
+                        <div class="min-w-[220px] flex-1">
+                            <?php renderLiveSearchField('bundle_component_article_id[]', '/artikel/suche', $componentRow['article_id'], $componentRow['label'], t('articles.form.bundle_component_placeholder'), null, 'select', false, false); ?>
+                        </div>
+                        <input type="number" name="bundle_component_quantity[]" min="1" max="999" value="<?= e((string) $componentRow['quantity']) ?>" title="<?= e(t('articles.form.bundle_component_quantity')) ?>"
+                               class="w-20 rounded-md border border-slate-300 px-2 py-2 text-sm dark:border-slate-700">
+                        <button type="button" data-bundle-remove class="px-2 py-2 text-sm text-red-600 hover:underline dark:text-red-400" title="<?= e(t('common.delete')) ?>">&times;</button>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <template data-bundle-template>
+                <div data-bundle-row class="flex flex-wrap items-end gap-2">
+                    <div class="min-w-[220px] flex-1">
+                        <?php renderLiveSearchField('bundle_component_article_id[]', '/artikel/suche', null, null, t('articles.form.bundle_component_placeholder'), null, 'select', false, false); ?>
+                    </div>
+                    <input type="number" name="bundle_component_quantity[]" min="1" max="999" value="1" title="<?= e(t('articles.form.bundle_component_quantity')) ?>"
+                           class="w-20 rounded-md border border-slate-300 px-2 py-2 text-sm dark:border-slate-700">
+                    <button type="button" data-bundle-remove class="px-2 py-2 text-sm text-red-600 hover:underline dark:text-red-400" title="<?= e(t('common.delete')) ?>">&times;</button>
+                </div>
+            </template>
+        </div>
+        <script>
+            (function () {
+                var bundleCheckbox = document.querySelector('[data-is-bundle]');
+                var notRentable = document.querySelector('[data-not-rentable]');
+                var notRentableWrapper = document.querySelector('[data-not-rentable-wrapper]');
+                var section = document.querySelector('[data-bundle-section]');
+                var rows = document.querySelector('[data-bundle-rows]');
+                var template = document.querySelector('[data-bundle-template]');
+                var addButton = document.querySelector('[data-bundle-add]');
+
+                function addRow() {
+                    var fragment = template.content.cloneNode(true);
+                    var row = fragment.querySelector('[data-bundle-row]');
+                    rows.appendChild(fragment);
+                    if (window.LiveSearch) { window.LiveSearch.init(row); }
+                }
+
+                function sync() {
+                    var isBundle = bundleCheckbox.checked;
+                    section.classList.toggle('hidden', !isBundle);
+                    // Ein Bundle ist selbst immer wählbar — die Option
+                    // "nicht einzeln vermietbar" gilt nur für normale Artikel.
+                    notRentable.disabled = isBundle;
+                    if (isBundle) { notRentable.checked = false; }
+                    notRentableWrapper.classList.toggle('opacity-50', isBundle);
+                    if (isBundle && rows.querySelectorAll('[data-bundle-row]').length === 0) { addRow(); }
+                }
+
+                bundleCheckbox.addEventListener('change', sync);
+                addButton.addEventListener('click', addRow);
+                rows.addEventListener('click', function (event) {
+                    var remove = event.target.closest('[data-bundle-remove]');
+                    if (remove) { remove.closest('[data-bundle-row]').remove(); }
+                });
+                sync();
+            })();
+        </script>
     </div>
 
     <div>

@@ -83,6 +83,10 @@ final class RentalController
         private readonly VoucherRedemptionRepositoryInterface $voucherRedemptions,
         private readonly LegalSettingsRepositoryInterface $legalSettings,
         private readonly \App\Domain\Rental\RentalRepositoryInterface $rentals,
+        // Bundles (Migration 107): gebuchte Bundles anzeigen/entfernen.
+        private readonly ?\App\Domain\Rental\RentalBundleRepositoryInterface $rentalBundles = null,
+        private readonly ?\App\Application\Article\Query\BundleComponentResolver $bundleResolver = null,
+        private readonly ?\App\Application\Rental\RentalBundlePlanner $bundlePlanner = null,
     ) {
     }
 
@@ -211,7 +215,9 @@ final class RentalController
             return;
         }
 
-        $articles = $this->queries->ask(new ListArticles(onlyActive: true))->items;
+        // Bundles (Migration 107): Bundles wählbar, nicht einzeln vermietbare
+        // Artikel nur über ihr Bundle.
+        $articles = $this->queries->ask(new ListArticles(onlyActive: true, onlyRentableIndividually: true))->items;
         $venue = $detail->rental->venueId !== null ? $this->venues->findById($detail->rental->venueId) : null;
         $warehouses = $this->queries->ask(new ListWarehouses())->items;
         $companySettings = $this->queries->ask(new GetCompanySettings());
@@ -258,8 +264,32 @@ final class RentalController
             $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
         }
 
+        // Gebuchte Bundles (Migration 107) mit Anzeige-Label und Bestandteilen,
+        // sowie je Artikel die davon durch Bundles belegte Menge.
+        $bookedBundles = [];
+        $bundleRequiredByArticle = [];
+        foreach ($this->rentalBundles?->findByRental($id) ?? [] as $rentalBundle) {
+            try {
+                $bundleDetail = $this->queries->ask(new \App\Application\Article\Query\GetArticle($rentalBundle->bundleArticleId));
+            } catch (NotFoundException) {
+                continue;
+            }
+            $components = $this->bundleResolver?->resolve([$bundleDetail->article])[$bundleDetail->article->id] ?? [];
+            foreach ($components as $component) {
+                $bundleRequiredByArticle[$component['articleId']] = ($bundleRequiredByArticle[$component['articleId']] ?? 0) + $component['quantity'] * $rentalBundle->quantity;
+            }
+            $bookedBundles[] = [
+                'id' => $rentalBundle->id,
+                'label' => ArticleDisplayName::of($bundleDetail->article, $bundleDetail->manufacturer),
+                'quantity' => $rentalBundle->quantity,
+                'description' => $components !== [] ? \App\Application\Article\Query\BundleComponentResolver::describe($components, $rentalBundle->quantity) : '',
+            ];
+        }
+
         echo View::page('rentals/show', [
             'detail' => $detail,
+            'bookedBundles' => $bookedBundles,
+            'bundleRequiredByArticle' => $bundleRequiredByArticle,
             'articles' => $articles,
             'articleDisplayNames' => $articleDisplayNames,
             'venue' => $venue,
@@ -644,6 +674,23 @@ final class RentalController
             Response::notFound($e->getMessage());
 
             return;
+        }
+
+        Response::redirect('/veranstaltungen/' . $rentalId);
+    }
+
+    /** Entfernt ein gebuchtes Bundle samt Bestandteil-Mengen (Migration 107). */
+    public function removeBundle(Request $request): void
+    {
+        $rentalId = $request->input('rental_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new \App\Application\Rental\Command\RemoveRentalBundle($request->param('id')));
+            Flash::success(t('rentals.flash.bundle_removed'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
         }
 
         Response::redirect('/veranstaltungen/' . $rentalId);

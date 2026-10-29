@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Rental\Command;
 
+use App\Application\Rental\RentalBundlePlanner;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
@@ -30,6 +31,7 @@ final class AddRentalItemHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly ArticleRepositoryInterface $articles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
+        private readonly ?RentalBundlePlanner $bundlePlanner = null,
     ) {
     }
 
@@ -53,8 +55,22 @@ final class AddRentalItemHandler implements CommandHandlerInterface
             $errors['quantity'] = 'Bitte eine Menge von mindestens 1 angeben.';
         }
 
+        // Bundles (Migration 107): nicht einzeln vermietbare Artikel nur über
+        // ihr Bundle; ein Bundle wird in seine Bestandteile aufgelöst.
+        if ($article !== null && !$article->isBundle && !$article->isRentableIndividually) {
+            $errors['articleId'] = "„{$article->name}“ ist nicht einzeln vermietbar — bitte das passende Bundle wählen.";
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
+        }
+
+        if ($article->isBundle) {
+            if ($this->bundlePlanner === null) {
+                throw new ValidationException(['articleId' => 'Bundles können hier nicht eingeplant werden.']);
+            }
+
+            return $this->bundlePlanner->add($command->rentalId, $article, (int) $quantity);
         }
 
         $existing = $this->items->findByRentalAndArticle($command->rentalId, $command->articleId);

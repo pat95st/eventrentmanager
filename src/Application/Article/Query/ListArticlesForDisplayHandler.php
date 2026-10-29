@@ -40,6 +40,10 @@ final class ListArticlesForDisplayHandler implements QueryHandlerInterface
             $query->page,
             $query->pageSize,
             $query->onlyActive,
+            $query->manufacturerIds,
+            $query->categoryIds,
+            $query->onlyRentableIndividually,
+            $query->excludeBundles,
         ));
 
         $manufacturerCache = [];

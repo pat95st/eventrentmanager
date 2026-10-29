@@ -8,6 +8,8 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -36,6 +38,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
     ) {
     }
 
@@ -72,6 +75,10 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
             $command->contactId,
         );
 
+        // Zahlungsart (Migration 106), siehe PaymentSelection.
+        [$paymentErrors, $paymentMethodId] = PaymentSelection::validate($this->paymentMethods, $command->paymentMethodId);
+        $errors = array_merge($errors, $paymentErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -91,6 +98,7 @@ final class UpdateOrderConfirmationHandler implements CommandHandlerInterface
         $orderConfirmation->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $orderConfirmation->sourceRentalId = $data['rentalId'];
         $orderConfirmation->contactId = $data['contactId'];
+        $orderConfirmation->paymentMethodId = $paymentMethodId;
         $orderConfirmation->updatedAt = new DateTimeImmutable();
 
         $this->orderConfirmations->save($orderConfirmation);

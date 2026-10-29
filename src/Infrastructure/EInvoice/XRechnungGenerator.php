@@ -151,14 +151,38 @@ final class XRechnungGenerator
         $this->append($dom, $buyerLegalEntity, $cbc, 'cbc:RegistrationName', $customer?->displayName() ?? ''); // BT-44
 
         // --- BG-16 Payment means ------------------------------------------
-        if ($invoiceSettings->iban !== null && trim($invoiceSettings->iban) !== '') {
+        // Gewählte bzw. Standard-Bankverbindung (Migration 105), Fallback auf
+        // die alte Bankverbindung aus den Rechnungseinstellungen.
+        $bankAccount = $detail->bankAccount;
+        $payeeIban = $bankAccount?->iban ?? ($invoiceSettings->iban !== null ? str_replace(' ', '', trim($invoiceSettings->iban)) : null);
+        $payeeAccountName = $bankAccount !== null ? ($bankAccount->accountHolder ?? $bankAccount->bankName) : $invoiceSettings->bankName;
+        $payeeBic = $bankAccount !== null ? $bankAccount->bic : $invoiceSettings->bic;
+        if ($payeeIban !== null && $payeeIban !== '') {
             $paymentMeans = $this->appendEl($dom, $root, $cac, 'cac:PaymentMeans');
             $this->append($dom, $paymentMeans, $cbc, 'cbc:PaymentMeansCode', '58');
             $account = $this->appendEl($dom, $paymentMeans, $cac, 'cac:PayeeFinancialAccount');
-            $this->append($dom, $account, $cbc, 'cbc:ID', $invoiceSettings->iban);
-            if ($invoiceSettings->bankName !== null && trim($invoiceSettings->bankName) !== '') {
-                $this->append($dom, $account, $cbc, 'cbc:Name', $invoiceSettings->bankName);
+            $this->append($dom, $account, $cbc, 'cbc:ID', $payeeIban); // BT-84
+            if ($payeeAccountName !== null && trim($payeeAccountName) !== '') {
+                $this->append($dom, $account, $cbc, 'cbc:Name', $payeeAccountName); // BT-85
             }
+            if ($payeeBic !== null && trim($payeeBic) !== '') {
+                $branch = $this->appendEl($dom, $account, $cac, 'cac:FinancialInstitutionBranch');
+                $this->append($dom, $branch, $cbc, 'cbc:ID', trim($payeeBic)); // BT-86
+            }
+        }
+
+        // --- BT-20 Payment terms (Zahlungsart mit Zahlungsziel, Migration 106)
+        if ($detail->paymentMethod !== null) {
+            $paymentTermsText = $detail->paymentMethod->name . ' – '
+                . ($invoice->dueDate !== null && $detail->paymentMethod->paymentTermDays > 0
+                    ? 'zahlbar bis ' . $invoice->dueDate->format('d.m.Y')
+                    : $detail->paymentMethod->termLabel());
+            $note = $detail->paymentMethod->renderNote($invoice->dueDate);
+            if ($note !== null) {
+                $paymentTermsText .= '. ' . $note;
+            }
+            $paymentTerms = $this->appendEl($dom, $root, $cac, 'cac:PaymentTerms');
+            $this->append($dom, $paymentTerms, $cbc, 'cbc:Note', $paymentTermsText);
         }
 
         $taxCategoryId = $isSmallBusiness ? 'E' : 'S'; // BT-118

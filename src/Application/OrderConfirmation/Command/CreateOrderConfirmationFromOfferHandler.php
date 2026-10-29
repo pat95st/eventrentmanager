@@ -72,6 +72,10 @@ final class CreateOrderConfirmationFromOfferHandler implements CommandHandlerInt
                 accessoryFlatRatePercent: $offer->accessoryFlatRatePercent,
                 discountType: $offer->discountType,
                 discountValue: $offer->discountValue,
+                // Ansprechpartner und Zahlungsart vom Angebot übernehmen
+                // (Migrationen 104/106).
+                contactId: $offer->contactId,
+                paymentMethodId: $offer->paymentMethodId,
             );
 
             $this->orderConfirmations->save($orderConfirmation);

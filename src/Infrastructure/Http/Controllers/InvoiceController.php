@@ -124,6 +124,8 @@ final class InvoiceController
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
             contactId: $this->nullIfEmpty($request->input('contact_id')),
+            paymentMethodId: $this->nullIfEmpty($request->input('payment_method_id')),
+            bankAccountId: $this->nullIfEmpty($request->input('bank_account_id')),
             flatRateEnabled: $request->input('flat_rate_enabled') === '1',
             flatRateAmount: $request->input('flat_rate_amount'),
             logisticsMethod: $this->nullIfEmpty($request->input('logistics_method')),
@@ -209,6 +211,8 @@ final class InvoiceController
             closingText: $request->input('closing_text'),
             rentalId: $this->nullIfEmpty($request->input('rental_id')),
             contactId: $this->nullIfEmpty($request->input('contact_id')),
+            paymentMethodId: $this->nullIfEmpty($request->input('payment_method_id')),
+            bankAccountId: $this->nullIfEmpty($request->input('bank_account_id')),
             flatRateEnabled: $request->input('flat_rate_enabled') === '1',
             flatRateAmount: $request->input('flat_rate_amount'),
             logisticsMethod: $this->nullIfEmpty($request->input('logistics_method')),
@@ -514,6 +518,11 @@ final class InvoiceController
         // $selectedRentalId/-Label oben) bereits serverseitig vorbelegt.
         $selectedContactId = $invoice?->contactId;
 
+        // Zahlungsart-/Bankkonto-Auswahl (Migrationen 105/106): leere Auswahl
+        // = jeweiliger Standard, siehe PaymentSelection.
+        $paymentMethods = $this->queries->ask(new \App\Application\Settings\Query\ListPaymentMethods());
+        $bankAccounts = $this->queries->ask(new \App\Application\Settings\Query\ListBankAccounts());
+
         echo View::page('invoices/form', [
             'invoice' => $invoice,
             'customers' => $customers,
@@ -536,6 +545,10 @@ final class InvoiceController
             'selectedRentalId' => $selectedRentalId,
             'selectedRentalLabel' => $selectedRentalLabel,
             'selectedContactId' => $selectedContactId,
+            'paymentMethods' => $paymentMethods,
+            'selectedPaymentMethodId' => $invoice?->paymentMethodId,
+            'bankAccounts' => $bankAccounts,
+            'selectedBankAccountId' => $invoice?->bankAccountId,
         ], activeNav: 'invoices', title: $invoice !== null ? t('invoices.edit') : t('invoices.new'));
     }
 
@@ -662,6 +675,8 @@ final class InvoiceController
             'closing_text' => $command->closingText ?? '',
             'rental_id' => $command->rentalId ?? '',
             'contact_id' => $command->contactId ?? '',
+            'payment_method_id' => $command->paymentMethodId ?? '',
+            'bank_account_id' => $command->bankAccountId ?? '',
             'flat_rate_enabled' => $command->flatRateEnabled ? '1' : '',
             'flat_rate_amount' => $command->flatRateAmount ?? '',
             'logistics_method' => $command->logisticsMethod ?? '',

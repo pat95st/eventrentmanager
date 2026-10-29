@@ -10,6 +10,7 @@ use App\Domain\Customer\Customer;
 use App\Domain\Customer\CustomerContact;
 use App\Domain\Invoice\InvoiceFreeTextItem;
 use App\Domain\Invoice\InvoiceSectionText;
+use App\Domain\Settings\BankAccount;
 use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\InvoicePdfSettings;
 use App\Domain\Settings\InvoiceSettings;
@@ -48,6 +49,9 @@ use App\Infrastructure\FileStorage\LocalFileStorage;
 final class InvoicePdfGenerator
 {
     private const MARGIN = 40.0;
+    // Unterste Grenze für Inhalt (Summen, Texte, Bedingungen) — darunter
+    // liegt die Fußzeile (siehe DocumentFooter::TOP_Y).
+    private const CONTENT_BOTTOM = DocumentFooter::TOP_Y + 12.0;
     private const LOGO_MAX_WIDTH = 120.0;
     private const LOGO_MAX_HEIGHT = 50.0;
     private const TABLE_FONT_SIZE = 8.5;
@@ -66,6 +70,7 @@ final class InvoicePdfGenerator
     public function __construct(
         private readonly LocalFileStorage $fileStorage,
         private readonly RichTextPdfRenderer $richTextRenderer,
+        private readonly ?DocumentFooter $footer = null,
     ) {
     }
 
@@ -213,15 +218,20 @@ final class InvoicePdfGenerator
             $y -= 30;
         }
 
-        $bankLine = $this->buildBankLine($invoiceSettings);
-        if ($bankLine !== null) {
-            if ($y < self::MARGIN + 30) {
+        // Zahlungsart, Hinweistext der Zahlungsart und Bankverbindung
+        // (Migrationen 105/106) unter der Summe.
+        $paymentLines = $this->buildPaymentLines($detail, $invoiceSettings, $pageWidth - 2 * self::MARGIN);
+        foreach ($paymentLines as $paymentLine) {
+            if ($y < self::CONTENT_BOTTOM) {
                 $pageNumber++;
                 $writer->addPage();
                 $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);
             }
-            $writer->text(self::MARGIN, $y, $bankLine, 8.5);
-            $y -= 22;
+            $writer->text(self::MARGIN, $y, $paymentLine, 8.5);
+            $y -= 12;
+        }
+        if ($paymentLines !== []) {
+            $y -= 10;
         }
 
         $closingBlocks = $this->richTextRenderer->parse($invoicePdfSettings?->closingHtml);
@@ -243,7 +253,7 @@ final class InvoicePdfGenerator
                 $closingX,
                 $closingY,
                 $closingWidth,
-                self::MARGIN + 20,
+                self::CONTENT_BOTTOM,
                 function () use ($writer, $detail, $companySettings, $invoiceSettings, $pageWidth, $pageHeight, $pdfDesignSettings, &$closingPageNumber): float {
                     $closingPageNumber++;
                     $writer->addPage();
@@ -271,7 +281,7 @@ final class InvoicePdfGenerator
                 self::MARGIN,
                 $y - 10.0,
                 $pageWidth - 2 * self::MARGIN,
-                self::MARGIN + 20,
+                self::CONTENT_BOTTOM,
                 function () use ($writer, $detail, $companySettings, $invoiceSettings, $pageWidth, $pageHeight, $pdfDesignSettings, &$documentClosingPageNumber): float {
                     $documentClosingPageNumber++;
                     $writer->addPage();
@@ -286,6 +296,9 @@ final class InvoicePdfGenerator
         if ($termsText !== null) {
             $y = $this->drawTerms($writer, $detail, $companySettings, $invoiceSettings, $termsText, $y, $pageWidth, $pageHeight, $pageNumber, $pdfDesignSettings);
         }
+
+        // Fußzeile (Firma | Kontakt/Steuernummer | Bank) auf jeder Seite.
+        $this->footer?->drawOnAllPages($writer, $detail->bankAccount);
 
         return $writer->output();
     }
@@ -332,7 +345,14 @@ final class InvoicePdfGenerator
             // Positionen (isRentalItem = false) sind davon unberührt.
             $hidePrice = $detail->invoice->flatRateEnabled && $entry->item->isRentalItem;
             $rows[] = [
-                'nameLines' => $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+                // Bundles (Migration 107): Bestandteile als Zusatzzeile(n)
+                // unter dem Bundle-Namen ("enthält: 2× …, 1× …").
+                'nameLines' => array_merge(
+                    $this->wrapText($entry->displayName(), $columns['article']['width'], self::TABLE_FONT_SIZE),
+                    isset($detail->bundleComponents[$entry->article->id])
+                        ? $this->wrapText(\App\Application\Article\Query\BundleComponentResolver::describe($detail->bundleComponents[$entry->article->id], (int) $entry->item->quantity), $columns['article']['width'], self::TABLE_FONT_SIZE)
+                        : [],
+                ),
                 'quantity' => (string) $entry->item->quantity,
                 'unitPrice' => $hidePrice ? '–' : (number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR'),
                 'lineTotal' => $hidePrice ? '–' : (number_format($entry->lineTotal(), 2, ',', '.') . ' EUR'),
@@ -480,10 +500,16 @@ final class InvoicePdfGenerator
         $lines[] = 'Rechnungsnummer: ' . ($invoice->invoiceNumber ?? '—');
         $lines[] = 'Rechnungsdatum: ' . ($invoice->invoiceDate?->format('d.m.Y') ?? $invoice->createdAt->format('d.m.Y') . ' (Entwurf)');
 
+        // Zahlungsziel aus der Zahlungsart (Migration 106), Fallback auf das
+        // alte firmenweite Zahlungsziel; die Zahlungsart selbst steht
+        // ausführlich unter der Summe (siehe buildPaymentLines()).
         if ($invoice->dueDate !== null) {
-            $lines[] = 'Fällig am: ' . $invoice->dueDate->format('d.m.Y') . ' — bitte überweisen Sie den Betrag bis zu diesem Datum.';
+            $lines[] = 'Fällig am: ' . $invoice->dueDate->format('d.m.Y');
         } else {
-            $lines[] = 'Zahlungsziel: ' . $invoiceSettings->paymentTermDays . ' Tage nach Rechnungsstellung (voraussichtlich, noch nicht versendet).';
+            $termDays = $detail->paymentMethod?->paymentTermDays ?? $invoiceSettings->paymentTermDays;
+            $lines[] = $termDays <= 0
+                ? 'Zahlungsziel: sofort fällig (voraussichtlich, noch nicht versendet).'
+                : 'Zahlungsziel: ' . $termDays . ' Tage nach Rechnungsstellung (voraussichtlich, noch nicht versendet).';
         }
 
         // Die vormalige Zeile "Kunde: ..." entfällt hier — der Kunde steht
@@ -538,29 +564,42 @@ final class InvoicePdfGenerator
 
         $returnLine = $this->buildReturnAddressLine($companySettings);
         $returnOverride = $layout?->get('return_address');
-        $returnX = $zoneX;
-        $returnFontSize = 7.5;
-        $y = $zoneTopY - 7.0;
-        if ($returnOverride !== null) {
-            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
-            $returnX = $returnPoint['x'];
-            $y = $returnPoint['y'];
-            $returnFontSize = $returnOverride->fontSize ?? 7.5;
-        }
-        if ($returnLine !== null) {
-            $writer->text($returnX, $y, $returnLine, $returnFontSize);
-        }
-        $y -= 18.0;
-
         $addressOverride = $layout?->get('customer_address');
+
+        // Empfängeradresse: Standard direkt unter der Absenderzeile in der
+        // DIN-5008-Fensterzone, per Layout-Editor überschreibbar.
         $addressX = $zoneX;
+        $addressY = $zoneTopY - 25.0;
         $addressFontSize = 10.0;
         if ($addressOverride !== null) {
             $addressPoint = $addressOverride->toPdfPoint($pageHeight);
             $addressX = $addressPoint['x'];
-            $y = $addressPoint['y'];
+            $addressY = $addressPoint['y'];
             $addressFontSize = $addressOverride->fontSize ?? 10.0;
         }
+
+        // Einzeilige Absenderangabe (Rücksendeadresse) über der
+        // Empfängeradresse. Nutzerhinweis "fehlt über der Kundenadresse":
+        // wurde nur die Kundenadresse im Layout-Editor verschoben, wandert
+        // die Absenderzeile jetzt mit (statt allein an der Standardposition
+        // zurückzubleiben); eine eigene Position der Absenderzeile im
+        // Layout-Editor hat weiterhin Vorrang. Dünne Unterstreichung wie bei
+        // DIN-5008-Rücksendeangaben üblich.
+        $returnFontSize = $returnOverride?->fontSize ?? 7.5;
+        if ($returnOverride !== null) {
+            $returnPoint = $returnOverride->toPdfPoint($pageHeight);
+            $returnX = $returnPoint['x'];
+            $returnY = $returnPoint['y'];
+        } else {
+            $returnX = $addressX;
+            $returnY = $addressY + 18.0;
+        }
+        if ($returnLine !== null) {
+            $writer->text($returnX, $returnY, $returnLine, $returnFontSize);
+            $writer->line($returnX, $returnY - 2.0, $returnX + $writer->textWidth($returnLine, $returnFontSize), $returnY - 2.0, 0.4, '0.3 0.3 0.3');
+        }
+
+        $y = $addressY;
 
         foreach ($this->buildCustomerAddressLines($detail->customer, $detail->contact) as $line) {
             $writer->text($addressX, $y, $line, $addressFontSize);
@@ -639,8 +678,65 @@ final class InvoicePdfGenerator
         return $parts === [] ? null : implode('   ', $parts);
     }
 
-    private function buildBankLine(InvoiceSettings $invoiceSettings): ?string
+    /**
+     * Zeilen unter der Summe: Zahlungsart mit Zahlungsziel bzw.
+     * Fälligkeitsdatum, optionaler Hinweistext der Zahlungsart (umbrochen)
+     * und die Bankverbindung (gewählt bzw. Standardkonto, sonst Fallback auf
+     * die alten Bankfelder der InvoiceSettings).
+     *
+     * @return string[]
+     */
+    private function buildPaymentLines(InvoiceDetail $detail, InvoiceSettings $invoiceSettings, float $maxWidth): array
     {
+        $lines = [];
+        $paymentMethod = $detail->paymentMethod;
+        $dueDate = $detail->invoice->dueDate;
+
+        if ($paymentMethod !== null) {
+            $term = $dueDate !== null
+                ? ($paymentMethod->paymentTermDays <= 0 ? 'sofort fällig' : 'zahlbar bis ' . $dueDate->format('d.m.Y'))
+                : $paymentMethod->termLabel() . ($paymentMethod->paymentTermDays > 0 ? ' nach Rechnungsstellung' : '');
+            $lines[] = 'Zahlungsart: ' . $paymentMethod->name . ' – ' . $term;
+
+            $note = $paymentMethod->renderNote($dueDate);
+            if ($note !== null) {
+                foreach ($this->wrapText($note, $maxWidth, 8.5, true) as $noteLine) {
+                    $lines[] = $noteLine;
+                }
+            }
+        }
+
+        // Mit Fußzeile steht die Bankverbindung dort — nicht doppelt im Text.
+        $bankLine = $this->footer === null ? $this->buildBankLine($detail->bankAccount, $invoiceSettings) : null;
+        if ($bankLine !== null) {
+            foreach ($this->wrapText($bankLine, $maxWidth, 8.5) as $bankLinePart) {
+                $lines[] = $bankLinePart;
+            }
+        }
+
+        return $lines;
+    }
+
+    private function buildBankLine(?BankAccount $bankAccount, InvoiceSettings $invoiceSettings): ?string
+    {
+        if ($bankAccount !== null) {
+            $parts = [];
+            if ($bankAccount->accountHolder !== null) {
+                $parts[] = 'Kontoinhaber ' . $bankAccount->accountHolder;
+            }
+            if ($bankAccount->bankName !== null) {
+                $parts[] = $bankAccount->bankName;
+            }
+            $parts[] = 'IBAN ' . $bankAccount->formattedIban();
+            if ($bankAccount->bic !== null) {
+                $parts[] = 'BIC ' . $bankAccount->bic;
+            }
+
+            return 'Bankverbindung: ' . implode(', ', $parts);
+        }
+
+        // Fallback: alte, einzelne Bankverbindung aus den Rechnungseinstellungen
+        // (nur noch relevant, solange keine Bankverbindung angelegt ist).
         if (
             ($invoiceSettings->bankName === null || trim($invoiceSettings->bankName) === '')
             && ($invoiceSettings->iban === null || trim($invoiceSettings->iban) === '')
@@ -789,7 +885,7 @@ final class InvoicePdfGenerator
         $lines = $this->wrapText($termsText, $pageWidth - 2 * self::MARGIN, 8.0, true);
 
         foreach ($lines as $line) {
-            if ($y < self::MARGIN + 20) {
+            if ($y < self::CONTENT_BOTTOM) {
                 $pageNumber++;
                 $writer->addPage();
                 $y = $this->drawHeader($writer, $detail, $companySettings, $invoiceSettings, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings);

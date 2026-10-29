@@ -27,12 +27,12 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
                 id, order_confirmation_number, customer_id, event_location, venue_id, start_date, end_date,
                 status, note, closing_text,
                 accessory_flat_rate_enabled, accessory_flat_rate_percent, discount_type, discount_value,
-                source_offer_id, source_rental_id, contact_id, created_at, updated_at
+                source_offer_id, source_rental_id, contact_id, payment_method_id, created_at, updated_at
              ) VALUES (
                 :id, :order_confirmation_number, :customer_id, :event_location, :venue_id, :start_date, :end_date,
                 :status, :note, :closing_text,
                 :accessory_flat_rate_enabled, :accessory_flat_rate_percent, :discount_type, :discount_value,
-                :source_offer_id, :source_rental_id, :contact_id, :created_at, :updated_at
+                :source_offer_id, :source_rental_id, :contact_id, :payment_method_id, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, event_location = :event_location2, venue_id = :venue_id2,
@@ -42,7 +42,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
                 accessory_flat_rate_percent = :accessory_flat_rate_percent2,
                 discount_type = :discount_type2, discount_value = :discount_value2,
                 source_rental_id = :source_rental_id2,
-                contact_id = :contact_id2,
+                contact_id = :contact_id2, payment_method_id = :payment_method_id2,
                 updated_at = :updated_at2'
         );
 
@@ -65,6 +65,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             'source_offer_id' => $orderConfirmation->sourceOfferId,
             'source_rental_id' => $orderConfirmation->sourceRentalId,
             'contact_id' => $orderConfirmation->contactId,
+            'payment_method_id' => $orderConfirmation->paymentMethodId,
             'created_at' => $orderConfirmation->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $orderConfirmation->updatedAt->format('Y-m-d H:i:s'),
             'customer_id2' => $orderConfirmation->customerId,
@@ -81,6 +82,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             'discount_value2' => $orderConfirmation->discountValue,
             'source_rental_id2' => $orderConfirmation->sourceRentalId,
             'contact_id2' => $orderConfirmation->contactId,
+            'payment_method_id2' => $orderConfirmation->paymentMethodId,
             'updated_at2' => $orderConfirmation->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -318,6 +320,7 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             discountValue: $row['discount_value'],
             sourceRentalId: $row['source_rental_id'] ?? null,
             contactId: $row['contact_id'] ?? null,
+            paymentMethodId: $row['payment_method_id'] ?? null,
         );
     }
 

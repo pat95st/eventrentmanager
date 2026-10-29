@@ -54,6 +54,9 @@ final class PdfLayoutBlueprint
                 new PdfLayoutElementDefinition('info_lines', 'Veranstaltungsinfo-Block', 14.0, 40.0, 180.0, true, 10.0),
             ],
             PdfDocumentType::PriceList => [
+                // Nutzerwunsch: Logo rechts oben (Standard = rechter Rand,
+                // 42 mm breit wie bei den übrigen Dokumenten).
+                new PdfLayoutElementDefinition('logo', 'Logo', 154.0, 14.0, 42.0, false),
                 new PdfLayoutElementDefinition('title', 'Dokumenttitel', 14.0, 14.0, null, true, 18.0),
             ],
         };

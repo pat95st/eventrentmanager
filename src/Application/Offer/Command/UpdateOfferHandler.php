@@ -8,6 +8,8 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -56,6 +58,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
     ) {
     }
 
@@ -112,6 +115,10 @@ final class UpdateOfferHandler implements CommandHandlerInterface
             return $offer->id;
         }
 
+        // Zahlungsart (Migration 106), siehe PaymentSelection.
+        [$paymentErrors, $paymentMethodId] = PaymentSelection::validate($this->paymentMethods, $command->paymentMethodId);
+        $errors = array_merge($errors, $paymentErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -138,6 +145,7 @@ final class UpdateOfferHandler implements CommandHandlerInterface
         $offer->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $offer->sourceRentalId = $data['rentalId'];
         $offer->contactId = $data['contactId'];
+        $offer->paymentMethodId = $paymentMethodId;
 
         // Geschäftsregel: siehe ValidatesInvoiceInput::validateInvoiceInput()
         // für die identische Begründung (dort bereits für den Kombirabatt

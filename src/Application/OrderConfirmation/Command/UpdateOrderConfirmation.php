@@ -33,6 +33,8 @@ final class UpdateOrderConfirmation implements CommandInterface
         // Optionale Auswahl eines Ansprechpartners des Kunden, siehe
         // OrderConfirmation::$contactId.
         public readonly ?string $contactId = null,
+        // Zahlungsart (Migration 106), leer = Standard-Zahlungsart.
+        public readonly ?string $paymentMethodId = null,
     ) {
     }
 }

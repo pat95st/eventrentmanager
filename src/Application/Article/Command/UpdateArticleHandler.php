@@ -6,7 +6,9 @@ namespace App\Application\Article\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Article\ArticleBundleComponentRepositoryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
+use App\Domain\Rental\RentalBundleRepositoryInterface;
 use App\Domain\Article\ProtectionClass;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
@@ -22,6 +24,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly CategoryRepositoryInterface $categories,
+        private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
+        private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
     ) {
     }
 
@@ -82,6 +86,12 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $errors['protectionClass'] = 'Bitte eine gültige Schutzklasse auswählen.';
         }
 
+        [$bundleErrors, $components] = ValidatesBundleInput::validate(
+            $command->isBundle, $command->isBillable, $command->dailyRentalPrice, $command->bundleComponents,
+            $article->id, $article->isBundle, $this->articles, $this->bundleComponents, $this->rentalBundles,
+        );
+        $errors = array_merge($errors, $bundleErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -103,9 +113,15 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $article->hasFirmware = $command->hasFirmware;
         $article->isBillable = $command->isBillable;
         $article->dailyRentalPrice = $command->isBillable ? (Money::normalize($command->dailyRentalPrice) ?: null) : null;
+        $article->isRentableIndividually = $command->isBundle || $command->isRentableIndividually;
+        $article->isBundle = $command->isBundle;
         $article->updatedAt = new DateTimeImmutable();
 
         $this->articles->save($article);
+        if ($this->bundleComponents !== null) {
+            // Kein Bundle (mehr) → Bestandteil-Liste leeren.
+            $this->bundleComponents->replaceForBundle($article->id, $command->isBundle ? $components : []);
+        }
 
         return null;
     }

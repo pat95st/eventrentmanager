@@ -6,11 +6,13 @@ namespace App\Infrastructure\Pdf;
 
 use App\Application\Article\Query\ArticleListItem;
 use App\Domain\Article\ArticleDisplayName;
+use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\PdfLayout\PdfLayoutSettings;
 use App\Domain\Settings\PriceRoundingDirection;
 use App\Domain\Settings\PriceRoundingStep;
 use App\Domain\Settings\PriceTier;
 use App\Domain\Settings\RentalPriceCalculator;
+use App\Infrastructure\FileStorage\LocalFileStorage;
 
 /**
  * Erzeugt die Preisliste (abrechenbare Artikel × Einsatztage-Staffelung) als
@@ -30,6 +32,12 @@ final class PriceListPdfGenerator
     private const TABLE_FONT_SIZE = 8.5;
     private const TABLE_LINE_HEIGHT = 12.0;
     private const NAME_COLUMN_WIDTH = 200.0;
+    private const LOGO_MAX_WIDTH = 120.0;
+    private const LOGO_MAX_HEIGHT = 50.0;
+
+    public function __construct(private readonly ?LocalFileStorage $fileStorage = null)
+    {
+    }
 
     /**
      * @param ArticleListItem[] $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert, mit aufgelöstem Hersteller
@@ -41,6 +49,7 @@ final class PriceListPdfGenerator
         ?PdfLayoutSettings $layout = null,
         PriceRoundingStep $roundingStep = PriceRoundingStep::None,
         PriceRoundingDirection $roundingDirection = PriceRoundingDirection::Nearest,
+        ?CompanySettings $companySettings = null,
     ): string {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -50,7 +59,10 @@ final class PriceListPdfGenerator
         $pageNumber = 1;
 
         $writer->addPage();
-        $y = $this->drawHeader($writer, $pageWidth, $pageHeight, $pageNumber, layout: $layout);
+        // Nutzerwunsch: Firmenlogo rechts oben (nur erste Seite, wie bei
+        // Angebot/Rechnung).
+        $logoJpeg = $companySettings !== null ? $this->prepareLogoJpeg($companySettings) : null;
+        $y = $this->drawHeader($writer, $pageWidth, $pageHeight, $pageNumber, layout: $layout, logoJpeg: $logoJpeg);
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns, $tiers);
 
         if ($articles === []) {
@@ -72,9 +84,26 @@ final class PriceListPdfGenerator
         return $writer->output();
     }
 
-    private function drawHeader(SimplePdfWriter $writer, float $pageWidth, float $pageHeight, int $pageNumber, bool $continuation = false, ?PdfLayoutSettings $layout = null): float
+    private function drawHeader(SimplePdfWriter $writer, float $pageWidth, float $pageHeight, int $pageNumber, bool $continuation = false, ?PdfLayoutSettings $layout = null, ?string $logoJpeg = null): float
     {
         $y = $pageHeight - self::MARGIN;
+
+        // Logo rechts oben (per Layout-Editor verschiebbar, Element "logo").
+        $logoBottomY = null;
+        if (!$continuation && $logoJpeg !== null) {
+            [$logoWidth, $logoHeight] = $this->fitBox($logoJpeg, self::LOGO_MAX_WIDTH, self::LOGO_MAX_HEIGHT);
+            $logoOverride = $layout?->get('logo');
+            if ($logoOverride !== null) {
+                $logoPoint = $logoOverride->toPdfPoint($pageHeight);
+                $logoX = $logoPoint['x'];
+                $logoTopY = $logoPoint['y'];
+            } else {
+                $logoX = $pageWidth - self::MARGIN - $logoWidth;
+                $logoTopY = $pageHeight - self::MARGIN;
+            }
+            $writer->image($logoJpeg, $logoX, $logoTopY - $logoHeight, $logoWidth, $logoHeight);
+            $logoBottomY = $logoTopY - $logoHeight;
+        }
 
         $titleOverride = !$continuation ? $layout?->get('title') : null;
         $titleX = self::MARGIN;
@@ -93,7 +122,15 @@ final class PriceListPdfGenerator
             $y -= 16;
         }
 
-        $writer->text($pageWidth - self::MARGIN - 50, $pageHeight - self::MARGIN - 40, 'Seite ' . $pageNumber, 8);
+        // Kopfbereich mindestens bis unter das Logo ziehen, damit Trennlinie
+        // und Tabelle nicht in das Logo laufen.
+        if ($logoBottomY !== null) {
+            $y = min($y, $logoBottomY - 10);
+        }
+
+        // Seitenzahl rechtsbündig direkt über der Trennlinie (früher fest
+        // rechts oben — dort sitzt jetzt das Logo).
+        $writer->textRight($pageWidth - self::MARGIN, $y, 'Seite ' . $pageNumber, 8);
 
         $y -= 6;
         $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, '0.4 0.4 0.4');
@@ -173,5 +210,68 @@ final class PriceListPdfGenerator
         foreach ($prices as $dayCount => $price) {
             $writer->textRight($columns['tiers'][$dayCount]['x'] + $columns['tiers'][$dayCount]['width'] - 4, $baseline, number_format((float) $price, 2, ',', '.') . ' €', self::TABLE_FONT_SIZE);
         }
+    }
+
+    /** Siehe OfferPdfGenerator::prepareLogoJpeg() — bewusst dupliziert (Projektkonvention je PDF-Generator). */
+    private function prepareLogoJpeg(CompanySettings $companySettings): ?string
+    {
+        if ($this->fileStorage === null || $companySettings->logoFilename === null || !extension_loaded('gd')) {
+            return null;
+        }
+
+        $absolutePath = $this->fileStorage->absolutePath('company', $companySettings->logoFilename);
+        if (!is_file($absolutePath)) {
+            return null;
+        }
+
+        $data = @file_get_contents($absolutePath);
+        if ($data === false || $data === '') {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($data);
+        if ($source === false) {
+            return null;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        if ($width <= 0 || $height <= 0) {
+            imagedestroy($source);
+
+            return null;
+        }
+
+        $canvas = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+        imagealphablending($canvas, true);
+        imagecopy($canvas, $source, 0, 0, 0, 0, $width, $height);
+        imagedestroy($source);
+
+        ob_start();
+        imagejpeg($canvas, null, 88);
+        $jpegBytes = ob_get_clean();
+        imagedestroy($canvas);
+
+        return $jpegBytes === false || $jpegBytes === '' ? null : $jpegBytes;
+    }
+
+    /** @return array{0: float, 1: float} */
+    private function fitBox(string $jpegBytes, float $maxWidth, float $maxHeight): array
+    {
+        $size = @getimagesizefromstring($jpegBytes);
+        if ($size === false) {
+            return [$maxWidth, $maxHeight];
+        }
+
+        [$pixelWidth, $pixelHeight] = $size;
+        if ($pixelWidth <= 0 || $pixelHeight <= 0) {
+            return [$maxWidth, $maxHeight];
+        }
+
+        $scale = min($maxWidth / $pixelWidth, $maxHeight / $pixelHeight);
+
+        return [$pixelWidth * $scale, $pixelHeight * $scale];
     }
 }

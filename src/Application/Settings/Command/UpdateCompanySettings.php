@@ -16,6 +16,10 @@ final class UpdateCompanySettings implements CommandInterface
         public readonly ?string $city,
         public readonly ?string $country,
         public readonly ?string $logoMaxHeightPx,
+        // Fußzeile der Dokumente (Migration 108); null = unverändert lassen.
+        public readonly ?string $phone = null,
+        public readonly ?string $email = null,
+        public readonly ?string $website = null,
     ) {
     }
 }

@@ -8,6 +8,9 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Customer\CustomerContactRepositoryInterface;
+use App\Application\Settings\PaymentSelection;
+use App\Domain\Settings\BankAccountRepositoryInterface;
+use App\Domain\Settings\PaymentMethodRepositoryInterface;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
@@ -51,6 +54,8 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         private readonly HtmlSanitizer $htmlSanitizer,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerContactRepositoryInterface $customerContacts,
+        private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
+        private readonly ?BankAccountRepositoryInterface $bankAccounts = null,
     ) {
     }
 
@@ -96,6 +101,10 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
             $command->logisticsDate2,
         );
 
+        // Zahlungsart/Bankverbindung (Migrationen 105/106), siehe PaymentSelection.
+        [$paymentErrors, $paymentMethodId, $bankAccountId] = PaymentSelection::validate($this->paymentMethods, $command->paymentMethodId, $this->bankAccounts, $command->bankAccountId);
+        $errors = array_merge($errors, $paymentErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -112,6 +121,8 @@ final class UpdateInvoiceHandler implements CommandHandlerInterface
         $invoice->closingText = $this->htmlSanitizer->sanitize($command->closingText);
         $invoice->sourceRentalId = $data['rentalId'];
         $invoice->contactId = $data['contactId'];
+        $invoice->paymentMethodId = $paymentMethodId;
+        $invoice->bankAccountId = $bankAccountId;
         $invoice->logisticsMethod = $data['logisticsMethod'];
         $invoice->logisticsDate1 = $data['logisticsDate1'];
         $invoice->logisticsDate2 = $data['logisticsDate2'];

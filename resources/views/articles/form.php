@@ -123,6 +123,19 @@ $bundleComponentRows ??= [];
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
+            <label for="weight_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.weight')) ?></label>
+            <div class="mt-1 flex gap-2">
+                <input type="number" step="any" min="0" id="weight_value" name="weight_value"
+                       value="<?= e($val('weight_value', $article?->weightValue)) ?>"
+                       class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                <?php $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g'); ?>
+                <select name="weight_unit" class="w-24 rounded-md border border-slate-300 px-2 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                    <option value="g" <?= $selectedUnit === 'g' ? 'selected' : '' ?>>g</option>
+                    <option value="kg" <?= $selectedUnit === 'kg' ? 'selected' : '' ?>>kg</option>
+                </select>
+            </div>
+        </div>
+        <div>
             <label for="dimensions" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.dimensions')) ?></label>
             <input type="text" id="dimensions" name="dimensions" placeholder="z. B. 24 x 8 x 22 cm"
                    value="<?= e($val('dimensions', $article?->dimensions)) ?>"

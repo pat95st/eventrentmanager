@@ -36,6 +36,10 @@ final class UpdatePdfDesignSettingsHandler implements CommandHandlerInterface
             $errors['logoPosition'] = 'Bitte eine gültige Logo-Position wählen.';
         }
 
+        if ($command->currencyDisplay !== null && !in_array($command->currencyDisplay, PdfDesignSettings::validCurrencyDisplays(), true)) {
+            $errors['currencyDisplay'] = 'Bitte eine gültige Währungsangabe wählen.';
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -47,6 +51,7 @@ final class UpdatePdfDesignSettingsHandler implements CommandHandlerInterface
             accentColorG: $rgb[1],
             accentColorB: $rgb[2],
             logoPosition: $command->logoPosition,
+            currencyDisplay: $command->currencyDisplay ?? $this->settingsRepository->get()->currencyDisplay,
         ));
 
         return null;

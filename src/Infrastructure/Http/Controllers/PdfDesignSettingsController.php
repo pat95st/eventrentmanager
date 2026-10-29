@@ -46,6 +46,7 @@ final class PdfDesignSettingsController
         $command = new UpdatePdfDesignSettings(
             accentColorHex: $request->input('accent_color', '') ?? '',
             logoPosition: $request->input('logo_position', '') ?? '',
+            currencyDisplay: $request->input('currency_display', '') ?? '',
         );
 
         try {

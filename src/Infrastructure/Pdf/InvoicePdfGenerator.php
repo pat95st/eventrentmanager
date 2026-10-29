@@ -71,6 +71,7 @@ final class InvoicePdfGenerator
         private readonly LocalFileStorage $fileStorage,
         private readonly RichTextPdfRenderer $richTextRenderer,
         private readonly ?DocumentFooter $footer = null,
+        private readonly ?PdfAmountFormatter $amountFormatter = null,
     ) {
     }
 
@@ -329,8 +330,8 @@ final class InvoicePdfGenerator
                 $rows[] = [
                     'nameLines' => $this->wrapText($item->description, $columns['article']['width'], self::TABLE_FONT_SIZE),
                     'quantity' => rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ','),
-                    'unitPrice' => number_format((float) $item->unitPrice, 2, ',', '.') . ' EUR',
-                    'lineTotal' => number_format($item->lineTotal(), 2, ',', '.') . ' EUR',
+                    'unitPrice' => number_format((float) $item->unitPrice, 2, ',', '.') . $this->currency(),
+                    'lineTotal' => number_format($item->lineTotal(), 2, ',', '.') . $this->currency(),
                     'isSection' => false,
                 ];
 
@@ -363,8 +364,8 @@ final class InvoicePdfGenerator
                 'shortTextLines' => $nameColumn['shortTextLines'],
                 'image' => $nameColumn['image'],
                 'quantity' => (string) $entry->item->quantity,
-                'unitPrice' => $hidePrice ? '–' : (number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . ' EUR'),
-                'lineTotal' => $hidePrice ? '–' : (number_format($entry->lineTotal(), 2, ',', '.') . ' EUR'),
+                'unitPrice' => $hidePrice ? '–' : (number_format((float) $entry->item->unitPricePerDay, 2, ',', '.') . $this->currency()),
+                'lineTotal' => $hidePrice ? '–' : (number_format($entry->lineTotal(), 2, ',', '.') . $this->currency()),
                 'isSection' => false,
             ];
         }
@@ -824,7 +825,7 @@ final class InvoicePdfGenerator
 
     private function formatAmount(float $amount): string
     {
-        return number_format($amount, 2, ',', '.') . ' EUR';
+        return number_format($amount, 2, ',', '.') . $this->currency();
     }
 
     /**
@@ -1025,5 +1026,11 @@ final class InvoicePdfGenerator
         $scale = min($maxWidth / $pixelWidth, $maxHeight / $pixelHeight);
 
         return [$pixelWidth * $scale, $pixelHeight * $scale];
+    }
+
+    /** Währungsangabe hinter Beträgen (Einstellungen › PDF-Design, Migration 110). */
+    private function currency(): string
+    {
+        return $this->amountFormatter?->suffix() ?? ' EUR';
     }
 }

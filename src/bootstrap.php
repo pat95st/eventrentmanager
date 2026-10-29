@@ -503,7 +503,9 @@ $documentFooter = new \App\Infrastructure\Pdf\DocumentFooter($companySettingsRep
 $paymentMethodRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPaymentMethodRepository($pdo);
 $dunningNoticeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningNoticeRepository($pdo);
 $dunningSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningSettingsRepository($pdo);
-$dunningPdfGenerator = new \App\Infrastructure\Pdf\DunningPdfGenerator($documentFooter);
+// Währungsangabe auf Dokumenten ("EUR" oder "€"), Einstellungen › PDF-Design (Migration 110).
+$pdfAmountFormatter = new \App\Infrastructure\Pdf\PdfAmountFormatter($pdfDesignSettingsRepository);
+$dunningPdfGenerator = new \App\Infrastructure\Pdf\DunningPdfGenerator($documentFooter, $pdfAmountFormatter);
 $invoiceDueReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderRepository($pdo);
 $invoiceDueReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderSettingsRepository($pdo);
 $receiptRepository = new MariadbReceiptRepository($pdo);
@@ -776,9 +778,9 @@ $commandBus->register(\App\Application\Offer\Command\MarkOfferAccepted::class, n
 $commandBus->register(\App\Application\Offer\Command\MarkOfferDeclined::class, new MarkOfferDeclinedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new DeleteOfferHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner));
-$offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter);
+$offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
-$orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter);
+$orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter);
 $getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
     $getOfferHandler,
@@ -844,7 +846,7 @@ $commandBus->register(\App\Application\BankImport\Command\CancelBankImport::clas
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceCancelled::class, new MarkInvoiceCancelledHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository));
-$invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter);
+$invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter);
 $xRechnungGenerator = new XRechnungGenerator();
 $getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver);
 $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, new EmailInvoicePdfHandler(
@@ -1229,7 +1231,7 @@ $categoryController = new CategoryController($commandBus, $queryBus);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
 $laborTimeArticleController = new LaborTimeArticleController($commandBus, $queryBus);
-$articleController = new ArticleController($commandBus, $queryBus, $fileStorage, new PriceListPdfGenerator($fileStorage), new PriceListCsvExporter(), $saleStockLotRepository, $customerRepository, $articleBundleComponentRepository);
+$articleController = new ArticleController($commandBus, $queryBus, $fileStorage, new PriceListPdfGenerator($fileStorage, $pdfAmountFormatter), new PriceListCsvExporter(), $saleStockLotRepository, $customerRepository, $articleBundleComponentRepository);
 $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
 $electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);

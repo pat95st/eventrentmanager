@@ -2327,6 +2327,7 @@ CREATE TABLE pdf_design_settings (
     accent_g     TINYINT UNSIGNED     NOT NULL DEFAULT 0,
     accent_b     TINYINT UNSIGNED     NOT NULL DEFAULT 0,
     logo_position ENUM('left', 'right') NOT NULL DEFAULT 'right',
+    currency_display ENUM('code', 'symbol') NOT NULL DEFAULT 'code', -- Beträge mit "EUR" oder "€" (Migration 110)
     updated_at   DATETIME             NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT chk_pdf_design_settings_singleton CHECK (id = 1)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

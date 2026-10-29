@@ -11,6 +11,7 @@ final class UpdatePdfDesignSettings implements CommandInterface
     public function __construct(
         public readonly string $accentColorHex, // "#rrggbb" aus dem <input type="color">, wird im Handler geparst
         public readonly string $logoPosition, // 'left' | 'right'
+        public readonly ?string $currencyDisplay = null, // 'code' | 'symbol', null = unverändert
     ) {
     }
 }

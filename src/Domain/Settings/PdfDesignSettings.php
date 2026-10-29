@@ -22,7 +22,24 @@ final class PdfDesignSettings
         public int $accentColorG,
         public int $accentColorB,
         public string $logoPosition, // 'left' | 'right', siehe LogoPosition-Konstanten
+        // Migration 110: Beträge auf Dokumenten mit "EUR" (code) oder "€" (symbol).
+        public string $currencyDisplay = self::CURRENCY_DISPLAY_CODE,
     ) {
+    }
+
+    public const CURRENCY_DISPLAY_CODE = 'code';
+    public const CURRENCY_DISPLAY_SYMBOL = 'symbol';
+
+    /** @return string[] */
+    public static function validCurrencyDisplays(): array
+    {
+        return [self::CURRENCY_DISPLAY_CODE, self::CURRENCY_DISPLAY_SYMBOL];
+    }
+
+    /** Anhängsel hinter Beträgen, inkl. führendem Leerzeichen: " EUR" bzw. " €". */
+    public function currencySuffix(): string
+    {
+        return $this->currencyDisplay === self::CURRENCY_DISPLAY_SYMBOL ? ' €' : ' EUR';
     }
 
     public const LOGO_POSITION_LEFT = 'left';

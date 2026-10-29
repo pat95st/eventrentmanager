@@ -1308,6 +1308,10 @@ return [
     'settings.pdf_design.field.logo_position_hint' => 'Determines which side of the top of the PDF the company logo appears on.',
     'settings.pdf_design.field.logo_position_left' => 'Left',
     'settings.pdf_design.field.logo_position_right' => 'Right (previous behavior)',
+    'settings.pdf_design.field.currency_display' => 'Currency in amounts',
+    'settings.pdf_design.field.currency_display_hint' => 'Applies to offers, order confirmations, invoices, dunning letters and the price list.',
+    'settings.pdf_design.field.currency_display_code' => 'Text “EUR” (1.234,56 EUR)',
+    'settings.pdf_design.field.currency_display_symbol' => 'Euro sign (1.234,56 €)',
     'settings.pdf_design.hint' => 'Fully free positioning of individual text blocks is planned as a separate, larger project for a later stage.',
     'settings.pdf_design.flash.saved' => 'PDF design was saved.',
 

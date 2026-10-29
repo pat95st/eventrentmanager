@@ -35,7 +35,10 @@ final class PriceListPdfGenerator
     private const LOGO_MAX_WIDTH = 120.0;
     private const LOGO_MAX_HEIGHT = 50.0;
 
-    public function __construct(private readonly ?LocalFileStorage $fileStorage = null)
+    public function __construct(
+        private readonly ?LocalFileStorage $fileStorage = null,
+        private readonly ?PdfAmountFormatter $amountFormatter = null,
+    )
     {
     }
 
@@ -208,7 +211,7 @@ final class PriceListPdfGenerator
 
         $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers, $roundingStep, $roundingDirection);
         foreach ($prices as $dayCount => $price) {
-            $writer->textRight($columns['tiers'][$dayCount]['x'] + $columns['tiers'][$dayCount]['width'] - 4, $baseline, number_format((float) $price, 2, ',', '.') . ' €', self::TABLE_FONT_SIZE);
+            $writer->textRight($columns['tiers'][$dayCount]['x'] + $columns['tiers'][$dayCount]['width'] - 4, $baseline, number_format((float) $price, 2, ',', '.') . $this->currency(), self::TABLE_FONT_SIZE);
         }
     }
 
@@ -273,5 +276,11 @@ final class PriceListPdfGenerator
         $scale = min($maxWidth / $pixelWidth, $maxHeight / $pixelHeight);
 
         return [$pixelWidth * $scale, $pixelHeight * $scale];
+    }
+
+    /** Währungsangabe hinter Beträgen (Einstellungen › PDF-Design, Migration 110). */
+    private function currency(): string
+    {
+        return $this->amountFormatter?->suffix() ?? ' €';
     }
 }

@@ -32,6 +32,7 @@ final class MariadbPdfDesignSettingsRepository implements PdfDesignSettingsRepos
             accentColorG: (int) $row['accent_g'],
             accentColorB: (int) $row['accent_b'],
             logoPosition: (string) $row['logo_position'],
+            currencyDisplay: (string) ($row['currency_display'] ?? PdfDesignSettings::CURRENCY_DISPLAY_CODE),
         );
     }
 
@@ -39,7 +40,7 @@ final class MariadbPdfDesignSettingsRepository implements PdfDesignSettingsRepos
     {
         $stmt = $this->pdo->prepare(
             'UPDATE pdf_design_settings SET
-                accent_r = :accent_r, accent_g = :accent_g, accent_b = :accent_b, logo_position = :logo_position
+                accent_r = :accent_r, accent_g = :accent_g, accent_b = :accent_b, logo_position = :logo_position, currency_display = :currency_display
              WHERE id = 1'
         );
 
@@ -48,6 +49,7 @@ final class MariadbPdfDesignSettingsRepository implements PdfDesignSettingsRepos
             'accent_g' => $settings->accentColorG,
             'accent_b' => $settings->accentColorB,
             'logo_position' => $settings->logoPosition,
+            'currency_display' => $settings->currencyDisplay,
         ]);
     }
 }

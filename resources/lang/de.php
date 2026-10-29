@@ -1309,6 +1309,10 @@ return [
     'settings.pdf_design.field.logo_position_hint' => 'Bestimmt, auf welcher Seite oben das Firmenlogo im PDF erscheint.',
     'settings.pdf_design.field.logo_position_left' => 'Links',
     'settings.pdf_design.field.logo_position_right' => 'Rechts (bisheriges Verhalten)',
+    'settings.pdf_design.field.currency_display' => 'Währungsangabe bei Beträgen',
+    'settings.pdf_design.field.currency_display_hint' => 'Gilt für Angebote, Auftragsbestätigungen, Rechnungen, Mahnungen und die Preisliste.',
+    'settings.pdf_design.field.currency_display_code' => 'Text „EUR“ (1.234,56 EUR)',
+    'settings.pdf_design.field.currency_display_symbol' => 'Euro-Zeichen (1.234,56 €)',
     'settings.pdf_design.hint' => 'Die vollständige freie Positionierung einzelner Textblöcke ist als eigenständiges, größeres Vorhaben für eine spätere Ausbaustufe vorgesehen.',
     'settings.pdf_design.flash.saved' => 'PDF-Design wurde gespeichert.',
 

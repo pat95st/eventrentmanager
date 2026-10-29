@@ -23,7 +23,10 @@ final class DunningPdfGenerator
 {
     private const MARGIN = 50.0;
 
-    public function __construct(private readonly ?DocumentFooter $footer = null)
+    public function __construct(
+        private readonly ?DocumentFooter $footer = null,
+        private readonly ?PdfAmountFormatter $amountFormatter = null,
+    )
     {
     }
 
@@ -113,18 +116,18 @@ final class DunningPdfGenerator
         $y -= 20;
 
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Offener Rechnungsbetrag:', 10);
-        $writer->textRight($pageWidth - self::MARGIN - 2, $y, number_format((float) $notice->invoiceGrossTotal, 2, ',', '.') . ' EUR', 10);
+        $writer->textRight($pageWidth - self::MARGIN - 2, $y, number_format((float) $notice->invoiceGrossTotal, 2, ',', '.') . $this->currency(), 10);
         $y -= 16;
 
         if ($notice->feeAmount !== '0.00' && (float) $notice->feeAmount > 0.0) {
             $feeLabel = 'Mahngebühr:';
             $writer->text($pageWidth - self::MARGIN - 230, $y, $feeLabel, 10);
-            $writer->textRight($pageWidth - self::MARGIN - 2, $y, '+' . number_format((float) $notice->feeAmount, 2, ',', '.') . ' EUR', 10);
+            $writer->textRight($pageWidth - self::MARGIN - 2, $y, '+' . number_format((float) $notice->feeAmount, 2, ',', '.') . $this->currency(), 10);
             $y -= 16;
         }
 
         $writer->text($pageWidth - self::MARGIN - 230, $y, 'Gesamtbetrag fällig:', 11, true);
-        $writer->textRight($pageWidth - self::MARGIN - 2, $y, number_format($notice->totalDue(), 2, ',', '.') . ' EUR', 11, true);
+        $writer->textRight($pageWidth - self::MARGIN - 2, $y, number_format($notice->totalDue(), 2, ',', '.') . $this->currency(), 11, true);
         $y -= 30;
 
         $writer->text(self::MARGIN, $y, 'Sollten Sie den Betrag bereits beglichen haben, betrachten Sie dieses Schreiben als gegenstandslos.', 8.5);
@@ -187,5 +190,11 @@ final class DunningPdfGenerator
         $maxChars = max(6, (int) floor($maxWidth / $avgCharWidth));
 
         return explode("\n", wordwrap($text, $maxChars, "\n", true));
+    }
+
+    /** Währungsangabe hinter Beträgen (Einstellungen › PDF-Design, Migration 110). */
+    private function currency(): string
+    {
+        return $this->amountFormatter?->suffix() ?? ' EUR';
     }
 }

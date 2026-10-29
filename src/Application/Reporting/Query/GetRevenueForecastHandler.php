@@ -43,6 +43,9 @@ use App\Domain\Settings\InvoiceSettingsRepositoryInterface;
  * Fallback, der ohnehin für netTotal irrelevant ist (Steuer wirkt sich nur
  * auf grossTotal aus).
  *
+ * Dokumente ohne Veranstaltungszeitraum (seit Migration 102 bei Angeboten,
+ * AB und Rechnungen möglich) werden dem Jahr ihres Anlagedatums zugeordnet.
+ *
  * Jahre außerhalb des angefragten Zeitraums (z. B. ein Angebot mit
  * Veranstaltungsdatum weit in der Vergangenheit) werden stillschweigend
  * übersprungen, nicht als Fehler behandelt.
@@ -81,7 +84,7 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
                 continue;
             }
 
-            $year = (int) $offer->startDate->format('Y');
+            $year = (int) ($offer->startDate ?? $offer->createdAt)->format('Y');
             if (!isset($amountsByYear[$year])) {
                 continue;
             }
@@ -92,7 +95,7 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
         foreach ($this->orderConfirmations->findNotCancelledForRevenueForecast() as $orderConfirmation) {
             assert($orderConfirmation instanceof OrderConfirmation);
 
-            $year = (int) $orderConfirmation->startDate->format('Y');
+            $year = (int) ($orderConfirmation->startDate ?? $orderConfirmation->createdAt)->format('Y');
             if (!isset($amountsByYear[$year])) {
                 continue;
             }
@@ -103,7 +106,7 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
         foreach ($this->invoices->findNotCancelledForRevenueForecast() as $invoice) {
             assert($invoice instanceof Invoice);
 
-            $year = (int) $invoice->startDate->format('Y');
+            $year = (int) ($invoice->startDate ?? $invoice->createdAt)->format('Y');
             if (!isset($amountsByYear[$year])) {
                 continue;
             }

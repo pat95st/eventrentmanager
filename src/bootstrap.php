@@ -434,7 +434,7 @@ $articleBundleComponentRepository = new \App\Infrastructure\Persistence\Pdo\Mari
 $rentalBundleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalBundleRepository($pdo);
 $bundleComponentResolver = new \App\Application\Article\Query\BundleComponentResolver($articleBundleComponentRepository, $articleRepository, $manufacturerRepository);
 $rentalIssuedItemRepository = new MariadbRentalIssuedItemRepository($pdo);
-$rentalBundlePlanner = new \App\Application\Rental\RentalBundlePlanner($rentalItemRepository, $rentalBundleRepository, $articleBundleComponentRepository, $inventoryNumberRepository, $rentalIssuedItemRepository);
+$rentalBundlePlanner = new \App\Application\Rental\RentalBundlePlanner($rentalItemRepository, $rentalBundleRepository, $articleBundleComponentRepository, $inventoryNumberRepository, $rentalIssuedItemRepository, $rentalRepository);
 $rentalReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalReminderRepository($pdo);
 $rentalReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalReminderSettingsRepository($pdo);
 $rentalCustomerChecklistTokenRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalCustomerChecklistTokenRepository($pdo);
@@ -574,9 +574,9 @@ $commandBus->register(\App\Application\LaborTime\Command\CreateLaborTimeArticle:
 $commandBus->register(\App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, new UpdateLaborTimeArticleHandler($laborTimeArticleRepository));
 $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle::class, new DeleteLaborTimeArticleHandler($laborTimeArticleRepository));
 
-$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository));
-$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository));
-$commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry));
+$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository));
+$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository));
+$commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository));
 $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, new \App\Application\Article\Command\SetArticleActiveHandler($articleRepository));
 $commandBus->register(\App\Application\Article\Command\AddArticleImage::class, new AddArticleImageHandler($articleRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\DeleteArticleImage::class, new DeleteArticleImageHandler($articleRepository, $fileStorage));

@@ -63,7 +63,7 @@ $bundleComponentRows ??= [];
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
+        <div data-not-for-bundle>
             <label for="manufacturer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.manufacturer')) ?></label>
             <div class="mt-1">
                 <?php
@@ -90,7 +90,7 @@ $bundleComponentRows ??= [];
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.manufacturer_hint')) ?></p>
         </div>
 
-        <div>
+        <div data-not-for-bundle>
             <label for="prefix" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.prefix')) ?></label>
             <input type="text" id="prefix" name="prefix" required maxlength="10" placeholder="z. B. AKS"
                    value="<?= e($val('prefix', $article?->prefix)) ?>"
@@ -123,7 +123,11 @@ $bundleComponentRows ??= [];
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
+        <div data-bundle-only class="hidden">
+            <span class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.weight')) ?></span>
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.form.bundle_weight_hint')) ?></p>
+        </div>
+        <div data-not-for-bundle>
             <label for="weight_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.weight')) ?></label>
             <div class="mt-1 flex gap-2">
                 <input type="number" step="any" min="0" id="weight_value" name="weight_value"
@@ -155,6 +159,7 @@ $bundleComponentRows ??= [];
         </div>
     </div>
 
+    <div data-not-for-bundle class="space-y-6">
     <div class="flex flex-wrap items-center gap-6">
         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
             <input type="checkbox" id="requires_electrical_inspection" name="requires_electrical_inspection" value="1" <?= $requiresElectricalInspection ? 'checked' : '' ?>>
@@ -196,8 +201,10 @@ $bundleComponentRows ??= [];
         </div>
     </div>
 
+    </div>
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
+        <div data-not-for-bundle>
             <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                 <input type="checkbox" name="has_firmware" value="1" <?= $hasFirmware ? 'checked' : '' ?>>
                 <?= e(t('articles.form.has_firmware_checkbox')) ?>
@@ -266,26 +273,53 @@ $bundleComponentRows ??= [];
                 </button>
             </div>
             <?php if (isset($errors['bundleComponents'])): ?><p class="mb-2 text-xs text-red-600 dark:text-red-400"><?= e($errors['bundleComponents']) ?></p><?php endif; ?>
-            <div data-bundle-rows class="space-y-2">
-                <?php foreach ($bundleComponentRows as $componentRow): ?>
-                    <div data-bundle-row class="flex flex-wrap items-end gap-2">
+            <?php
+            // Eine Bestandteil-Zeile inkl. optionaler Alternativartikel
+            // (Migration 111): Chips + Live-Suche zum Hinzufügen, die IDs
+            // stehen kommagetrennt in bundle_component_alternatives[].
+            $renderBundleRow = function (?array $componentRow): void {
+                $alternatives = $componentRow['alternatives'] ?? [];
+                ?>
+                <div data-bundle-row class="rounded-md border border-slate-200 p-2 dark:border-slate-700">
+                    <div class="flex flex-wrap items-end gap-2">
                         <div class="min-w-[220px] flex-1">
-                            <?php renderLiveSearchField('bundle_component_article_id[]', '/artikel/suche', $componentRow['article_id'], $componentRow['label'], t('articles.form.bundle_component_placeholder'), null, 'select', false, false); ?>
+                            <?php renderLiveSearchField('bundle_component_article_id[]', '/artikel/suche', $componentRow['article_id'] ?? null, $componentRow['label'] ?? null, t('articles.form.bundle_component_placeholder'), null, 'select', false, false); ?>
                         </div>
-                        <input type="number" name="bundle_component_quantity[]" min="1" max="999" value="<?= e((string) $componentRow['quantity']) ?>" title="<?= e(t('articles.form.bundle_component_quantity')) ?>"
+                        <input type="number" name="bundle_component_quantity[]" min="1" max="999" value="<?= e((string) ($componentRow['quantity'] ?? 1)) ?>" title="<?= e(t('articles.form.bundle_component_quantity')) ?>"
                                class="w-20 rounded-md border border-slate-300 px-2 py-2 text-sm dark:border-slate-700">
                         <button type="button" data-bundle-remove class="px-2 py-2 text-sm text-red-600 hover:underline dark:text-red-400" title="<?= e(t('common.delete')) ?>">&times;</button>
                     </div>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <span class="text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.form.bundle_alternatives')) ?>:</span>
+                        <span data-alt-list class="flex flex-wrap gap-1">
+                            <?php foreach ($alternatives as $alternative): ?>
+                                <span data-alt-chip data-id="<?= e($alternative['article_id']) ?>" class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                    <?= e($alternative['label']) ?>
+                                    <button type="button" data-alt-remove class="text-slate-400 hover:text-red-600" title="<?= e(t('common.delete')) ?>">&times;</button>
+                                </span>
+                            <?php endforeach; ?>
+                        </span>
+                        <div data-alt-search class="min-w-[220px] flex-1">
+                            <?php renderLiveSearchField('alternative_search[]', '/artikel/suche', null, null, t('articles.form.bundle_alternative_placeholder'), null, 'select', false, false); ?>
+                        </div>
+                    </div>
+                    <input type="hidden" name="bundle_component_alternatives[]" data-alt-ids value="<?= e(implode(',', array_column($alternatives, 'article_id'))) ?>">
+                </div>
+                <?php
+            };
+            ?>
+            <div data-bundle-rows class="space-y-2">
+                <?php foreach ($bundleComponentRows as $componentRow): ?>
+                    <?php $renderBundleRow($componentRow); ?>
                 <?php endforeach; ?>
             </div>
+            <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.bundle_alternatives_hint')) ?></p>
             <template data-bundle-template>
-                <div data-bundle-row class="flex flex-wrap items-end gap-2">
-                    <div class="min-w-[220px] flex-1">
-                        <?php renderLiveSearchField('bundle_component_article_id[]', '/artikel/suche', null, null, t('articles.form.bundle_component_placeholder'), null, 'select', false, false); ?>
-                    </div>
-                    <input type="number" name="bundle_component_quantity[]" min="1" max="999" value="1" title="<?= e(t('articles.form.bundle_component_quantity')) ?>"
-                           class="w-20 rounded-md border border-slate-300 px-2 py-2 text-sm dark:border-slate-700">
-                    <button type="button" data-bundle-remove class="px-2 py-2 text-sm text-red-600 hover:underline dark:text-red-400" title="<?= e(t('common.delete')) ?>">&times;</button>
+                <?php $renderBundleRow(null); ?>
+            </template>
+            <template data-alt-search-template>
+                <div data-alt-search class="min-w-[220px] flex-1">
+                    <?php renderLiveSearchField('alternative_search[]', '/artikel/suche', null, null, t('articles.form.bundle_alternative_placeholder'), null, 'select', false, false); ?>
                 </div>
             </template>
         </div>
@@ -306,9 +340,63 @@ $bundleComponentRows ??= [];
                     if (window.LiveSearch) { window.LiveSearch.init(row); }
                 }
 
+                // Felder, die es bei Bundles nicht gibt (Migration 111):
+                // ausblenden und deaktivieren, damit sie weder geprüft noch
+                // übermittelt werden.
+                var notForBundle = document.querySelectorAll('[data-not-for-bundle]');
+                var bundleOnly = document.querySelectorAll('[data-bundle-only]');
+                var altTemplate = document.querySelector('[data-alt-search-template]');
+
+                function syncFieldVisibility(isBundle) {
+                    notForBundle.forEach(function (block) {
+                        block.classList.toggle('hidden', isBundle);
+                        block.querySelectorAll('input, select, textarea').forEach(function (field) { field.disabled = isBundle; });
+                    });
+                    bundleOnly.forEach(function (block) { block.classList.toggle('hidden', !isBundle); });
+                }
+
+                function altIds(row) {
+                    return Array.prototype.map.call(row.querySelectorAll('[data-alt-chip]'), function (chip) { return chip.getAttribute('data-id'); });
+                }
+
+                function writeAltIds(row) {
+                    row.querySelector('[data-alt-ids]').value = altIds(row).join(',');
+                }
+
+                function addAlternative(row, id, label) {
+                    if (!id || altIds(row).indexOf(id) !== -1) { return; }
+                    var chip = document.createElement('span');
+                    chip.setAttribute('data-alt-chip', '');
+                    chip.setAttribute('data-id', id);
+                    chip.className = 'inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+                    chip.appendChild(document.createTextNode(label + ' '));
+                    var remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.setAttribute('data-alt-remove', '');
+                    remove.className = 'text-slate-400 hover:text-red-600';
+                    remove.textContent = '×';
+                    chip.appendChild(remove);
+                    row.querySelector('[data-alt-list]').appendChild(chip);
+                    writeAltIds(row);
+                }
+
+                // Auswahl in der Alternativen-Suche: als Chip übernehmen und
+                // das Suchfeld durch ein frisches ersetzen.
+                rows.addEventListener('change', function (event) {
+                    var search = event.target.closest('[data-alt-search]');
+                    if (!search || !event.target.matches('[data-live-search-value]') || event.target.value === '') { return; }
+                    var row = search.closest('[data-bundle-row]');
+                    var label = search.querySelector('[data-live-search-input]').value;
+                    addAlternative(row, event.target.value, label);
+                    var fresh = altTemplate.content.cloneNode(true).querySelector('[data-alt-search]');
+                    search.replaceWith(fresh);
+                    if (window.LiveSearch) { window.LiveSearch.init(fresh); }
+                });
+
                 function sync() {
                     var isBundle = bundleCheckbox.checked;
                     section.classList.toggle('hidden', !isBundle);
+                    syncFieldVisibility(isBundle);
                     // Ein Bundle ist selbst immer wählbar — die Option
                     // "nicht einzeln vermietbar" gilt nur für normale Artikel.
                     notRentable.disabled = isBundle;
@@ -321,7 +409,13 @@ $bundleComponentRows ??= [];
                 addButton.addEventListener('click', addRow);
                 rows.addEventListener('click', function (event) {
                     var remove = event.target.closest('[data-bundle-remove]');
-                    if (remove) { remove.closest('[data-bundle-row]').remove(); }
+                    if (remove) { remove.closest('[data-bundle-row]').remove(); return; }
+                    var altRemove = event.target.closest('[data-alt-remove]');
+                    if (altRemove) {
+                        var row = altRemove.closest('[data-bundle-row]');
+                        altRemove.closest('[data-alt-chip]').remove();
+                        writeAltIds(row);
+                    }
                 });
                 sync();
             })();

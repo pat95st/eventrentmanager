@@ -17,6 +17,8 @@ final class ArticleBundleComponent
         public readonly string $componentArticleId,
         public int $quantity,
         public int $sortOrder = 0,
+        /** @var list<string> Alternativartikel in Reihenfolge (Migration 111) */
+        public array $alternativeArticleIds = [],
     ) {
     }
 }

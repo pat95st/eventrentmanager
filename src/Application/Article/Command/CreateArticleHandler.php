@@ -14,6 +14,8 @@ use App\Domain\Article\ProtectionClass;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
+use App\Application\Article\BundleWeightCalculator;
+use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Shared\Money;
 use App\Shared\Prefix;
 use App\Shared\Uuid;
@@ -27,6 +29,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
         private readonly CategoryRepositoryInterface $categories,
         private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
         private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
+        private readonly ?InventoryNumberRepositoryInterface $inventoryNumbers = null,
     ) {
     }
 
@@ -79,6 +82,10 @@ final class CreateArticleHandler implements CommandHandlerInterface
             documentShortText: $documentShortText !== '' ? $documentShortText : null,
         );
 
+        if ($command->isBundle) {
+            $this->applyBundleRules($article, $components);
+        }
+
         $this->articles->save($article);
         if ($command->isBundle && $this->bundleComponents !== null) {
             $this->bundleComponents->replaceForBundle($article->id, $components);
@@ -96,12 +103,16 @@ final class CreateArticleHandler implements CommandHandlerInterface
             $errors['name'] = 'Bitte einen Produktnamen angeben.';
         }
 
-        if ($command->manufacturerId === '' || $this->manufacturers->findById($command->manufacturerId) === null) {
+        // Bundles haben keinen Hersteller und kein Präfix (keine
+        // Inventarnummern), siehe Migration 111.
+        if (!$command->isBundle && ($command->manufacturerId === '' || $this->manufacturers->findById($command->manufacturerId) === null)) {
             $errors['manufacturerId'] = 'Bitte einen gültigen Hersteller auswählen.';
         }
 
         $prefix = Prefix::normalize($command->prefix);
-        if ($prefix === '') {
+        if ($command->isBundle) {
+            // keine Prüfung
+        } elseif ($prefix === '') {
             $errors['prefix'] = 'Bitte ein Präfix angeben.';
         } elseif (!Prefix::isValid($prefix)) {
             $errors['prefix'] = 'Das Präfix darf nur aus Großbuchstaben und Ziffern bestehen (max. 10 Zeichen).';
@@ -124,7 +135,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
             $errors['dailyRentalPrice'] = 'Bitte einen gültigen Preis pro Einsatztag angeben (z. B. 49.90).';
         }
 
-        if ($command->is19Inch) {
+        if ($command->is19Inch && !$command->isBundle) {
             if (self::normalizeHeightUnits($command->heightUnits) === null) {
                 $errors['heightUnits'] = 'Bitte eine gültige Anzahl an Höheneinheiten angeben (z. B. 3).';
             }
@@ -134,7 +145,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
             }
         }
 
-        if ($command->requiresElectricalInspection && self::normalizeProtectionClass($command->protectionClass) === null) {
+        if ($command->requiresElectricalInspection && !$command->isBundle && self::normalizeProtectionClass($command->protectionClass) === null) {
             $errors['protectionClass'] = 'Bitte eine gültige Schutzklasse auswählen.';
         }
 
@@ -144,6 +155,26 @@ final class CreateArticleHandler implements CommandHandlerInterface
     private static function normalizeProtectionClass(?string $raw): ?ProtectionClass
     {
         return $raw !== null ? ProtectionClass::tryFrom($raw) : null;
+    }
+
+    /**
+     * Bundles (Migration 111): kein Hersteller, kein Präfix, keine
+     * Elektroprüfung, keine Firmware, keine 19-Zoll-Angaben; Gewicht aus
+     * den Bestandteilen berechnet.
+     *
+     * @param \App\Domain\Article\ArticleBundleComponent[] $components
+     */
+    private function applyBundleRules(\App\Domain\Article\Article $article, array $components): void
+    {
+        $article->manufacturerId = null;
+        $article->prefix = null;
+        $article->requiresElectricalInspection = false;
+        $article->protectionClass = null;
+        $article->hasFirmware = false;
+        $article->is19Inch = false;
+        $article->heightUnits = null;
+        $article->installDepthCm = null;
+        (new BundleWeightCalculator($this->articles))->apply($article, $components);
     }
 
     /** Höheneinheiten (HE): positive Ganzzahl, sonst null (= ungültig/leer). */

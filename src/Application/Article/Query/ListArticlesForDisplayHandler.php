@@ -51,8 +51,8 @@ final class ListArticlesForDisplayHandler implements QueryHandlerInterface
 
         $items = array_map(
             function (Article $article) use (&$manufacturerCache, &$categoryCache): ArticleListItem {
-                if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
-                    $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+                if (!array_key_exists(($article->manufacturerId ?? ''), $manufacturerCache)) {
+                    $manufacturerCache[($article->manufacturerId ?? '')] = $this->manufacturers->findById(($article->manufacturerId ?? ''));
                 }
 
                 $category = null;
@@ -63,7 +63,7 @@ final class ListArticlesForDisplayHandler implements QueryHandlerInterface
                     $category = $categoryCache[$article->categoryId];
                 }
 
-                return new ArticleListItem($article, $manufacturerCache[$article->manufacturerId], $category);
+                return new ArticleListItem($article, $manufacturerCache[($article->manufacturerId ?? '')], $category);
             },
             $result->items
         );

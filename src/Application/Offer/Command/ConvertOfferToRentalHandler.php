@@ -102,7 +102,7 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         // prüfen, bevor irgendetwas gespeichert wird.
         $plannedSoFar = $individualQuantities;
         foreach ($bundleItems as [$bundleArticle, $bundleQuantity]) {
-            foreach ($this->bundlePlanner->checkAdd('', $bundleArticle, $bundleQuantity, $plannedSoFar) as $componentId => $demand) {
+            foreach ($this->bundlePlanner->checkAdd('', $bundleArticle, $bundleQuantity, $plannedSoFar, $offer->startDate, $offer->endDate) as $componentId => $demand) {
                 $plannedSoFar[$componentId] = ($plannedSoFar[$componentId] ?? 0) + $demand;
             }
         }

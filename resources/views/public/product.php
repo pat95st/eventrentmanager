@@ -22,7 +22,7 @@ $hasImage = $article->images !== [];
             <?php endif; ?>
             <div class="p-6">
                 <h1 class="text-xl font-semibold text-slate-900"><?= e($article->name) ?></h1>
-                <p class="mt-1 text-sm text-slate-500"><?= e($detail->manufacturer->name) ?></p>
+                <?php if ($detail->manufacturer !== null): ?><p class="mt-1 text-sm text-slate-500"><?= e($detail->manufacturer->name) ?></p><?php endif; ?>
 
                 <?php if ($article->isBillable && $article->dailyRentalPrice !== null): ?>
                     <p class="mt-4 text-lg font-semibold text-slate-900"><?= e($article->dailyRentalPrice) ?> € <span class="text-sm font-normal text-slate-500">/ Einsatztag</span></p>

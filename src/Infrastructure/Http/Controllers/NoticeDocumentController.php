@@ -148,7 +148,7 @@ final class NoticeDocumentController
 
         $displayNames = [];
         foreach ($articles as $article) {
-            $displayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+            $displayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[($article->manufacturerId ?? '')] ?? null);
         }
 
         return $displayNames;

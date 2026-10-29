@@ -44,10 +44,10 @@ final class GetReceiptHandler implements QueryHandlerInterface
                 $article = $this->articles->findById($inventoryNumber->articleId);
                 $manufacturer = null;
                 if ($article !== null) {
-                    if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
-                        $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+                    if (!array_key_exists(($article->manufacturerId ?? ''), $manufacturerCache)) {
+                        $manufacturerCache[($article->manufacturerId ?? '')] = $this->manufacturers->findById(($article->manufacturerId ?? ''));
                     }
-                    $manufacturer = $manufacturerCache[$article->manufacturerId];
+                    $manufacturer = $manufacturerCache[($article->manufacturerId ?? '')];
                 }
 
                 return new ReceiptInventoryNumberEntry($inventoryNumber, $article, $manufacturer);

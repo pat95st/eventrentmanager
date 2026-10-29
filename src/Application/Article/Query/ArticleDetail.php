@@ -30,7 +30,7 @@ final class ArticleDetail
      */
     public function __construct(
         public readonly Article $article,
-        public readonly Manufacturer $manufacturer,
+        public readonly ?Manufacturer $manufacturer, // null bei Bundles (Migration 111)
         public readonly ?Category $category,
         public readonly array $inventoryNumbers,
         // Vorschau der als nächstes vergebenen Inventurnummer; null, wenn Hersteller-

@@ -1071,13 +1071,12 @@ final class ArticleController
                 if (trim($row['article_id']) === '') {
                     continue;
                 }
-                try {
-                    $componentDetail = $this->queries->ask(new GetArticle($row['article_id']));
-                    $label = ArticleDisplayName::of($componentDetail->article, $componentDetail->manufacturer);
-                } catch (NotFoundException) {
-                    $label = '';
-                }
-                $bundleComponentRows[] = ['article_id' => $row['article_id'], 'label' => $label, 'quantity' => (int) $row['quantity']];
+                $bundleComponentRows[] = [
+                    'article_id' => $row['article_id'],
+                    'label' => $this->articleLabel($row['article_id']) ?? '',
+                    'quantity' => (int) $row['quantity'],
+                    'alternatives' => $this->alternativeRows(array_filter(array_map('trim', explode(',', (string) ($row['alternative_ids'] ?? ''))))),
+                ];
             }
         } elseif ($article !== null && $article->isBundle) {
             $bundleComponentRows = $this->bundleComponentRows($article->id);
@@ -1135,7 +1134,11 @@ final class ArticleController
         }
 
         $bundles = [];
-        foreach ($this->bundleComponents->findBundleIdsContaining($articleId) as $bundleId) {
+        $bundleIds = array_values(array_unique(array_merge(
+            $this->bundleComponents->findBundleIdsContaining($articleId),
+            $this->bundleComponents->findBundleIdsWithAlternative($articleId), // auch als Alternative (Migration 111)
+        )));
+        foreach ($bundleIds as $bundleId) {
             try {
                 $bundleDetail = $this->queries->ask(new GetArticle($bundleId));
                 $bundles[] = ['id' => $bundleId, 'label' => ArticleDisplayName::of($bundleDetail->article, $bundleDetail->manufacturer)];
@@ -1146,14 +1149,20 @@ final class ArticleController
         return $bundles;
     }
 
-    /** @return array<int, array{article_id: string, quantity: string}> */
+    /** @return array<int, array{article_id: string, quantity: string, alternative_ids: string}> */
     private function bundleComponentsFromRequest(Request $request): array
     {
         $articleIds = $request->post['bundle_component_article_id'] ?? [];
         $quantities = $request->post['bundle_component_quantity'] ?? [];
+        // Migration 111: kommagetrennte Alternativartikel je Zeile.
+        $alternatives = $request->post['bundle_component_alternatives'] ?? [];
         $rows = [];
         foreach ((array) $articleIds as $i => $articleId) {
-            $rows[] = ['article_id' => (string) $articleId, 'quantity' => (string) ($quantities[$i] ?? '1')];
+            $rows[] = [
+                'article_id' => (string) $articleId,
+                'quantity' => (string) ($quantities[$i] ?? '1'),
+                'alternative_ids' => (string) ($alternatives[$i] ?? ''),
+            ];
         }
 
         return $rows;
@@ -1163,7 +1172,7 @@ final class ArticleController
      * Bestandteile eines Bundles mit Anzeige-Label ("Hersteller Name") für
      * Formular und Detailseite.
      *
-     * @return list<array{article_id: string, label: string, quantity: int}>
+     * @return list<array{article_id: string, label: string, quantity: int, alternatives: list<array{article_id: string, label: string}>}>
      */
     private function bundleComponentRows(string $bundleArticleId): array
     {
@@ -1173,16 +1182,44 @@ final class ArticleController
 
         $rows = [];
         foreach ($this->bundleComponents->findByBundle($bundleArticleId) as $component) {
-            try {
-                $componentDetail = $this->queries->ask(new GetArticle($component->componentArticleId));
-                $label = ArticleDisplayName::of($componentDetail->article, $componentDetail->manufacturer);
-            } catch (NotFoundException) {
-                $label = $component->componentArticleId;
-            }
-            $rows[] = ['article_id' => $component->componentArticleId, 'label' => $label, 'quantity' => $component->quantity];
+            $rows[] = [
+                'article_id' => $component->componentArticleId,
+                'label' => $this->articleLabel($component->componentArticleId) ?? $component->componentArticleId,
+                'quantity' => $component->quantity,
+                'alternatives' => $this->alternativeRows($component->alternativeArticleIds),
+            ];
         }
 
         return $rows;
+    }
+
+    /**
+     * @param string[] $articleIds
+     * @return list<array{article_id: string, label: string}>
+     */
+    private function alternativeRows(array $articleIds): array
+    {
+        $rows = [];
+        foreach ($articleIds as $articleId) {
+            $label = $this->articleLabel($articleId);
+            if ($label !== null) {
+                $rows[] = ['article_id' => $articleId, 'label' => $label];
+            }
+        }
+
+        return $rows;
+    }
+
+    /** "Hersteller Name" eines Artikels, null wenn er nicht (mehr) existiert. */
+    private function articleLabel(string $articleId): ?string
+    {
+        try {
+            $detail = $this->queries->ask(new GetArticle($articleId));
+
+            return ArticleDisplayName::of($detail->article, $detail->manufacturer);
+        } catch (NotFoundException) {
+            return null;
+        }
     }
 
     private function nullIfEmpty(?string $value): ?string

@@ -65,11 +65,11 @@ final class ListRentalsInRangeHandler implements QueryHandlerInterface
                                 return null;
                             }
 
-                            if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
-                                $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+                            if (!array_key_exists(($article->manufacturerId ?? ''), $manufacturerCache)) {
+                                $manufacturerCache[($article->manufacturerId ?? '')] = $this->manufacturers->findById(($article->manufacturerId ?? ''));
                             }
 
-                            return ArticleDisplayName::of($article, $manufacturerCache[$article->manufacturerId]) . ' (' . $item->quantity . 'x)';
+                            return ArticleDisplayName::of($article, $manufacturerCache[($article->manufacturerId ?? '')]) . ' (' . $item->quantity . 'x)';
                         },
                         $rentalItems
                     )));

@@ -75,7 +75,7 @@ final class AddInventoryNumberHandler implements CommandHandlerInterface
             throw new ValidationException(['storageLocation' => 'Der Lagerort darf höchstens 255 Zeichen lang sein.']);
         }
 
-        $manufacturer = $this->manufacturers->findById($article->manufacturerId);
+        $manufacturer = $this->manufacturers->findById(($article->manufacturerId ?? ''));
         if ($manufacturer === null) {
             throw new NotFoundException('Hersteller des Artikels wurde nicht gefunden.');
         }

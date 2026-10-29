@@ -159,9 +159,21 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             $sql .= ' AND is_bundle = 0';
         }
 
-        if ($searchTerm !== null && $searchTerm !== '') {
-            $sql .= ' AND (name LIKE :term OR description LIKE :term)';
-            $params['term'] = '%' . $searchTerm . '%';
+        if ($searchTerm !== null && trim($searchTerm) !== '') {
+            // Wortweise Suche: jedes Wort muss im Namen, in der Beschreibung
+            // oder im Herstellernamen vorkommen — die Auswahl zeigt
+            // "Hersteller Artikelname", danach wird auch gesucht
+            // (z. B. "db opera 12"). Je Vorkommen ein eigener Platzhalter,
+            // damit auch native Prepared Statements funktionieren.
+            $words = array_slice(preg_split('/\s+/u', trim($searchTerm)) ?: [], 0, 8);
+            foreach ($words as $i => $word) {
+                $like = '%' . addcslashes($word, '%_\\') . '%';
+                $sql .= " AND (name LIKE :term{$i}a OR description LIKE :term{$i}b"
+                    . " OR manufacturer_id IN (SELECT m.id FROM manufacturers m WHERE m.name LIKE :term{$i}c))";
+                $params["term{$i}a"] = $like;
+                $params["term{$i}b"] = $like;
+                $params["term{$i}c"] = $like;
+            }
         }
 
         if ($manufacturerId !== null) {

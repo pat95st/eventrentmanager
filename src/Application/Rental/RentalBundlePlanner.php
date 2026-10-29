@@ -13,6 +13,7 @@ use App\Domain\Rental\RentalBundleRepositoryInterface;
 use App\Domain\Rental\RentalIssuedItemRepositoryInterface;
 use App\Domain\Rental\RentalItem;
 use App\Domain\Rental\RentalItemRepositoryInterface;
+use App\Domain\Rental\RentalRepositoryInterface;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -23,6 +24,14 @@ use DateTimeImmutable;
  * ausgegeben werden. RentalBundle merkt sich die gebuchten Bundles, damit
  * deren Bestandteile nicht einzeln unter die Bundle-Menge gesenkt oder
  * entfernt werden können und die Rechnung zum Bundle-Preis abrechnet.
+ *
+ * Alternativen (Migration 111): Je Bestandteil wird der Hauptartikel
+ * eingeplant. Reicht dessen freie Menge im Zeitraum nicht (aktive
+ * Inventarnummern abzüglich der Planung überschneidender Veranstaltungen
+ * und dieser Veranstaltung), wird die erste Alternative mit genügend freier
+ * Menge genommen. Passt keine, bleibt es beim Hauptartikel (und dessen
+ * Bestandsprüfung entscheidet wie bisher). Die tatsächlich belegten Artikel
+ * stehen in RentalBundle::$allocations.
  *
  * Gemeinsam genutzt von AddRentalItemHandler, ConvertOfferToRentalHandler,
  * RemoveRentalBundleHandler sowie Update-/DeleteRentalItemHandler.
@@ -35,6 +44,7 @@ final class RentalBundlePlanner
         private readonly ArticleBundleComponentRepositoryInterface $bundleComponents,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly RentalIssuedItemRepositoryInterface $issuedItems,
+        private readonly ?RentalRepositoryInterface $rentals = null,
     ) {
     }
 
@@ -43,39 +53,55 @@ final class RentalBundlePlanner
     {
         $required = 0;
         foreach ($this->rentalBundles->findByRental($rentalId) as $rentalBundle) {
-            foreach ($this->bundleComponents->findByBundle($rentalBundle->bundleArticleId) as $component) {
-                if ($component->componentArticleId === $articleId) {
-                    $required += $component->quantity * $rentalBundle->quantity;
-                }
-            }
+            $required += $this->allocationsOf($rentalBundle)[$articleId] ?? 0;
         }
 
         return $required;
     }
 
     /**
-     * Prüft, ob $quantity Bundles in die Vermietung passen (Inventarnummern
-     * je Bestandteil), ohne etwas zu speichern.
+     * Wählt je Bestandteil den einzuplanenden Artikel (Hauptartikel oder
+     * Alternative) und prüft den Bestand, ohne etwas zu speichern.
      *
      * @param array<string, int> $alsoPlanned zusätzlich bereits eingeplante Mengen je Artikel (z. B. andere Positionen derselben Umwandlung)
-     * @return array<string, int> zusätzlicher Bedarf je Bestandteil-Artikel
+     * @param DateTimeImmutable|null $from Zeitraum für die Verfügbarkeit; ohne Angabe der der Vermietung $rentalId
+     * @return array<string, int> zusätzlicher Bedarf je eingeplantem Artikel
      */
-    public function checkAdd(string $rentalId, Article $bundle, int $quantity, array $alsoPlanned = []): array
+    public function checkAdd(string $rentalId, Article $bundle, int $quantity, array $alsoPlanned = [], ?DateTimeImmutable $from = null, ?DateTimeImmutable $to = null): array
     {
         $components = $this->bundleComponents->findByBundle($bundle->id);
         if ($components === []) {
             throw new ValidationException(['articleId' => "Das Bundle „{$bundle->name}“ hat keine Bestandteile und kann daher nicht vermietet werden."]);
         }
 
+        if (($from === null || $to === null) && $rentalId !== '' && $this->rentals !== null) {
+            $rental = $this->rentals->findById($rentalId);
+            $from ??= $rental?->startDate;
+            $to ??= $rental?->endDate;
+        }
+        $usedElsewhere = $this->usageInOverlappingRentals($rentalId, $from, $to);
+
         $demand = [];
         foreach ($components as $component) {
-            $demand[$component->componentArticleId] = ($demand[$component->componentArticleId] ?? 0) + $component->quantity * $quantity;
+            $need = $component->quantity * $quantity;
+            $chosen = $component->componentArticleId;
+            foreach (array_merge([$component->componentArticleId], $component->alternativeArticleIds) as $candidate) {
+                $free = count($this->inventoryNumbers->findActiveByArticle($candidate))
+                    - ($usedElsewhere[$candidate] ?? 0)
+                    - $this->plannedInRental($rentalId, $candidate)
+                    - ($alsoPlanned[$candidate] ?? 0)
+                    - ($demand[$candidate] ?? 0);
+                if ($free >= $need) {
+                    $chosen = $candidate;
+                    break;
+                }
+            }
+            $demand[$chosen] = ($demand[$chosen] ?? 0) + $need;
         }
 
         foreach ($demand as $articleId => $additional) {
-            $existing = $this->rentalItems->findByRentalAndArticle($rentalId, $articleId)?->quantity ?? 0;
             $available = count($this->inventoryNumbers->findActiveByArticle($articleId));
-            if ($existing + ($alsoPlanned[$articleId] ?? 0) + $additional > $available) {
+            if ($this->plannedInRental($rentalId, $articleId) + ($alsoPlanned[$articleId] ?? 0) + $additional > $available) {
                 throw new ValidationException([
                     'quantity' => "Für einen Bestandteil des Bundles „{$bundle->name}“ existieren nur {$available} Inventarnummer(n) — die geplante Menge übersteigt diese Anzahl.",
                 ]);
@@ -112,9 +138,11 @@ final class RentalBundlePlanner
 
         $rentalBundle = $this->rentalBundles->findByRentalAndBundle($rentalId, $bundle->id);
         if ($rentalBundle !== null) {
+            $allocations = $this->allocationsOf($rentalBundle);
             $rentalBundle->quantity += $quantity;
             $rentalBundle->updatedAt = $now;
         } else {
+            $allocations = [];
             $rentalBundle = new RentalBundle(
                 id: Uuid::v4(),
                 rentalId: $rentalId,
@@ -124,6 +152,10 @@ final class RentalBundlePlanner
                 updatedAt: $now,
             );
         }
+        foreach ($demand as $articleId => $additional) {
+            $allocations[$articleId] = ($allocations[$articleId] ?? 0) + $additional;
+        }
+        $rentalBundle->allocations = $allocations;
         $this->rentalBundles->save($rentalBundle);
 
         return $rentalBundle->id;
@@ -137,13 +169,13 @@ final class RentalBundlePlanner
     {
         $now = new DateTimeImmutable();
         $plan = [];
-        foreach ($this->bundleComponents->findByBundle($rentalBundle->bundleArticleId) as $component) {
-            $item = $this->rentalItems->findByRentalAndArticle($rentalBundle->rentalId, $component->componentArticleId);
+        foreach ($this->allocationsOf($rentalBundle) as $articleId => $allocated) {
+            $item = $this->rentalItems->findByRentalAndArticle($rentalBundle->rentalId, (string) $articleId);
             if ($item === null) {
                 continue;
             }
-            $newQuantity = $item->quantity - $component->quantity * $rentalBundle->quantity;
-            $issued = $this->issuedItems->countByRentalAndArticle($rentalBundle->rentalId, $component->componentArticleId);
+            $newQuantity = $item->quantity - $allocated;
+            $issued = $this->issuedItems->countByRentalAndArticle($rentalBundle->rentalId, (string) $articleId);
             if ($newQuantity < $issued) {
                 throw new ValidationException([
                     'bundle' => 'Von den Bestandteilen dieses Bundles sind bereits Exemplare ausgegeben — bitte zuerst die Ausgabe rückgängig machen.',
@@ -163,5 +195,51 @@ final class RentalBundlePlanner
         }
 
         $this->rentalBundles->delete($rentalBundle->id);
+    }
+
+    /**
+     * Belegte Artikel eines gebuchten Bundles; Altbuchungen ohne Zuordnung
+     * fallen auf die aktuellen Bestandteile (Hauptartikel) zurück.
+     *
+     * @return array<string, int>
+     */
+    public function allocationsOf(RentalBundle $rentalBundle): array
+    {
+        if ($rentalBundle->allocations !== []) {
+            return $rentalBundle->allocations;
+        }
+
+        $allocations = [];
+        foreach ($this->bundleComponents->findByBundle($rentalBundle->bundleArticleId) as $component) {
+            $allocations[$component->componentArticleId] = ($allocations[$component->componentArticleId] ?? 0)
+                + $component->quantity * $rentalBundle->quantity;
+        }
+
+        return $allocations;
+    }
+
+    private function plannedInRental(string $rentalId, string $articleId): int
+    {
+        return $rentalId !== '' ? ($this->rentalItems->findByRentalAndArticle($rentalId, $articleId)?->quantity ?? 0) : 0;
+    }
+
+    /** @return array<string, int> Artikel-ID => in überschneidenden anderen Vermietungen geplante Menge */
+    private function usageInOverlappingRentals(string $rentalId, ?DateTimeImmutable $from, ?DateTimeImmutable $to): array
+    {
+        if ($this->rentals === null || $from === null || $to === null) {
+            return [];
+        }
+
+        $usage = [];
+        foreach ($this->rentals->findOverlapping($from, $to) as $rental) {
+            if ($rental->id === $rentalId) {
+                continue;
+            }
+            foreach ($this->rentalItems->findByRental($rental->id) as $item) {
+                $usage[$item->articleId] = ($usage[$item->articleId] ?? 0) + $item->quantity;
+            }
+        }
+
+        return $usage;
     }
 }

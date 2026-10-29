@@ -51,8 +51,9 @@ final class GetArticleHandler implements QueryHandlerInterface
             throw new NotFoundException("Artikel \"{$query->id}\" wurde nicht gefunden.");
         }
 
-        $manufacturer = $this->manufacturers->findById($article->manufacturerId);
-        if ($manufacturer === null) {
+        // Bundles haben keinen Hersteller (Migration 111).
+        $manufacturer = $article->manufacturerId !== null ? $this->manufacturers->findById($article->manufacturerId) : null;
+        if ($manufacturer === null && $article->manufacturerId !== null) {
             throw new NotFoundException("Hersteller des Artikels wurde nicht gefunden.");
         }
 
@@ -93,7 +94,7 @@ final class GetArticleHandler implements QueryHandlerInterface
             $rawInventoryNumbers
         );
 
-        $nextInventoryNumberPreview = ($manufacturer->prefix !== null && $article->prefix !== null)
+        $nextInventoryNumberPreview = ($manufacturer?->prefix !== null && $article->prefix !== null)
             ? InventoryNumberGenerator::nextNumber($rawInventoryNumbers, $manufacturer->prefix, $article->prefix)
             : null;
 

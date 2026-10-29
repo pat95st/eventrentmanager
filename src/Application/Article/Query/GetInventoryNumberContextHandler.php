@@ -36,7 +36,7 @@ final class GetInventoryNumberContextHandler implements QueryHandlerInterface
             throw new NotFoundException('Zugehöriger Artikel wurde nicht gefunden.');
         }
 
-        $manufacturer = $this->manufacturers->findById($article->manufacturerId);
+        $manufacturer = $this->manufacturers->findById(($article->manufacturerId ?? ''));
         if ($manufacturer === null) {
             throw new NotFoundException('Hersteller des Artikels wurde nicht gefunden.');
         }

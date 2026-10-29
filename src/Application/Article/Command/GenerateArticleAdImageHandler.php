@@ -80,7 +80,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
             }
         }
 
-        $manufacturer = $this->manufacturers->findById($article->manufacturerId);
+        $manufacturer = $this->manufacturers->findById(($article->manufacturerId ?? ''));
         $category = $article->categoryId !== null ? $this->categories->findById($article->categoryId) : null;
 
         try {

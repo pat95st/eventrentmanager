@@ -111,7 +111,7 @@ final class ReceivePurchaseOrderItemHandler implements CommandHandlerInterface
     private function receiveIntoRentalPool(\App\Domain\Purchase\PurchaseOrderItem $item, string $supplierId, string $articleId, int $quantity, DateTimeImmutable $now): void
     {
         $article = $this->articles->findById($articleId);
-        $manufacturer = $article !== null ? $this->manufacturers->findById($article->manufacturerId) : null;
+        $manufacturer = $article !== null ? $this->manufacturers->findById(($article->manufacturerId ?? '')) : null;
 
         if ($article === null || $manufacturer === null || $manufacturer->prefix === null || $article->prefix === null) {
             throw new ValidationException([

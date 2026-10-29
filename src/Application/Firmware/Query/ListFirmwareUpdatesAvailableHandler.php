@@ -57,7 +57,7 @@ final class ListFirmwareUpdatesAvailableHandler implements QueryHandlerInterface
                 continue;
             }
 
-            $manufacturer = $this->manufacturers->findById($article->manufacturerId);
+            $manufacturer = $this->manufacturers->findById(($article->manufacturerId ?? ''));
             if ($manufacturer === null) {
                 continue;
             }

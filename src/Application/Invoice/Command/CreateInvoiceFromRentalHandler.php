@@ -142,9 +142,16 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
             if ($bundleArticle === null) {
                 continue;
             }
-            foreach ($this->bundleComponents?->findByBundle($bundleArticle->id) ?? [] as $component) {
-                $coveredByBundles[$component->componentArticleId] = ($coveredByBundles[$component->componentArticleId] ?? 0)
-                    + $component->quantity * $rentalBundle->quantity;
+            if ($rentalBundle->allocations !== []) {
+                // Tatsächlich belegte Artikel inkl. Alternativen (Migration 111).
+                foreach ($rentalBundle->allocations as $allocatedArticleId => $allocatedQuantity) {
+                    $coveredByBundles[$allocatedArticleId] = ($coveredByBundles[$allocatedArticleId] ?? 0) + $allocatedQuantity;
+                }
+            } else {
+                foreach ($this->bundleComponents?->findByBundle($bundleArticle->id) ?? [] as $component) {
+                    $coveredByBundles[$component->componentArticleId] = ($coveredByBundles[$component->componentArticleId] ?? 0)
+                        + $component->quantity * $rentalBundle->quantity;
+                }
             }
             $items[] = new InvoiceItem(
                 id: Uuid::v4(),

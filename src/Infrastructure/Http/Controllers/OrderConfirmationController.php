@@ -357,7 +357,7 @@ final class OrderConfirmationController
         }
         $articleDisplayNames = [];
         foreach ($articles as $article) {
-            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[($article->manufacturerId ?? '')] ?? null);
         }
 
         // Anzeige-Label der verknüpften Veranstaltung — siehe

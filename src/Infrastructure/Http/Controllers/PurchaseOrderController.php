@@ -267,7 +267,7 @@ final class PurchaseOrderController
         }
         $articleDisplayNames = [];
         foreach ($articles as $article) {
-            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[($article->manufacturerId ?? '')] ?? null);
         }
 
         echo View::page('purchase_orders/form', [

@@ -14,7 +14,7 @@ final class Article
     public function __construct(
         public readonly string $id,
         public string $name,
-        public string $manufacturerId,
+        public ?string $manufacturerId, // null bei Bundles (Migration 111)
         public ?string $prefix, // Präfix für generierte Inventurnummern, z. B. "AKS"; bei Altdaten ggf. noch null
         public ?string $categoryId,
         public ?string $description,

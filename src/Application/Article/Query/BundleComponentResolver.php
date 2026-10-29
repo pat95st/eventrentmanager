@@ -49,7 +49,7 @@ final class BundleComponentResolver
                 if ($componentArticle === null) {
                     continue;
                 }
-                $manufacturerId = $componentArticle->manufacturerId;
+                $manufacturerId = ($componentArticle->manufacturerId ?? '');
                 if (!array_key_exists($manufacturerId, $manufacturerCache)) {
                     $manufacturerCache[$manufacturerId] = $this->manufacturers->findById($manufacturerId);
                 }

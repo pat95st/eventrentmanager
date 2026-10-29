@@ -59,10 +59,10 @@ final class GetRentalLoadingListHandler implements QueryHandlerInterface
             if ($article === null || $inventoryNumber === null) {
                 continue;
             }
-            if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
-                $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+            if (!array_key_exists(($article->manufacturerId ?? ''), $manufacturerCache)) {
+                $manufacturerCache[($article->manufacturerId ?? '')] = $this->manufacturers->findById(($article->manufacturerId ?? ''));
             }
-            $issuedItemsWithDetails[$issuedItem->id] = new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerCache[$article->manufacturerId]);
+            $issuedItemsWithDetails[$issuedItem->id] = new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerCache[($article->manufacturerId ?? '')]);
         }
 
         $loads = $this->vehicleLoads->findByRental($rental->id);

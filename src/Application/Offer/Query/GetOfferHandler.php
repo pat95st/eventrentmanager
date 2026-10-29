@@ -67,7 +67,7 @@ final class GetOfferHandler implements QueryHandlerInterface
             function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
 
-                return $article !== null ? new OfferItemWithArticle($item, $article, $manufacturerFor($article->manufacturerId)) : null;
+                return $article !== null ? new OfferItemWithArticle($item, $article, $manufacturerFor(($article->manufacturerId ?? ''))) : null;
             },
             $rawItems
         )));
@@ -109,7 +109,7 @@ final class GetOfferHandler implements QueryHandlerInterface
 
                 $inventoryNumber = $item->inventoryNumberId !== null ? $this->inventoryNumbers->findById($item->inventoryNumberId) : null;
 
-                return new OfferSaleItemWithArticle($item, $article, $inventoryNumber, $manufacturerFor($article->manufacturerId));
+                return new OfferSaleItemWithArticle($item, $article, $inventoryNumber, $manufacturerFor(($article->manufacturerId ?? '')));
             },
             $rawSaleItems
         )));

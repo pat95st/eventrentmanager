@@ -261,7 +261,7 @@ final class RentalController
         }
         $articleDisplayNames = [];
         foreach ($articles as $article) {
-            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[$article->manufacturerId] ?? null);
+            $articleDisplayNames[$article->id] = ArticleDisplayName::of($article, $manufacturersById[($article->manufacturerId ?? '')] ?? null);
         }
 
         // Gebuchte Bundles (Migration 107) mit Anzeige-Label und Bestandteilen,
@@ -275,14 +275,31 @@ final class RentalController
                 continue;
             }
             $components = $this->bundleResolver?->resolve([$bundleDetail->article])[$bundleDetail->article->id] ?? [];
-            foreach ($components as $component) {
-                $bundleRequiredByArticle[$component['articleId']] = ($bundleRequiredByArticle[$component['articleId']] ?? 0) + $component['quantity'] * $rentalBundle->quantity;
+            $description = $components !== [] ? \App\Application\Article\Query\BundleComponentResolver::describe($components, $rentalBundle->quantity) : '';
+            if ($this->bundlePlanner !== null) {
+                // Tatsächlich eingeplante Artikel inkl. Alternativen (Migration 111).
+                $allocationParts = [];
+                foreach ($this->bundlePlanner->allocationsOf($rentalBundle) as $allocatedArticleId => $allocatedQuantity) {
+                    $bundleRequiredByArticle[$allocatedArticleId] = ($bundleRequiredByArticle[$allocatedArticleId] ?? 0) + $allocatedQuantity;
+                    try {
+                        $allocatedDetail = $this->queries->ask(new \App\Application\Article\Query\GetArticle((string) $allocatedArticleId));
+                        $allocationParts[] = $allocatedQuantity . '× ' . ArticleDisplayName::of($allocatedDetail->article, $allocatedDetail->manufacturer);
+                    } catch (NotFoundException) {
+                    }
+                }
+                if ($allocationParts !== []) {
+                    $description = 'eingeplant: ' . implode(', ', $allocationParts);
+                }
+            } else {
+                foreach ($components as $component) {
+                    $bundleRequiredByArticle[$component['articleId']] = ($bundleRequiredByArticle[$component['articleId']] ?? 0) + $component['quantity'] * $rentalBundle->quantity;
+                }
             }
             $bookedBundles[] = [
                 'id' => $rentalBundle->id,
                 'label' => ArticleDisplayName::of($bundleDetail->article, $bundleDetail->manufacturer),
                 'quantity' => $rentalBundle->quantity,
-                'description' => $components !== [] ? \App\Application\Article\Query\BundleComponentResolver::describe($components, $rentalBundle->quantity) : '',
+                'description' => $description,
             ];
         }
 

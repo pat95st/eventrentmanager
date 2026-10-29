@@ -152,7 +152,7 @@ final class ArticleApiController
     /** @return array<string, mixed> */
     private function detailToArray(ArticleDetail $detail): array
     {
-        $data = $this->articleToArray($detail->article, $detail->manufacturer->name, $detail->category?->name);
+        $data = $this->articleToArray($detail->article, $detail->manufacturer?->name, $detail->category?->name);
         $data['inventory_numbers'] = array_map(
             fn ($entry) => [
                 'number' => $entry->inventoryNumber->number,

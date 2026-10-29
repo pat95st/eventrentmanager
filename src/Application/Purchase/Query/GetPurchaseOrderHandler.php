@@ -47,7 +47,7 @@ final class GetPurchaseOrderHandler implements QueryHandlerInterface
             function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
 
-                return $article !== null ? new PurchaseOrderItemWithArticle($item, $article, $manufacturerFor($article->manufacturerId)) : null;
+                return $article !== null ? new PurchaseOrderItemWithArticle($item, $article, $manufacturerFor(($article->manufacturerId ?? ''))) : null;
             },
             $rawItems
         )));

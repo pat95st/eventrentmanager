@@ -84,7 +84,7 @@ CREATE TABLE labor_time_articles (
 CREATE TABLE articles (
     id                  CHAR(36)        NOT NULL PRIMARY KEY,
     name                VARCHAR(255)    NOT NULL,
-    manufacturer_id     CHAR(36)        NOT NULL,
+    manufacturer_id     CHAR(36)        NULL, -- NULL bei Bundles (Migration 111)
     prefix              VARCHAR(20)     NULL, -- Präfix für Inventurnummern, z. B. "AKS" (siehe inventory_numbers)
     category_id         CHAR(36)        NULL,
     description         TEXT            NULL,
@@ -130,6 +130,20 @@ CREATE TABLE article_bundle_components (
         FOREIGN KEY (component_article_id) REFERENCES articles (id) ON DELETE RESTRICT,
     UNIQUE KEY uq_article_bundle_components (bundle_article_id, component_article_id),
     INDEX idx_article_bundle_components_component (component_article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Optionale Alternativartikel je Bundle-Bestandteil (Migration 111).
+CREATE TABLE article_bundle_component_alternatives (
+    id           CHAR(36) NOT NULL PRIMARY KEY,
+    component_id CHAR(36) NOT NULL,
+    article_id   CHAR(36) NOT NULL,
+    sort_order   INT      NOT NULL DEFAULT 0,
+    CONSTRAINT fk_bundle_alternatives_component
+        FOREIGN KEY (component_id) REFERENCES article_bundle_components (id) ON DELETE CASCADE,
+    CONSTRAINT fk_bundle_alternatives_article
+        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE RESTRICT,
+    UNIQUE KEY uq_bundle_alternatives (component_id, article_id),
+    INDEX idx_bundle_alternatives_article (article_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -711,6 +725,20 @@ CREATE TABLE rental_bundles (
     CONSTRAINT fk_rental_bundles_article
         FOREIGN KEY (bundle_article_id) REFERENCES articles (id) ON DELETE RESTRICT,
     UNIQUE KEY uq_rental_bundles (rental_id, bundle_article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Tatsächlich belegte Artikel je gebuchtem Bundle (Migration 111), z. B.
+-- eine Alternative statt des Hauptartikels.
+CREATE TABLE rental_bundle_allocations (
+    id               CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_bundle_id CHAR(36)     NOT NULL,
+    article_id       CHAR(36)     NOT NULL,
+    quantity         INT UNSIGNED NOT NULL,
+    CONSTRAINT fk_rental_bundle_allocations_bundle
+        FOREIGN KEY (rental_bundle_id) REFERENCES rental_bundles (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_bundle_allocations_article
+        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE RESTRICT,
+    UNIQUE KEY uq_rental_bundle_allocations (rental_bundle_id, article_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------

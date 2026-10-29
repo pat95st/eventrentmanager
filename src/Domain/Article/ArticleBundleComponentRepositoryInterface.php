@@ -25,4 +25,12 @@ interface ArticleBundleComponentRepositoryInterface
      * @param ArticleBundleComponent[] $components
      */
     public function replaceForBundle(string $bundleArticleId, array $components): void;
+
+    /**
+     * Bundles, in denen der Artikel als Alternative zu einem Bestandteil
+     * eingetragen ist (Migration 111).
+     *
+     * @return string[]
+     */
+    public function findBundleIdsWithAlternative(string $articleId): array;
 }

@@ -56,6 +56,24 @@ final class MariadbRentalBundleRepository implements RentalBundleRepositoryInter
             'created_at' => $bundle->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $bundle->updatedAt->format('Y-m-d H:i:s'),
         ]);
+
+        // Zuordnung komplett ersetzen (Migration 111).
+        $delete = $this->pdo->prepare('DELETE FROM rental_bundle_allocations WHERE rental_bundle_id = :id');
+        $delete->execute(['id' => $bundle->id]);
+        $insert = $this->pdo->prepare(
+            'INSERT INTO rental_bundle_allocations (id, rental_bundle_id, article_id, quantity) VALUES (:id, :rental_bundle_id, :article_id, :quantity)'
+        );
+        foreach ($bundle->allocations as $articleId => $quantity) {
+            if ($quantity <= 0) {
+                continue;
+            }
+            $insert->execute([
+                'id' => \App\Shared\Uuid::v4(),
+                'rental_bundle_id' => $bundle->id,
+                'article_id' => (string) $articleId,
+                'quantity' => $quantity,
+            ]);
+        }
     }
 
     public function delete(string $id): void
@@ -82,6 +100,20 @@ final class MariadbRentalBundleRepository implements RentalBundleRepositoryInter
             quantity: (int) $row['quantity'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            allocations: $this->loadAllocations((string) $row['id']),
         );
+    }
+
+    /** @return array<string, int> */
+    private function loadAllocations(string $rentalBundleId): array
+    {
+        $stmt = $this->pdo->prepare('SELECT article_id, quantity FROM rental_bundle_allocations WHERE rental_bundle_id = :id');
+        $stmt->execute(['id' => $rentalBundleId]);
+        $allocations = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $allocations[(string) $row['article_id']] = (int) $row['quantity'];
+        }
+
+        return $allocations;
     }
 }

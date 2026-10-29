@@ -60,7 +60,7 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
             function ($item) use ($manufacturerFor) {
                 $article = $this->articles->findById($item->articleId);
 
-                return $article !== null ? new OrderConfirmationItemWithArticle($item, $article, $manufacturerFor($article->manufacturerId)) : null;
+                return $article !== null ? new OrderConfirmationItemWithArticle($item, $article, $manufacturerFor(($article->manufacturerId ?? ''))) : null;
             },
             $rawItems
         )));

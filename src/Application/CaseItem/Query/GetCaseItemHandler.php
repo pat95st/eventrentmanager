@@ -64,7 +64,7 @@ final class GetCaseItemHandler implements QueryHandlerInterface
 
                         // Artikel könnte theoretisch parallel gelöscht worden sein;
                         // dann blenden wir die Zeile einfach aus statt zu crashen.
-                        return $article !== null ? new CaseContentItemWithArticle($item, $article, $articleManufacturerFor($article->manufacturerId)) : null;
+                        return $article !== null ? new CaseContentItemWithArticle($item, $article, $articleManufacturerFor(($article->manufacturerId ?? ''))) : null;
                     },
                     $contentItems
                 )));

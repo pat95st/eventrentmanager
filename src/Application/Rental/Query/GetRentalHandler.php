@@ -69,7 +69,7 @@ final class GetRentalHandler implements QueryHandlerInterface
                 $accessories = $this->accessories->findByArticle($item->articleId);
                 $preIssueChecks = $this->preIssueChecks->findByArticle($item->articleId);
 
-                return new RentalItemWithArticle($item, $article, $issuedCount, $accessories, $preIssueChecks, $manufacturerFor($article->manufacturerId));
+                return new RentalItemWithArticle($item, $article, $issuedCount, $accessories, $preIssueChecks, $manufacturerFor(($article->manufacturerId ?? '')));
             },
             $rawItems
         )));
@@ -83,7 +83,7 @@ final class GetRentalHandler implements QueryHandlerInterface
                     return null;
                 }
 
-                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerFor($article->manufacturerId));
+                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerFor(($article->manufacturerId ?? '')));
             },
             $rawIssuedItems
         )));

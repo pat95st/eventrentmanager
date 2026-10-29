@@ -21,6 +21,14 @@ final class RentalBundle
         public int $quantity,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        /**
+         * Tatsächlich belegte Artikel (Migration 111): Artikel-ID => Menge,
+         * z. B. eine Alternative statt des Hauptartikels. Leer bei
+         * Altbuchungen ohne Zuordnung — dann gelten die Bestandteile.
+         *
+         * @var array<string, int>
+         */
+        public array $allocations = [],
     ) {
     }
 }

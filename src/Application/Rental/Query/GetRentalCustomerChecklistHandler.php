@@ -82,11 +82,11 @@ final class GetRentalCustomerChecklistHandler implements QueryHandlerInterface
                     return null;
                 }
 
-                if (!array_key_exists($article->manufacturerId, $manufacturerCache)) {
-                    $manufacturerCache[$article->manufacturerId] = $this->manufacturers->findById($article->manufacturerId);
+                if (!array_key_exists(($article->manufacturerId ?? ''), $manufacturerCache)) {
+                    $manufacturerCache[($article->manufacturerId ?? '')] = $this->manufacturers->findById(($article->manufacturerId ?? ''));
                 }
 
-                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerCache[$article->manufacturerId]);
+                return new RentalIssuedItemWithDetails($issuedItem, $inventoryNumber, $article, $manufacturerCache[($article->manufacturerId ?? '')]);
             },
             $activeIssuedItems
         )));

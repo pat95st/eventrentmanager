@@ -75,7 +75,7 @@ $availabilityStatusMeta = [
         <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($article, $detail->manufacturer)) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
             <?php if ($detail->category !== null): ?><?= e($detail->category->name) ?><?php endif; ?>
-            <?php if ($detail->manufacturer->prefix !== null && $article->prefix !== null): ?>
+            <?php if ($detail->manufacturer?->prefix !== null && $article->prefix !== null): ?>
                 · <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->manufacturer->prefix) ?>-<?= e($article->prefix) ?>-…</span>
             <?php endif; ?>
         </p>
@@ -123,7 +123,7 @@ $availabilityStatusMeta = [
             <div class="mt-3 text-sm text-slate-600 dark:text-slate-300">
                 <span class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.bundle_components')) ?>:</span>
                 <?php foreach ($bundleComponentRows as $i => $componentRow): ?>
-                    <?= $i > 0 ? ' · ' : '' ?><?= (int) $componentRow['quantity'] ?>× <a href="/artikel/<?= e($componentRow['article_id']) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($componentRow['label']) ?></a>
+                    <?= $i > 0 ? ' · ' : '' ?><?= (int) $componentRow['quantity'] ?>× <a href="/artikel/<?= e($componentRow['article_id']) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($componentRow['label']) ?></a><?php if (($componentRow['alternatives'] ?? []) !== []): ?> <span class="text-xs text-slate-500 dark:text-slate-400">(<?= e(t('articles.show.bundle_alternatives')) ?>: <?php foreach ($componentRow['alternatives'] as $j => $alternative): ?><?= $j > 0 ? ', ' : '' ?><a href="/artikel/<?= e($alternative['article_id']) ?>" class="hover:underline"><?= e($alternative['label']) ?></a><?php endforeach; ?>)</span><?php endif; ?>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
@@ -171,7 +171,7 @@ $availabilityStatusMeta = [
             <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.details_title')) ?></h2>
             <dl class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
                 <div>
-                    <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.weight')) ?></dt>
+                    <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.weight')) ?><?= $article->isBundle ? ' (' . e(t('articles.show.weight_calculated')) . ')' : '' ?></dt>
                     <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $article->weightValue !== null ? e($article->weightValue . ' ' . $article->weightUnit) : '–' ?></dd>
                 </div>
                 <div>
@@ -495,6 +495,7 @@ $availabilityStatusMeta = [
             </div>
         <?php endif; ?>
 
+        <?php if (!$article->isBundle): /* Bundles haben keine Inventarnummern und keinen Verkaufsbestand (Migration 111) */ ?>
         <!-- Inventurnummern -->
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.inventory_numbers_title')) ?></h2>
@@ -767,6 +768,8 @@ $availabilityStatusMeta = [
             <?php endif; ?>
         </div>
 
+        <?php endif; ?>
+
         <!-- Zubehör -->
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.accessories_title')) ?></h2>
@@ -888,6 +891,7 @@ $availabilityStatusMeta = [
 
     <div class="space-y-4">
         <!-- Verfügbarkeitskalender -->
+        <?php if (!$article->isBundle): /* Verfügbarkeit gilt je Bestandteil (Migration 111) */ ?>
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.availability_title')) ?></h2>
@@ -956,6 +960,7 @@ $availabilityStatusMeta = [
                 <?php endforeach; ?>
             </div>
         </div>
+        <?php endif; ?>
 
         <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.upcoming_rentals_title')) ?></h2>
@@ -1001,12 +1006,14 @@ $availabilityStatusMeta = [
             <?php endif; ?>
         </div>
 
+        <?php if (!$article->isBundle): ?>
         <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.note_title')) ?></h2>
             <p class="text-slate-500 dark:text-slate-400">
                 <?= e(t('articles.show.note_text')) ?>
             </p>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 

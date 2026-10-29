@@ -19,6 +19,6 @@ final class ListPaymentMethodsHandler implements QueryHandlerInterface
     {
         assert($query instanceof ListPaymentMethods);
 
-        return $this->bankAccounts->findAll();
+        return $this->paymentMethods->findAll();
     }
 }

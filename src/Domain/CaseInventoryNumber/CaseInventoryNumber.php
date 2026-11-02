@@ -16,6 +16,8 @@ final class CaseInventoryNumber
         public ?DateTimeImmutable $acquisitionDate,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Migration 114: Hinweistext für die Stückliste (bereinigtes HTML).
+        public ?string $noticeHtml = null,
     ) {
     }
 }

@@ -36,7 +36,149 @@ final class CaseController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        // Migration 114: Fotos, Hinweistext und Stückliste je Case-Exemplar.
+        private readonly ?\App\Infrastructure\FileStorage\LocalFileStorage $fileStorage = null,
+        private readonly ?\App\Infrastructure\Pdf\CasePackingListPdfGenerator $packingListPdf = null,
     ) {
+    }
+
+    /** Hinweistext (WYSIWYG) eines Exemplars speichern. */
+    public function updateNotice(Request $request): void
+    {
+        $inventoryNumberId = $request->param('id');
+        $caseId = $request->input('case_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new \App\Application\CaseItem\Command\UpdateCaseInventoryNotice($inventoryNumberId, $request->input('notice_html')));
+            Flash::success('Hinweistext wurde gespeichert.');
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/cases/' . $caseId . '#exemplar-' . $inventoryNumberId);
+    }
+
+    /** Ein oder mehrere Fotos des befüllten Exemplars hochladen. */
+    public function addImages(Request $request): void
+    {
+        $inventoryNumberId = $request->param('id');
+        $caseId = $request->input('case_id', '') ?? '';
+
+        $files = $request->fileList('images');
+        if ($files === [] && ($single = $request->file('images')) !== null) {
+            $files = [$single];
+        }
+        if ($files === []) {
+            Flash::error('Bitte mindestens ein Bild auswählen.');
+            Response::redirect('/cases/' . $caseId . '#exemplar-' . $inventoryNumberId);
+
+            return;
+        }
+
+        $added = 0;
+        $errors = [];
+        foreach ($files as $file) {
+            try {
+                $this->commands->dispatch(new \App\Application\CaseItem\Command\AddCaseInventoryNumberImage($inventoryNumberId, $file));
+                $added++;
+            } catch (ValidationException $e) {
+                $errors[] = $file['name'] . ': ' . implode(' ', $e->errors());
+            } catch (NotFoundException $e) {
+                Response::notFound($e->getMessage());
+
+                return;
+            }
+        }
+
+        if ($added > 0) {
+            Flash::success($added === 1 ? 'Bild wurde hinzugefügt.' : "{$added} Bilder wurden hinzugefügt.");
+        }
+        if ($errors !== []) {
+            Flash::error(implode(' ', $errors));
+        }
+        Response::redirect('/cases/' . $caseId . '#exemplar-' . $inventoryNumberId);
+    }
+
+    public function deleteImage(Request $request): void
+    {
+        $caseId = $request->input('case_id', '') ?? '';
+        $inventoryNumberId = $request->input('inventory_number_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new \App\Application\CaseItem\Command\DeleteCaseInventoryNumberImage($request->param('id')));
+            Flash::success('Bild wurde entfernt.');
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/cases/' . $caseId . ($inventoryNumberId !== '' ? '#exemplar-' . $inventoryNumberId : ''));
+    }
+
+    /** Liefert ein Exemplar-Foto aus: /cases/{id}/bild?image=… */
+    public function showImage(Request $request): void
+    {
+        $imageId = (string) $request->query('image', '');
+        $image = null;
+        try {
+            $detail = $this->queries->ask(new GetCaseItem($request->param('id')));
+            foreach ($detail->inventoryNumbers as $entry) {
+                foreach ($entry->images as $candidate) {
+                    if ($candidate->id === $imageId) {
+                        $image = $candidate;
+                    }
+                }
+            }
+        } catch (NotFoundException) {
+        }
+
+        if ($image === null || $this->fileStorage === null) {
+            Response::notFound('Bild wurde nicht gefunden.');
+
+            return;
+        }
+
+        $absolutePath = $this->fileStorage->absolutePath('cases', $image->filePath);
+        if (!is_file($absolutePath)) {
+            Response::notFound('Bild wurde nicht gefunden.');
+
+            return;
+        }
+        $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
+        Response::file($absolutePath, basename($image->filePath), $mimeType);
+    }
+
+    /** Stückliste eines Exemplars als PDF: /cases/{id}/stueckliste.pdf?exemplar=… */
+    public function packingListPdf(Request $request): void
+    {
+        try {
+            $detail = $this->queries->ask(new GetCaseItem($request->param('id')));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        $exemplarId = (string) $request->query('exemplar', '');
+        $entry = null;
+        foreach ($detail->inventoryNumbers as $candidate) {
+            if ($candidate->inventoryNumber->id === $exemplarId) {
+                $entry = $candidate;
+            }
+        }
+        if ($entry === null || $this->packingListPdf === null) {
+            Response::notFound('Case-Exemplar wurde nicht gefunden.');
+
+            return;
+        }
+
+        $companySettings = $this->queries->ask(new \App\Application\Settings\Query\GetCompanySettings());
+        $pdf = $this->packingListPdf->generate($detail, $entry, $companySettings);
+        $filename = 'Stueckliste-' . preg_replace('/[^A-Za-z0-9._-]+/', '-', $entry->inventoryNumber->number) . '.pdf';
+        Response::raw($pdf, 200, 'application/pdf', ['Content-Disposition' => 'inline; filename="' . $filename . '"']);
     }
 
     public function index(Request $request): void

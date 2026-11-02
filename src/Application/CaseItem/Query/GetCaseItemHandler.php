@@ -22,6 +22,7 @@ final class GetCaseItemHandler implements QueryHandlerInterface
         private readonly CaseInventoryNumberRepositoryInterface $caseInventoryNumbers,
         private readonly CaseContentItemRepositoryInterface $contentItems,
         private readonly ArticleRepositoryInterface $articles,
+        private readonly ?\App\Domain\CaseInventoryNumber\CaseInventoryNumberImageRepositoryInterface $images = null,
     ) {
     }
 
@@ -69,7 +70,7 @@ final class GetCaseItemHandler implements QueryHandlerInterface
                     $contentItems
                 )));
 
-                return new CaseInventoryNumberWithContent($caseInventoryNumber, $content);
+                return new CaseInventoryNumberWithContent($caseInventoryNumber, $content, $this->images?->findByInventoryNumber($caseInventoryNumber->id) ?? []);
             },
             $rawInventoryNumbers
         );

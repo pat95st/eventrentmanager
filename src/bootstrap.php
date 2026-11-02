@@ -421,6 +421,7 @@ $customerRepository = new MariadbCustomerRepository($pdo);
 $customerContactRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCustomerContactRepository($pdo);
 $caseItemRepository = new MariadbCaseItemRepository($pdo);
 $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
+$caseInventoryNumberImageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCaseInventoryNumberImageRepository($pdo);
 $caseContentItemRepository = new MariadbCaseContentItemRepository($pdo);
 $supplierRepository = new MariadbSupplierRepository($pdo);
 $rentalRepository = new MariadbRentalRepository($pdo);
@@ -648,7 +649,9 @@ $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseItem::class, n
 $commandBus->register(\App\Application\CaseItem\Command\DeleteCaseItem::class, new DeleteCaseItemHandler($caseItemRepository));
 $commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumber::class, new AddCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseItemRepository, $manufacturerRepository));
 $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseInventoryNumber::class, new UpdateCaseInventoryNumberHandler($caseInventoryNumberRepository));
-$commandBus->register(\App\Application\CaseItem\Command\DeleteCaseInventoryNumber::class, new DeleteCaseInventoryNumberHandler($caseInventoryNumberRepository));
+$commandBus->register(\App\Application\CaseItem\Command\DeleteCaseInventoryNumber::class, new DeleteCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseInventoryNumberImageRepository, $fileStorage));
+$commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumberImage::class, new \App\Application\CaseItem\Command\AddCaseInventoryNumberImageHandler($caseInventoryNumberRepository, $caseInventoryNumberImageRepository, $fileStorage));
+$commandBus->register(\App\Application\CaseItem\Command\DeleteCaseInventoryNumberImage::class, new \App\Application\CaseItem\Command\DeleteCaseInventoryNumberImageHandler($caseInventoryNumberImageRepository, $fileStorage));
 $commandBus->register(\App\Application\CaseItem\Command\AddCaseContentItem::class, new AddCaseContentItemHandler($caseContentItemRepository, $caseInventoryNumberRepository, $articleRepository));
 $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseContentItem::class, new UpdateCaseContentItemHandler($caseContentItemRepository));
 $commandBus->register(\App\Application\CaseItem\Command\DeleteCaseContentItem::class, new DeleteCaseContentItemHandler($caseContentItemRepository));
@@ -773,6 +776,7 @@ $commandBus->register(\App\Application\Settings\Command\UpdatePriceTiers::class,
 $commandBus->register(\App\Application\Settings\Command\UpdateCompanySettings::class, new UpdateCompanySettingsHandler($companySettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateLegalSettings::class, new UpdateLegalSettingsHandler($legalSettingsRepository));
 $htmlSanitizer = new HtmlSanitizer();
+$commandBus->register(\App\Application\CaseItem\Command\UpdateCaseInventoryNotice::class, new \App\Application\CaseItem\Command\UpdateCaseInventoryNoticeHandler($caseInventoryNumberRepository, $htmlSanitizer));
 $commandBus->register(\App\Application\ClosingTextTemplate\Command\CreateClosingTextTemplate::class, new \App\Application\ClosingTextTemplate\Command\CreateClosingTextTemplateHandler($closingTextTemplateRepository, $closingTextTemplateFolderRepository, $htmlSanitizer));
 $commandBus->register(\App\Application\ClosingTextTemplate\Command\UpdateClosingTextTemplate::class, new \App\Application\ClosingTextTemplate\Command\UpdateClosingTextTemplateHandler($closingTextTemplateRepository, $closingTextTemplateFolderRepository, $htmlSanitizer));
 $richTextPdfRenderer = new RichTextPdfRenderer(new HtmlToRichTextParser());
@@ -1097,6 +1101,7 @@ $queryBus->register(\App\Application\CaseItem\Query\GetCaseItem::class, new GetC
     $caseInventoryNumberRepository,
     $caseContentItemRepository,
     $articleRepository,
+    images: $caseInventoryNumberImageRepository,
 ));
 
 $queryBus->register(\App\Application\Supplier\Query\ListSuppliers::class, new ListSuppliersHandler($supplierRepository));
@@ -1264,7 +1269,7 @@ $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
 $electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);
 $customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
-$caseController = new CaseController($commandBus, $queryBus);
+$caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer));
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
 $salesController = new \App\Infrastructure\Http\Controllers\SalesController($queryBus);
@@ -1691,6 +1696,12 @@ $router->post('/case-inventurnummern/{id}/loeschen', $auth->guard(Permission::Ar
 $router->post('/case-inventurnummern/{id}/inhalt', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'addContentItem']));
 $router->post('/case-inhalt/{id}', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'updateContentItem']));
 $router->post('/case-inhalt/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'deleteContentItem']));
+// Migration 114: Fotos, Hinweistext und Stückliste je Case-Exemplar.
+$router->post('/case-inventurnummern/{id}/hinweis', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'updateNotice']));
+$router->post('/case-inventurnummern/{id}/bilder', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'addImages']));
+$router->post('/case-bilder/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'deleteImage']));
+$router->get('/cases/{id}/bild', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'showImage']));
+$router->get('/cases/{id}/stueckliste.pdf', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'packingListPdf']));
 
 $router->get('/lieferanten', $auth->guard(Permission::Artikelverwaltung, [$supplierController, 'index']));
 // Live-Suche (JSON) für die Lieferantenauswahl in Bestell-/

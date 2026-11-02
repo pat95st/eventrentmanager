@@ -18,9 +18,9 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
     public function save(CaseInventoryNumber $caseInventoryNumber): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO case_inventory_numbers (id, case_id, number, acquisition_date, created_at, updated_at)
-             VALUES (:id, :case_id, :number, :acquisition_date, :created_at, :updated_at)
-             ON DUPLICATE KEY UPDATE number = :number2, acquisition_date = :acquisition_date2, updated_at = :updated_at2'
+            'INSERT INTO case_inventory_numbers (id, case_id, number, acquisition_date, notice_html, created_at, updated_at)
+             VALUES (:id, :case_id, :number, :acquisition_date, :notice_html, :created_at, :updated_at)
+             ON DUPLICATE KEY UPDATE number = :number2, acquisition_date = :acquisition_date2, notice_html = :notice_html2, updated_at = :updated_at2'
         );
 
         $acquisitionDate = $caseInventoryNumber->acquisitionDate?->format('Y-m-d');
@@ -30,10 +30,12 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
             'case_id' => $caseInventoryNumber->caseId,
             'number' => $caseInventoryNumber->number,
             'acquisition_date' => $acquisitionDate,
+            'notice_html' => $caseInventoryNumber->noticeHtml,
             'created_at' => $caseInventoryNumber->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $caseInventoryNumber->updatedAt->format('Y-m-d H:i:s'),
             'number2' => $caseInventoryNumber->number,
             'acquisition_date2' => $acquisitionDate,
+            'notice_html2' => $caseInventoryNumber->noticeHtml,
             'updated_at2' => $caseInventoryNumber->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -89,6 +91,7 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
             acquisitionDate: $row['acquisition_date'] !== null ? new DateTimeImmutable($row['acquisition_date']) : null,
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            noticeHtml: $row['notice_html'] ?? null,
         );
     }
 }

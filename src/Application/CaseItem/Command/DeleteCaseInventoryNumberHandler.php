@@ -11,8 +11,12 @@ use App\Domain\Exception\NotFoundException;
 
 final class DeleteCaseInventoryNumberHandler implements CommandHandlerInterface
 {
-    public function __construct(private readonly CaseInventoryNumberRepositoryInterface $caseInventoryNumbers)
-    {
+    public function __construct(
+        private readonly CaseInventoryNumberRepositoryInterface $caseInventoryNumbers,
+        // Migration 114: Fotos des Exemplars auch als Dateien entfernen.
+        private readonly ?\App\Domain\CaseInventoryNumber\CaseInventoryNumberImageRepositoryInterface $images = null,
+        private readonly ?\App\Infrastructure\FileStorage\LocalFileStorage $fileStorage = null,
+    ) {
     }
 
     public function handle(CommandInterface $command): mixed
@@ -26,7 +30,15 @@ final class DeleteCaseInventoryNumberHandler implements CommandHandlerInterface
 
         // Packlisten-Einträge (case_content_items) hängen per FK ON DELETE CASCADE
         // am Case-Exemplar und werden mit entfernt.
+        $images = $this->images?->findByInventoryNumber($command->id) ?? [];
         $this->caseInventoryNumbers->delete($command->id);
+        foreach ($images as $image) {
+            try {
+                $this->fileStorage?->delete('cases', $image->filePath);
+            } catch (\Throwable) {
+                // Datei fehlt bereits
+            }
+        }
 
         return null;
     }

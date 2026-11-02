@@ -35,6 +35,9 @@ final class PriceListPdfGenerator
     private const LOGO_MAX_WIDTH = 120.0;
     private const LOGO_MAX_HEIGHT = 50.0;
 
+    private const ROW_PADDING = 4.0;
+    private const GROUP_HEADING_HEIGHT = 22.0;
+
     public function __construct(
         private readonly ?LocalFileStorage $fileStorage = null,
         private readonly ?PdfAmountFormatter $amountFormatter = null,
@@ -45,6 +48,9 @@ final class PriceListPdfGenerator
     /**
      * @param ArticleListItem[] $articles nur abrechenbare Artikel (isBillable), bereits alphabetisch sortiert, mit aufgelöstem Hersteller
      * @param PriceTier[]       $tiers
+     * @param bool $groupByCategory Nutzerwunsch: Artikel unter Kategorie-Überschriften gruppieren (Gruppen und Artikel je Gruppe alphabetisch, "Ohne Kategorie" am Ende)
+     * @param bool $withImages Dokumentbild des Artikels links neben dem Namen (wie Angebot/Rechnung, siehe ArticlePdfRow)
+     * @param bool $withShortTexts Kurztext des Artikels klein und kursiv unter dem Namen
      */
     public function generate(
         array $articles,
@@ -53,6 +59,9 @@ final class PriceListPdfGenerator
         PriceRoundingStep $roundingStep = PriceRoundingStep::None,
         PriceRoundingDirection $roundingDirection = PriceRoundingDirection::Nearest,
         ?CompanySettings $companySettings = null,
+        bool $groupByCategory = false,
+        bool $withImages = false,
+        bool $withShortTexts = false,
     ): string {
         $writer = new SimplePdfWriter();
         $pageWidth = $writer->pageWidth();
@@ -60,6 +69,7 @@ final class PriceListPdfGenerator
 
         $columns = $this->columnLayout($pageWidth, $tiers);
         $pageNumber = 1;
+        $rowRenderer = $withImages && $this->fileStorage !== null ? new ArticlePdfRow($this->fileStorage) : null;
 
         $writer->addPage();
         // Nutzerwunsch: Firmenlogo rechts oben (nur erste Seite, wie bei
@@ -72,19 +82,124 @@ final class PriceListPdfGenerator
             $writer->text(self::MARGIN, $y - self::TABLE_LINE_HEIGHT, 'Keine abrechenbaren Artikel vorhanden.', 10);
         }
 
-        foreach ($articles as $item) {
-            if ($y - self::TABLE_LINE_HEIGHT < self::MARGIN + 20) {
-                $pageNumber++;
-                $writer->addPage();
-                $y = $this->drawHeader($writer, $pageWidth, $pageHeight, $pageNumber, continuation: true);
-                $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns, $tiers);
+        $newPage = function () use ($writer, $pageWidth, $pageHeight, &$pageNumber, $columns, $tiers): float {
+            $pageNumber++;
+            $writer->addPage();
+            $y = $this->drawHeader($writer, $pageWidth, $pageHeight, $pageNumber, continuation: true);
+
+            return $this->drawTableHeader($writer, $y, $pageWidth, $columns, $tiers);
+        };
+
+        $groups = $groupByCategory ? $this->groupByCategory($articles) : ['' => $articles];
+        $firstGroup = true;
+        foreach ($groups as $heading => $groupArticles) {
+            $rows = array_map(fn (ArticleListItem $item) => $this->rowData($item, $columns, $rowRenderer, $withShortTexts), $groupArticles);
+
+            if ($groupByCategory) {
+                if (!$firstGroup) {
+                    $y -= 8; // Abstand zur vorigen Gruppe
+                }
+                $firstGroup = false;
+                // Überschrift nie allein am Seitenende: mit der ersten Zeile zusammen umbrechen.
+                $firstHeight = $rows !== [] ? $this->rowHeight($rows[0]) : 0.0;
+                if ($y - self::GROUP_HEADING_HEIGHT - $firstHeight < self::MARGIN + 20) {
+                    $y = $newPage();
+                }
+                $writer->text(self::MARGIN + 2, $y - 14, (string) $heading, 11, true);
+                $writer->line(self::MARGIN, $y - 18, $pageWidth - self::MARGIN, $y - 18, 0.5, '0.6 0.6 0.6');
+                $y -= self::GROUP_HEADING_HEIGHT;
             }
 
-            $this->drawRow($writer, $y, $item, $columns, $tiers, $roundingStep, $roundingDirection);
-            $y -= self::TABLE_LINE_HEIGHT;
+            foreach ($groupArticles as $i => $item) {
+                $height = $this->rowHeight($rows[$i]);
+                if ($y - $height < self::MARGIN + 20) {
+                    $y = $newPage();
+                }
+
+                $this->drawRow($writer, $y, $item, $rows[$i], $columns, $tiers, $roundingStep, $roundingDirection);
+                $y -= $height;
+            }
         }
 
         return $writer->output();
+    }
+
+    /**
+     * @param ArticleListItem[] $articles
+     * @return array<string, ArticleListItem[]> Kategoriename => Artikel (Reihenfolge der Eingabe bleibt je Gruppe erhalten)
+     */
+    private function groupByCategory(array $articles): array
+    {
+        $groups = [];
+        $withoutCategory = [];
+        foreach ($articles as $item) {
+            if ($item->category === null) {
+                $withoutCategory[] = $item;
+                continue;
+            }
+            $groups[$item->category->name][] = $item;
+        }
+        uksort($groups, static fn ($a, $b) => strnatcasecmp((string) $a, (string) $b));
+        if ($withoutCategory !== []) {
+            $groups['Ohne Kategorie'] = array_merge($groups['Ohne Kategorie'] ?? [], $withoutCategory);
+        }
+
+        return $groups;
+    }
+
+    /**
+     * Namensspalte einer Zeile: ohne Bilder/Kurztexte einzeilig (bei
+     * Überlänge gekürzt, wie bisher), sonst über ArticlePdfRow mit Umbruch.
+     *
+     * @param array{name: array{x: float, width: float}, tiers: array<int, array{x: float, width: float}>} $columns
+     * @return array{nameLines: string[], shortTextLines: string[], image: string|null}
+     */
+    private function rowData(ArticleListItem $item, array $columns, ?ArticlePdfRow $rowRenderer, bool $withShortTexts): array
+    {
+        $name = ArticleDisplayName::of($item->article, $item->manufacturer);
+        $width = $columns['name']['width'] - 4;
+
+        if ($rowRenderer === null && !$withShortTexts) {
+            $maxChars = (int) floor($width / (self::TABLE_FONT_SIZE * 0.52));
+            if (mb_strlen($name) > $maxChars) {
+                $name = mb_substr($name, 0, max(1, $maxChars - 1)) . '…';
+            }
+
+            return ['nameLines' => [$name], 'shortTextLines' => [], 'image' => null];
+        }
+
+        $wrap = static function (string $text, float $maxWidth, float $fontSize): array {
+            $maxChars = max(6, (int) floor($maxWidth / ($fontSize * 0.52)));
+
+            return explode("\n", wordwrap(trim($text), $maxChars, "\n", true));
+        };
+
+        if ($rowRenderer !== null) {
+            $row = $rowRenderer->nameColumn($item->article, [$name], $width, self::TABLE_FONT_SIZE, $wrap);
+            if (!$withShortTexts) {
+                $row['shortTextLines'] = [];
+            }
+
+            return $row;
+        }
+
+        $shortText = trim((string) $item->article->documentShortText);
+
+        return [
+            'nameLines' => $wrap($name, $width, self::TABLE_FONT_SIZE),
+            'shortTextLines' => $shortText !== '' ? $wrap($shortText, $width, ArticlePdfRow::SHORT_TEXT_FONT_SIZE) : [],
+            'image' => null,
+        ];
+    }
+
+    /** @param array{nameLines: string[], shortTextLines: string[], image: string|null} $row */
+    private function rowHeight(array $row): float
+    {
+        if (count($row['nameLines']) <= 1 && $row['shortTextLines'] === [] && $row['image'] === null) {
+            return self::TABLE_LINE_HEIGHT;
+        }
+
+        return ArticlePdfRow::contentHeight($row, self::TABLE_LINE_HEIGHT) + self::ROW_PADDING;
     }
 
     private function drawHeader(SimplePdfWriter $writer, float $pageWidth, float $pageHeight, int $pageNumber, bool $continuation = false, ?PdfLayoutSettings $layout = null, ?string $logoJpeg = null): float
@@ -191,6 +306,7 @@ final class PriceListPdfGenerator
         SimplePdfWriter $writer,
         float $y,
         ArticleListItem $item,
+        array $row,
         array $columns,
         array $tiers,
         PriceRoundingStep $roundingStep = PriceRoundingStep::None,
@@ -198,12 +314,12 @@ final class PriceListPdfGenerator
     ): void {
         $baseline = $y - self::TABLE_LINE_HEIGHT + 3;
 
-        $name = ArticleDisplayName::of($item->article, $item->manufacturer);
-        $maxChars = (int) floor($columns['name']['width'] / (self::TABLE_FONT_SIZE * 0.52));
-        if (mb_strlen($name) > $maxChars) {
-            $name = mb_substr($name, 0, max(1, $maxChars - 1)) . '…';
+        if ($this->rowHeight($row) === self::TABLE_LINE_HEIGHT) {
+            $writer->text($columns['name']['x'] + 2, $baseline, $row['nameLines'][0], self::TABLE_FONT_SIZE);
+        } else {
+            ArticlePdfRow::drawNameColumn($writer, $columns['name']['x'] + 2, $y - self::ROW_PADDING / 2, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT);
+            $baseline = $y - self::ROW_PADDING / 2 - self::TABLE_LINE_HEIGHT + 2;
         }
-        $writer->text($columns['name']['x'] + 2, $baseline, $name, self::TABLE_FONT_SIZE);
 
         if ($item->article->dailyRentalPrice === null) {
             return;

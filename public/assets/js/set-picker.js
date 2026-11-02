@@ -79,7 +79,7 @@
         panel.appendChild(actions);
         document.body.appendChild(overlay);
 
-        function close() { overlay.remove(); }
+        function close() { if (window.ModalFade) { window.ModalFade.remove(overlay); } else { overlay.remove(); } }
         cancel.addEventListener('click', close);
         overlay.addEventListener('click', function (event) { if (event.target === overlay) { close(); } });
 

@@ -2491,4 +2491,12 @@ return [
     'rentals.show.confirm_remove_set' => 'Dieses Set samt der dafür eingeplanten Artikel aus der Veranstaltung entfernen?',
     'rentals.flash.set_removed' => 'Set wurde aus der Veranstaltung entfernt.',
     'sets.form.add_to_document' => 'Set',
+    'articles.price_list.modal_title' => 'Preisliste exportieren',
+    'articles.price_list.sort_label' => 'Sortierung',
+    'articles.price_list.sort_alpha' => 'Alphabetisch',
+    'articles.price_list.sort_category' => 'Nach Kategorie gruppiert (mit Überschrift, je Kategorie alphabetisch)',
+    'articles.price_list.content_label' => 'Inhalt',
+    'articles.price_list.with_images' => 'Artikelbilder anzeigen (Dokumentbild aus der Galerie)',
+    'articles.price_list.with_short_texts' => 'Kurztexte anzeigen',
+    'articles.price_list.export_button' => 'PDF erstellen',
 ];

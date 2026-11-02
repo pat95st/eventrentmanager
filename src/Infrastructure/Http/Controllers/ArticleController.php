@@ -89,7 +89,20 @@ final class ArticleController
 
         $companySettings = $this->queries->ask(new \App\Application\Settings\Query\GetCompanySettings());
 
-        $pdf = $this->priceListPdfGenerator->generate($articles, $tiers, $layout, $pricingSettings->priceRoundingStep, $pricingSettings->priceRoundingDirection, $companySettings);
+        // Exporteinstellungen aus dem Modal in der Artikelliste (Nutzerwunsch):
+        // Sortierung alphabetisch oder nach Kategorie gruppiert, optional
+        // Artikelbilder und Kurztexte.
+        $pdf = $this->priceListPdfGenerator->generate(
+            $articles,
+            $tiers,
+            $layout,
+            $pricingSettings->priceRoundingStep,
+            $pricingSettings->priceRoundingDirection,
+            $companySettings,
+            groupByCategory: $request->query('sort') === 'category',
+            withImages: $request->query('images') === '1',
+            withShortTexts: $request->query('short_texts') === '1',
+        );
 
         Response::download($pdf, 'Preisliste.pdf', 'application/pdf');
     }

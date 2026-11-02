@@ -142,6 +142,25 @@ $canDocuments = $canRentals;
   siehe package.json ("npm run build:css") und README.
 -->
 <link rel="stylesheet" href="/assets/css/app.css">
+<style>
+  /* Weiches Ein-/Ausblenden der Modals, siehe /assets/js/modal-fade.js */
+  .modal-fade { transition: opacity 180ms ease; }
+  .modal-fade.modal-fade-out { opacity: 0; }
+  @keyframes modal-fade-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+  @keyframes modal-fade-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(6px) scale(.98); } }
+  @keyframes modal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modal-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
+  dialog[open] { animation: modal-fade-in 180ms ease; }
+  dialog[open]::backdrop { animation: modal-backdrop-in 180ms ease; }
+  dialog.modal-closing { animation: modal-fade-out 180ms ease forwards; }
+  dialog.modal-closing::backdrop { animation: modal-backdrop-out 180ms ease forwards; }
+  @media (prefers-reduced-motion: reduce) {
+    dialog[open], dialog[open]::backdrop, dialog.modal-closing, dialog.modal-closing::backdrop { animation: none; }
+    .modal-fade { transition: none; }
+  }
+</style>
+<script src="/assets/js/modal-fade.js"></script>
+<script src="/assets/js/sortable-tables.js" defer></script>
 <?php require __DIR__ . '/_pwa_head.php'; ?>
 <script>
   // CSRF-Token einmal pro Seitenaufruf global verfügbar machen, für alle

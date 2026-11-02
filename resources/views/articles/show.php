@@ -936,7 +936,7 @@ $availabilityStatusMeta = [
                 wirken kann.
             -->
             <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-            <table class="w-full table-fixed text-center">
+            <table class="w-full table-fixed text-center" data-no-sort>
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-900">
                         <?php foreach ($availabilityWeekdayLabels as $i => $label): ?>

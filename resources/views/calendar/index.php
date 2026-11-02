@@ -47,7 +47,7 @@ $maxVisiblePerDay = 3;
     Tailwind-Build erzeugten) Utility-CSS-Datei.
 -->
 <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-<table class="w-full table-fixed">
+<table class="w-full table-fixed" data-no-sort>
     <thead>
         <tr class="bg-slate-50 dark:bg-slate-900">
             <?php foreach ($weekdayLabels as $i => $label): ?>

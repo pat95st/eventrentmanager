@@ -2490,4 +2490,12 @@ return [
     'rentals.show.confirm_remove_set' => 'Remove this set and its planned articles from the event?',
     'rentals.flash.set_removed' => 'Set removed from the event.',
     'sets.form.add_to_document' => 'Set',
+    'articles.price_list.modal_title' => 'Export price list',
+    'articles.price_list.sort_label' => 'Sorting',
+    'articles.price_list.sort_alpha' => 'Alphabetical',
+    'articles.price_list.sort_category' => 'Grouped by category (with heading, alphabetical within each)',
+    'articles.price_list.content_label' => 'Content',
+    'articles.price_list.with_images' => 'Show article images (document image from the gallery)',
+    'articles.price_list.with_short_texts' => 'Show short texts',
+    'articles.price_list.export_button' => 'Create PDF',
 ];

@@ -228,8 +228,8 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             $delete->execute(['offer_id' => $offerId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO offer_free_text_items (id, offer_id, description, quantity, unit_price, sort_order)
-                 VALUES (:id, :offer_id, :description, :quantity, :unit_price, :sort_order)'
+                'INSERT INTO offer_free_text_items (id, offer_id, description, quantity, unit_price, sort_order, set_id, set_upgrade_id)
+                 VALUES (:id, :offer_id, :description, :quantity, :unit_price, :sort_order, :set_id, :set_upgrade_id)'
             );
 
             foreach ($items as $item) {
@@ -240,6 +240,8 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unitPrice,
                     'sort_order' => $item->sortOrder,
+                    'set_id' => $item->setId,
+                    'set_upgrade_id' => $item->setUpgradeId,
                 ]);
             }
 
@@ -444,6 +446,8 @@ final class MariadbOfferRepository implements OfferRepositoryInterface
             quantity: $row['quantity'],
             unitPrice: $row['unit_price'],
             sortOrder: (int) $row['sort_order'],
+            setId: $row['set_id'] ?? null,
+            setUpgradeId: $row['set_upgrade_id'] ?? null,
         );
     }
 

@@ -35,6 +35,8 @@ final class OrderConfirmationDetail
         // (siehe BundleComponentResolver), für "enthält …" unter der Position.
         /** @var array<string, list<array{articleId: string, label: string, quantity: int}>> */
         public readonly array $bundleComponents = [],
+        /** @var array<string, string> Sets (Migration 113): Freitext-Positions-ID => "enthält: …" */
+        public readonly array $setContents = [],
         // Umsatzsteuer (Nutzerwunsch Regelbesteuerung): aktueller Stand der
         // Rechnungseinstellungen (Kleinunternehmer ja/nein, Steuersatz),
         // gesetzt von Get*Handler. Angebote/AB werden — anders als versendete

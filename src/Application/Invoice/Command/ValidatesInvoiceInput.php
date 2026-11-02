@@ -317,6 +317,9 @@ trait ValidatesInvoiceInput
                 'quantity' => number_format($freeTextQuantity, 2, '.', ''),
                 'unitPrice' => number_format($freeTextUnitPrice, 2, '.', ''),
                 'sortOrder' => (int) ($rawFreeTextItem['sort_order'] ?? (1000 + $index)),
+                // Sets (Migration 113): Verweis wird in SetPositionValidator geprüft.
+                'setId' => trim((string) ($rawFreeTextItem['set_id'] ?? '')) ?: null,
+                'setUpgradeId' => trim((string) ($rawFreeTextItem['set_upgrade_id'] ?? '')) ?: null,
             ];
         }
 

@@ -292,8 +292,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             $delete->execute(['invoice_id' => $invoiceId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO invoice_free_text_items (id, invoice_id, description, quantity, unit_price, sort_order)
-                 VALUES (:id, :invoice_id, :description, :quantity, :unit_price, :sort_order)'
+                'INSERT INTO invoice_free_text_items (id, invoice_id, description, quantity, unit_price, sort_order, set_id, set_upgrade_id)
+                 VALUES (:id, :invoice_id, :description, :quantity, :unit_price, :sort_order, :set_id, :set_upgrade_id)'
             );
 
             foreach ($items as $item) {
@@ -304,6 +304,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unitPrice,
                     'sort_order' => $item->sortOrder,
+                    'set_id' => $item->setId,
+                    'set_upgrade_id' => $item->setUpgradeId,
                 ]);
             }
 
@@ -521,6 +523,8 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
             quantity: $row['quantity'],
             unitPrice: $row['unit_price'],
             sortOrder: (int) $row['sort_order'],
+            setId: $row['set_id'] ?? null,
+            setUpgradeId: $row['set_upgrade_id'] ?? null,
         );
     }
 

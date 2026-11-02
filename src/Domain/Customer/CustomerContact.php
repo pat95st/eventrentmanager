@@ -29,6 +29,8 @@ final class CustomerContact
         public ?string $addressLine2 = null,
         public ?string $postalCode = null,
         public ?string $city = null,
+        // Migration 113: Anrede, siehe Salutation.
+        public ?string $salutation = null,
     ) {
     }
 

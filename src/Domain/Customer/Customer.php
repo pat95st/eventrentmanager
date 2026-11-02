@@ -39,6 +39,8 @@ final class Customer
         // in architektur-und-setup.md). Nullable, trailing, damit bestehende
         // new Customer(...)-Aufrufstellen unverändert bleiben.
         public ?DateTimeImmutable $idCheckedAt = null,
+        // Migration 113: Anrede ('herr' | 'frau' | 'divers' | null), siehe Salutation.
+        public ?string $salutation = null,
     ) {
     }
 

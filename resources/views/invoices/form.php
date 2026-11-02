@@ -618,6 +618,9 @@ foreach ($laborArticles as $laborArticle) {
                 <button type="button" id="invoice-free-text-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('invoices.form.free_text_items_add')) ?>
                 </button>
+                <button type="button" id="invoice-set-add" data-set-picker-button class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    + <?= e(t('sets.form.add_to_document')) ?>
+                </button>
                 <button type="button" id="invoice-section-add" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     + <?= e(t('invoices.form.section_texts_add')) ?>
                 </button>
@@ -934,6 +937,7 @@ foreach ($laborArticles as $laborArticle) {
 <template id="invoice-free-text-row-template">
     <div class="invoice-free-text-row invoice-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <span class="invoice-row-handle mt-5 shrink-0 cursor-move select-none text-slate-400 dark:text-slate-500" title="<?= e(t('invoices.form.rows_drag_hint')) ?>">⠿</span>
+        <span data-set-badge class="hidden mt-5 shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950/40 dark:text-brand-400"></span>
         <div class="min-w-[200px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.free_text_description')) ?></label>
             <input type="text" name="free_text_description[]" class="invoice-free-text-description mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -946,6 +950,8 @@ foreach ($laborArticles as $laborArticle) {
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('invoices.form.item_price')) ?></label>
             <input type="text" name="free_text_unit_price[]" inputmode="decimal" value="0" class="invoice-free-text-price mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
         </div>
+        <input type="hidden" name="free_text_set_id[]" data-set-id value="">
+        <input type="hidden" name="free_text_set_upgrade_id[]" data-set-upgrade-id value="">
         <input type="hidden" name="free_text_sort_order[]" class="invoice-free-text-sort" data-row-sort value="1000">
         <button type="button" class="invoice-free-text-remove rounded-md border border-red-300 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
             <?= e(t('invoices.form.item_remove')) ?>
@@ -1233,6 +1239,7 @@ foreach ($laborArticles as $laborArticle) {
         if (data.quantity) { row.querySelector('.invoice-free-text-quantity').value = data.quantity; }
         if (data.unit_price !== undefined) { row.querySelector('.invoice-free-text-price').value = data.unit_price; }
         row.querySelector('.invoice-free-text-sort').value = 0;
+        if (window.SetPicker) { window.SetPicker.decorateRow(row, data); }
         row.querySelector('.invoice-free-text-remove').addEventListener('click', function () { row.remove(); updateOnlyLaborState(); });
         enableRowDrag(row);
         freeTextContainer.appendChild(row);
@@ -1242,6 +1249,12 @@ foreach ($laborArticles as $laborArticle) {
     if (freeTextAddButton) {
         freeTextAddButton.addEventListener('click', function () { addFreeTextRow(); });
     }
+
+    // Sets (Migration 113): Set-/Upgrade-Positionen als Freitext-Zeilen mit Verweis.
+    function attachSetPicker() {
+        if (window.SetPicker) { window.SetPicker.attach(document.getElementById('invoice-set-add'), function (data) { addFreeTextRow(data); }); }
+    }
+    if (window.SetPicker) { attachSetPicker(); } else { document.addEventListener('DOMContentLoaded', attachSetPicker); }
 
     function addSectionRow(data) {
         var fragment = sectionTemplate.content.cloneNode(true);

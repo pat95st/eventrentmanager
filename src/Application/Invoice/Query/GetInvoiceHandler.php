@@ -32,6 +32,7 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
         private readonly ?BankAccountRepositoryInterface $bankAccounts = null,
         private readonly ?BundleComponentResolver $bundleResolver = null,
+        private readonly ?\App\Application\ArticleSet\SetContentsResolver $setContents = null,
     ) {
     }
 
@@ -104,6 +105,6 @@ final class GetInvoiceHandler implements QueryHandlerInterface
         $sectionTexts = $this->invoices->findSectionTextsByInvoice($invoice->id);
 
         $bundleComponents = $this->bundleResolver?->resolve(array_map(static fn ($entry) => $entry->article, $items)) ?? [];
-        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts, $contact, $paymentMethod, $bankAccount, bundleComponents: $bundleComponents);
+        return new InvoiceDetail($invoice, $customer, $items, $laborItems, $freeTextItems, $sectionTexts, $contact, $paymentMethod, $bankAccount, bundleComponents: $bundleComponents, setContents: $this->setContents?->resolve($freeTextItems) ?? []);
     }
 }

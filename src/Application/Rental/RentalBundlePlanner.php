@@ -45,6 +45,8 @@ final class RentalBundlePlanner
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly RentalIssuedItemRepositoryInterface $issuedItems,
         private readonly ?RentalRepositoryInterface $rentals = null,
+        // Sets (Migration 113): durch gebuchte Sets belegte Mengen zählen mit.
+        private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
     ) {
     }
 
@@ -54,6 +56,9 @@ final class RentalBundlePlanner
         $required = 0;
         foreach ($this->rentalBundles->findByRental($rentalId) as $rentalBundle) {
             $required += $this->allocationsOf($rentalBundle)[$articleId] ?? 0;
+        }
+        foreach ($this->setBookings?->findByRental($rentalId) ?? [] as $setBooking) {
+            $required += $setBooking->allocations[$articleId] ?? 0;
         }
 
         return $required;

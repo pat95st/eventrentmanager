@@ -103,6 +103,21 @@ final class CreateOrderConfirmationFromOfferHandler implements CommandHandlerInt
         );
         $this->orderConfirmations->replaceItems($orderConfirmation->id, $items);
 
+        // Freitext-Positionen inkl. Set-/Upgrade-Positionen (Migration 113) übernehmen.
+        $this->orderConfirmations->replaceFreeTextItems($orderConfirmation->id, array_map(
+            fn ($item) => new \App\Domain\OrderConfirmation\OrderConfirmationFreeTextItem(
+                id: Uuid::v4(),
+                orderConfirmationId: $orderConfirmation->id,
+                description: $item->description,
+                quantity: $item->quantity,
+                unitPrice: $item->unitPrice,
+                sortOrder: $item->sortOrder,
+                setId: $item->setId,
+                setUpgradeId: $item->setUpgradeId,
+            ),
+            $this->offers->findFreeTextItemsByOffer($offer->id),
+        ));
+
         return $orderConfirmation->id;
     }
 }

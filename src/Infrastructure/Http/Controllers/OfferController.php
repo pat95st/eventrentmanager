@@ -465,6 +465,8 @@ final class OfferController
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unitPrice,
                     'sort_order' => $item->sortOrder,
+                    'set_id' => $item->setId ?? '',
+                    'set_upgrade_id' => $item->setUpgradeId ?? '',
                 ];
             }
             foreach ($detail->sectionTexts as $sectionText) {
@@ -601,6 +603,9 @@ final class OfferController
         $descriptions = $request->post['free_text_description'] ?? [];
         $quantities = $request->post['free_text_quantity'] ?? [];
         $unitPrices = $request->post['free_text_unit_price'] ?? [];
+        // Sets (Migration 113)
+        $setIds = $request->post['free_text_set_id'] ?? [];
+        $setUpgradeIds = $request->post['free_text_set_upgrade_id'] ?? [];
         $sortOrders = $request->post['free_text_sort_order'] ?? [];
 
         if (!is_array($descriptions)) {
@@ -614,6 +619,8 @@ final class OfferController
                 'quantity' => (string) ($quantities[$index] ?? '1'),
                 'unit_price' => (string) ($unitPrices[$index] ?? '0'),
                 'sort_order' => (string) ($sortOrders[$index] ?? (1000 + $index)),
+                'set_id' => (string) ($setIds[$index] ?? ''),
+                'set_upgrade_id' => (string) ($setUpgradeIds[$index] ?? ''),
             ];
         }
 

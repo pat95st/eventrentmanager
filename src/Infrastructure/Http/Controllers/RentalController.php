@@ -87,6 +87,8 @@ final class RentalController
         private readonly ?\App\Domain\Rental\RentalBundleRepositoryInterface $rentalBundles = null,
         private readonly ?\App\Application\Article\Query\BundleComponentResolver $bundleResolver = null,
         private readonly ?\App\Application\Rental\RentalBundlePlanner $bundlePlanner = null,
+        // Sets (Migration 113)
+        private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
     ) {
     }
 
@@ -308,6 +310,7 @@ final class RentalController
         echo View::page('rentals/show', [
             'detail' => $detail,
             'bookedBundles' => $bookedBundles,
+            'bookedSets' => $this->bookedSets($id, $articleDisplayNames ?? []),
             'bundleRequiredByArticle' => $bundleRequiredByArticle,
             'articles' => $articles,
             'articleDisplayNames' => $articleDisplayNames,
@@ -713,6 +716,60 @@ final class RentalController
         }
 
         Response::redirect('/veranstaltungen/' . $rentalId);
+    }
+
+    /** Set-Buchung samt eingeplanter Mengen entfernen (Migration 113). */
+    public function removeSetBooking(Request $request): void
+    {
+        $rentalId = $request->input('rental_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new \App\Application\Rental\Command\RemoveRentalSetBooking($request->param('id')));
+            Flash::success(t('rentals.flash.set_removed'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/veranstaltungen/' . $rentalId);
+    }
+
+    /**
+     * Gebuchte Sets für die Veranstaltungsseite.
+     *
+     * @param array<string, string> $articleDisplayNames
+     * @return list<array{id: string, label: string, quantity: int, description: string}>
+     */
+    private function bookedSets(string $rentalId, array $articleDisplayNames): array
+    {
+        $result = [];
+        foreach ($this->setBookings?->findByRental($rentalId) ?? [] as $booking) {
+            try {
+                $setDetail = $this->queries->ask(new \App\Application\ArticleSet\Query\GetArticleSet($booking->setId));
+            } catch (NotFoundException) {
+                continue;
+            }
+            $upgradeNames = [];
+            foreach ($booking->upgradeIds as $upgradeId) {
+                $upgrade = $setDetail->upgrade($upgradeId);
+                if ($upgrade !== null) {
+                    $upgradeNames[] = $upgrade['name'];
+                }
+            }
+            $parts = [];
+            foreach ($booking->allocations as $articleId => $quantity) {
+                $parts[] = $quantity . '× ' . ($articleDisplayNames[$articleId] ?? $articleId);
+            }
+            $result[] = [
+                'id' => $booking->id,
+                'label' => $setDetail->set->name . ($upgradeNames !== [] ? ' + ' . implode(', ', $upgradeNames) : ''),
+                'quantity' => $booking->quantity,
+                'description' => $parts !== [] ? 'eingeplant: ' . implode(', ', $parts) : '',
+            ];
+        }
+
+        return $result;
     }
 
     public function updateItem(Request $request): void

@@ -84,6 +84,7 @@ final class CreateCustomerHandler implements CommandHandlerInterface
                 telegramChatId: $data['telegramChatId'],
                 createdAt: $now,
                 updatedAt: $now,
+                salutation: \App\Domain\Customer\Salutation::normalize($command->salutation),
             );
 
             $this->customers->save($customer);
@@ -101,6 +102,7 @@ final class CreateCustomerHandler implements CommandHandlerInterface
                     addressLine2: $contact['addressLine2'],
                     postalCode: $contact['postalCode'],
                     city: $contact['city'],
+                    salutation: $contact['salutation'] ?? null,
                 ),
                 $contacts,
                 array_keys($contacts),

@@ -35,7 +35,7 @@ final class DeleteRentalItemHandler implements CommandHandlerInterface
         }
 
         if (($this->bundlePlanner?->requiredQuantity($item->rentalId, $item->articleId) ?? 0) > 0) {
-            throw new ConflictException('Dieser Artikel gehört zu einem gebuchten Bundle. Bitte stattdessen das Bundle entfernen.');
+            throw new ConflictException('Dieser Artikel gehört zu einem gebuchten Bundle oder Set. Bitte stattdessen das Bundle bzw. Set entfernen.');
         }
 
         $this->items->delete($command->id);

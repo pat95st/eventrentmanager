@@ -22,6 +22,7 @@ final class CreateCustomer implements CommandInterface
         public readonly ?string $email,
         public readonly ?string $telegramChatId = null,
         public readonly array $contacts = [],
+        public readonly ?string $salutation = null,
     ) {
     }
 }

@@ -25,6 +25,9 @@ final class OfferFreeTextItem
         public string $quantity,
         public string $unitPrice,
         public int $sortOrder = 0,
+        // Sets (Migration 113): Position ist ein Set bzw. ein Set-Upgrade zum Festpreis.
+        public ?string $setId = null,
+        public ?string $setUpgradeId = null,
     ) {
     }
 

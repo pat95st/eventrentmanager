@@ -21,21 +21,23 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
         $stmt = $this->pdo->prepare(
             'INSERT INTO customers (
                 id, customer_number, type, company_name, first_name, last_name, street, address_line2,
-                postal_code, city, phone, email, telegram_chat_id, id_checked_at, created_at, updated_at
+                postal_code, city, phone, email, telegram_chat_id, id_checked_at, created_at, updated_at, salutation
              ) VALUES (
                 :id, :customer_number, :type, :company_name, :first_name, :last_name, :street, :address_line2,
-                :postal_code, :city, :phone, :email, :telegram_chat_id, :id_checked_at, :created_at, :updated_at
+                :postal_code, :city, :phone, :email, :telegram_chat_id, :id_checked_at, :created_at, :updated_at, :salutation
              )
              ON DUPLICATE KEY UPDATE
                 type = :type2, company_name = :company_name2, first_name = :first_name2,
                 last_name = :last_name2, street = :street2, address_line2 = :address_line22,
                 postal_code = :postal_code2, city = :city2, phone = :phone2, email = :email2,
-                telegram_chat_id = :telegram_chat_id2, id_checked_at = :id_checked_at2, updated_at = :updated_at2'
+                telegram_chat_id = :telegram_chat_id2, id_checked_at = :id_checked_at2, updated_at = :updated_at2, salutation = :salutation2'
         );
 
         $params = [
             'id' => $customer->id,
             'customer_number' => $customer->customerNumber,
+            'salutation' => $customer->salutation,
+            'salutation2' => $customer->salutation,
             'type' => $customer->type->value,
             'company_name' => $customer->companyName,
             'first_name' => $customer->firstName,
@@ -163,6 +165,7 @@ final class MariadbCustomerRepository implements CustomerRepositoryInterface
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
             idCheckedAt: $row['id_checked_at'] !== null ? new DateTimeImmutable($row['id_checked_at']) : null,
+            salutation: $row['salutation'] ?? null,
         );
     }
 }

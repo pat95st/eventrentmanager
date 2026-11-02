@@ -25,6 +25,7 @@ final class DeleteArticleHandler implements CommandHandlerInterface
         private readonly ArticleChannelListingRepositoryInterface $channelListings,
         private readonly ArticleChannelPublisherRegistry $channelPublishers,
         private readonly ?\App\Domain\Article\ArticleBundleComponentRepositoryInterface $bundleComponents = null,
+        private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
     ) {
     }
 
@@ -49,6 +50,11 @@ final class DeleteArticleHandler implements CommandHandlerInterface
         if ($this->bundleComponents !== null
             && ($this->bundleComponents->findBundleIdsContaining($command->id) !== [] || $this->bundleComponents->findBundleIdsWithAlternative($command->id) !== [])) {
             throw new ConflictException('Dieser Artikel ist Bestandteil oder Alternative in einem Bundle. Bitte ihn zuerst dort entfernen.');
+        }
+
+        // Sets (Migration 113)
+        if ($this->articleSets?->isArticleUsed($command->id) ?? false) {
+            throw new ConflictException('Dieser Artikel ist in einem Set oder Set-Upgrade enthalten. Bitte ihn zuerst dort entfernen.');
         }
 
         // Inventurnummern, RMAs, RMA-Dokumente und article_channel_listings hängen

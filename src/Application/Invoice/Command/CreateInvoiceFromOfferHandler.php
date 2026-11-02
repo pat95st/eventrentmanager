@@ -88,7 +88,8 @@ final class CreateInvoiceFromOfferHandler implements CommandHandlerInterface
         $allSaleItems = $this->offers->findSaleItemsByOffer($offer->id);
         $openSaleItems = array_values(array_filter($allSaleItems, fn ($item) => !$item->isFulfilled()));
 
-        if ($offerItems === [] && $openSaleItems === []) {
+        $offerFreeTextItems = $this->offers->findFreeTextItemsByOffer($offer->id);
+        if ($offerItems === [] && $openSaleItems === [] && $offerFreeTextItems === []) {
             throw new ValidationException(['items' => 'Dieses Angebot enthält keine (noch offenen) Positionen und kann daher nicht in eine Rechnung umgewandelt werden.']);
         }
 
@@ -162,6 +163,21 @@ final class CreateInvoiceFromOfferHandler implements CommandHandlerInterface
         }
 
         $this->invoices->replaceItems($invoice->id, $items);
+
+        // Freitext-Positionen inkl. Set-/Upgrade-Positionen (Migration 113) übernehmen.
+        $this->invoices->replaceFreeTextItems($invoice->id, array_map(
+            fn ($item) => new \App\Domain\Invoice\InvoiceFreeTextItem(
+                id: Uuid::v4(),
+                invoiceId: $invoice->id,
+                description: $item->description,
+                quantity: $item->quantity,
+                unitPrice: $item->unitPrice,
+                sortOrder: $item->sortOrder,
+                setId: $item->setId,
+                setUpgradeId: $item->setUpgradeId,
+            ),
+            $offerFreeTextItems,
+        ));
 
         $offerLaborItems = $this->offers->findLaborItemsByOffer($offer->id);
         $invoiceLaborItems = array_map(

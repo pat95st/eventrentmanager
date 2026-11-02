@@ -52,6 +52,7 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         private readonly CustomerContactRepositoryInterface $customerContacts,
         private readonly ?PaymentMethodRepositoryInterface $paymentMethods = null,
         private readonly ?BankAccountRepositoryInterface $bankAccounts = null,
+        private readonly ?\App\Application\ArticleSet\SetPositionValidator $setPositions = null,
     ) {
     }
 
@@ -91,6 +92,12 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
         // Zahlungsart/Bankverbindung (Migrationen 105/106), siehe PaymentSelection.
         [$paymentErrors, $paymentMethodId, $bankAccountId] = PaymentSelection::validate($this->paymentMethods, $command->paymentMethodId, $this->bankAccounts, $command->bankAccountId);
         $errors = array_merge($errors, $paymentErrors);
+
+        // Sets (Migration 113): Festpreis, Zeitregeln und Einsatztage der Set-Positionen.
+        if ($this->setPositions !== null) {
+            [$setErrors, $data['freeTextItems']] = $this->setPositions->apply($data['freeTextItems'], $data['startDate'], $data['endDate']);
+            $errors = array_merge($errors, $setErrors);
+        }
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -194,6 +201,8 @@ final class CreateInvoiceHandler implements CommandHandlerInterface
                 quantity: $item['quantity'],
                 unitPrice: $item['unitPrice'],
                 sortOrder: $item['sortOrder'],
+                setId: $item['setId'] ?? null,
+                setUpgradeId: $item['setUpgradeId'] ?? null,
             ),
             $data['freeTextItems']
         );

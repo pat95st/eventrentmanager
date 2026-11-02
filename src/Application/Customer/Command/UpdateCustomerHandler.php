@@ -65,13 +65,18 @@ final class UpdateCustomerHandler implements CommandHandlerInterface
         $customer->phone = $data['phone'];
         $customer->email = $data['email'];
         $customer->telegramChatId = $data['telegramChatId'];
+        if ($command->salutation !== null) {
+            $customer->salutation = \App\Domain\Customer\Salutation::normalize($command->salutation);
+        }
         $customer->updatedAt = new DateTimeImmutable();
 
         $this->customers->save($customer);
 
+        // Bestehende Ansprechpartner behalten ihre ID (Dokumente verweisen darauf).
+        $ownContactIds = array_map(static fn ($contact) => $contact->id, $this->customerContacts->findByCustomerId($customer->id));
         $this->customerContacts->replaceForCustomer($customer->id, array_map(
             static fn (array $contact, int $index) => new CustomerContact(
-                id: Uuid::v4(),
+                id: in_array($contact['id'] ?? '', $ownContactIds, true) ? $contact['id'] : Uuid::v4(),
                 customerId: $customer->id,
                 name: $contact['name'],
                 jobTitle: $contact['jobTitle'],
@@ -82,6 +87,7 @@ final class UpdateCustomerHandler implements CommandHandlerInterface
                 addressLine2: $contact['addressLine2'],
                 postalCode: $contact['postalCode'],
                 city: $contact['city'],
+                salutation: $contact['salutation'] ?? null,
             ),
             $contacts,
             array_keys($contacts),

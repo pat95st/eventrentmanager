@@ -217,8 +217,8 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             $delete->execute(['id' => $orderConfirmationId]);
 
             $insert = $this->pdo->prepare(
-                'INSERT INTO order_confirmation_free_text_items (id, order_confirmation_id, description, quantity, unit_price, sort_order)
-                 VALUES (:id, :order_confirmation_id, :description, :quantity, :unit_price, :sort_order)'
+                'INSERT INTO order_confirmation_free_text_items (id, order_confirmation_id, description, quantity, unit_price, sort_order, set_id, set_upgrade_id)
+                 VALUES (:id, :order_confirmation_id, :description, :quantity, :unit_price, :sort_order, :set_id, :set_upgrade_id)'
             );
 
             foreach ($items as $item) {
@@ -229,6 +229,8 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unitPrice,
                     'sort_order' => $item->sortOrder,
+                    'set_id' => $item->setId,
+                    'set_upgrade_id' => $item->setUpgradeId,
                 ]);
             }
 
@@ -346,6 +348,8 @@ final class MariadbOrderConfirmationRepository implements OrderConfirmationRepos
             quantity: $row['quantity'],
             unitPrice: $row['unit_price'],
             sortOrder: (int) $row['sort_order'],
+            setId: $row['set_id'] ?? null,
+            setUpgradeId: $row['set_upgrade_id'] ?? null,
         );
     }
 

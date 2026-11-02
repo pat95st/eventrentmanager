@@ -189,6 +189,7 @@ final class CustomerController
             email: $this->nullIfEmpty($request->input('email')),
             telegramChatId: $this->nullIfEmpty($request->input('telegram_chat_id')),
             contacts: $this->contactsFromRequest($request),
+            salutation: $request->input('salutation', '') ?? '',
         );
 
         try {
@@ -256,6 +257,7 @@ final class CustomerController
             email: $this->nullIfEmpty($request->input('email')),
             telegramChatId: $this->nullIfEmpty($request->input('telegram_chat_id')),
             contacts: $this->contactsFromRequest($request),
+            salutation: $request->input('salutation', '') ?? '',
         );
 
         try {
@@ -370,6 +372,8 @@ final class CustomerController
                     'address_line2' => $contact->addressLine2 ?? '',
                     'postal_code' => $contact->postalCode ?? '',
                     'city' => $contact->city ?? '',
+                    'salutation' => $contact->salutation ?? '',
+                    'id' => $contact->id,
                 ],
                 $this->customerContacts->findByCustomerId($customer->id),
             ) : []);
@@ -398,6 +402,7 @@ final class CustomerController
             'city' => $command->city,
             'phone' => $command->phone,
             'email' => $command->email,
+            'salutation' => $command->salutation,
             'telegram_chat_id' => $command->telegramChatId,
             'contacts' => $command->contacts,
         ];
@@ -419,6 +424,9 @@ final class CustomerController
         $addressLine2s = $request->post['contact_address_line2'] ?? [];
         $postalCodes = $request->post['contact_postal_code'] ?? [];
         $cities = $request->post['contact_city'] ?? [];
+        // Migration 113: Anrede und ID (ID bleibt beim Speichern erhalten)
+        $salutations = $request->post['contact_salutation'] ?? [];
+        $ids = $request->post['contact_id'] ?? [];
 
         $contacts = [];
         foreach ($names as $index => $name) {
@@ -431,6 +439,8 @@ final class CustomerController
                 'address_line2' => (string) ($addressLine2s[$index] ?? ''),
                 'postal_code' => (string) ($postalCodes[$index] ?? ''),
                 'city' => (string) ($cities[$index] ?? ''),
+                'salutation' => (string) ($salutations[$index] ?? ''),
+                'id' => (string) ($ids[$index] ?? ''),
             ];
         }
 

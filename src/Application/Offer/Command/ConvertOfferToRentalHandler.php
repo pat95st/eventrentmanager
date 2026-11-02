@@ -46,6 +46,9 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         // Bestandteile aufgelöst.
         private readonly ?ArticleRepositoryInterface $articles = null,
         private readonly ?RentalBundlePlanner $bundlePlanner = null,
+        // Sets (Migration 113)
+        private readonly ?\App\Application\Rental\RentalSetPlanner $setPlanner = null,
+        private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
     ) {
     }
 
@@ -107,6 +110,30 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
             }
         }
 
+        // Sets (Migration 113): Set-Positionen samt Upgrades einplanen.
+        $setBookings = [];
+        if ($this->setPlanner !== null && $this->articleSets !== null) {
+            $freeTextItems = $this->offers->findFreeTextItemsByOffer($offer->id);
+            $upgradesBySet = [];
+            foreach ($freeTextItems as $freeTextItem) {
+                if ($freeTextItem->setUpgradeId !== null && ($upgrade = $this->articleSets->findUpgradeById($freeTextItem->setUpgradeId)) !== null) {
+                    $upgradesBySet[$upgrade->setId][] = $upgrade->id;
+                }
+            }
+            foreach ($freeTextItems as $freeTextItem) {
+                if ($freeTextItem->setId === null || ($set = $this->articleSets->findById($freeTextItem->setId)) === null) {
+                    continue;
+                }
+                $setQuantity = max(1, (int) round((float) $freeTextItem->quantity));
+                $upgradeIds = $upgradesBySet[$set->id] ?? [];
+                unset($upgradesBySet[$set->id]); // Upgrades nur dem ersten Vorkommen des Sets zuordnen
+                foreach ($this->setPlanner->checkAdd('', $set, $setQuantity, $upgradeIds, $plannedSoFar, $offer->startDate, $offer->endDate) as $articleId => $demand) {
+                    $plannedSoFar[$articleId] = ($plannedSoFar[$articleId] ?? 0) + $demand;
+                }
+                $setBookings[] = [$set, $setQuantity, $upgradeIds];
+            }
+        }
+
         $now = new DateTimeImmutable();
         $eventName = $offer->eventLocation !== null && trim($offer->eventLocation) !== ''
             ? $offer->eventLocation
@@ -139,6 +166,9 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         }
         foreach ($bundleItems as [$bundleArticle, $bundleQuantity]) {
             $this->bundlePlanner->add($rental->id, $bundleArticle, $bundleQuantity);
+        }
+        foreach ($setBookings as [$set, $setQuantity, $upgradeIds]) {
+            $this->setPlanner->add($rental->id, $set, $setQuantity, $upgradeIds);
         }
 
         $offer->convertedRentalId = $rental->id;

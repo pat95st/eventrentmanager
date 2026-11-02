@@ -50,9 +50,10 @@ $backgroundImageUrl = CompanyBranding::backgroundImageUrl();
 // verwaltung und stecken daher hier (nicht mehr bei "Veranstaltungen").
 // Jeder Menüpunkt wird nur angezeigt, wenn der angemeldete Benutzer das
 // zugehörige Recht besitzt (siehe Zuordnung in bootstrap.php).
-$articlesGroupKeys = ['articles', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents', 'warehouses'];
+$articlesGroupKeys = ['articles', 'sets', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents', 'warehouses'];
 $articlesChildren = [
     ['key' => 'articles', 'label' => t('nav.articles_all'), 'href' => '/artikel'],
+    ['key' => 'sets', 'label' => t('nav.sets'), 'href' => '/sets'],
     ['key' => 'cases', 'label' => t('nav.cases'), 'href' => '/cases'],
     ['key' => 'manufacturers', 'label' => t('nav.manufacturers'), 'href' => '/hersteller'],
     ['key' => 'arbeitszeit', 'label' => t('nav.labor_time_articles'), 'href' => '/arbeitszeit-artikel'],
@@ -1104,5 +1105,7 @@ $canDocuments = $canRentals;
        und App\Infrastructure\Http\renderArticlePickerModal() — global
        geladen aus demselben Grund wie live-search.js direkt darüber. -->
   <script src="/assets/js/article-picker.js" defer></script>
+  <!-- Set-Auswahl in Angebot/AB/Rechnung (Migration 113), siehe public/assets/js/set-picker.js -->
+  <script src="/assets/js/set-picker.js" defer></script>
 </body>
 </html>

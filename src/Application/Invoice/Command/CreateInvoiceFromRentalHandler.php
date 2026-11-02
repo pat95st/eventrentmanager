@@ -54,6 +54,9 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         // abgerechnet, ihre Bestandteile nicht noch einmal einzeln.
         private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
         private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
+        // Sets (Migration 113): gebuchte Sets zum Festpreis (inkl. Upgrades).
+        private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
+        private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
     ) {
     }
 
@@ -162,6 +165,35 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
                 lineNote: null,
                 sortOrder: count($items),
             );
+        }
+
+        // Gebuchte Sets: Freitext-Positionen zum Festpreis, eingeplante
+        // Artikel werden nicht noch einmal einzeln berechnet.
+        $setFreeTextItems = [];
+        foreach ($this->setBookings?->findByRental($rental->id) ?? [] as $booking) {
+            $set = $this->articleSets?->findById($booking->setId);
+            if ($set === null) {
+                continue;
+            }
+            foreach ($booking->allocations as $allocatedArticleId => $allocatedQuantity) {
+                $coveredByBundles[$allocatedArticleId] = ($coveredByBundles[$allocatedArticleId] ?? 0) + $allocatedQuantity;
+            }
+            $setFreeTextItems[] = new \App\Domain\Invoice\InvoiceFreeTextItem(
+                id: Uuid::v4(), invoiceId: $invoice->id, description: $set->name, quantity: number_format($booking->quantity, 2, '.', ''),
+                unitPrice: $set->price, sortOrder: 1000 + count($setFreeTextItems), setId: $set->id,
+            );
+            foreach ($booking->upgradeIds as $upgradeId) {
+                $upgrade = $this->articleSets?->findUpgradeById($upgradeId);
+                if ($upgrade !== null) {
+                    $setFreeTextItems[] = new \App\Domain\Invoice\InvoiceFreeTextItem(
+                        id: Uuid::v4(), invoiceId: $invoice->id, description: 'Upgrade: ' . $upgrade->name, quantity: number_format($booking->quantity, 2, '.', ''),
+                        unitPrice: $upgrade->price, sortOrder: 1000 + count($setFreeTextItems), setUpgradeId: $upgrade->id,
+                    );
+                }
+            }
+        }
+        if ($setFreeTextItems !== []) {
+            $this->invoices->replaceFreeTextItems($invoice->id, $setFreeTextItems);
         }
 
         foreach ($rentalItems as $rentalItem) {

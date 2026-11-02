@@ -65,6 +65,18 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
         <div id="contacts" class="space-y-2"></div>
     </div>
 
+    <?php $selectedSalutation = (string) $val('salutation', $customer?->salutation); ?>
+    <div class="max-w-xs">
+        <label for="salutation" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.salutation')) ?></label>
+        <select id="salutation" name="salutation" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
+            <option value=""><?= e(t('customers.form.salutation_none')) ?></option>
+            <?php foreach (\App\Domain\Customer\Salutation::cases() as $salutationCase): ?>
+                <option value="<?= e($salutationCase->value) ?>" <?= $selectedSalutation === $salutationCase->value ? 'selected' : '' ?>><?= e($salutationCase->label()) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('customers.form.salutation_hint')) ?></p>
+    </div>
+
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="first_name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('customers.form.first_name')) ?></label>
@@ -151,6 +163,16 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
 
 <template id="contact-row-template">
     <div class="contact-row flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <input type="hidden" name="contact_id[]" class="contact-id" value="">
+        <div class="w-28">
+            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.salutation')) ?></label>
+            <select name="contact_salutation[]" class="contact-salutation mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                <option value="">–</option>
+                <?php foreach (\App\Domain\Customer\Salutation::cases() as $salutationCase): ?>
+                    <option value="<?= e($salutationCase->value) ?>"><?= e($salutationCase->label()) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
         <div class="min-w-[160px] flex-1">
             <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('customers.form.contact_name')) ?></label>
             <input type="text" name="contact_name[]" class="contact-name mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
@@ -248,6 +270,8 @@ $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->v
         if (data.address_line2) { row.querySelector('.contact-address-line2').value = data.address_line2; }
         if (data.postal_code) { row.querySelector('.contact-postal-code').value = data.postal_code; }
         if (data.city) { row.querySelector('.contact-city').value = data.city; }
+        if (data.salutation) { row.querySelector('.contact-salutation').value = data.salutation; }
+        if (data.id) { row.querySelector('.contact-id').value = data.id; }
 
         row.querySelector('.contact-remove').addEventListener('click', function () { row.remove(); });
 

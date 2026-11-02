@@ -71,6 +71,8 @@ final class OfferPdfGenerator
         private readonly RichTextPdfRenderer $richTextRenderer,
         private readonly ?DocumentFooter $footer = null,
         private readonly ?PdfAmountFormatter $amountFormatter = null,
+        // Migration 113: Starttext je Dokumenttyp mit Platzhaltern ({anrede} …)
+        private readonly ?\App\Application\Settings\DocumentIntroTextRenderer $introTexts = null,
     ) {
     }
 
@@ -88,6 +90,11 @@ final class OfferPdfGenerator
 
         $writer->addPage();
         $y = $this->drawHeader($writer, $detail, $companySettings, $logoJpeg, $logoBox, $pageWidth, $pageHeight, $pageNumber, continuation: false, offerPdfSettings: $offerPdfSettings, pdfDesignSettings: $pdfDesignSettings, layout: $layout);
+        // Starttext (Einstellungen › Starttexte, Migration 113) direkt vor der Positionstabelle.
+        $introText = $this->introTexts?->render('offer', $detail->customer, $detail->contact, $detail->offer->offerNumber);
+        if ($introText !== null) {
+            $y = $this->drawIntroText($writer, $introText, $y, $pageWidth);
+        }
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings);
 
         if ($rows === []) {
@@ -310,6 +317,8 @@ final class OfferPdfGenerator
                 $item = $row->data;
                 $rows[] = [
                     'nameLines' => $this->wrapText($item->description, $columns['article']['width'], self::TABLE_FONT_SIZE),
+                    // Sets (Migration 113): Inhalt des Sets/Upgrades klein und kursiv darunter.
+                    'shortTextLines' => isset($detail->setContents[$item->id]) ? $this->wrapText($detail->setContents[$item->id], $columns['article']['width'], ArticlePdfRow::SHORT_TEXT_FONT_SIZE) : [],
                     'quantity' => rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ','),
                     'unitPrice' => number_format((float) $item->unitPrice, 2, ',', '.') . $this->currency(),
                     'lineTotal' => number_format($item->lineTotal(), 2, ',', '.') . $this->currency(),
@@ -433,7 +442,7 @@ final class OfferPdfGenerator
             // vor der Rich-Text-Umstellung) nicht separat paginiert — bei sehr
             // langen Einleitungstexten kann er in die Positionstabelle laufen,
             // siehe RichTextPdfRenderer-Klassendoc.
-            $introBlocks = $this->richTextRenderer->parse($offerPdfSettings?->introHtml);
+            $introBlocks = $this->richTextRenderer->parse($this->introTexts?->applyToHtml($offerPdfSettings?->introHtml, $detail->customer, $detail->contact, $detail->offer->offerNumber) ?? $offerPdfSettings?->introHtml);
             if ($introBlocks !== []) {
                 $introOverride = $layout?->get('intro_text');
                 $introX = self::MARGIN;
@@ -908,5 +917,23 @@ final class OfferPdfGenerator
     private function currency(): string
     {
         return $this->amountFormatter?->suffix() ?? ' EUR';
+    }
+
+    /** Starttext absatzweise umbrechen und zeichnen; liefert die neue y-Position. */
+    private function drawIntroText(SimplePdfWriter $writer, string $text, float $y, float $pageWidth): float
+    {
+        $y -= 4;
+        foreach (explode("\n", $text) as $paragraph) {
+            if (trim($paragraph) === '') {
+                $y -= 8;
+                continue;
+            }
+            foreach ($this->wrapText($paragraph, $pageWidth - 2 * self::MARGIN, 10) as $line) {
+                $writer->text(self::MARGIN, $y, $line, 10);
+                $y -= 13;
+            }
+        }
+
+        return $y - 8;
     }
 }

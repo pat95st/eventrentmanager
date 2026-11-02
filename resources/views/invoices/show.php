@@ -249,7 +249,11 @@ $rows = $detail->orderedRows();
                     <?php elseif ($row->type === InvoiceRow::TYPE_FREE_TEXT): ?>
                         <?php $item = $row->data; ?>
                         <tr>
-                            <td class="px-2 py-2 text-slate-800 dark:text-slate-200"><?= e($item->description) ?></td>
+                            <td class="px-2 py-2 text-slate-800 dark:text-slate-200">
+                                <?php if (($item->setId ?? null) !== null || ($item->setUpgradeId ?? null) !== null): ?><span class="mr-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950/40 dark:text-brand-400"><?= ($item->setId ?? null) !== null ? 'Set' : 'Upgrade' ?></span><?php endif; ?>
+                                <?= e($item->description) ?>
+                                <?php if (isset($detail->setContents[$item->id])): ?><div class="text-xs italic text-slate-500 dark:text-slate-400"><?= e($detail->setContents[$item->id]) ?></div><?php endif; ?>
+                            </td>
                             <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= e(rtrim(rtrim(number_format((float) $item->quantity, 2, ',', '.'), '0'), ',')) ?></td>
                             <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= number_format((float) $item->unitPrice, 2, ',', '.') ?> €</td>
                             <td class="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200"><?= number_format($item->lineTotal(), 2, ',', '.') ?> €</td>

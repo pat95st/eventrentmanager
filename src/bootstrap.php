@@ -432,9 +432,14 @@ $rentalItemRepository = new MariadbRentalItemRepository($pdo);
 // Bundles (Migration 107)
 $articleBundleComponentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbArticleBundleComponentRepository($pdo);
 $rentalBundleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalBundleRepository($pdo);
+// Sets (Migration 113)
+$articleSetRepository = new \App\Infrastructure\Persistence\Pdo\MariadbArticleSetRepository($pdo);
+$rentalSetBookingRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalSetBookingRepository($pdo);
+$articleLabelResolver = new \App\Application\ArticleSet\ArticleLabelResolver($articleRepository, $manufacturerRepository);
 $bundleComponentResolver = new \App\Application\Article\Query\BundleComponentResolver($articleBundleComponentRepository, $articleRepository, $manufacturerRepository);
 $rentalIssuedItemRepository = new MariadbRentalIssuedItemRepository($pdo);
-$rentalBundlePlanner = new \App\Application\Rental\RentalBundlePlanner($rentalItemRepository, $rentalBundleRepository, $articleBundleComponentRepository, $inventoryNumberRepository, $rentalIssuedItemRepository, $rentalRepository);
+$rentalBundlePlanner = new \App\Application\Rental\RentalBundlePlanner($rentalItemRepository, $rentalBundleRepository, $articleBundleComponentRepository, $inventoryNumberRepository, $rentalIssuedItemRepository, $rentalRepository, setBookings: $rentalSetBookingRepository);
+$rentalSetPlanner = new \App\Application\Rental\RentalSetPlanner($articleSetRepository, $articleRepository, $rentalItemRepository, $rentalSetBookingRepository, $inventoryNumberRepository, $rentalBundlePlanner, $rentalIssuedItemRepository);
 $rentalReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalReminderRepository($pdo);
 $rentalReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalReminderSettingsRepository($pdo);
 $rentalCustomerChecklistTokenRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalCustomerChecklistTokenRepository($pdo);
@@ -505,6 +510,9 @@ $dunningNoticeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunnin
 $dunningSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningSettingsRepository($pdo);
 // Währungsangabe auf Dokumenten ("EUR" oder "€"), Einstellungen › PDF-Design (Migration 110).
 $pdfAmountFormatter = new \App\Infrastructure\Pdf\PdfAmountFormatter($pdfDesignSettingsRepository);
+// Starttexte je Dokumenttyp (Migration 113)
+$documentIntroTextRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentIntroTextRepository($pdo);
+$documentIntroTextRenderer = new \App\Application\Settings\DocumentIntroTextRenderer($documentIntroTextRepository);
 $dunningPdfGenerator = new \App\Infrastructure\Pdf\DunningPdfGenerator($documentFooter, $pdfAmountFormatter);
 $invoiceDueReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderRepository($pdo);
 $invoiceDueReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderSettingsRepository($pdo);
@@ -542,6 +550,12 @@ $backupArchiveImporter = new \App\Infrastructure\Backup\BackupArchiveImporter($b
 
 // --- Command-Bus ---------------------------------------------------------
 $commandBus = new CommandBus();
+$commandBus->register(\App\Application\Settings\Command\UpdateDocumentIntroTexts::class, new \App\Application\Settings\Command\UpdateDocumentIntroTextsHandler($documentIntroTextRepository));
+$setPositionValidator = new \App\Application\ArticleSet\SetPositionValidator($articleSetRepository);
+// Sets (Migration 113)
+$commandBus->register(\App\Application\ArticleSet\Command\CreateArticleSet::class, new \App\Application\ArticleSet\Command\CreateArticleSetHandler($articleSetRepository, $articleRepository));
+$commandBus->register(\App\Application\ArticleSet\Command\UpdateArticleSet::class, new \App\Application\ArticleSet\Command\UpdateArticleSetHandler($articleSetRepository, $articleRepository));
+$commandBus->register(\App\Application\ArticleSet\Command\DeleteArticleSet::class, new \App\Application\ArticleSet\Command\DeleteArticleSetHandler($articleSetRepository, $rentalSetBookingRepository));
 
 // --- Query-Bus -------------------------------------------------------------
 // Bewusst bereits hier (statt erst unten vor den eigentlichen Query-Registrierungen)
@@ -551,6 +565,12 @@ $commandBus = new CommandBus();
 // "Undefined variable $queryBus" auslösen, da $queryBus zum Zeitpunkt ihrer
 // Ausführung noch nicht existierte.
 $queryBus = new QueryBus();
+$queryBus->register(\App\Application\Settings\Query\GetDocumentIntroTexts::class, new \App\Application\Settings\Query\GetDocumentIntroTextsHandler($documentIntroTextRepository));
+// Sets (Migration 113)
+$getArticleSetHandler = new \App\Application\ArticleSet\Query\GetArticleSetHandler($articleSetRepository, $articleLabelResolver);
+$queryBus->register(\App\Application\ArticleSet\Query\GetArticleSet::class, $getArticleSetHandler);
+$setContentsResolver = new \App\Application\ArticleSet\SetContentsResolver($getArticleSetHandler, $articleSetRepository, $articleLabelResolver);
+$queryBus->register(\App\Application\ArticleSet\Query\ListArticleSets::class, new \App\Application\ArticleSet\Query\ListArticleSetsHandler($articleSetRepository, $getArticleSetHandler));
 
 $queryBus->register(\App\Application\Settings\Query\GetPdfLayoutSettings::class, new \App\Application\Settings\Query\GetPdfLayoutSettingsHandler($pdfLayoutSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdatePdfLayoutSettings::class, new \App\Application\Settings\Command\UpdatePdfLayoutSettingsHandler($pdfLayoutSettingsRepository));
@@ -576,7 +596,7 @@ $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle:
 
 $commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository));
 $commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository));
-$commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository));
+$commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository, $articleSetRepository));
 $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, new \App\Application\Article\Command\SetArticleActiveHandler($articleRepository));
 $commandBus->register(\App\Application\Article\Command\AddArticleImage::class, new AddArticleImageHandler($articleRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\DeleteArticleImage::class, new DeleteArticleImageHandler($articleRepository, $fileStorage));
@@ -669,6 +689,7 @@ $commandBus->register(\App\Application\Rental\Command\DeleteRental::class, new D
 $commandBus->register(\App\Application\Rental\Command\AddRentalItem::class, new AddRentalItemHandler($rentalItemRepository, $rentalRepository, $articleRepository, $inventoryNumberRepository, $rentalBundlePlanner));
 $commandBus->register(\App\Application\Rental\Command\UpdateRentalItem::class, new UpdateRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository, $inventoryNumberRepository, $rentalBundlePlanner));
 $commandBus->register(\App\Application\Rental\Command\DeleteRentalItem::class, new DeleteRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository, $rentalBundlePlanner));
+$commandBus->register(\App\Application\Rental\Command\RemoveRentalSetBooking::class, new \App\Application\Rental\Command\RemoveRentalSetBookingHandler($rentalSetBookingRepository, $rentalSetPlanner));
 $commandBus->register(\App\Application\Rental\Command\RemoveRentalBundle::class, new \App\Application\Rental\Command\RemoveRentalBundleHandler($rentalBundleRepository, $rentalBundlePlanner));
 $commandBus->register(\App\Application\Rental\Command\IssueRentalItem::class, new IssueRentalItemHandler($rentalIssuedItemRepository, $rentalItemRepository, $rentalRepository, $inventoryNumberRepository, $articleAccessoryRepository, $articlePreIssueCheckRepository, $saleRepository, $customerRepository));
 $commandBus->register(\App\Application\Rental\Command\SignRentalTerms::class, new \App\Application\Rental\Command\SignRentalTermsHandler($rentalRepository, $fileStorage));
@@ -773,17 +794,17 @@ $commandBus->register(\App\Application\Printing\Command\DeleteLabelPrinter::clas
 $commandBus->register(\App\Application\Printing\Command\SendTestPrint::class, new SendTestPrintHandler($labelPrinterRepository, $labelPrinterDrivers));
 $commandBus->register(\App\Application\Printing\Command\PrintInventoryNumberLabel::class, new PrintInventoryNumberLabelHandler($inventoryNumberRepository, $labelPrinterRepository, $labelPrinterDrivers, $printerTransport));
 
-$commandBus->register(\App\Application\Offer\Command\CreateOffer::class, new CreateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $documentNumberSequence, $pdo, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository));
-$commandBus->register(\App\Application\Offer\Command\UpdateOffer::class, new UpdateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository));
+$commandBus->register(\App\Application\Offer\Command\CreateOffer::class, new CreateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $documentNumberSequence, $pdo, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository, setPositions: $setPositionValidator));
+$commandBus->register(\App\Application\Offer\Command\UpdateOffer::class, new UpdateOfferHandler($offerRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $saleRepository, $userRepository, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository, setPositions: $setPositionValidator));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferSent::class, new MarkOfferSentHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferAccepted::class, new MarkOfferAcceptedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferDeclined::class, new MarkOfferDeclinedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new DeleteOfferHandler($offerRepository));
-$commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner));
-$offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter);
+$commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner), setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository);
+$offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
-$orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter);
-$getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository);
+$orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
+$getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
     $getOfferHandler,
     $companySettingsRepository,
@@ -810,6 +831,7 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConf
     $rentalRepository,
     $customerContactRepository,
     $paymentMethodRepository,
+    setPositions: $setPositionValidator,
 ));
 $commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConfirmationFromOffer::class, new \App\Application\OrderConfirmation\Command\CreateOrderConfirmationFromOfferHandler(
     $offerRepository,
@@ -827,17 +849,18 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\UpdateOrderConf
     $rentalRepository,
     $customerContactRepository,
     $paymentMethodRepository,
+    setPositions: $setPositionValidator,
 ));
 $commandBus->register(\App\Application\OrderConfirmation\Command\DeleteOrderConfirmation::class, new \App\Application\OrderConfirmation\Command\DeleteOrderConfirmationHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationSent::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationSentHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmed::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmedHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelled::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelledHandler($orderConfirmationRepository));
-$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository, $manufacturerRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository));
+$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository, $manufacturerRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository), setContents: $setContentsResolver);
 $queryBus->register(\App\Application\OrderConfirmation\Query\ListOrderConfirmations::class, new \App\Application\OrderConfirmation\Query\ListOrderConfirmationsHandler($orderConfirmationRepository, $customerRepository));
 
 // --- Rechnungen (Invoices) --------------------------------------------
-$commandBus->register(\App\Application\Invoice\Command\CreateInvoice::class, new CreateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $userRepository, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository));
-$commandBus->register(\App\Application\Invoice\Command\UpdateInvoice::class, new UpdateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $userRepository, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository));
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoice::class, new CreateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $userRepository, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, setPositions: $setPositionValidator));
+$commandBus->register(\App\Application\Invoice\Command\UpdateInvoice::class, new UpdateInvoiceHandler($invoiceRepository, $customerRepository, $venueRepository, $articleRepository, $pricingSettingsRepository, $laborTimeArticleRepository, $userRepository, $htmlSanitizer, $rentalRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, setPositions: $setPositionValidator));
 $commandBus->register(\App\Application\Invoice\Command\DeleteInvoice::class, new DeleteInvoiceHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceSent::class, new MarkInvoiceSentHandler($invoiceRepository, $invoiceSettingsRepository, $documentNumberSequence, $pdo, $paymentMethodRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoicePaid::class, new MarkInvoicePaidHandler($invoiceRepository));
@@ -847,10 +870,10 @@ $commandBus->register(\App\Application\BankImport\Command\ConfirmBankImport::cla
 $commandBus->register(\App\Application\BankImport\Command\CancelBankImport::class, new CancelBankImportHandler($bankImportStaging));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceCancelled::class, new MarkInvoiceCancelledHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository));
-$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository));
-$invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter);
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository), setBookings: $rentalSetBookingRepository, articleSets: $articleSetRepository);
+$invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $xRechnungGenerator = new XRechnungGenerator();
-$getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver);
+$getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver, setContents: $setContentsResolver);
 $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, new EmailInvoicePdfHandler(
     $getInvoiceHandler,
     $companySettingsRepository,
@@ -1233,6 +1256,8 @@ $reportingController = new \App\Infrastructure\Http\Controllers\ReportingControl
 $categoryController = new CategoryController($commandBus, $queryBus);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
+$articleSetController = new \App\Infrastructure\Http\Controllers\ArticleSetController($commandBus, $queryBus);
+$documentIntroTextSettingsController = new \App\Infrastructure\Http\Controllers\DocumentIntroTextSettingsController($commandBus, $queryBus);
 $laborTimeArticleController = new LaborTimeArticleController($commandBus, $queryBus);
 $articleController = new ArticleController($commandBus, $queryBus, $fileStorage, new PriceListPdfGenerator($fileStorage, $pdfAmountFormatter), new PriceListCsvExporter(), $saleStockLotRepository, $customerRepository, $articleBundleComponentRepository);
 $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
@@ -1322,7 +1347,7 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
@@ -1506,6 +1531,8 @@ $router->post('/kategorien/{id}/loeschen', $auth->guard(Permission::Artikelverwa
 // muss für jeden angemeldeten Benutzer funktionieren, unabhängig von
 // dessen Administration-Recht.
 $router->get('/textvorlagen/liste', $auth->guard(null, [$closingTextTemplateController, 'list']));
+$router->get('/einstellungen/starttexte', $auth->guard(Permission::Administration, [$documentIntroTextSettingsController, 'edit']));
+$router->post('/einstellungen/starttexte', $auth->guard(Permission::Administration, [$documentIntroTextSettingsController, 'update']));
 $router->get('/einstellungen/textvorlagen', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'index']));
 $router->get('/einstellungen/textvorlagen/ordner/{id}/bearbeiten', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'editFolder']));
 $router->post('/einstellungen/textvorlagen/ordner', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'storeFolder']));
@@ -1516,6 +1543,15 @@ $router->post('/einstellungen/textvorlagen/vorlagen', $auth->guard(Permission::A
 $router->post('/einstellungen/textvorlagen/vorlagen/{id}', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'updateTemplate']));
 $router->post('/einstellungen/textvorlagen/vorlagen/{id}/loeschen', $auth->guard(Permission::Administration, [$closingTextTemplateController, 'destroyTemplate']));
 
+// Sets (Migration 113); /sets/auswahl ohne Recht, wie /artikel/suche (Dokumentformulare)
+$router->get('/sets', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'index']));
+$router->get('/sets/neu', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'create']));
+$router->get('/sets/auswahl', $auth->guard(null, [$articleSetController, 'selection']));
+$router->post('/sets', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'store']));
+$router->get('/sets/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'show']));
+$router->get('/sets/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'edit']));
+$router->post('/sets/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'update']));
+$router->post('/sets/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleSetController, 'destroy']));
 $router->get('/hersteller', $auth->guard(Permission::Artikelverwaltung, [$manufacturerController, 'index']));
 // Live-Suche (JSON) für das Hersteller-Auswahlfeld in Artikel-/Case-
 // Formularen: bewusst `null` statt Permission::Artikelverwaltung, da jeder
@@ -1741,6 +1777,7 @@ $router->post('/veranstaltungen/{id}/logistik', $auth->guard(Permission::Ausgabe
 $router->post('/veranstaltungen/{id}/artikel', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'addItem']));
 $router->post('/veranstaltungsposten/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateItem']));
 $router->post('/veranstaltungsposten/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'deleteItem']));
+$router->post('/veranstaltungssets/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'removeSetBooking']));
 $router->post('/veranstaltungsbundles/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'removeBundle']));
 
 $router->get('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'checklist']));

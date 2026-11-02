@@ -337,6 +337,30 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
         </div>
     <?php endif; ?>
 
+    <?php $bookedSets ??= []; ?>
+    <?php if ($bookedSets !== []): /* Sets (Migration 113) */ ?>
+        <div class="mb-4 rounded-md border border-brand-200 bg-brand-50 p-3 dark:border-brand-800 dark:bg-brand-950/40">
+            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-brand-700 dark:text-brand-400"><?= e(t('rentals.show.sets_title')) ?></p>
+            <div class="divide-y divide-brand-100 dark:divide-brand-900">
+                <?php foreach ($bookedSets as $bookedSet): ?>
+                    <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                        <div>
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= (int) $bookedSet['quantity'] ?>× <?= e($bookedSet['label']) ?></p>
+                            <?php if ($bookedSet['description'] !== ''): ?>
+                                <p class="text-xs text-slate-500 dark:text-slate-400"><?= e($bookedSet['description']) ?></p>
+                            <?php endif; ?>
+                        </div>
+                        <form method="post" action="/veranstaltungssets/<?= e($bookedSet['id']) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_remove_set')) ?>" data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
+                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.show.remove')) ?></button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <?php if ($detail->items === []): ?>
         <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.no_items_planned')) ?></p>
     <?php else: ?>

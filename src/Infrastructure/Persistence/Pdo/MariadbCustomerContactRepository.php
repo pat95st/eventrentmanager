@@ -33,16 +33,29 @@ final class MariadbCustomerContactRepository implements CustomerContactRepositor
 
     public function replaceForCustomer(string $customerId, array $contacts): void
     {
-        $delete = $this->pdo->prepare('DELETE FROM customer_contacts WHERE customer_id = :customer_id');
-        $delete->execute(['customer_id' => $customerId]);
+        // Bestehende Ansprechpartner per ID fortschreiben statt alle zu
+        // löschen: Dokumente verweisen per contact_id (ON DELETE SET NULL)
+        // auf sie, ein Löschen würde dort die Auswahl entfernen.
+        $keepIds = array_map(static fn ($contact) => $contact->id, $contacts);
+        $existing = $this->pdo->prepare('SELECT id FROM customer_contacts WHERE customer_id = :customer_id');
+        $existing->execute(['customer_id' => $customerId]);
+        $delete = $this->pdo->prepare('DELETE FROM customer_contacts WHERE id = :id');
+        foreach ($existing->fetchAll(\PDO::FETCH_COLUMN) as $existingId) {
+            if (!in_array((string) $existingId, $keepIds, true)) {
+                $delete->execute(['id' => $existingId]);
+            }
+        }
 
         if ($contacts === []) {
             return;
         }
 
         $insert = $this->pdo->prepare(
-            'INSERT INTO customer_contacts (id, customer_id, name, job_title, phone, email, sort_order, street, address_line2, postal_code, city)
-             VALUES (:id, :customer_id, :name, :job_title, :phone, :email, :sort_order, :street, :address_line2, :postal_code, :city)'
+            'INSERT INTO customer_contacts (id, customer_id, name, job_title, phone, email, sort_order, street, address_line2, postal_code, city, salutation)
+             VALUES (:id, :customer_id, :name, :job_title, :phone, :email, :sort_order, :street, :address_line2, :postal_code, :city, :salutation)
+             ON DUPLICATE KEY UPDATE name = VALUES(name), job_title = VALUES(job_title), phone = VALUES(phone), email = VALUES(email),
+                sort_order = VALUES(sort_order), street = VALUES(street), address_line2 = VALUES(address_line2),
+                postal_code = VALUES(postal_code), city = VALUES(city), salutation = VALUES(salutation)'
         );
 
         foreach ($contacts as $contact) {
@@ -58,6 +71,7 @@ final class MariadbCustomerContactRepository implements CustomerContactRepositor
                 'address_line2' => $contact->addressLine2,
                 'postal_code' => $contact->postalCode,
                 'city' => $contact->city,
+                'salutation' => $contact->salutation,
             ]);
         }
     }
@@ -76,6 +90,7 @@ final class MariadbCustomerContactRepository implements CustomerContactRepositor
             addressLine2: $row['address_line2'] ?? null,
             postalCode: $row['postal_code'] ?? null,
             city: $row['city'] ?? null,
+            salutation: $row['salutation'] ?? null,
         );
     }
 }

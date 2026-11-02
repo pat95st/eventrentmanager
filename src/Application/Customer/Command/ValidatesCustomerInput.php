@@ -157,6 +157,8 @@ trait ValidatesCustomerInput
             }
 
             $contacts[] = [
+                'id' => trim((string) ($rawContact['id'] ?? '')),
+                'salutation' => \App\Domain\Customer\Salutation::normalize((string) ($rawContact['salutation'] ?? '')),
                 'name' => $name,
                 'jobTitle' => $jobTitle !== '' ? $jobTitle : null,
                 'phone' => $phone !== '' ? $phone : null,

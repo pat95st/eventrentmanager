@@ -50,7 +50,7 @@ final class UpdateRentalItemHandler implements CommandHandlerInterface
         $requiredByBundles = $this->bundlePlanner?->requiredQuantity($item->rentalId, $item->articleId) ?? 0;
         if ($quantity < $requiredByBundles) {
             throw new ValidationException([
-                'quantity' => "{$requiredByBundles} Exemplare dieses Artikels gehören zu gebuchten Bundles — die Menge kann nicht darunter gesenkt werden. Bitte stattdessen das Bundle entfernen.",
+                'quantity' => "{$requiredByBundles} Exemplare dieses Artikels gehören zu gebuchten Bundles oder Sets — die Menge kann nicht darunter gesenkt werden. Bitte stattdessen das Bundle bzw. Set entfernen.",
             ]);
         }
 

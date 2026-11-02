@@ -90,15 +90,40 @@ if (!function_exists('renderCaseNoticeField')) {
                 <div class="mb-4 space-y-4">
                     <?php foreach ($detail->inventoryNumbers as $entry): ?>
                         <?php $inv = $entry->inventoryNumber; ?>
-                        <div id="exemplar-<?= e($inv->id) ?>" class="rounded-md border border-slate-100 dark:border-slate-800">
+                        <?php
+                            $articleCount = array_sum(array_map(static fn ($c) => $c->item->quantity, $entry->content));
+                            $photoCount = count($entry->images);
+                        ?>
+                        <div id="exemplar-<?= e($inv->id) ?>" class="overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
+                            <!-- Kopf des Exemplars: Inventurnummer und Stückliste (eine pro Case-Exemplar) -->
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
+                                <div>
+                                    <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Case-Exemplar</p>
+                                    <p class="font-mono text-base font-semibold text-slate-900 dark:text-slate-100"><?= e($inv->number) ?></p>
+                                    <p class="text-xs text-slate-500 dark:text-slate-400">
+                                        <?= $articleCount ?> Teile · <?= $photoCount ?> Foto<?= $photoCount === 1 ? '' : 's' ?> · Angeschafft: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
+                                    </p>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <a href="/cases/<?= e($case->id) ?>/stueckliste.pdf?exemplar=<?= e($inv->id) ?>" target="_blank" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="width:1rem;height:1rem"><path d="M4 2a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.414A2 2 0 0 0 17.414 6L14 2.586A2 2 0 0 0 12.586 2H4Zm6 5a1 1 0 0 1 1 1v3.586l1.293-1.293a1 1 0 1 1 1.414 1.414l-3 3a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L9 11.586V8a1 1 0 0 1 1-1Z"/></svg>
+                                        Stückliste (PDF)
+                                    </a>
+                                    <?php if ($editInventoryId !== $inv->id): ?>
+                                        <a href="/cases/<?= e($case->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                                    <?php endif; ?>
+                                    <form method="post" action="/case-inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm="Dieses Case-Exemplar inklusive Inhalt löschen?" data-confirm-style="danger">
+                                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                        <input type="hidden" name="case_id" value="<?= e($case->id) ?>">
+                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
+                                    </form>
+                                </div>
+                            </div>
+
                             <?php if ($editInventoryId === $inv->id): ?>
-                                <form method="post" action="/case-inventurnummern/<?= e($inv->id) ?>" class="flex flex-wrap items-end gap-3 p-3">
-                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <form method="post" action="/case-inventurnummern/<?= e($inv->id) ?>" class="flex flex-wrap items-end gap-3 border-b border-slate-100 p-3 dark:border-slate-800">
+                                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <input type="hidden" name="case_id" value="<?= e($case->id) ?>">
-                                    <div>
-                                        <label class="block text-xs text-slate-500 dark:text-slate-400">Inventurnummer</label>
-                                        <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($inv->number) ?></p>
-                                    </div>
                                     <div>
                                         <label class="block text-xs text-slate-500 dark:text-slate-400">Anschaffungszeitpunkt</label>
                                         <input type="date" name="acquisition_date" value="<?= e($inv->acquisitionDate?->format('Y-m-d')) ?>"
@@ -107,24 +132,6 @@ if (!function_exists('renderCaseNoticeField')) {
                                     <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>
                                     <a href="/cases/<?= e($case->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">Abbrechen</a>
                                 </form>
-                            <?php else: ?>
-                                <div class="flex flex-wrap items-center justify-between gap-2 p-3">
-                                    <div>
-                                        <p class="font-mono text-sm text-slate-800 dark:text-slate-200"><?= e($inv->number) ?></p>
-                                        <p class="text-xs text-slate-400 dark:text-slate-500">
-                                            Angeschafft: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
-                                        </p>
-                                    </div>
-                                    <div class="flex items-center gap-3">
-                                        <a href="/cases/<?= e($case->id) ?>/stueckliste.pdf?exemplar=<?= e($inv->id) ?>" target="_blank" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Stückliste (PDF)</a>
-                                        <a href="/cases/<?= e($case->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
-                                        <form method="post" action="/case-inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm="Dieses Case-Exemplar inklusive Inhalt löschen?" data-confirm-style="danger">
-                                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                            <input type="hidden" name="case_id" value="<?= e($case->id) ?>">
-                                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
-                                        </form>
-                                    </div>
-                                </div>
                             <?php endif; ?>
 
                             <!-- Inhalt dieses Exemplars -->

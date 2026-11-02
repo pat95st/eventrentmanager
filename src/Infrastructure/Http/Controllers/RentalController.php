@@ -89,7 +89,31 @@ final class RentalController
         private readonly ?\App\Application\Rental\RentalBundlePlanner $bundlePlanner = null,
         // Sets (Migration 113)
         private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
+        // Racks (Migration 115): fest zugeordnete Racks gehen bei Ausgabe mit.
+        private readonly ?\App\Domain\Rack\RackRepositoryInterface $racks = null,
     ) {
+    }
+
+    /**
+     * Fest zugeordnete Racks (Migration 115) der ausgegebenen und der zur
+     * Ausgabe angebotenen Geräte-Exemplare.
+     *
+     * @param array<string, \App\Domain\InventoryNumber\InventoryNumber[]> $availableByArticle
+     * @return array<string, \App\Domain\Rack\Rack> Geräte-Exemplar-ID => Rack
+     */
+    private function fixedRacks(\App\Application\Rental\Query\RentalDetail $detail, array $availableByArticle = []): array
+    {
+        if ($this->racks === null) {
+            return [];
+        }
+        $ids = array_map(static fn ($issued) => $issued->inventoryNumber->id, $detail->issuedItems);
+        foreach ($availableByArticle as $inventoryNumbers) {
+            foreach ($inventoryNumbers as $inventoryNumber) {
+                $ids[] = $inventoryNumber->id;
+            }
+        }
+
+        return $this->racks->findByFixedInventoryNumbers($ids);
     }
 
     /**
@@ -839,6 +863,7 @@ final class RentalController
             'detail' => $detail,
             'availableByArticle' => $availableByArticle,
             'rentalTermsMarkdown' => $this->legalSettings->get()->rentalTermsMarkdown,
+            'fixedRacks' => $this->fixedRacks($detail, $availableByArticle),
         ], activeNav: 'rentals', title: t('rentals.page_title.checklist', ['event' => $detail->rental->eventName]));
     }
 
@@ -983,6 +1008,7 @@ final class RentalController
 
         echo View::page('rentals/return-checklist', [
             'detail' => $detail,
+            'fixedRacks' => $this->fixedRacks($detail),
         ], activeNav: 'rentals', title: t('rentals.page_title.return_checklist', ['event' => $detail->rental->eventName]));
     }
 

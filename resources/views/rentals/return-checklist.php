@@ -1,4 +1,6 @@
 <?php
+/** @var array<string, \App\Domain\Rack\Rack> $fixedRacks fest zugeordnete Racks je Geräte-Exemplar (Migration 115) */
+$fixedRacks ??= [];
 /** @var \App\Application\Rental\Query\RentalDetail $detail */
 
 use function App\Infrastructure\Http\e;
@@ -133,6 +135,9 @@ foreach ($detail->issuedItems as $issued) {
                             <div class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                                 <span class="font-mono text-slate-700 dark:text-slate-300">
                                     ✓ <?= e($entryReturned->inventoryNumber->number) ?>
+                                    <?php if (isset($fixedRacks[$entryReturned->inventoryNumber->id])): ?>
+                                    <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 font-sans text-xs font-medium text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700" title="Fest zugeordnetes Rack – geht mit diesem Gerät mit">+ Rack <?= e($fixedRacks[$entryReturned->inventoryNumber->id]->name) ?> (<?= e($fixedRacks[$entryReturned->inventoryNumber->id]->inventoryNumber) ?>)</span>
+                                <?php endif; ?>
                                     <?php if ($entryReturned->issuedItem->functionTestPassed === false): ?>
                                         <span class="ml-1 inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-800 ring-1 ring-red-300 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-700">
                                             <?= e(t('rentals.return_checklist.test_failed_badge')) ?>
@@ -159,7 +164,10 @@ foreach ($detail->issuedItems as $issued) {
                             <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rueckgabe" class="flex flex-wrap items-center justify-between gap-3 py-2">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <input type="hidden" name="issued_item_id" value="<?= e($entryPending->issuedItem->id) ?>">
-                                <span class="font-mono text-sm text-slate-700 dark:text-slate-300"><?= e($entryPending->inventoryNumber->number) ?></span>
+                                <span class="font-mono text-sm text-slate-700 dark:text-slate-300"><?= e($entryPending->inventoryNumber->number) ?>
+                                <?php if (isset($fixedRacks[$entryPending->inventoryNumber->id])): ?>
+                                    <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 font-sans text-xs font-medium text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700" title="Fest zugeordnetes Rack – geht mit diesem Gerät mit">+ Rack <?= e($fixedRacks[$entryPending->inventoryNumber->id]->name) ?> (<?= e($fixedRacks[$entryPending->inventoryNumber->id]->inventoryNumber) ?>)</span>
+                                <?php endif; ?></span>
                                 <div class="flex flex-wrap items-center gap-3">
                                     <label class="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
                                         <input type="radio" name="function_test_passed" value="1" checked>

@@ -2,6 +2,8 @@
 /** @var \App\Application\Rental\Query\RentalDetail $detail */
 /** @var array<string, \App\Domain\InventoryNumber\InventoryNumber[]> $availableByArticle */
 /** @var string|null $rentalTermsMarkdown */
+/** @var array<string, \App\Domain\Rack\Rack> $fixedRacks fest zugeordnete Racks je Geräte-Exemplar (Migration 115) */
+$fixedRacks ??= [];
 
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
@@ -282,7 +284,10 @@ foreach ($detail->issuedItems as $issued) {
                     <div class="mb-3 divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($issued as $issuedEntry): ?>
                             <div class="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
-                                <span class="font-mono text-slate-700 dark:text-slate-300">✓ <?= e($issuedEntry->inventoryNumber->number) ?></span>
+                                <span class="font-mono text-slate-700 dark:text-slate-300">✓ <?= e($issuedEntry->inventoryNumber->number) ?>
+                                <?php if (isset($fixedRacks[$issuedEntry->inventoryNumber->id])): ?>
+                                    <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 font-sans text-xs font-medium text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700" title="Fest zugeordnetes Rack – geht mit diesem Gerät mit">+ Rack <?= e($fixedRacks[$issuedEntry->inventoryNumber->id]->name) ?> (<?= e($fixedRacks[$issuedEntry->inventoryNumber->id]->inventoryNumber) ?>)</span>
+                                <?php endif; ?></span>
                                 <form method="post" action="/ausgaben/<?= e($issuedEntry->issuedItem->id) ?>/loeschen" data-confirm="<?= e(t('rentals.checklist.confirm_undo_issue')) ?>" data-confirm-style="danger">
                                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
@@ -314,7 +319,7 @@ foreach ($detail->issuedItems as $issued) {
                                 <select name="inventory_number_id" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm font-mono dark:border-slate-700">
                                     <option value=""><?= e(t('rentals.checklist.issue_select_placeholder')) ?></option>
                                     <?php foreach ($available as $inv): ?>
-                                        <option value="<?= e($inv->id) ?>"><?= e($inv->number) ?></option>
+                                        <option value="<?= e($inv->id) ?>"><?= e($inv->number) ?><?= isset($fixedRacks[$inv->id]) ? ' + Rack ' . e($fixedRacks[$inv->id]->name) : '' ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>

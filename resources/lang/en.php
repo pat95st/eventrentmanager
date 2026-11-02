@@ -2498,4 +2498,5 @@ return [
     'articles.price_list.with_images' => 'Show article images (document image from the gallery)',
     'articles.price_list.with_short_texts' => 'Show short texts',
     'articles.price_list.export_button' => 'Create PDF',
+    'nav.racks' => 'Racks',
 ];

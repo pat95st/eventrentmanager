@@ -421,6 +421,7 @@ $customerRepository = new MariadbCustomerRepository($pdo);
 $customerContactRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCustomerContactRepository($pdo);
 $caseItemRepository = new MariadbCaseItemRepository($pdo);
 $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
+$rackRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRackRepository($pdo);
 $caseInventoryNumberImageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCaseInventoryNumberImageRepository($pdo);
 $caseContentItemRepository = new MariadbCaseContentItemRepository($pdo);
 $supplierRepository = new MariadbSupplierRepository($pdo);
@@ -1094,6 +1095,18 @@ $queryBus->register(\App\Application\Rma\Query\ListRmas::class, new ListRmasHand
 $queryBus->register(\App\Application\Customer\Query\ListCustomers::class, new ListCustomersHandler($customerRepository));
 $queryBus->register(\App\Application\Customer\Query\GetCustomer::class, new GetCustomerHandler($customerRepository));
 
+// Racks (Migration 115)
+$rackValidator = new \App\Application\Rack\Command\RackValidator($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository);
+$rackDetailBuilder = new \App\Application\Rack\Query\RackDetailBuilder($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository, $rentalIssuedItemRepository, $rentalRepository);
+$commandBus->register(\App\Application\Rack\Command\CreateRack::class, new \App\Application\Rack\Command\CreateRackHandler($rackRepository, $rackValidator));
+$commandBus->register(\App\Application\Rack\Command\UpdateRack::class, new \App\Application\Rack\Command\UpdateRackHandler($rackRepository, $rackValidator));
+$commandBus->register(\App\Application\Rack\Command\DeleteRack::class, new \App\Application\Rack\Command\DeleteRackHandler($rackRepository));
+$commandBus->register(\App\Application\Rack\Command\AddRackSlot::class, new \App\Application\Rack\Command\AddRackSlotHandler($rackRepository, $rackValidator));
+$commandBus->register(\App\Application\Rack\Command\RemoveRackSlot::class, new \App\Application\Rack\Command\RemoveRackSlotHandler($rackRepository));
+$queryBus->register(\App\Application\Rack\Query\ListRacks::class, new \App\Application\Rack\Query\ListRacksHandler($rackRepository, $rackDetailBuilder));
+$queryBus->register(\App\Application\Rack\Query\GetRack::class, new \App\Application\Rack\Query\GetRackHandler($rackRepository, $rackDetailBuilder));
+$queryBus->register(\App\Application\Rack\Query\ListRackDeviceOptions::class, new \App\Application\Rack\Query\ListRackDeviceOptionsHandler($articleRepository, $inventoryNumberRepository, $manufacturerRepository, $rackRepository));
+
 $queryBus->register(\App\Application\CaseItem\Query\ListCaseItems::class, new ListCaseItemsHandler($caseItemRepository));
 $queryBus->register(\App\Application\CaseItem\Query\GetCaseItem::class, new GetCaseItemHandler(
     $caseItemRepository,
@@ -1269,6 +1282,7 @@ $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
 $electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);
 $customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
+$rackController = new \App\Infrastructure\Http\Controllers\RackController($commandBus, $queryBus);
 $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer));
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
@@ -1352,7 +1366,7 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
@@ -1681,6 +1695,16 @@ $router->post('/kunden/{id}', $auth->guard(Permission::Kundenverwaltung, [$custo
 $router->post('/kunden/{id}/loeschen', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'destroy']));
 $router->post('/kunden/{id}/nachricht', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'sendMessage']));
 
+// Racks (Migration 115)
+$router->get('/racks', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'index']));
+$router->get('/racks/neu', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'create']));
+$router->post('/racks', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'store']));
+$router->get('/racks/{id}', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'show']));
+$router->get('/racks/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'edit']));
+$router->post('/racks/{id}', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'update']));
+$router->post('/racks/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'destroy']));
+$router->post('/racks/{id}/einbauten', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'addSlot']));
+$router->post('/rack-einbauten/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'removeSlot']));
 $router->get('/cases', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'index']));
 $router->get('/cases/neu', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'create']));
 $router->post('/cases', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'store']));

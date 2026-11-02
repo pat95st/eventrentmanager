@@ -2499,4 +2499,5 @@ return [
     'articles.price_list.with_images' => 'Artikelbilder anzeigen (Dokumentbild aus der Galerie)',
     'articles.price_list.with_short_texts' => 'Kurztexte anzeigen',
     'articles.price_list.export_button' => 'PDF erstellen',
+    'nav.racks' => 'Racks',
 ];

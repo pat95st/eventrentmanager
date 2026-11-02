@@ -50,11 +50,12 @@ $backgroundImageUrl = CompanyBranding::backgroundImageUrl();
 // verwaltung und stecken daher hier (nicht mehr bei "Veranstaltungen").
 // Jeder Menüpunkt wird nur angezeigt, wenn der angemeldete Benutzer das
 // zugehörige Recht besitzt (siehe Zuordnung in bootstrap.php).
-$articlesGroupKeys = ['articles', 'sets', 'cases', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents', 'warehouses'];
+$articlesGroupKeys = ['articles', 'sets', 'cases', 'racks', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents', 'warehouses'];
 $articlesChildren = [
     ['key' => 'articles', 'label' => t('nav.articles_all'), 'href' => '/artikel'],
     ['key' => 'sets', 'label' => t('nav.sets'), 'href' => '/sets'],
     ['key' => 'cases', 'label' => t('nav.cases'), 'href' => '/cases'],
+    ['key' => 'racks', 'label' => t('nav.racks'), 'href' => '/racks'],
     ['key' => 'manufacturers', 'label' => t('nav.manufacturers'), 'href' => '/hersteller'],
     ['key' => 'arbeitszeit', 'label' => t('nav.labor_time_articles'), 'href' => '/arbeitszeit-artikel'],
     ['key' => 'categories', 'label' => t('nav.categories'), 'href' => '/kategorien'],

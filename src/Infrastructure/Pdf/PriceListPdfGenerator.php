@@ -105,7 +105,7 @@ final class PriceListPdfGenerator
                 if ($y - self::GROUP_HEADING_HEIGHT - $firstHeight < self::MARGIN + 20) {
                     $y = $newPage();
                 }
-                $writer->text(self::MARGIN + 2, $y - 14, (string) $heading, 11, true);
+                $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN + 2, $y - 14, (string) $heading, 11, true);
                 $writer->line(self::MARGIN, $y - 18, $pageWidth - self::MARGIN, $y - 18, 0.5, '0.6 0.6 0.6');
                 $y -= self::GROUP_HEADING_HEIGHT;
             }
@@ -232,7 +232,7 @@ final class PriceListPdfGenerator
         }
         $title = $continuation ? 'Preisliste (Fortsetzung)' : 'Preisliste';
         $titleFontSize = $titleOverride?->fontSize ?? 18.0;
-        $writer->text($titleX, $y - 4, $title, $titleFontSize, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, $titleX, $y - 4, $title, $titleFontSize, true);
         $y -= 26;
 
         if (!$continuation) {
@@ -286,16 +286,21 @@ final class PriceListPdfGenerator
      */
     private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, array $columns, array $tiers): float
     {
-        $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, '0.92 0.92 0.92');
-        $writer->text($columns['name']['x'] + 2, $y - 8, 'Artikel', 9, true);
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, '0.92 0.92 0.92');
+            $writer->text($columns['name']['x'] + 2, $y - 8, 'Artikel', 9, true);
 
-        foreach ($tiers as $tier) {
-            $label = $tier->dayCount . ($tier->dayCount === 1 ? ' Tag' : ' Tage');
-            // Preisspalten rechtsbündig (Nutzerwunsch, gilt für alle Dokumente).
-            $writer->textRight($columns['tiers'][$tier->dayCount]['x'] + $columns['tiers'][$tier->dayCount]['width'] - 4, $y - 8, $label, 9, true);
+            foreach ($tiers as $tier) {
+                $label = $tier->dayCount . ($tier->dayCount === 1 ? ' Tag' : ' Tage');
+                // Preisspalten rechtsbündig (Nutzerwunsch, gilt für alle Dokumente).
+                $writer->textRight($columns['tiers'][$tier->dayCount]['x'] + $columns['tiers'][$tier->dayCount]['width'] - 4, $y - 8, $label, 9, true);
+            }
+
+            return $y - 22;
+        } finally {
+            $writer->setFontRole($previousFontRole);
         }
-
-        return $y - 22;
     }
 
     /**
@@ -312,22 +317,27 @@ final class PriceListPdfGenerator
         PriceRoundingStep $roundingStep = PriceRoundingStep::None,
         PriceRoundingDirection $roundingDirection = PriceRoundingDirection::Nearest,
     ): void {
-        $baseline = $y - self::TABLE_LINE_HEIGHT + 3;
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $baseline = $y - self::TABLE_LINE_HEIGHT + 3;
 
-        if ($this->rowHeight($row) === self::TABLE_LINE_HEIGHT) {
-            $writer->text($columns['name']['x'] + 2, $baseline, $row['nameLines'][0], self::TABLE_FONT_SIZE);
-        } else {
-            ArticlePdfRow::drawNameColumn($writer, $columns['name']['x'] + 2, $y - self::ROW_PADDING / 2, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT);
-            $baseline = $y - self::ROW_PADDING / 2 - self::TABLE_LINE_HEIGHT + 2;
-        }
+            if ($this->rowHeight($row) === self::TABLE_LINE_HEIGHT) {
+                $writer->text($columns['name']['x'] + 2, $baseline, $row['nameLines'][0], self::TABLE_FONT_SIZE);
+            } else {
+                ArticlePdfRow::drawNameColumn($writer, $columns['name']['x'] + 2, $y - self::ROW_PADDING / 2, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT);
+                $baseline = $y - self::ROW_PADDING / 2 - self::TABLE_LINE_HEIGHT + 2;
+            }
 
-        if ($item->article->dailyRentalPrice === null) {
-            return;
-        }
+            if ($item->article->dailyRentalPrice === null) {
+                return;
+            }
 
-        $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers, $roundingStep, $roundingDirection);
-        foreach ($prices as $dayCount => $price) {
-            $writer->textRight($columns['tiers'][$dayCount]['x'] + $columns['tiers'][$dayCount]['width'] - 4, $baseline, number_format((float) $price, 2, ',', '.') . $this->currency(), self::TABLE_FONT_SIZE);
+            $prices = RentalPriceCalculator::calculate($item->article->dailyRentalPrice, $tiers, $roundingStep, $roundingDirection);
+            foreach ($prices as $dayCount => $price) {
+                $writer->textRight($columns['tiers'][$dayCount]['x'] + $columns['tiers'][$dayCount]['width'] - 4, $baseline, number_format((float) $price, 2, ',', '.') . $this->currency(), self::TABLE_FONT_SIZE);
+            }
+        } finally {
+            $writer->setFontRole($previousFontRole);
         }
     }
 

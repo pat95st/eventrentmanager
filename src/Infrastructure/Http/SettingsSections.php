@@ -54,6 +54,7 @@ final class SettingsSections
                     ['key' => 'settings-starttexte', 'href' => '/einstellungen/starttexte', 'label' => t('nav.intro_texts')],
                     ['key' => 'settings-textvorlagen', 'href' => '/einstellungen/textvorlagen', 'label' => t('nav.closing_text_templates')],
                     ['key' => 'settings-pdf-design', 'href' => '/einstellungen/pdf-design', 'label' => t('nav.pdf_design_settings')],
+                    ['key' => 'settings-schriften', 'href' => '/einstellungen/schriften', 'label' => t('nav.pdf_fonts')],
                     ['key' => 'settings-pdf-layout', 'href' => '/einstellungen/pdf-layout', 'label' => t('nav.pdf_layout_settings')],
                     ['key' => 'settings-preise', 'href' => '/einstellungen/preise', 'label' => t('nav.pricing_settings')],
                     ['key' => 'settings-gutscheine', 'href' => '/einstellungen/gutscheine', 'label' => t('nav.voucher_settings')],

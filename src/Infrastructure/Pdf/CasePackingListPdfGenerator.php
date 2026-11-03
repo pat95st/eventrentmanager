@@ -77,6 +77,7 @@ final class CasePackingListPdfGenerator
             $writer->text(self::MARGIN, $y - self::TABLE_LINE_HEIGHT, 'Diesem Case sind noch keine Artikel zugeordnet.', 10);
             $y -= self::TABLE_LINE_HEIGHT * 2;
         }
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
         foreach ($entry->content as $contentEntry) {
             $row = $rowRenderer->nameColumn($contentEntry->article, [$contentEntry->displayName()], $articleWidth, self::TABLE_FONT_SIZE, $wrap);
             $height = ArticlePdfRow::contentHeight($row, self::TABLE_LINE_HEIGHT) + self::ROW_PADDING;
@@ -93,6 +94,7 @@ final class CasePackingListPdfGenerator
             $y -= $height;
             $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 0.3, '0.85 0.85 0.85');
         }
+        $writer->setFontRole($previousFontRole);
 
         // --- Hinweis --------------------------------------------------------
         $blocks = $this->richTextRenderer->parse($entry->inventoryNumber->noticeHtml);
@@ -101,7 +103,7 @@ final class CasePackingListPdfGenerator
             if ($y - 60 < self::MARGIN + 20) {
                 $y = $newPage();
             }
-            $writer->text(self::MARGIN, $y - 12, 'Hinweise', 12, true);
+            $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y - 12, 'Hinweise', 12, true);
             $y -= 30;
             $y = $this->richTextRenderer->render($writer, $blocks, self::MARGIN, $y, $contentWidth, self::MARGIN + 20, $newPage);
         }
@@ -119,7 +121,7 @@ final class CasePackingListPdfGenerator
             if ($y - 22 - $firstHeight < self::MARGIN + 20) {
                 $y = $newPage();
             }
-            $writer->text(self::MARGIN, $y - 12, 'So wird das Case gepackt', 12, true);
+            $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y - 12, 'So wird das Case gepackt', 12, true);
             $y -= 24;
 
             for ($i = 0; $i < count($photos); $i += $single ? 1 : 2) {
@@ -151,7 +153,7 @@ final class CasePackingListPdfGenerator
             $logoBottomY = $y - $logoHeight;
         }
 
-        $writer->text(self::MARGIN, $y - 4, 'Stückliste', 18, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y - 4, 'Stückliste', 18, true);
         $y -= 26;
         $writer->text(self::MARGIN, $y, $detail->case->name, 11, true);
         $y -= 14;
@@ -172,7 +174,7 @@ final class CasePackingListPdfGenerator
     private function drawContinuationHeader(SimplePdfWriter $writer, float $pageWidth, float $pageHeight, int $pageNumber, string $subtitle): float
     {
         $y = $pageHeight - self::MARGIN;
-        $writer->text(self::MARGIN, $y - 4, 'Stückliste (Fortsetzung)', 14, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y - 4, 'Stückliste (Fortsetzung)', 14, true);
         $y -= 22;
         $writer->text(self::MARGIN, $y, $subtitle, 9, false, false, '0.3 0.3 0.3');
         $writer->textRight($pageWidth - self::MARGIN, $y, 'Seite ' . $pageNumber, 8);
@@ -185,11 +187,16 @@ final class CasePackingListPdfGenerator
     /** @param array{check: float, quantity: float, article: float} $columns */
     private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, array $columns): float
     {
-        $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, '0.92 0.92 0.92');
-        $writer->textRight($columns['quantity'] + self::QUANTITY_COLUMN_WIDTH - 6, $y - 8, 'Menge', 9, true);
-        $writer->text($columns['article'], $y - 8, 'Artikel', 9, true);
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, '0.92 0.92 0.92');
+            $writer->textRight($columns['quantity'] + self::QUANTITY_COLUMN_WIDTH - 6, $y - 8, 'Menge', 9, true);
+            $writer->text($columns['article'], $y - 8, 'Artikel', 9, true);
 
-        return $y - 20;
+            return $y - 20;
+        } finally {
+            $writer->setFontRole($previousFontRole);
+        }
     }
 
     private function drawCheckbox(SimplePdfWriter $writer, float $x, float $y): void

@@ -88,7 +88,7 @@ final class DunningPdfGenerator
             $y = $titlePoint['y'];
         }
         $titleFontSize = $titleOverride?->fontSize ?? 16.0;
-        $writer->text($titleX, $y, 'Mahnung: ' . $notice->levelName, $titleFontSize, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, $titleX, $y, 'Mahnung: ' . $notice->levelName, $titleFontSize, true);
         $y -= 28;
 
         $infoLines = [

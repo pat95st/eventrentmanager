@@ -2499,4 +2499,5 @@ return [
     'articles.price_list.with_short_texts' => 'Show short texts',
     'articles.price_list.export_button' => 'Create PDF',
     'nav.racks' => 'Racks',
+    'nav.pdf_fonts' => 'Fonts',
 ];

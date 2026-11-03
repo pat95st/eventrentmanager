@@ -450,7 +450,7 @@ final class InvoicePdfGenerator
         }
         $title = $continuation ? 'Rechnung (Fortsetzung)' : 'Rechnung';
         $titleFontSize = $titleOverride?->fontSize ?? 18.0;
-        $writer->text($titleX, $y - 4, $title, $titleFontSize, true, color: $pdfDesignSettings?->accentColorPdfString() ?? '0 0 0');
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, $titleX, $y - 4, $title, $titleFontSize, true, color: $pdfDesignSettings?->accentColorPdfString() ?? '0 0 0');
         $y -= 24;
 
         if (!$detail->invoice->isFinalized()) {
@@ -792,30 +792,40 @@ final class InvoicePdfGenerator
     /** @param string[] $labels Spaltenüberschriften: Bezeichnung, Menge, Einzelpreis, Summe */
     private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth, ?PdfDesignSettings $pdfDesignSettings = null, array $labels = ['Artikel', 'Menge', 'Einzelpreis', 'Summe']): float
     {
-        $columns = $this->columnLayout();
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $columns = $this->columnLayout();
 
-        $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, $pdfDesignSettings?->accentColorTintPdfString() ?? '0.92 0.92 0.92');
-        $writer->text($columns['article']['x'] + 2, $y - 8, $labels[0], 9, true);
-        $writer->text($columns['quantity']['x'] + 2, $y - 8, $labels[1], 9, true);
-        // Preisspalten rechtsbündig (Nutzerwunsch), Überschriften passend dazu.
-        $writer->textRight($this->columnRight($columns['unitPrice']), $y - 8, $labels[2], 9, true);
-        $writer->textRight($this->columnRight($columns['lineTotal']), $y - 8, $labels[3], 9, true);
+            $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, $pdfDesignSettings?->accentColorTintPdfString() ?? '0.92 0.92 0.92');
+            $writer->text($columns['article']['x'] + 2, $y - 8, $labels[0], 9, true);
+            $writer->text($columns['quantity']['x'] + 2, $y - 8, $labels[1], 9, true);
+            // Preisspalten rechtsbündig (Nutzerwunsch), Überschriften passend dazu.
+            $writer->textRight($this->columnRight($columns['unitPrice']), $y - 8, $labels[2], 9, true);
+            $writer->textRight($this->columnRight($columns['lineTotal']), $y - 8, $labels[3], 9, true);
 
-        return $y - 22;
+            return $y - 22;
+        } finally {
+            $writer->setFontRole($previousFontRole);
+        }
     }
 
     /** @param array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool} $row */
     private function drawRow(SimplePdfWriter $writer, float $topY, array $row): void
     {
-        $columns = $this->columnLayout();
-        $baseline = $topY - self::TABLE_LINE_HEIGHT + 2;
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $columns = $this->columnLayout();
+            $baseline = $topY - self::TABLE_LINE_HEIGHT + 2;
 
-        ArticlePdfRow::drawNameColumn($writer, $columns['article']['x'] + 2, $topY, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT, $row['isSection']);
+            ArticlePdfRow::drawNameColumn($writer, $columns['article']['x'] + 2, $topY, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT, $row['isSection']);
 
-        if (!$row['isSection']) {
-            $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
-            $writer->textRight($this->columnRight($columns['unitPrice']), $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
-            $writer->textRight($this->columnRight($columns['lineTotal']), $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
+            if (!$row['isSection']) {
+                $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
+                $writer->textRight($this->columnRight($columns['unitPrice']), $baseline, $row['unitPrice'], self::TABLE_FONT_SIZE);
+                $writer->textRight($this->columnRight($columns['lineTotal']), $baseline, $row['lineTotal'], self::TABLE_FONT_SIZE);
+            }
+        } finally {
+            $writer->setFontRole($previousFontRole);
         }
     }
 
@@ -843,8 +853,13 @@ final class InvoicePdfGenerator
      */
     private function drawSummaryLine(SimplePdfWriter $writer, float $pageWidth, float $y, string $label, string $amount, float $fontSize = 9, bool $bold = false): void
     {
-        $writer->text($pageWidth - self::MARGIN - 230, $y, $label, $fontSize, $bold);
-        $writer->textRight($this->columnRight($this->columnLayout()['lineTotal']), $y, $amount, $fontSize, $bold);
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $writer->text($pageWidth - self::MARGIN - 230, $y, $label, $fontSize, $bold);
+            $writer->textRight($this->columnRight($this->columnLayout()['lineTotal']), $y, $amount, $fontSize, $bold);
+        } finally {
+            $writer->setFontRole($previousFontRole);
+        }
     }
 
     /**
@@ -864,7 +879,7 @@ final class InvoicePdfGenerator
             $y = $newPage();
         }
 
-        $writer->text(self::MARGIN, $y, $title, 10, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y, $title, 10, true);
         $y -= 8;
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
 
@@ -903,7 +918,7 @@ final class InvoicePdfGenerator
 
     private function drawTerms(SimplePdfWriter $writer, InvoiceDetail $detail, CompanySettings $companySettings, InvoiceSettings $invoiceSettings, string $termsText, float $y, float $pageWidth, float $pageHeight, int $pageNumber, ?PdfDesignSettings $pdfDesignSettings = null): float
     {
-        $writer->text(self::MARGIN, $y, 'Vermietbedingungen', 11, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y, 'Vermietbedingungen', 11, true);
         $y -= 18;
 
         $lines = $this->wrapText($termsText, $pageWidth - 2 * self::MARGIN, 8.0, true);

@@ -421,6 +421,19 @@ $customerRepository = new MariadbCustomerRepository($pdo);
 $customerContactRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCustomerContactRepository($pdo);
 $caseItemRepository = new MariadbCaseItemRepository($pdo);
 $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
+$pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepository($pdo);
+// Schriftarten je Bereich für alle PDFs (Migration 116), erst beim ersten PDF geladen.
+\App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
+    $configuration = [];
+    foreach ($pdfFontRepository->assignments() as $role => $fontId) {
+        $font = $pdfFontRepository->findById($fontId);
+        if ($font !== null) {
+            $configuration[$role] = array_map(static fn (?string $file) => $file !== null ? $fileStorage->absolutePath('fonts', $file) : null, $font->files());
+        }
+    }
+
+    return $configuration;
+});
 $rackRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRackRepository($pdo);
 $caseInventoryNumberImageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCaseInventoryNumberImageRepository($pdo);
 $caseContentItemRepository = new MariadbCaseContentItemRepository($pdo);
@@ -1095,6 +1108,14 @@ $queryBus->register(\App\Application\Rma\Query\ListRmas::class, new ListRmasHand
 $queryBus->register(\App\Application\Customer\Query\ListCustomers::class, new ListCustomersHandler($customerRepository));
 $queryBus->register(\App\Application\Customer\Query\GetCustomer::class, new GetCustomerHandler($customerRepository));
 
+// Schriftarten (Migration 116)
+$pdfFontStorage = new \App\Application\Settings\Command\PdfFontStorage($pdfFontRepository, $fileStorage);
+$commandBus->register(\App\Application\Settings\Command\AddGoogleFont::class, new \App\Application\Settings\Command\AddGoogleFontHandler($pdfFontRepository, new \App\Infrastructure\Fonts\GoogleFontsDownloader(), $pdfFontStorage));
+$commandBus->register(\App\Application\Settings\Command\UploadPdfFont::class, new \App\Application\Settings\Command\UploadPdfFontHandler($pdfFontStorage));
+$commandBus->register(\App\Application\Settings\Command\DeletePdfFont::class, new \App\Application\Settings\Command\DeletePdfFontHandler($pdfFontRepository, $pdfFontStorage));
+$commandBus->register(\App\Application\Settings\Command\UpdatePdfFontAssignments::class, new \App\Application\Settings\Command\UpdatePdfFontAssignmentsHandler($pdfFontRepository));
+$queryBus->register(\App\Application\Settings\Query\GetPdfFontSettings::class, new \App\Application\Settings\Query\GetPdfFontSettingsHandler($pdfFontRepository));
+
 // Racks (Migration 115)
 $rackValidator = new \App\Application\Rack\Command\RackValidator($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository);
 $rackDetailBuilder = new \App\Application\Rack\Query\RackDetailBuilder($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository, $rentalIssuedItemRepository, $rentalRepository);
@@ -1282,6 +1303,7 @@ $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
 $electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);
 $customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
+$pdfFontSettingsController = new \App\Infrastructure\Http\Controllers\PdfFontSettingsController($commandBus, $queryBus, $fileStorage);
 $rackController = new \App\Infrastructure\Http\Controllers\RackController($commandBus, $queryBus);
 $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer));
 $supplierController = new SupplierController($commandBus, $queryBus);
@@ -2086,6 +2108,14 @@ $router->get('/einstellungen/rechnungsvorlage', $auth->guard(Permission::Adminis
 $router->post('/einstellungen/rechnungsvorlage', $auth->guard(Permission::Administration, [$invoicePdfTemplateSettingsController, 'update']));
 
 $router->get('/einstellungen/pdf-design', $auth->guard(Permission::Administration, [$pdfDesignSettingsController, 'edit']));
+// Schriftarten (Migration 116)
+$router->get('/einstellungen/schriften', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'edit']));
+$router->get('/einstellungen/schriften/vorschau.pdf', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'preview']));
+$router->post('/einstellungen/schriften/google', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'addGoogle']));
+$router->post('/einstellungen/schriften/hochladen', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'upload']));
+$router->post('/einstellungen/schriften/zuordnung', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'assign']));
+$router->get('/einstellungen/schriften/{id}/datei', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'file']));
+$router->post('/einstellungen/schriften/{id}/loeschen', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'delete']));
 $router->post('/einstellungen/pdf-design', $auth->guard(Permission::Administration, [$pdfDesignSettingsController, 'update']));
 
 $router->get('/einstellungen/pdf-layout', $auth->guard(Permission::Administration, [$pdfLayoutSettingsController, 'edit']));

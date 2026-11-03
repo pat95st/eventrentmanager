@@ -49,10 +49,55 @@ final class SimplePdfWriter
     /** @var array<string, int> md5 der JPEG-Bytes => Objektnummer */
     private array $imageObjectsByHash = [];
 
+    /**
+     * Schriftarten je Bereich (Nutzerwunsch, Migration 116): Rolle =>
+     * Schnitt (regular/bold/italic/boldItalic) => Pfad zur TTF-Datei.
+     * Geladen beim ersten Writer einer Anfrage über den in bootstrap.php
+     * gesetzten Loader. Ohne Eintrag bleibt es bei Helvetica.
+     *
+     * @var array<string, array<string, string|null>>|null
+     */
+    private static ?array $fontConfiguration = null;
+
+    /** @var (callable(): array<string, array<string, string|null>>)|null */
+    private static $fontConfigurationLoader = null;
+
+    /** Aktueller Bereich, siehe setFontRole(). */
+    private string $fontRole = self::ROLE_BODY;
+
+    /** @var array<string, array{font: TrueTypeFont, name: string, codes: array<int, true>}> eingebettete Schriften je Dateipfad */
+    private array $embeddedFonts = [];
+
+    public const ROLE_BODY = 'body';
+    public const ROLE_HEADING = 'heading';
+    public const ROLE_TABLE = 'table';
+    public const ROLE_FOOTER = 'footer';
+
     public function __construct(float $pageWidth = 595.28, float $pageHeight = 841.89)
     {
         $this->pageWidth = $pageWidth;
         $this->pageHeight = $pageHeight;
+    }
+
+    /** Setzt den Loader für die Schriftart-Konfiguration (siehe $fontConfiguration). */
+    public static function useFontConfiguration(?callable $loader): void
+    {
+        self::$fontConfigurationLoader = $loader;
+        self::$fontConfiguration = null;
+    }
+
+    /**
+     * Wechselt den Bereich, dessen Schriftart text()/textWidth() verwenden
+     * (body, heading, table, footer). Ist für den Bereich keine Schrift
+     * gewählt, gilt die des Bereichs "body" (Text), sonst Helvetica.
+     * Liefert den bisherigen Bereich, damit Aufrufer ihn zurücksetzen können.
+     */
+    public function setFontRole(string $role): string
+    {
+        $previous = $this->fontRole;
+        $this->fontRole = $role;
+
+        return $previous;
     }
 
     public function pageWidth(): float
@@ -109,17 +154,53 @@ final class SimplePdfWriter
     public function text(float $x, float $y, string $text, float $fontSize = 10.0, bool $bold = false, bool $italic = false, string $color = '0 0 0'): void
     {
         $this->assertHasPage();
-        $font = $this->fontNameFor($bold, $italic);
+        $face = $this->resolveFace($bold, $italic);
         $escaped = $this->escapeString($text);
+
+        if ($face === null) {
+            $this->appendToCurrentPage(sprintf(
+                "q %s rg BT /%s %s Tf %s %s Td (%s) Tj ET Q\n",
+                $color,
+                $this->fontNameFor($bold, $italic),
+                $this->num($fontSize),
+                $this->num($x),
+                $this->num($y),
+                $escaped
+            ));
+
+            return;
+        }
+
+        // Eingebettete TrueType-Schrift; fehlende Schnitte werden nachgebildet
+        // (fett = Kontur mitzeichnen, kursiv = Schrägstellung).
+        $embedded = &$this->embeddedFonts[$face['path']];
+        foreach (count_chars($this->toWinAnsi($text), 1) as $code => $_) {
+            $embedded['codes'][$code] = true;
+        }
+        $mode = $face['fakeBold'] ? sprintf('2 Tr %s RG %s w ', $color, $this->num($fontSize * 0.03)) : '';
+        $position = $face['fakeItalic']
+            ? sprintf('1 0 0.21 1 %s %s Tm', $this->num($x), $this->num($y))
+            : sprintf('%s %s Td', $this->num($x), $this->num($y));
         $this->appendToCurrentPage(sprintf(
-            "q %s rg BT /%s %s Tf %s %s Td (%s) Tj ET Q\n",
+            "q %s rg BT /%s %s Tf %s%s (%s) Tj ET Q\n",
             $color,
-            $font,
+            $embedded['name'],
             $this->num($fontSize),
-            $this->num($x),
-            $this->num($y),
+            $mode,
+            $position,
             $escaped
         ));
+    }
+
+    /** text() in der Schriftart eines bestimmten Bereichs (z. B. Überschriften). */
+    public function textInRole(string $role, float $x, float $y, string $text, float $fontSize = 10.0, bool $bold = false, bool $italic = false, string $color = '0 0 0'): void
+    {
+        $previous = $this->setFontRole($role);
+        try {
+            $this->text($x, $y, $text, $fontSize, $bold, $italic, $color);
+        } finally {
+            $this->fontRole = $previous;
+        }
     }
 
     /**
@@ -142,6 +223,19 @@ final class SimplePdfWriter
      */
     public function textWidth(string $text, float $fontSize, bool $bold = false): float
     {
+        $face = $this->resolveFace($bold, false);
+        if ($face !== null) {
+            $font = $this->embeddedFonts[$face['path']]['font'];
+            $units = 0;
+            foreach (str_split($this->toWinAnsi($text)) as $byte) {
+                if ($byte !== '') {
+                    $units += $font->widthOfCode(ord($byte));
+                }
+            }
+
+            return $units * $fontSize / 1000 + ($face['fakeBold'] ? $fontSize * 0.03 : 0.0);
+        }
+
         $widths = $bold ? self::HELVETICA_BOLD_WIDTHS : self::HELVETICA_WIDTHS;
         $units = 0;
         foreach (mb_str_split($text) as $char) {
@@ -156,6 +250,72 @@ final class SimplePdfWriter
         }
 
         return $units * $fontSize / 1000;
+    }
+
+    /**
+     * Eingebettete Schrift für den aktuellen Bereich und Schnitt oder null
+     * (= Helvetica). Fehlt ein Schnitt, wird auf einen vorhandenen
+     * zurückgegriffen und fett/kursiv nachgebildet.
+     *
+     * @return array{path: string, fakeBold: bool, fakeItalic: bool}|null
+     */
+    private function resolveFace(bool $bold, bool $italic): ?array
+    {
+        $configuration = self::fontConfiguration();
+        $set = $configuration[$this->fontRole] ?? null;
+        if ($set === null || ($set['regular'] ?? null) === null) {
+            $set = $configuration[self::ROLE_BODY] ?? null;
+        }
+        if ($set === null || ($set['regular'] ?? null) === null) {
+            return null;
+        }
+
+        $candidates = match (true) {
+            $bold && $italic => [['boldItalic', false, false], ['bold', false, true], ['italic', true, false], ['regular', true, true]],
+            $bold => [['bold', false, false], ['regular', true, false]],
+            $italic => [['italic', false, false], ['regular', false, true]],
+            default => [['regular', false, false]],
+        };
+        foreach ($candidates as [$style, $fakeBold, $fakeItalic]) {
+            $path = $set[$style] ?? null;
+            if ($path === null || !$this->registerFont($path)) {
+                continue;
+            }
+
+            return ['path' => $path, 'fakeBold' => $fakeBold, 'fakeItalic' => $fakeItalic];
+        }
+
+        return null;
+    }
+
+    /** Lädt eine TTF-Datei einmal pro Dokument; false, wenn sie nicht nutzbar ist. */
+    private function registerFont(string $path): bool
+    {
+        if (isset($this->embeddedFonts[$path])) {
+            return true;
+        }
+        try {
+            $font = TrueTypeFont::fromFile($path);
+        } catch (\Throwable) {
+            return false;
+        }
+        $this->embeddedFonts[$path] = ['font' => $font, 'name' => 'T' . (count($this->embeddedFonts) + 1), 'codes' => []];
+
+        return true;
+    }
+
+    /** @return array<string, array<string, string|null>> */
+    private static function fontConfiguration(): array
+    {
+        if (self::$fontConfiguration === null) {
+            try {
+                self::$fontConfiguration = self::$fontConfigurationLoader !== null ? (self::$fontConfigurationLoader)() : [];
+            } catch (\Throwable) {
+                self::$fontConfiguration = [];
+            }
+        }
+
+        return self::$fontConfiguration;
     }
 
     /** Helvetica-Zeichenbreiten (1/1000 em) für ASCII 32–126. */
@@ -326,6 +486,8 @@ final class SimplePdfWriter
         $this->objects[$fontItalicObjectNumber] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>';
         $this->objects[$fontBoldItalicObjectNumber] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-BoldOblique /Encoding /WinAnsiEncoding >>';
 
+        $embeddedFontResources = $this->writeEmbeddedFonts();
+
         $pageContentObjectNumbers = [];
         foreach ($this->pageObjectNumbers as $index => $_) {
             $contentObjectNumber = $this->nextObjectNumber++;
@@ -339,7 +501,7 @@ final class SimplePdfWriter
 
         foreach ($this->pageObjectNumbers as $index => $pageObjectNumber) {
             $resourceFonts = sprintf(
-                '/Font << /%s %d 0 R /%s %d 0 R /%s %d 0 R /%s %d 0 R >>',
+                '/Font << /%s %d 0 R /%s %d 0 R /%s %d 0 R /%s %d 0 R' . $embeddedFontResources . ' >>',
                 self::FONT_REGULAR,
                 $fontRegularObjectNumber,
                 self::FONT_BOLD,
@@ -377,6 +539,57 @@ final class SimplePdfWriter
         $this->objects[$catalogObjectNumber] = sprintf('<< /Type /Catalog /Pages %d 0 R >>', $pagesObjectNumber);
 
         return $this->serialize($catalogObjectNumber);
+    }
+
+    /**
+     * Schreibt die verwendeten TrueType-Schriften (als Subset, komprimiert)
+     * und liefert die Einträge für das /Font-Ressourcen-Dictionary.
+     */
+    private function writeEmbeddedFonts(): string
+    {
+        $resources = '';
+        foreach ($this->embeddedFonts as $path => $embedded) {
+            if ($embedded['codes'] === []) {
+                continue; // nur für Breitenberechnung geladen, nie gezeichnet
+            }
+            $font = $embedded['font'];
+            $subset = $font->subset(array_keys($embedded['codes']));
+            $compressed = gzcompress($subset, 9);
+            $tag = '';
+            foreach (str_split(substr(md5($path . implode(',', array_keys($embedded['codes']))), 0, 6)) as $hex) {
+                $tag .= chr(65 + hexdec($hex) % 26);
+            }
+            $baseFont = $tag . '+' . $font->postScriptName();
+            $descriptor = $font->descriptor();
+
+            $fileObject = $this->nextObjectNumber++;
+            $this->objects[$fileObject] = sprintf("<< /Length %d /Length1 %d /Filter /FlateDecode >>\nstream\n%s\nendstream", strlen($compressed), strlen($subset), $compressed);
+
+            $descriptorObject = $this->nextObjectNumber++;
+            $this->objects[$descriptorObject] = sprintf(
+                '<< /Type /FontDescriptor /FontName /%s /Flags %d /FontBBox [%s] /ItalicAngle %s /Ascent %d /Descent %d /CapHeight %d /StemV 80 /FontFile2 %d 0 R >>',
+                $baseFont,
+                $descriptor['flags'],
+                implode(' ', $descriptor['fontBBox']),
+                $this->num($descriptor['italicAngle']),
+                $descriptor['ascent'],
+                $descriptor['descent'],
+                $descriptor['capHeight'],
+                $fileObject
+            );
+
+            $fontObject = $this->nextObjectNumber++;
+            $this->objects[$fontObject] = sprintf(
+                '<< /Type /Font /Subtype /TrueType /BaseFont /%s /FirstChar 32 /LastChar 255 /Widths [%s] /Encoding /WinAnsiEncoding /FontDescriptor %d 0 R >>',
+                $baseFont,
+                implode(' ', $font->widths()),
+                $descriptorObject
+            );
+
+            $resources .= sprintf(' /%s %d 0 R', $embedded['name'], $fontObject);
+        }
+
+        return $resources;
     }
 
     /** @return string Vollständiges PDF-Binärdokument inkl. Header, Objekten, xref-Tabelle und Trailer. */
@@ -445,15 +658,20 @@ final class SimplePdfWriter
         }
     }
 
+    /** Text in WinAnsiEncoding (cp1252), wie er im PDF steht. */
+    private function toWinAnsi(string $text): string
+    {
+        $converted = @mb_convert_encoding($text, 'Windows-1252', 'UTF-8');
+
+        return str_replace(["\r", "\n"], ['', ' '], $converted === false ? $text : $converted);
+    }
+
     /** Escaped einen String für die Verwendung als PDF-Literal-String "(...)". */
     private function escapeString(string $text): string
     {
         // In WinAnsiEncoding (cp1252) konvertieren, damit Umlaute etc. mit
         // dem Standard-Helvetica-Zeichensatz korrekt dargestellt werden.
-        $converted = @mb_convert_encoding($text, 'Windows-1252', 'UTF-8');
-        if ($converted === false) {
-            $converted = $text;
-        }
+        $converted = $this->toWinAnsi($text);
 
         $escaped = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $converted);
 

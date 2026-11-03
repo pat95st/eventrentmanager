@@ -45,26 +45,31 @@ final class DocumentFooter
      */
     public function drawOnAllPages(SimplePdfWriter $writer, ?BankAccount $bankAccount = null, ?string $bankAccountId = null): void
     {
-        $columns = $this->columns($bankAccount ?? ($bankAccountId !== null ? $this->bankAccounts->findById($bankAccountId) : null));
-        if ($columns === []) {
-            return;
-        }
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_FOOTER);
+        try {
+            $columns = $this->columns($bankAccount ?? ($bankAccountId !== null ? $this->bankAccounts->findById($bankAccountId) : null));
+            if ($columns === []) {
+                return;
+            }
 
-        $pageWidth = $writer->pageWidth();
-        $contentWidth = $pageWidth - 2 * self::MARGIN;
-        $columnWidth = $contentWidth / count($columns);
+            $pageWidth = $writer->pageWidth();
+            $contentWidth = $pageWidth - 2 * self::MARGIN;
+            $columnWidth = $contentWidth / count($columns);
 
-        for ($page = 0; $page < $writer->pageCount(); $page++) {
-            $writer->selectPage($page);
-            $writer->line(self::MARGIN, self::TOP_Y, $pageWidth - self::MARGIN, self::TOP_Y, 0.5, '0.45 0.45 0.45');
-            foreach ($columns as $index => $lines) {
-                $x = self::MARGIN + $index * $columnWidth + 4;
-                $y = self::TOP_Y - 12;
-                foreach ($lines as $line) {
-                    $writer->text($x, $y, $this->fit($writer, $line, $columnWidth - 8), self::FONT_SIZE, color: '0.25 0.25 0.25');
-                    $y -= self::LINE_HEIGHT;
+            for ($page = 0; $page < $writer->pageCount(); $page++) {
+                $writer->selectPage($page);
+                $writer->line(self::MARGIN, self::TOP_Y, $pageWidth - self::MARGIN, self::TOP_Y, 0.5, '0.45 0.45 0.45');
+                foreach ($columns as $index => $lines) {
+                    $x = self::MARGIN + $index * $columnWidth + 4;
+                    $y = self::TOP_Y - 12;
+                    foreach ($lines as $line) {
+                        $writer->text($x, $y, $this->fit($writer, $line, $columnWidth - 8), self::FONT_SIZE, color: '0.25 0.25 0.25');
+                        $y -= self::LINE_HEIGHT;
+                    }
                 }
             }
+        } finally {
+            $writer->setFontRole($previousFontRole);
         }
     }
 

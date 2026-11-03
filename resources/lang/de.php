@@ -2500,4 +2500,5 @@ return [
     'articles.price_list.with_short_texts' => 'Kurztexte anzeigen',
     'articles.price_list.export_button' => 'PDF erstellen',
     'nav.racks' => 'Racks',
+    'nav.pdf_fonts' => 'Schriftarten',
 ];

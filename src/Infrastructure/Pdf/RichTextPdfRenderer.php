@@ -38,6 +38,9 @@ final class RichTextPdfRenderer
     private const LIST_INDENT = 14.0;
     private const PARAGRAPH_SPACING_FACTOR = 0.45;
 
+    /** Writer des laufenden render(), für echte Zeichenbreiten der gewählten Schrift. */
+    private ?SimplePdfWriter $writer = null;
+
     public function __construct(private readonly HtmlToRichTextParser $parser)
     {
     }
@@ -70,10 +73,25 @@ final class RichTextPdfRenderer
         float $bottomLimit,
         ?callable $newPage = null
     ): float {
+        $this->writer = $writer;
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_BODY);
+        try {
+            return $this->renderBlocks($writer, $blocks, $x, $y, $maxWidth, $bottomLimit, $newPage);
+        } finally {
+            $writer->setFontRole($previousFontRole);
+            $this->writer = null;
+        }
+    }
+
+    /** @param list<RichTextBlock> $blocks */
+    private function renderBlocks(SimplePdfWriter $writer, array $blocks, float $x, float $y, float $maxWidth, float $bottomLimit, ?callable $newPage): float
+    {
         foreach ($blocks as $block) {
             $fontSize = self::FONT_SIZES[$block->type] ?? 9.0;
             $lineHeight = $fontSize * 1.4;
             $forceBold = str_starts_with($block->type, 'heading');
+            // Überschriften im Rich-Text in der Schrift des Bereichs "Überschriften".
+            $writer->setFontRole($forceBold ? SimplePdfWriter::ROLE_HEADING : SimplePdfWriter::ROLE_BODY);
             $isListItem = $block->type === RichTextBlock::TYPE_BULLET || $block->type === RichTextBlock::TYPE_NUMBERED;
             $indent = $isListItem ? self::LIST_INDENT : 0.0;
 
@@ -242,6 +260,9 @@ final class RichTextPdfRenderer
      */
     private function textWidth(string $text, float $fontSize, bool $bold): float
     {
+        if ($this->writer !== null) {
+            return $this->writer->textWidth($text, $fontSize, $bold);
+        }
         $avgCharWidth = $fontSize * ($bold ? 0.58 : 0.52);
 
         return mb_strlen($text) * $avgCharWidth;

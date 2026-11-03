@@ -136,7 +136,7 @@ final class PackingListPdfGenerator
         }
         $title = $continuation ? 'Packliste (Fortsetzung)' : 'Packliste';
         $titleFontSize = $titleOverride?->fontSize ?? 18.0;
-        $writer->text($titleX, $y - 4, $title, $titleFontSize, true);
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, $titleX, $y - 4, $title, $titleFontSize, true);
         $y -= 30;
 
         if (!$continuation) {
@@ -214,40 +214,50 @@ final class PackingListPdfGenerator
 
     private function drawTableHeader(SimplePdfWriter $writer, float $y, float $pageWidth): float
     {
-        $columns = $this->columnLayout();
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $columns = $this->columnLayout();
 
-        $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, '0.92 0.92 0.92');
-        $writer->text($columns['article']['x'] + 2, $y - 8, 'Artikel', 9, true);
-        $writer->text($columns['quantity']['x'] + 2, $y - 8, 'Geplant', 9, true);
-        $writer->text($columns['issued']['x'] + 2, $y - 8, 'Ausgegeben', 9, true);
-        $writer->text($columns['numbers']['x'] + 2, $y - 8, 'Inventarnummern', 9, true);
+            $writer->filledRect(self::MARGIN, $y - 14, $pageWidth - 2 * self::MARGIN, 18, '0.92 0.92 0.92');
+            $writer->text($columns['article']['x'] + 2, $y - 8, 'Artikel', 9, true);
+            $writer->text($columns['quantity']['x'] + 2, $y - 8, 'Geplant', 9, true);
+            $writer->text($columns['issued']['x'] + 2, $y - 8, 'Ausgegeben', 9, true);
+            $writer->text($columns['numbers']['x'] + 2, $y - 8, 'Inventarnummern', 9, true);
 
-        return $y - 22;
+            return $y - 22;
+        } finally {
+            $writer->setFontRole($previousFontRole);
+        }
     }
 
     /** @param array{nameLines: string[], numbersLines: string[], quantity: string, issued: string} $row */
     private function drawRow(SimplePdfWriter $writer, float $topY, array $row): void
     {
-        $columns = $this->columnLayout();
-        $baseline = $topY - self::TABLE_LINE_HEIGHT + 2;
+        $previousFontRole = $writer->setFontRole(SimplePdfWriter::ROLE_TABLE);
+        try {
+            $columns = $this->columnLayout();
+            $baseline = $topY - self::TABLE_LINE_HEIGHT + 2;
 
-        // Leerer Kreis zum handschriftlichen Abhaken beim Packen, vertikal
-        // auf der (ggf. mehrzeiligen) Zeile zentriert.
-        $rowLineCount = max(count($row['nameLines']), count($row['numbersLines']), 1);
-        $rowHeight = $rowLineCount * self::TABLE_LINE_HEIGHT;
-        $circleCenterX = $columns['checkbox']['x'] + self::CHECKBOX_COLUMN_WIDTH / 2 - 2;
-        $circleCenterY = $topY - $rowHeight / 2 + self::TABLE_LINE_HEIGHT / 2;
-        $writer->drawCircle($circleCenterX, $circleCenterY, self::CHECKBOX_RADIUS);
+            // Leerer Kreis zum handschriftlichen Abhaken beim Packen, vertikal
+            // auf der (ggf. mehrzeiligen) Zeile zentriert.
+            $rowLineCount = max(count($row['nameLines']), count($row['numbersLines']), 1);
+            $rowHeight = $rowLineCount * self::TABLE_LINE_HEIGHT;
+            $circleCenterX = $columns['checkbox']['x'] + self::CHECKBOX_COLUMN_WIDTH / 2 - 2;
+            $circleCenterY = $topY - $rowHeight / 2 + self::TABLE_LINE_HEIGHT / 2;
+            $writer->drawCircle($circleCenterX, $circleCenterY, self::CHECKBOX_RADIUS);
 
-        foreach ($row['nameLines'] as $i => $line) {
-            $writer->text($columns['article']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE);
-        }
+            foreach ($row['nameLines'] as $i => $line) {
+                $writer->text($columns['article']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE);
+            }
 
-        $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
-        $writer->text($columns['issued']['x'] + 2, $baseline, $row['issued'], self::TABLE_FONT_SIZE);
+            $writer->text($columns['quantity']['x'] + 2, $baseline, $row['quantity'], self::TABLE_FONT_SIZE);
+            $writer->text($columns['issued']['x'] + 2, $baseline, $row['issued'], self::TABLE_FONT_SIZE);
 
-        foreach ($row['numbersLines'] as $i => $line) {
-            $writer->text($columns['numbers']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE);
+            foreach ($row['numbersLines'] as $i => $line) {
+                $writer->text($columns['numbers']['x'] + 2, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE);
+            }
+        } finally {
+            $writer->setFontRole($previousFontRole);
         }
     }
 

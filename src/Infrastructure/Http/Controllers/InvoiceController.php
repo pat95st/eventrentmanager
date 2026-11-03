@@ -171,6 +171,7 @@ final class InvoiceController
             'dunningLevels' => $dunningLevels,
             'linkedRental' => $linkedRental,
             'selectedContact' => $selectedContact,
+            'invoiceCorrections' => $this->queries->ask(new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrections(invoiceId: $id)),
         ], activeNav: 'invoices', title: t('invoices.page_title.detail'));
     }
 

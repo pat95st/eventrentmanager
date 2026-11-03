@@ -45,6 +45,7 @@ final class CreateDunningNoticeHandler implements CommandHandlerInterface
         private readonly DunningNoticeRepositoryInterface $dunningNotices,
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
+        private readonly ?\App\Domain\InvoiceCorrection\InvoiceCorrectionRepositoryInterface $corrections = null,
     ) {
     }
 
@@ -71,6 +72,13 @@ final class CreateDunningNoticeHandler implements CommandHandlerInterface
 
         $invoiceSettings = $this->invoiceSettings->get();
         $grossTotal = $detail->totals($invoiceSettings)->grossTotal;
+        // Ausgestellte Rechnungskorrekturen (Migration 121) ändern den offenen Betrag.
+        foreach ($this->corrections?->findByInvoice($invoice->id) ?? [] as $correction) {
+            if ($correction->status === \App\Domain\InvoiceCorrection\InvoiceCorrectionStatus::Issued) {
+                $grossTotal += $correction->grossTotal();
+            }
+        }
+        $grossTotal = max(0.0, round($grossTotal, 2));
 
         $feeAmount = match ($level->feeType) {
             DunningFeeType::None => 0.0,

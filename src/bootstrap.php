@@ -524,6 +524,7 @@ $documentFooter = new \App\Infrastructure\Pdf\DocumentFooter($companySettingsRep
 $paymentMethodRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPaymentMethodRepository($pdo);
 $dunningNoticeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningNoticeRepository($pdo);
 $dunningSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDunningSettingsRepository($pdo);
+$invoiceCorrectionRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceCorrectionRepository($pdo);
 // Währungsangabe auf Dokumenten ("EUR" oder "€"), Einstellungen › PDF-Design (Migration 110).
 $pdfAmountFormatter = new \App\Infrastructure\Pdf\PdfAmountFormatter($pdfDesignSettingsRepository);
 // Starttexte je Dokumenttyp (Migration 113)
@@ -954,8 +955,21 @@ $commandBus->register(\App\Application\Dunning\Command\CreateDunningNotice::clas
     $dunningNoticeRepository,
     $documentNumberSequence,
     $pdo,
+    corrections: $invoiceCorrectionRepository,
 ));
 $getDunningNoticeHandler = new \App\Application\Dunning\Query\GetDunningNoticeHandler($dunningNoticeRepository, $invoiceRepository, $customerRepository);
+
+// --- Rechnungskorrekturen (Migration 121) ---------------------------------
+$invoiceCorrectionLineSource = new \App\Application\InvoiceCorrection\InvoiceCorrectionLineSource($getInvoiceHandler, $invoiceSettingsRepository, $invoiceCorrectionRepository);
+$commandBus->register(\App\Application\InvoiceCorrection\Command\CreateInvoiceCorrection::class, new \App\Application\InvoiceCorrection\Command\CreateInvoiceCorrectionHandler($invoiceCorrectionRepository, $invoiceRepository, $invoiceCorrectionLineSource, $invoiceSettingsRepository));
+$commandBus->register(\App\Application\InvoiceCorrection\Command\UpdateInvoiceCorrection::class, new \App\Application\InvoiceCorrection\Command\UpdateInvoiceCorrectionHandler($invoiceCorrectionRepository));
+$commandBus->register(\App\Application\InvoiceCorrection\Command\DeleteInvoiceCorrection::class, new \App\Application\InvoiceCorrection\Command\DeleteInvoiceCorrectionHandler($invoiceCorrectionRepository));
+$commandBus->register(\App\Application\InvoiceCorrection\Command\IssueInvoiceCorrection::class, new \App\Application\InvoiceCorrection\Command\IssueInvoiceCorrectionHandler($invoiceCorrectionRepository, $invoiceRepository, $invoiceCorrectionLineSource, $pdo, $documentNumberSequence));
+$commandBus->register(\App\Application\InvoiceCorrection\Command\MarkInvoiceCorrectionSettled::class, new \App\Application\InvoiceCorrection\Command\MarkInvoiceCorrectionSettledHandler($invoiceCorrectionRepository));
+$getInvoiceCorrectionHandler = new \App\Application\InvoiceCorrection\Query\GetInvoiceCorrectionHandler($invoiceCorrectionRepository, $invoiceCorrectionLineSource, $invoiceSettingsRepository);
+$queryBus->register(\App\Application\InvoiceCorrection\Query\GetInvoiceCorrection::class, $getInvoiceCorrectionHandler);
+$queryBus->register(\App\Application\InvoiceCorrection\Query\GetNewInvoiceCorrection::class, $getInvoiceCorrectionHandler);
+$queryBus->register(\App\Application\InvoiceCorrection\Query\ListInvoiceCorrections::class, new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrectionsHandler($invoiceCorrectionRepository, $invoiceRepository, $customerRepository));
 $commandBus->register(\App\Application\Dunning\Command\EmailDunningNotice::class, new \App\Application\Dunning\Command\EmailDunningNoticeHandler(
     $getDunningNoticeHandler,
     $companySettingsRepository,
@@ -1282,7 +1296,7 @@ $queryBus->register(\App\Application\Calendar\Query\ListCalendarsForUser::class,
 $queryBus->register(\App\Application\Calendar\Query\ListRentalsForCalendar::class, new \App\Application\Calendar\Query\ListRentalsForCalendarHandler($calendarRepository, $rentalRepository, $categoryRepository));
 $queryBus->register(\App\Application\Settings\Query\GetCalDavSigningSettings::class, new \App\Application\Settings\Query\GetCalDavSigningSettingsHandler($calDavSigningSettingsRepository));
 $queryBus->register(\App\Application\AddressBook\Query\ListCardDavCredentialsForUser::class, new \App\Application\AddressBook\Query\ListCardDavCredentialsForUserHandler($cardDavCredentialRepository));
-$queryBus->register(\App\Application\Reporting\Query\GetIncomeExpenseOverview::class, new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository));
+$queryBus->register(\App\Application\Reporting\Query\GetIncomeExpenseOverview::class, new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository, corrections: $invoiceCorrectionRepository));
 $queryBus->register(\App\Application\Reporting\Query\GetRevenueForecast::class, new \App\Application\Reporting\Query\GetRevenueForecastHandler($offerRepository, $orderConfirmationRepository, $invoiceRepository, $invoiceSettingsRepository));
 
 $queryBus->register(\App\Application\Printing\Query\ListLabelPrinters::class, new ListLabelPrintersHandler($labelPrinterRepository));
@@ -1412,6 +1426,7 @@ $dunningLevelController = new \App\Infrastructure\Http\Controllers\DunningLevelC
 $bankAccountSettingsController = new \App\Infrastructure\Http\Controllers\BankAccountSettingsController($commandBus, $queryBus);
 $paymentMethodSettingsController = new \App\Infrastructure\Http\Controllers\PaymentMethodSettingsController($commandBus, $queryBus);
 $dunningController = new \App\Infrastructure\Http\Controllers\DunningController($commandBus, $queryBus, $dunningPdfGenerator);
+$invoiceCorrectionController = new \App\Infrastructure\Http\Controllers\InvoiceCorrectionController($commandBus, $queryBus, new \App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator($fileStorage, $documentFooter, $pdfAmountFormatter));
 $pricingSettingsController = new PricingSettingsController($commandBus, $queryBus);
 $invoicePdfTemplateSettingsController = new InvoicePdfTemplateSettingsController($commandBus, $queryBus);
 $receiptController = new ReceiptController($commandBus, $queryBus, $fileStorage);
@@ -1952,6 +1967,17 @@ $router->post('/zahlungsabgleich/bestaetigen', $auth->guard(Permission::AusgabeR
 $router->post('/zahlungsabgleich/abbrechen', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'cancel']));
 
 $router->post('/rechnungen/{id}/mahnungen', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'store']));
+// Rechnungskorrekturen / Stornorechnungen (Migration 121)
+$router->get('/rechnungen/{id}/korrektur/neu', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'create']));
+$router->post('/rechnungen/{id}/korrekturen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'store']));
+$router->get('/rechnungskorrekturen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'index']));
+$router->get('/rechnungskorrekturen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'show']));
+$router->get('/rechnungskorrekturen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'edit']));
+$router->post('/rechnungskorrekturen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'update']));
+$router->post('/rechnungskorrekturen/{id}/ausstellen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'issue']));
+$router->post('/rechnungskorrekturen/{id}/erledigt', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'settle']));
+$router->post('/rechnungskorrekturen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'destroy']));
+$router->get('/rechnungskorrekturen/{id}/pdf', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'exportPdf']));
 $router->get('/mahnungen/{dunningId}/pdf', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'exportPdf']));
 $router->post('/mahnungen/{dunningId}/email', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'emailPdf']));
 

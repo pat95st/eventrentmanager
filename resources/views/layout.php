@@ -92,11 +92,12 @@ $isProcurementGroupActive = in_array($activeNav, $procurementGroupKeys, true) ||
 // bestätigungen, Rechnungen) sowie den Zahlungsabgleich — bewusst GETRENNT
 // von "Veranstaltungen", da diese Dokumente eigenständig (nicht nur aus
 // einer Veranstaltung heraus) angelegt werden können.
-$documentsGroupKeys = ['offers', 'order_confirmations', 'invoices', 'bank_import'];
+$documentsGroupKeys = ['offers', 'order_confirmations', 'invoices', 'invoice-corrections', 'bank_import'];
 $documentsChildren = [
     ['key' => 'offers', 'label' => t('nav.offers'), 'href' => '/angebote'],
     ['key' => 'order_confirmations', 'label' => t('nav.order_confirmations'), 'href' => '/auftragsbestaetigungen'],
     ['key' => 'invoices', 'label' => t('nav.invoices'), 'href' => '/rechnungen'],
+    ['key' => 'invoice-corrections', 'label' => 'Rechnungskorrekturen', 'href' => '/rechnungskorrekturen'],
     ['key' => 'bank_import', 'label' => t('nav.bank_import'), 'href' => '/zahlungsabgleich'],
 ];
 $isDocumentsGroupActive = in_array($activeNav, $documentsGroupKeys, true);

@@ -26,6 +26,8 @@ use DateTimeImmutable;
  * Offene (nicht bezahlte) Rechnungen/Belege fließen NICHT ein — stornierte
  * Rechnungen (InvoiceStatus::Cancelled) ohnehin nicht, da sie nie den
  * Status "paid" erreichen können (siehe MarkInvoiceCancelledHandler).
+ * Rechnungskorrekturen/Stornorechnungen fließen mit ihrem Bruttobetrag ein
+ * (siehe handle()).
  *
  * Einnahmen: Bruttosumme jeder bezahlten Rechnung über
  * App\Domain\Pricing\DocumentTotals::calculate() (dieselbe Berechnung wie
@@ -42,6 +44,7 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
         private readonly InvoiceRepositoryInterface $invoices,
         private readonly ReceiptRepositoryInterface $receipts,
         private readonly InvoiceSettingsRepositoryInterface $invoiceSettings,
+        private readonly ?\App\Domain\InvoiceCorrection\InvoiceCorrectionRepositoryInterface $corrections = null,
     ) {
     }
 
@@ -64,6 +67,21 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
             }
 
             $incomeByMonth[$month] += $this->grossTotalFor($invoice, $invoiceSettings);
+        }
+
+        // Rechnungskorrekturen (Migration 121): war die Rechnung beim Ausstellen
+        // schon bezahlt, zählt der Korrekturbetrag zum Erstattungs-/
+        // Nachzahlungsdatum; sonst zusammen mit der Zahlung der Rechnung.
+        foreach ($this->corrections?->findIssued() ?? [] as $correction) {
+            if ($correction->requiresSettlement) {
+                $date = $correction->settledAt;
+            } else {
+                $invoice = $this->invoices->findById($correction->invoiceId);
+                $date = $invoice !== null && $invoice->status === \App\Domain\Invoice\InvoiceStatus::Paid ? $invoice->paidAt : null;
+            }
+            if ($date !== null && $date >= $from && $date <= $to) {
+                $incomeByMonth[(int) $date->format('n')] += $correction->grossTotal();
+            }
         }
 
         $expenseByMonth = array_fill(1, 12, 0.0);

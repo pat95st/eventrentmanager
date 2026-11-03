@@ -109,10 +109,7 @@ $rows = $detail->orderedRows();
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"><?= e(t('invoices.show.mark_paid')) ?></button>
             </form>
-            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/stornieren" data-confirm="<?= e(t('invoices.show.confirm_cancel')) ?>" data-confirm-style="danger">
-                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('invoices.show.mark_cancelled')) ?></button>
-            </form>
+            <?php /* Versendete Rechnungen werden per Stornorechnung storniert (Migration 121), siehe Abschnitt "Rechnungskorrekturen". */ ?>
         <?php endif; ?>
 
         <a href="/rechnungen/<?= e($invoice->id) ?>/pdf" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -223,6 +220,8 @@ $rows = $detail->orderedRows();
         <p class="border-t border-slate-100 pt-4 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e(t('invoices.show.dunning_no_levels')) ?></p>
     <?php endif; ?>
 </div>
+
+<?= \App\Infrastructure\Http\View::render('invoices/_corrections', ['invoice' => $invoice, 'corrections' => $invoiceCorrections ?? [], 'invoiceGross' => $totals->grossTotal]) ?>
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.show.items_title')) ?></h2>

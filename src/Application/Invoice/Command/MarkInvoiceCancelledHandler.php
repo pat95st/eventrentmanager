@@ -13,11 +13,11 @@ use App\Domain\Invoice\InvoiceStatus;
 use DateTimeImmutable;
 
 /**
- * Entwurf ODER Versendet -> Storniert. Aus "Bezahlt" ist keine Stornierung
- * mehr möglich (siehe Aufgabenstellung) — dafür gibt es in diesem System
- * bewusst keinen eigenen Workflow (z. B. eine Korrekturrechnung/Gutschrift
- * wäre der fachlich korrekte Weg, liegt aber außerhalb dieses Umfangs).
- * Eine bereits stornierte Rechnung kann nicht erneut storniert werden.
+ * Entwurf -> Storniert. Versendete und bezahlte Rechnungen werden über eine
+ * Stornorechnung storniert (Rechnungskorrekturen, Migration 121, siehe
+ * IssueInvoiceCorrectionHandler), damit das Storno als eigenes Dokument mit
+ * Nummer vorliegt. Eine bereits stornierte Rechnung kann nicht erneut
+ * storniert werden.
  */
 final class MarkInvoiceCancelledHandler implements CommandHandlerInterface
 {
@@ -34,8 +34,11 @@ final class MarkInvoiceCancelledHandler implements CommandHandlerInterface
             throw new NotFoundException("Rechnung \"{$command->id}\" wurde nicht gefunden.");
         }
 
-        if (!in_array($invoice->status, [InvoiceStatus::Draft, InvoiceStatus::Sent], true)) {
-            throw new ConflictException('Nur eine Rechnung im Status "Entwurf" oder "Versendet" kann storniert werden.');
+        if ($invoice->status === InvoiceStatus::Sent || $invoice->status === InvoiceStatus::Paid) {
+            throw new ConflictException('Versendete oder bezahlte Rechnungen bitte über „Stornorechnung erstellen“ stornieren.');
+        }
+        if ($invoice->status !== InvoiceStatus::Draft) {
+            throw new ConflictException('Nur eine Rechnung im Status "Entwurf" kann direkt storniert werden.');
         }
 
         $invoice->status = InvoiceStatus::Cancelled;

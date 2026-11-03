@@ -28,6 +28,7 @@ enum NumberedDocumentType: string
     // Migration 120: Inventarnummern für Case-Exemplare und Racks (CASE-0001, RACK-0001).
     case CaseItem = 'case_item';
     case Rack = 'rack';
+    case InvoiceCorrection = 'invoice_correction';
 
     public function label(): string
     {
@@ -39,12 +40,13 @@ enum NumberedDocumentType: string
             self::Customer => 'Kunden',
             self::CaseItem => 'Cases (Inventarnummern)',
             self::Rack => 'Racks (Inventarnummern)',
+            self::InvoiceCorrection => 'Rechnungskorrekturen',
         };
     }
 
     /** @return NumberedDocumentType[] Feste Anzeigereihenfolge auf der Einstellungsseite. */
     public static function all(): array
     {
-        return [self::Invoice, self::Offer, self::DunningNotice, self::OrderConfirmation, self::Customer, self::CaseItem, self::Rack];
+        return [self::Invoice, self::InvoiceCorrection, self::Offer, self::DunningNotice, self::OrderConfirmation, self::Customer, self::CaseItem, self::Rack];
     }
 }

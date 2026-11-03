@@ -180,9 +180,14 @@ $canDocuments = $canRentals;
     dialog[open], dialog[open]::backdrop, dialog.modal-closing, dialog.modal-closing::backdrop { animation: none; }
     .modal-fade { transition: none; }
   }
+  /* Mobiles Menü im (sticky) Header: eigene Scrollfläche, sonst ist alles
+     unterhalb des Bildschirmrands auf dem Handy nicht erreichbar. Die
+     genaue Höhe setzt das Hamburger-Skript beim Öffnen. */
+  #mobile-nav { max-height: calc(100vh - 4rem); max-height: calc(100dvh - 4rem); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 </style>
 <script src="/assets/js/modal-fade.js"></script>
 <script src="/assets/js/sortable-tables.js" defer></script>
+<script src="/assets/js/pdf-viewer.js" defer></script>
 <?php require __DIR__ . '/_pwa_head.php'; ?>
 <script>
   // CSRF-Token einmal pro Seitenaufruf global verfügbar machen, für alle
@@ -777,9 +782,19 @@ $canDocuments = $canRentals;
       var iconOpen = document.getElementById('mobile-menu-icon-open');
       var iconClose = document.getElementById('mobile-menu-icon-close');
 
+      function fitNav() {
+        if (nav.classList.contains('hidden')) {
+          return;
+        }
+        var top = nav.getBoundingClientRect().top;
+        nav.style.maxHeight = Math.max(160, window.innerHeight - Math.max(0, top)) + 'px';
+      }
+      window.addEventListener('resize', fitNav);
+
       toggle.addEventListener('click', function () {
         var isOpen = !nav.classList.contains('hidden');
         nav.classList.toggle('hidden', isOpen);
+        fitNav();
         iconOpen.classList.toggle('hidden', !isOpen);
         iconClose.classList.toggle('hidden', isOpen);
         toggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
@@ -1085,6 +1100,15 @@ $canDocuments = $canRentals;
           menu.style.bottom = '';
         }
 
+        // Lange Menüs (z. B. das mobile Einstellungsmenü) scrollbar halten,
+        // statt sie über den Bildschirmrand hinaus laufen zu lassen.
+        var available = openUpward ? summaryRect.top - 12 : window.innerHeight - summaryRect.bottom - 12;
+        if (menuRect.height > available) {
+          menu.style.maxHeight = Math.max(120, available) + 'px';
+          menu.style.overflowY = 'auto';
+          menu.style.overscrollBehavior = 'contain';
+        }
+
         var left = summaryRect.right - menuRect.width;
         left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
         menu.style.left = left + 'px';
@@ -1097,6 +1121,9 @@ $canDocuments = $canRentals;
           return;
         }
         menu.style.position = '';
+        menu.style.maxHeight = '';
+        menu.style.overflowY = '';
+        menu.style.overscrollBehavior = '';
         menu.style.top = '';
         menu.style.bottom = '';
         menu.style.left = '';

@@ -12,8 +12,9 @@
 //      ausgeliefert und dadurch jede zustandsändernde Aktion mit 403
 //      scheitern lassen),
 //    - alle API-/Datenabrufe,
-//    - alle Bilder (Firmenlogo, Hintergrundbild, Artikel-/Beleg-Anhänge
-//      usw.) — sie kommen aus der Datenbank bzw. dem Upload-Verzeichnis
+//    - alle Bilder (Artikel-/Beleg-Anhänge usw.; Ausnahme: Firmenlogo,
+//      Hintergrund und Favicon mit Versionsparameter, siehe BRANDING_CACHE)
+//      — sie kommen aus der Datenbank bzw. dem Upload-Verzeichnis
 //      und sollen laut Vorgabe immer frisch nachgeladen werden, nicht aus
 //      dem Cache.
 //
@@ -29,7 +30,13 @@
 // nächsten Seitenaufruf einen neuen Cache an und räumt in activate() den
 // alten auf, statt auf die (im Hintergrund laufende, also nicht sofort
 // sichtbare) Stale-while-revalidate-Aktualisierung zu warten.
-var CACHE_VERSION = 'static-v1';
+var CACHE_VERSION = 'static-v2';
+
+// Firmenlogo/Hintergrund/Favicon mit Versionsparameter (?v=…, ändert sich bei
+// jedem Upload, siehe CompanyBranding::versioned()). Eigener Cache, der beim
+// Versions-Bump oben NICHT geleert wird.
+var BRANDING_CACHE = 'branding-v1';
+var BRANDING_PATHS = ['/firmenlogo', '/firmenlogo-dark', '/firmenhintergrund', '/firmen-favicon'];
 
 var PRECACHE_URLS = [
   '/assets/css/app.css',
@@ -61,7 +68,7 @@ self.addEventListener('activate', function (event) {
     caches.keys().then(function (keys) {
       return Promise.all(
         keys
-          .filter(function (key) { return key !== CACHE_VERSION; })
+          .filter(function (key) { return key !== CACHE_VERSION && key !== BRANDING_CACHE; })
           .map(function (key) { return caches.delete(key); })
       );
     }).then(function () {
@@ -83,6 +90,36 @@ self.addEventListener('fetch', function (event) {
   }
 
   var url = new URL(event.request.url);
+
+  if (url.origin === self.location.origin && BRANDING_PATHS.indexOf(url.pathname) !== -1 && url.searchParams.has('v')) {
+    // Cache-first: die URL ändert sich bei jedem neuen Upload, eine
+    // gecachte Antwort ist also nie veraltet. Ältere Versionen derselben
+    // Datei werden beim Speichern der neuen entfernt.
+    event.respondWith(
+      caches.open(BRANDING_CACHE).then(function (cache) {
+        return cache.match(event.request).then(function (cached) {
+          if (cached) {
+            return cached;
+          }
+          return fetch(event.request).then(function (response) {
+            if (response && response.ok) {
+              var copy = response.clone();
+              cache.keys().then(function (requests) {
+                requests.forEach(function (request) {
+                  if (new URL(request.url).pathname === url.pathname) {
+                    cache.delete(request);
+                  }
+                });
+                cache.put(event.request, copy);
+              });
+            }
+            return response;
+          });
+        });
+      })
+    );
+    return;
+  }
 
   if (!isPrecachedAsset(url)) {
     // Alles andere (Seiten, API, Bilder/Uploads) bewusst NICHT abgefangen —

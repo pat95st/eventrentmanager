@@ -67,6 +67,36 @@ final class Response
     }
 
     /**
+     * Wie file(), aber cachebar (Firmenlogo, Hintergrundbild, Favicon): die
+     * Session setzt sonst "no-store"/"Pragma: no-cache", wodurch die PWA das
+     * Logo bei jedem Seitenaufruf neu lädt. Mit $immutable (URL enthält einen
+     * Versionsparameter ?v=…, der sich bei jedem Upload ändert) darf der
+     * Browser die Datei ein Jahr lang ohne Nachfrage verwenden, sonst fragt er
+     * per ETag nach und bekommt bei unveränderter Datei nur ein 304.
+     */
+    public static function cachedFile(string $absolutePath, string $downloadName, string $mimeType, bool $immutable): void
+    {
+        if (!is_file($absolutePath)) {
+            self::notFound('Die Datei wurde nicht gefunden.');
+        }
+
+        $etag = '"' . substr(md5($absolutePath . '|' . filesize($absolutePath) . '|' . filemtime($absolutePath)), 0, 16) . '"';
+        header_remove('Pragma');
+        header_remove('Expires');
+        header('Cache-Control: ' . ($immutable ? 'private, max-age=31536000, immutable' : 'private, no-cache'));
+        header('ETag: ' . $etag);
+        header('Last-Modified: ' . gmdate('D, d M Y H:i:s', (int) filemtime($absolutePath)) . ' GMT');
+
+        $ifNoneMatch = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+        if ($ifNoneMatch !== '' && in_array($etag, array_map('trim', explode(',', $ifNoneMatch)), true)) {
+            http_response_code(304);
+            exit;
+        }
+
+        self::file($absolutePath, $downloadName, $mimeType);
+    }
+
+    /**
      * Liefert eine bereits auf der Platte liegende Datei als ECHTEN Download
      * aus (Content-Disposition: attachment, anders als file() oben, das
      * "inline" setzt) — für die Backup-Export-ZIP (siehe

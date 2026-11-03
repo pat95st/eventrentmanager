@@ -110,7 +110,7 @@ final class CompanySettingsController
         $absolutePath = $this->fileStorage->absolutePath('company', $settings->logoFilename);
         $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
 
-        Response::file($absolutePath, basename($settings->logoFilename), $mimeType);
+        Response::cachedFile($absolutePath, basename($settings->logoFilename), $mimeType, $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version($settings->logoFilename));
     }
 
     public function uploadDarkLogo(Request $request): void
@@ -150,7 +150,7 @@ final class CompanySettingsController
         $absolutePath = $this->fileStorage->absolutePath('company', $settings->darkLogoFilename);
         $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
 
-        Response::file($absolutePath, basename($settings->darkLogoFilename), $mimeType);
+        Response::cachedFile($absolutePath, basename($settings->darkLogoFilename), $mimeType, $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version($settings->darkLogoFilename));
     }
 
     public function uploadBackgroundImage(Request $request): void
@@ -190,7 +190,7 @@ final class CompanySettingsController
         $absolutePath = $this->fileStorage->absolutePath('company', $settings->backgroundImageFilename);
         $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
 
-        Response::file($absolutePath, basename($settings->backgroundImageFilename), $mimeType);
+        Response::cachedFile($absolutePath, basename($settings->backgroundImageFilename), $mimeType, $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version($settings->backgroundImageFilename));
     }
 
     public function uploadFavicon(Request $request): void
@@ -234,6 +234,6 @@ final class CompanySettingsController
             default => 'image/x-icon',
         };
 
-        Response::file($absolutePath, basename($settings->faviconFilename), $mimeType);
+        Response::cachedFile($absolutePath, basename($settings->faviconFilename), $mimeType, $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version($settings->faviconFilename));
     }
 }

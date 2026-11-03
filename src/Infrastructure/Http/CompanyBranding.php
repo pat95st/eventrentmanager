@@ -30,7 +30,7 @@ final class CompanyBranding
     /** URL des öffentlich abrufbaren Firmenlogos, oder null falls keins hinterlegt ist. */
     public static function logoUrl(): ?string
     {
-        return self::$settings?->logoFilename !== null ? '/firmenlogo' : null;
+        return self::versioned('/firmenlogo', self::$settings?->logoFilename);
     }
 
     /**
@@ -41,7 +41,7 @@ final class CompanyBranding
      */
     public static function darkLogoUrl(): ?string
     {
-        return self::$settings?->darkLogoFilename !== null ? '/firmenlogo-dark' : null;
+        return self::versioned('/firmenlogo-dark', self::$settings?->darkLogoFilename);
     }
 
     /** Konfigurierte maximale Logo-Höhe im Header in Pixeln, oder der Standardwert (40px), falls nichts hinterlegt ist. */
@@ -69,7 +69,7 @@ final class CompanyBranding
      */
     public static function backgroundImageUrl(): ?string
     {
-        return self::$settings?->backgroundImageFilename !== null ? '/firmenhintergrund' : null;
+        return self::versioned('/firmenhintergrund', self::$settings?->backgroundImageFilename);
     }
 
     /**
@@ -80,6 +80,23 @@ final class CompanyBranding
     {
         $filename = self::$settings?->faviconFilename;
 
-        return $filename !== null ? '/firmen-favicon?v=' . substr(md5($filename), 0, 8) : null;
+        return self::versioned('/firmen-favicon', $filename);
+    }
+
+    /**
+     * URL mit Versionsparameter aus dem gespeicherten Dateinamen (bei jedem
+     * Upload eine neue UUID): so darf der Browser/die PWA die Datei dauerhaft
+     * cachen und lädt sie erst nach einem neuen Upload wieder (siehe
+     * Response::cachedFile()).
+     */
+    private static function versioned(string $path, ?string $filename): ?string
+    {
+        return $filename !== null ? $path . '?v=' . self::version($filename) : null;
+    }
+
+    /** Kurzer Versions-Hash eines gespeicherten Dateinamens, auch für den Abgleich im Controller. */
+    public static function version(string $filename): string
+    {
+        return substr(md5($filename), 0, 8);
     }
 }

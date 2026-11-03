@@ -6,6 +6,7 @@ namespace App\Infrastructure\Pdf;
 
 use App\Application\CaseItem\Query\CaseInventoryNumberWithContent;
 use App\Application\CaseItem\Query\CaseItemDetail;
+use App\Domain\Article\ArticleAccessoryRepositoryInterface;
 use App\Domain\Settings\CompanySettings;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 
@@ -16,6 +17,9 @@ use App\Infrastructure\FileStorage\LocalFileStorage;
  *
  * Aufbau wie PackingListPdfGenerator (Logo rechts oben, Seitenzahl über der
  * Trennlinie); Artikel mit Dokumentbild und Kurztext über ArticlePdfRow.
+ * Das Zubehör jedes Artikels (Artikel › Zubehör) folgt direkt unter dem
+ * Artikel, eingerückt, leicht eingefärbt und mit dem Hinweis „Zubehör“;
+ * Menge = Zubehörmenge × Artikelmenge im Case.
  */
 final class CasePackingListPdfGenerator
 {
@@ -31,10 +35,14 @@ final class CasePackingListPdfGenerator
     private const PHOTO_GAP = 12.0;
     private const PHOTO_MAX_HEIGHT = 300.0;
     private const PHOTO_PIXELS = 1400;
+    private const ACCESSORY_FILL = '0.93 0.96 0.99';
+    private const ACCESSORY_LABEL_COLOR = '0.25 0.4 0.6';
+    private const ACCESSORY_INDENT = 14.0;
 
     public function __construct(
         private readonly LocalFileStorage $fileStorage,
         private readonly RichTextPdfRenderer $richTextRenderer,
+        private readonly ?ArticleAccessoryRepositoryInterface $accessories = null,
     ) {
     }
 
@@ -93,6 +101,28 @@ final class CasePackingListPdfGenerator
             ArticlePdfRow::drawNameColumn($writer, $columns['article'], $top, $row, self::TABLE_FONT_SIZE, self::TABLE_LINE_HEIGHT);
             $y -= $height;
             $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 0.3, '0.85 0.85 0.85');
+
+            foreach ($this->accessories?->findByArticle($contentEntry->article->id) ?? [] as $accessory) {
+                $labelWidth = $writer->textWidth('Zubehör', self::TABLE_FONT_SIZE - 1, true) + 8;
+                $textX = $columns['article'] + self::ACCESSORY_INDENT + $labelWidth;
+                $lines = $wrap($accessory->description, $pageWidth - self::MARGIN - $textX, self::TABLE_FONT_SIZE);
+                $height = count($lines) * self::TABLE_LINE_HEIGHT + self::ROW_PADDING;
+                if ($y - $height < self::MARGIN + 20) {
+                    $y = $newPage();
+                    $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns);
+                }
+
+                $writer->filledRect(self::MARGIN, $y - $height, $pageWidth - 2 * self::MARGIN, $height, self::ACCESSORY_FILL);
+                $baseline = $y - self::ROW_PADDING / 2 - self::TABLE_LINE_HEIGHT + 2;
+                $this->drawCheckbox($writer, $columns['check'] + 4, $baseline - 1);
+                $writer->textRight($columns['quantity'] + self::QUANTITY_COLUMN_WIDTH - 6, $baseline, ($accessory->quantity * $contentEntry->item->quantity) . ' ×', self::TABLE_FONT_SIZE, false, color: self::ACCESSORY_LABEL_COLOR);
+                $writer->text($columns['article'] + self::ACCESSORY_INDENT, $baseline, 'Zubehör', self::TABLE_FONT_SIZE - 1, true, false, self::ACCESSORY_LABEL_COLOR);
+                foreach ($lines as $i => $line) {
+                    $writer->text($textX, $baseline - $i * self::TABLE_LINE_HEIGHT, $line, self::TABLE_FONT_SIZE, false, false, '0.2 0.2 0.2');
+                }
+                $y -= $height;
+                $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 0.3, '0.85 0.85 0.85');
+            }
         }
         $writer->setFontRole($previousFontRole);
 

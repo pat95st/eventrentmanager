@@ -10,7 +10,6 @@ use App\Domain\CaseItem\CaseItemRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
-use App\Shared\Prefix;
 use DateTimeImmutable;
 
 final class UpdateCaseItemHandler implements CommandHandlerInterface
@@ -37,7 +36,6 @@ final class UpdateCaseItemHandler implements CommandHandlerInterface
 
         $caseItem->name = trim($command->name);
         $caseItem->manufacturerId = $command->manufacturerId;
-        $caseItem->prefix = Prefix::normalize($command->prefix);
         $caseItem->description = $command->description !== null && trim($command->description) !== '' ? trim($command->description) : null;
         $caseItem->updatedAt = new DateTimeImmutable();
 
@@ -57,18 +55,6 @@ final class UpdateCaseItemHandler implements CommandHandlerInterface
 
         if ($command->manufacturerId === '' || $this->manufacturers->findById($command->manufacturerId) === null) {
             $errors['manufacturerId'] = 'Bitte einen gültigen Hersteller auswählen.';
-        }
-
-        $prefix = Prefix::normalize($command->prefix);
-        if ($prefix === '') {
-            $errors['prefix'] = 'Bitte ein Präfix angeben.';
-        } elseif (!Prefix::isValid($prefix)) {
-            $errors['prefix'] = 'Das Präfix darf nur aus Großbuchstaben und Ziffern bestehen (max. 10 Zeichen).';
-        } elseif (
-            $command->manufacturerId !== ''
-            && $this->cases->existsByPrefix($command->manufacturerId, $prefix, $command->id)
-        ) {
-            $errors['prefix'] = 'Dieses Präfix wird bei diesem Hersteller bereits von einem anderen Case verwendet.';
         }
 
         return $errors;

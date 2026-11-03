@@ -37,7 +37,11 @@ final class MariadbDocumentNumberingSettingsRepository implements DocumentNumber
     {
         $result = [];
         foreach (NumberedDocumentType::all() as $type) {
-            $result[] = $this->findByType($type);
+            try {
+                $result[] = $this->findByType($type);
+            } catch (\RuntimeException) {
+                // Typ noch nicht angelegt (Migration fehlt) – Einstellungsseite trotzdem anzeigen.
+            }
         }
 
         return $result;

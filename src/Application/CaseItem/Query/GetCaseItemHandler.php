@@ -8,7 +8,6 @@ use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\CaseContent\CaseContentItemRepositoryInterface;
-use App\Domain\CaseInventoryNumber\CaseInventoryNumberGenerator;
 use App\Domain\CaseInventoryNumber\CaseInventoryNumberRepositoryInterface;
 use App\Domain\CaseItem\CaseItemRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
@@ -23,6 +22,8 @@ final class GetCaseItemHandler implements QueryHandlerInterface
         private readonly CaseContentItemRepositoryInterface $contentItems,
         private readonly ArticleRepositoryInterface $articles,
         private readonly ?\App\Domain\CaseInventoryNumber\CaseInventoryNumberImageRepositoryInterface $images = null,
+        // Migration 120: fortlaufende Inventurnummern CASE-0001 … (Vorschau der nächsten).
+        private readonly ?\App\Domain\Numbering\DocumentNumberingSettingsRepositoryInterface $numbering = null,
     ) {
     }
 
@@ -75,9 +76,16 @@ final class GetCaseItemHandler implements QueryHandlerInterface
             $rawInventoryNumbers
         );
 
-        $nextInventoryNumberPreview = ($manufacturer->prefix !== null && $caseItem->prefix !== null)
-            ? CaseInventoryNumberGenerator::nextNumber($rawInventoryNumbers, $manufacturer->prefix, $caseItem->prefix)
-            : null;
+        $nextInventoryNumberPreview = null;
+        if ($this->numbering !== null) {
+            try {
+                $settings = $this->numbering->findByType(\App\Domain\Numbering\NumberedDocumentType::CaseItem);
+                $year = \App\Domain\Numbering\DocumentNumberFormatter::previewYear($settings);
+                $nextInventoryNumberPreview = \App\Domain\Numbering\DocumentNumberFormatter::format($settings, $year, $this->numbering->getNextNumber(\App\Domain\Numbering\NumberedDocumentType::CaseItem, $year));
+            } catch (\RuntimeException) {
+                $nextInventoryNumberPreview = null; // Migration 120 fehlt
+            }
+        }
 
         return new CaseItemDetail($caseItem, $manufacturer, $inventoryNumbers, $nextInventoryNumberPreview);
     }

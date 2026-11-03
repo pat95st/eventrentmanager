@@ -226,7 +226,6 @@ final class CaseController
         $command = new CreateCaseItem(
             name: $request->input('name', '') ?? '',
             manufacturerId: $request->input('manufacturer_id', '') ?? '',
-            prefix: $request->input('prefix', '') ?? '',
             description: $request->input('description'),
         );
 
@@ -300,7 +299,6 @@ final class CaseController
             id: $id,
             name: $request->input('name', '') ?? '',
             manufacturerId: $request->input('manufacturer_id', '') ?? '',
-            prefix: $request->input('prefix', '') ?? '',
             description: $request->input('description'),
         );
 
@@ -462,7 +460,6 @@ final class CaseController
         return [
             'name' => $command->name,
             'manufacturer_id' => $command->manufacturerId,
-            'prefix' => $command->prefix,
             'description' => $command->description,
         ];
     }

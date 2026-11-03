@@ -144,7 +144,7 @@ final class RackController
     private function old(Request $request): array
     {
         $old = ['_submitted' => '1'];
-        foreach (['name', 'inventory_number', 'manufacturer_id', 'height_units', 'install_depth_cm', 'rail_type', 'width', 'color', 'fixed_inventory_number_id', 'description'] as $key) {
+        foreach (['name', 'manufacturer_id', 'height_units', 'install_depth_cm', 'rail_type', 'width', 'color', 'fixed_inventory_number_id', 'description'] as $key) {
             $old[$key] = (string) ($request->input($key) ?? '');
         }
         foreach (['has_shock_mount', 'has_wheels'] as $key) {
@@ -160,7 +160,6 @@ final class RackController
     {
         return new RackInput(
             name: $request->input('name', '') ?? '',
-            inventoryNumber: $request->input('inventory_number', '') ?? '',
             manufacturerId: $request->input('manufacturer_id'),
             heightUnits: $request->input('height_units'),
             installDepthCm: $request->input('install_depth_cm'),

@@ -662,7 +662,7 @@ $commandBus->register(\App\Application\Customer\Command\DeleteCustomer::class, n
 $commandBus->register(\App\Application\CaseItem\Command\CreateCaseItem::class, new CreateCaseItemHandler($caseItemRepository, $manufacturerRepository));
 $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseItem::class, new UpdateCaseItemHandler($caseItemRepository, $manufacturerRepository));
 $commandBus->register(\App\Application\CaseItem\Command\DeleteCaseItem::class, new DeleteCaseItemHandler($caseItemRepository));
-$commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumber::class, new AddCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseItemRepository, $manufacturerRepository));
+$commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumber::class, new AddCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseItemRepository, $pdo, $documentNumberSequence));
 $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseInventoryNumber::class, new UpdateCaseInventoryNumberHandler($caseInventoryNumberRepository));
 $commandBus->register(\App\Application\CaseItem\Command\DeleteCaseInventoryNumber::class, new DeleteCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseInventoryNumberImageRepository, $fileStorage));
 $commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumberImage::class, new \App\Application\CaseItem\Command\AddCaseInventoryNumberImageHandler($caseInventoryNumberRepository, $caseInventoryNumberImageRepository, $fileStorage));
@@ -1124,7 +1124,7 @@ $queryBus->register(\App\Application\Settings\Query\GetPdfFontSettings::class, n
 // Racks (Migration 115)
 $rackValidator = new \App\Application\Rack\Command\RackValidator($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository);
 $rackDetailBuilder = new \App\Application\Rack\Query\RackDetailBuilder($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository, $rentalIssuedItemRepository, $rentalRepository);
-$commandBus->register(\App\Application\Rack\Command\CreateRack::class, new \App\Application\Rack\Command\CreateRackHandler($rackRepository, $rackValidator));
+$commandBus->register(\App\Application\Rack\Command\CreateRack::class, new \App\Application\Rack\Command\CreateRackHandler($rackRepository, $rackValidator, $pdo, $documentNumberSequence));
 $commandBus->register(\App\Application\Rack\Command\UpdateRack::class, new \App\Application\Rack\Command\UpdateRackHandler($rackRepository, $rackValidator));
 $commandBus->register(\App\Application\Rack\Command\DeleteRack::class, new \App\Application\Rack\Command\DeleteRackHandler($rackRepository));
 $commandBus->register(\App\Application\Rack\Command\AddRackSlot::class, new \App\Application\Rack\Command\AddRackSlotHandler($rackRepository, $rackValidator));
@@ -1141,6 +1141,7 @@ $queryBus->register(\App\Application\CaseItem\Query\GetCaseItem::class, new GetC
     $caseContentItemRepository,
     $articleRepository,
     images: $caseInventoryNumberImageRepository,
+    numbering: $documentNumberingSettingsRepository,
 ));
 
 $queryBus->register(\App\Application\Supplier\Query\ListSuppliers::class, new ListSuppliersHandler($supplierRepository));
@@ -1311,7 +1312,7 @@ $customerController = new CustomerController($commandBus, $queryBus, $customerCo
 $powerDistributorController = new \App\Infrastructure\Http\Controllers\PowerDistributorController();
 $pdfFontSettingsController = new \App\Infrastructure\Http\Controllers\PdfFontSettingsController($commandBus, $queryBus, $fileStorage);
 $rackController = new \App\Infrastructure\Http\Controllers\RackController($commandBus, $queryBus);
-$caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer));
+$caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer, $articleAccessoryRepository));
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
 $salesController = new \App\Infrastructure\Http\Controllers\SalesController($queryBus);

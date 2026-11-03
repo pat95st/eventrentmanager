@@ -9,7 +9,6 @@ final class RackInput
 {
     public function __construct(
         public readonly string $name,
-        public readonly string $inventoryNumber,
         public readonly ?string $manufacturerId,
         public readonly ?string $heightUnits,
         public readonly ?string $installDepthCm,

@@ -7,26 +7,29 @@ namespace App\Application\CaseItem\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\CaseInventoryNumber\CaseInventoryNumber;
-use App\Domain\CaseInventoryNumber\CaseInventoryNumberGenerator;
 use App\Domain\CaseInventoryNumber\CaseInventoryNumberRepositoryInterface;
 use App\Domain\CaseItem\CaseItemRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
-use App\Domain\Exception\ValidationException;
-use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
+use App\Domain\Numbering\NumberedDocumentType;
+use App\Infrastructure\Persistence\Pdo\DocumentNumberSequence;
 use App\Shared\Uuid;
 use DateTimeImmutable;
+use PDO;
 
 /**
- * Vergibt eine standardisierte Inventurnummer für ein Case-Exemplar nach dem
- * Schema (Hersteller-Präfix)-(Case-Präfix)-(laufende Nummer), analog zu
- * App\Application\Article\Command\AddInventoryNumberHandler für Artikel.
+ * Legt ein Case-Exemplar an und vergibt die Inventurnummer automatisch und
+ * fortlaufend über alle Cases (Nutzerwunsch, Migration 120): CASE-0001,
+ * CASE-0002 … (Format unter Einstellungen › Nummerierung anpassbar).
+ * Nummernvergabe und Speichern laufen in einer Transaktion, siehe
+ * DocumentNumberSequence.
  */
 final class AddCaseInventoryNumberHandler implements CommandHandlerInterface
 {
     public function __construct(
         private readonly CaseInventoryNumberRepositoryInterface $caseInventoryNumbers,
         private readonly CaseItemRepositoryInterface $cases,
-        private readonly ManufacturerRepositoryInterface $manufacturers,
+        private readonly PDO $pdo,
+        private readonly DocumentNumberSequence $numberSequence,
     ) {
     }
 
@@ -39,49 +42,34 @@ final class AddCaseInventoryNumberHandler implements CommandHandlerInterface
             throw new NotFoundException("Case \"{$command->caseId}\" wurde nicht gefunden.");
         }
 
-        $manufacturer = $this->manufacturers->findById($caseItem->manufacturerId);
-        if ($manufacturer === null) {
-            throw new NotFoundException('Hersteller des Case wurde nicht gefunden.');
-        }
-
-        if ($manufacturer->prefix === null || $caseItem->prefix === null) {
-            throw new ValidationException([
-                'number' => 'Für dieses Case fehlt noch das Hersteller- und/oder Case-Präfix. '
-                    . 'Bitte zuerst beim Hersteller und beim Case ein Präfix hinterlegen.',
-            ]);
-        }
-
-        $existing = $this->caseInventoryNumbers->findByCase($caseItem->id);
-        $number = CaseInventoryNumberGenerator::nextNumber($existing, $manufacturer->prefix, $caseItem->prefix);
-
-        // Sicherheitsnetz gegen einen sehr unwahrscheinlichen Kollisionsfall.
-        while ($this->caseInventoryNumbers->existsByNumber($number)) {
-            $existing[] = new CaseInventoryNumber(
-                id: 'temp',
-                caseId: $caseItem->id,
-                number: $number,
-                acquisitionDate: null,
-                createdAt: new DateTimeImmutable(),
-                updatedAt: new DateTimeImmutable(),
-            );
-            $number = CaseInventoryNumberGenerator::nextNumber($existing, $manufacturer->prefix, $caseItem->prefix);
-        }
-
         $acquisitionDate = $command->acquisitionDate !== null && $command->acquisitionDate !== ''
             ? new DateTimeImmutable($command->acquisitionDate)
             : null;
 
-        $now = new DateTimeImmutable();
-        $caseInventoryNumber = new CaseInventoryNumber(
-            id: Uuid::v4(),
-            caseId: $command->caseId,
-            number: $number,
-            acquisitionDate: $acquisitionDate,
-            createdAt: $now,
-            updatedAt: $now,
-        );
+        $this->pdo->beginTransaction();
+        try {
+            // Nummern, die (z. B. von Hand) schon vergeben sind, überspringen.
+            do {
+                $number = $this->numberSequence->allocateNext(NumberedDocumentType::CaseItem);
+            } while ($this->caseInventoryNumbers->existsByNumber($number));
 
-        $this->caseInventoryNumbers->save($caseInventoryNumber);
+            $now = new DateTimeImmutable();
+            $caseInventoryNumber = new CaseInventoryNumber(
+                id: Uuid::v4(),
+                caseId: $caseItem->id,
+                number: $number,
+                acquisitionDate: $acquisitionDate,
+                createdAt: $now,
+                updatedAt: $now,
+            );
+            $this->caseInventoryNumbers->save($caseInventoryNumber);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $e;
+        }
 
         return $caseInventoryNumber->id;
     }

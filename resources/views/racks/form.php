@@ -33,9 +33,9 @@ $fixedSelected = $val('fixed_inventory_number_id', $rack?->fixedInventoryNumberI
             <?= $err('name') ?>
         </div>
         <div>
-            <label for="inventory_number" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Inventarnummer *</label>
-            <input id="inventory_number" name="inventory_number" value="<?= e($val('inventory_number', $rack?->inventoryNumber)) ?>" required class="<?= $input ?> font-mono">
-            <?= $err('inventory_number') ?>
+            <span class="block text-sm font-medium text-slate-700 dark:text-slate-300">Inventarnummer</span>
+            <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= $rack !== null ? e($rack->inventoryNumber) : 'wird automatisch vergeben' ?></p>
+            <?php if ($rack === null): ?><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Fortlaufend nach dem Schema RACK-0001 (anpassbar unter Einstellungen › Nummerierung).</p><?php endif; ?>
         </div>
         <div>
             <label for="manufacturer_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Hersteller</label>

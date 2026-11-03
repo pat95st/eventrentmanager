@@ -25,6 +25,9 @@ enum NumberedDocumentType: string
     case DunningNotice = 'dunning_notice';
     case OrderConfirmation = 'order_confirmation';
     case Customer = 'customer';
+    // Migration 120: Inventarnummern für Case-Exemplare und Racks (CASE-0001, RACK-0001).
+    case CaseItem = 'case_item';
+    case Rack = 'rack';
 
     public function label(): string
     {
@@ -34,12 +37,14 @@ enum NumberedDocumentType: string
             self::DunningNotice => 'Mahnungen',
             self::OrderConfirmation => 'Auftragsbestätigungen',
             self::Customer => 'Kunden',
+            self::CaseItem => 'Cases (Inventarnummern)',
+            self::Rack => 'Racks (Inventarnummern)',
         };
     }
 
     /** @return NumberedDocumentType[] Feste Anzeigereihenfolge auf der Einstellungsseite. */
     public static function all(): array
     {
-        return [self::Invoice, self::Offer, self::DunningNotice, self::OrderConfirmation, self::Customer];
+        return [self::Invoice, self::Offer, self::DunningNotice, self::OrderConfirmation, self::Customer, self::CaseItem, self::Rack];
     }
 }

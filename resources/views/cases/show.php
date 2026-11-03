@@ -50,9 +50,6 @@ if (!function_exists('renderCaseNoticeField')) {
         <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($case->name) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
             <?= e($detail->manufacturer->name) ?>
-            <?php if ($detail->manufacturer->prefix !== null && $case->prefix !== null): ?>
-                · <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->manufacturer->prefix) ?>-<?= e($case->prefix) ?>-…</span>
-            <?php endif; ?>
         </p>
     </div>
     <div class="flex items-center gap-3">
@@ -232,8 +229,7 @@ if (!function_exists('renderCaseNoticeField')) {
             <?php if ($detail->nextInventoryNumberPreview === null): ?>
                 <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
                     <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
-                        Um ein neues Case-Exemplar anzulegen, müssen zuerst ein Hersteller-Präfix
-                        (unter „Hersteller“) und ein Case-Präfix (<a href="/cases/<?= e($case->id) ?>/bearbeiten" class="underline">Case bearbeiten</a>) hinterlegt werden.
+                        Die Nummerierung für Case-Inventurnummern ist noch nicht eingerichtet (Migration 120, siehe Einstellungen › Nummerierung).
                     </p>
                 </div>
             <?php else: ?>

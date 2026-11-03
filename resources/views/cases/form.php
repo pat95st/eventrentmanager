@@ -58,17 +58,6 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Neue Hersteller lassen sich unter „Hersteller“ anlegen.</p>
         </div>
 
-        <div>
-            <label for="prefix" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Case-Präfix *</label>
-            <input type="text" id="prefix" name="prefix" required maxlength="10" placeholder="z. B. RCK"
-                   value="<?= e($val('prefix', $case?->prefix)) ?>"
-                   class="mt-1 w-full rounded-md border <?= isset($errors['prefix']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 font-mono text-sm uppercase focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
-            <?php if (isset($errors['prefix'])): ?>
-                <p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['prefix']) ?></p>
-            <?php else: ?>
-                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Zusammen mit dem Hersteller-Präfix Grundlage für die Inventurnummern der einzelnen Case-Exemplare (HERSTELLER-CASE-NUMMER).</p>
-            <?php endif; ?>
-        </div>
     </div>
 
     <div>

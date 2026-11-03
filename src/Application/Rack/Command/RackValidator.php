@@ -17,8 +17,9 @@ use DateTimeImmutable;
 
 /**
  * Prüfungen für Racks (Migration 115):
- * - Stammdaten: Bezeichnung, eindeutige Inventarnummer, HE 1–60, Einbautiefe
- *   optional (> 0), Hersteller optional aus der Herstellerliste.
+ * - Stammdaten: Bezeichnung, HE 1–60, Einbautiefe optional (> 0), Hersteller
+ *   optional aus der Herstellerliste. Die Inventarnummer wird automatisch
+ *   vergeben (RACK-0001 …, Migration 120).
  * - Feste Zuordnung: Geräte-Exemplar muss existieren und darf keinem anderen
  *   Rack fest zugeordnet sein.
  * - Einbau: nur Exemplare von 19-Zoll-Artikeln, HE-Bereich innerhalb des
@@ -35,21 +36,13 @@ final class RackValidator
     ) {
     }
 
-    public function build(string $id, RackInput $input, ?Rack $existing): Rack
+    /** @param string $inventoryNumber bei neuen Racks die vergebene Nummer (RACK-0001 …), bei bestehenden ignoriert */
+    public function build(string $id, RackInput $input, ?Rack $existing, string $inventoryNumber = ''): Rack
     {
         $errors = [];
         $name = trim($input->name);
         if ($name === '') {
             $errors['name'] = 'Bitte eine Bezeichnung angeben.';
-        }
-
-        $number = trim($input->inventoryNumber);
-        if ($number === '') {
-            $errors['inventory_number'] = 'Bitte eine Inventarnummer angeben.';
-        } elseif (mb_strlen($number) > 100) {
-            $errors['inventory_number'] = 'Die Inventarnummer ist zu lang.';
-        } elseif ($this->racks->existsByInventoryNumber($number, $existing?->id)) {
-            $errors['inventory_number'] = 'Diese Inventarnummer ist bereits bei einem anderen Rack vergeben.';
         }
 
         $manufacturerId = $this->blank($input->manufacturerId);
@@ -108,7 +101,6 @@ final class RackValidator
 
         if ($existing !== null) {
             $existing->name = $name;
-            $existing->inventoryNumber = $number;
             $existing->manufacturerId = $manufacturerId;
             $existing->heightUnits = $units;
             $existing->installDepthCm = $depth;
@@ -124,7 +116,7 @@ final class RackValidator
             return $existing;
         }
 
-        return new Rack($id, $name, $number, $manufacturerId, $units, $depth, $railType, $width, $color, $input->hasShockMount, $input->hasWheels, $fixedId, $description, $now, $now);
+        return new Rack($id, $name, $inventoryNumber, $manufacturerId, $units, $depth, $railType, $width, $color, $input->hasShockMount, $input->hasWheels, $fixedId, $description, $now, $now);
     }
 
     /** Prüft einen Einbau und liefert die Startposition. */

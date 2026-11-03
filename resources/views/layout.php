@@ -264,7 +264,7 @@ $canDocuments = $canRentals;
       </div>
     </div>
   </dialog>
-  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" style="position:sticky;top:0;z-index:30">
     <div class="flex items-center gap-3 px-4 py-3 lg:gap-8">
       <button
         type="button"

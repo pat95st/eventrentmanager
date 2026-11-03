@@ -6,6 +6,7 @@
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
 /** @var \App\Domain\PowerDistributor\PowerDistributor|null $powerDistributor gespeicherte Stromverteiler-Angaben (Migration 117) */
+/** @var string|null $powerDistributorCategoryId Kategorie "Stromverteiler" (Migration 118) */
 
 use App\Domain\Article\ProtectionClass;
 use function App\Infrastructure\Http\e;
@@ -20,7 +21,9 @@ foreach ($categories as $category) {
 $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback ?? '';
 $powerDistributor ??= null;
 // Stromverteiler (Migration 117): nach Validierungsfehler aus $old, sonst aus den gespeicherten Angaben.
-$isPowerDistributor = array_key_exists('is_power_distributor', $old) ? (bool) $old['is_power_distributor'] : $powerDistributor !== null;
+$powerDistributorCategoryId ??= null;
+// Stromverteiler = Kategorie "Stromverteiler" gewählt (Migration 118).
+$isPowerDistributor = $powerDistributorCategoryId !== null && $val('category_id', $article?->categoryId) === $powerDistributorCategoryId;
 $requiresElectricalInspection = $isPowerDistributor || (array_key_exists('requires_electrical_inspection', $old)
     ? (bool) $old['requires_electrical_inspection']
     : ($article?->requiresElectricalInspection ?? false));
@@ -185,15 +188,12 @@ $bundleComponentRows ??= [];
         <?php if (isset($errors['protectionClass'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['protectionClass']) ?></p><?php endif; ?>
     </div>
 
-    <!-- Stromverteiler (Migration 117): Angaben direkt beim Artikel -->
-    <div class="rounded-md border border-slate-200 p-4 dark:border-slate-700">
+    <!-- Stromverteiler (Migration 117/118): erscheint bei Kategorie "Stromverteiler" -->
+    <div id="power_distributor_section" class="rounded-md border border-amber-300 bg-amber-50/40 p-4 dark:border-amber-700 dark:bg-amber-950/20 <?= $isPowerDistributor ? '' : 'hidden' ?>" data-power-distributor-category="<?= e((string) $powerDistributorCategoryId) ?>">
         <input type="hidden" name="power_distributor_section" value="1">
-        <label class="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-            <input type="checkbox" id="is_power_distributor" name="is_power_distributor" value="1" <?= $isPowerDistributor ? 'checked' : '' ?>>
-            Dieser Artikel ist ein Stromverteiler
-        </label>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Zuleitung, FI/LS und Abgänge erfassen. Die Elektroprüfung ist bei Stromverteilern immer erforderlich (Standard Schutzklasse I).</p>
-        <div id="power_distributor_fields" class="mt-4 <?= $isPowerDistributor ? '' : 'hidden' ?>">
+        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Stromverteiler</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Zuleitung, FI/LS und Abgänge erfassen. Die Elektroprüfung ist bei Stromverteilern immer erforderlich (Standard Schutzklasse I). Andere Kategorie wählen, wenn der Artikel kein Stromverteiler ist.</p>
+        <div id="power_distributor_fields" class="mt-4">
             <?= \App\Infrastructure\Http\View::render('power-distributors/_fields', [
                 'distributor' => $powerDistributor,
                 'old' => array_key_exists('power_distributor', $old) ? $old['power_distributor'] : null,
@@ -324,12 +324,13 @@ $bundleComponentRows ??= [];
         var hint = document.getElementById('electrical_inspection_forced_hint');
         var field = document.getElementById('protection_class_field');
         var protectionClass = document.getElementById('protection_class');
-        var distributor = document.getElementById('is_power_distributor');
-        var distributorFields = document.getElementById('power_distributor_fields');
+        var category = document.getElementById('category_id');
+        var distributorSection = document.getElementById('power_distributor_section');
+        var distributorCategory = distributorSection ? distributorSection.getAttribute('data-power-distributor-category') : '';
 
         function sync() {
             // Stromverteiler: Elektroprüfung immer erforderlich, Schutzklasse standardmäßig I.
-            var isDistributor = distributor && distributor.checked;
+            var isDistributor = !!distributorCategory && category && category.value === distributorCategory;
             if (isDistributor) {
                 checkbox.checked = true;
                 if (protectionClass && !protectionClass.value) { protectionClass.value = 'I'; }
@@ -337,12 +338,12 @@ $bundleComponentRows ??= [];
             checkbox.disabled = isDistributor;
             forced.disabled = !isDistributor;
             hint.classList.toggle('hidden', !isDistributor);
-            if (distributorFields) { distributorFields.classList.toggle('hidden', !isDistributor); }
+            if (distributorSection) { distributorSection.classList.toggle('hidden', !isDistributor); }
             field.classList.toggle('hidden', !checkbox.checked);
         }
 
         checkbox.addEventListener('change', sync);
-        if (distributor) { distributor.addEventListener('change', sync); }
+        if (category) { category.addEventListener('change', sync); }
         sync();
     })();
 </script>

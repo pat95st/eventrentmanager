@@ -361,7 +361,8 @@ final class ArticleController
     public function create(Request $request): void
     {
         // "+ Neuer Stromverteiler" in der Artikelliste: Abschnitt vorausgewählt (Migration 117).
-        $this->renderForm(null, [], $request->query('stromverteiler') === '1' ? ['is_power_distributor' => true] : []);
+        $powerDistributorCategoryId = $request->query('stromverteiler') === '1' ? $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()) : null;
+        $this->renderForm(null, [], $powerDistributorCategoryId !== null ? ['category_id' => $powerDistributorCategoryId] : []);
     }
 
     /** Eigene Seite zum Anlegen eines Bundles (articles/bundle-form.php). */
@@ -1119,6 +1120,7 @@ final class ArticleController
             'editingId' => $editingId,
             // Stromverteiler (Migration 117): Angaben direkt im Artikelformular.
             'powerDistributor' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($article->id)) : null,
+            'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 
@@ -1148,7 +1150,6 @@ final class ArticleController
             'bundle_components' => $command->bundleComponents,
             'document_short_text' => $command->documentShortText,
             // Stromverteiler (Migration 117)
-            'is_power_distributor' => $command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput,
             'power_distributor' => $command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput ? [
                 'inlet_type' => (string) $command->powerDistributor->inletType,
                 'notes' => (string) $command->powerDistributor->notes,
@@ -1159,17 +1160,14 @@ final class ArticleController
     }
 
     /**
-     * Stromverteiler-Angaben aus dem Artikelformular (Migration 117):
-     * Eingabe, false (Abschnitt vorhanden, aber kein Stromverteiler) oder null
-     * (Formular ohne diesen Abschnitt, z. B. Bundle-Formular).
+     * Stromverteiler-Angaben aus dem Artikelformular (Migration 117): Eingabe
+     * oder null (Formular ohne diesen Abschnitt, z. B. Bundle-Formular). Ob
+     * sie gespeichert werden, entscheidet die Kategorie (Migration 118).
      */
     private function powerDistributorFromRequest(Request $request): \App\Application\PowerDistributor\PowerDistributorInput|false|null
     {
         if ($request->input('power_distributor_section') === null) {
             return null;
-        }
-        if ($request->input('is_power_distributor') === null) {
-            return false;
         }
         $rows = static function (mixed $raw): array {
             $result = [];

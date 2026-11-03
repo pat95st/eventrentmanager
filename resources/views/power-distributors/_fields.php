@@ -76,7 +76,8 @@ $renderDeviceRow = static function (string $index, array $row) use ($input, $lab
                 <label class="<?= $label ?>">Polzahl</label>
                 <select name="<?= $name('poles') ?>" class="<?= $input ?>"><?= $options($assoc(ProtectiveDevice::POLES, '-polig'), $row['poles'] ?? '', '–') ?></select>
             </div>
-            <div class="flex items-end justify-end">
+            <div class="flex items-end justify-end gap-3">
+                <button type="button" data-duplicate-row title="Mit allen Einstellungen duplizieren" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Duplizieren</button>
                 <button type="button" data-remove-row class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
             </div>
             <div data-rcd-field>
@@ -128,7 +129,8 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
                 <option value="">direkt von der Zuleitung</option>
             </select>
         </div>
-        <div class="flex justify-end" style="flex:0 0 auto">
+        <div class="flex justify-end gap-3" style="flex:0 0 auto">
+            <button type="button" data-duplicate-row title="Mit allen Einstellungen duplizieren" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Duplizieren</button>
             <button type="button" data-remove-row class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
         </div>
     </div>

@@ -1050,6 +1050,7 @@ $commandBus->register(\App\Application\AddressBook\Command\DeleteCardDavCredenti
 // --- Weitere Query-Registrierungen ($queryBus wurde bereits weiter oben, neben
 // dem Command-Bus, instanziiert) ---------------------------------------------
 $queryBus->register(\App\Application\Category\Query\ListCategories::class, new ListCategoriesHandler($categoryRepository));
+$queryBus->register(\App\Application\Category\Query\GetPowerDistributorCategoryId::class, new \App\Application\Category\Query\GetPowerDistributorCategoryIdHandler($categoryRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFolders::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFoldersHandler($closingTextTemplateFolderRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplates::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplatesHandler($closingTextTemplateRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));

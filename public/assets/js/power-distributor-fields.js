@@ -89,7 +89,48 @@
         outlets.appendChild(fromTemplate('[data-template-outlet]', { '__I__': String(counter++) }));
         refresh();
     });
+    // Duplizieren: neue Zeile mit allen Einstellungen direkt unter der Vorlage.
+    // Schutzorgane bekommen einen neuen Schlüssel und die nächste freie
+    // F-Nummer (sonst eine leere Bezeichnung = automatisch).
+    function nextLabel(label) {
+        var match = /^([A-Za-z]+)(\d+)$/.exec(label.trim());
+        if (!match) { return ''; }
+        var used = {};
+        devices.querySelectorAll('[data-device-label]').forEach(function (input) { used[input.value.trim().toLowerCase()] = true; });
+        var number = parseInt(match[2], 10) + 1;
+        while (used[(match[1] + number).toLowerCase()]) { number++; }
+        return match[1] + number;
+    }
+
+    function fieldName(name) {
+        var match = /\[([a-z_]+)\]$/.exec(name || '');
+        return match ? match[1] : null;
+    }
+
+    function duplicate(source) {
+        var isDevice = source.hasAttribute('data-device-row');
+        var copy = isDevice
+            ? fromTemplate('[data-template-device]', { '__I__': String(counter++), '__KEY__': 'n' + (counter++) })
+            : fromTemplate('[data-template-outlet]', { '__I__': String(counter++) });
+        var values = {};
+        source.querySelectorAll('input[name], select[name]').forEach(function (field) { values[fieldName(field.name)] = field.value; });
+        copy.querySelectorAll('input[name], select[name]').forEach(function (field) {
+            var key = fieldName(field.name);
+            if (key === 'key' || !(key in values)) { return; }
+            if (key === 'label' && isDevice) { field.value = nextLabel(values.label); return; }
+            if (field.tagName === 'SELECT' && field.hasAttribute('data-selected')) { field.setAttribute('data-selected', values[key]); }
+            field.value = values[key];
+        });
+        source.parentNode.insertBefore(copy, source.nextSibling);
+        refresh();
+    }
+
     form.addEventListener('click', function (event) {
+        var duplicateButton = event.target.closest('[data-duplicate-row]');
+        if (duplicateButton) {
+            duplicate(duplicateButton.closest('[data-device-row], [data-outlet-row]'));
+            return;
+        }
         var button = event.target.closest('[data-remove-row]');
         if (!button) { return; }
         button.closest('[data-device-row], [data-outlet-row]').remove();

@@ -57,8 +57,14 @@ final class CreateArticleHandler implements CommandHandlerInterface
         $distributor = null;
         $requiresElectricalInspection = $command->requiresElectricalInspection;
         $protectionClass = $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null;
-        if ($command->powerDistributor !== null && !$command->isBundle) {
-            [$distributorErrors, $distributor] = (new \App\Application\PowerDistributor\PowerDistributorBuilder())->build($articleId, $command->powerDistributor, null);
+        // Stromverteiler = Artikel der Kategorie "Stromverteiler" (Migration 118).
+        $powerDistributorCategoryId = $this->powerDistributors !== null ? $this->categories->findPowerDistributorCategoryId() : null;
+        if (!$command->isBundle && $powerDistributorCategoryId !== null && $command->categoryId === $powerDistributorCategoryId) {
+            [$distributorErrors, $distributor] = (new \App\Application\PowerDistributor\PowerDistributorBuilder())->build(
+                $articleId,
+                $command->powerDistributor ?? new \App\Application\PowerDistributor\PowerDistributorInput(null, null, [], []),
+                null,
+            );
             $errors = array_merge($errors, $distributorErrors);
             unset($errors['protectionClass']);
             $requiresElectricalInspection = true;

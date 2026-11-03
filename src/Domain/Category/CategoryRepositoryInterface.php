@@ -22,4 +22,7 @@ interface CategoryRepositoryInterface
     public function existsByNameAndParent(string $name, ?string $parentId, ?string $excludeId = null): bool;
 
     public function delete(string $id): void;
+
+    /** ID der Kategorie "Stromverteiler" (Migration 118, categories.is_power_distributor), falls vorhanden. */
+    public function findPowerDistributorCategoryId(): ?string;
 }

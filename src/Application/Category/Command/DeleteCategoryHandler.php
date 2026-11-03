@@ -28,6 +28,10 @@ final class DeleteCategoryHandler implements CommandHandlerInterface
             throw new NotFoundException("Kategorie \"{$command->id}\" wurde nicht gefunden.");
         }
 
+        if ($this->categories->findPowerDistributorCategoryId() === $category->id) {
+            throw new ConflictException('Die Kategorie für Stromverteiler wird vom System benötigt und kann nicht gelöscht werden (umbenennen ist möglich).');
+        }
+
         if ($this->categories->findChildren($command->id) !== []) {
             throw new ConflictException('Diese Kategorie enthält noch Unterkategorien. Bitte zuerst verschieben oder löschen.');
         }

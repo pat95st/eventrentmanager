@@ -103,6 +103,13 @@ final class MariadbCategoryRepository implements CategoryRepositoryInterface
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    public function findPowerDistributorCategoryId(): ?string
+    {
+        $id = $this->pdo->query('SELECT id FROM categories WHERE is_power_distributor = 1 LIMIT 1')->fetchColumn();
+
+        return $id !== false && $id !== null && $id !== 0 ? (string) $id : null;
+    }
+
     public function delete(string $id): void
     {
         $stmt = $this->pdo->prepare('DELETE FROM categories WHERE id = :id');

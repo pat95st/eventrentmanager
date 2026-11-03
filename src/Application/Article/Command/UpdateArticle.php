@@ -35,7 +35,8 @@ final class UpdateArticle implements CommandInterface
         public readonly array $bundleComponents = [],
         // Migration 109: Kurztext für Dokumente (null = Feld nicht übermittelt).
         public readonly ?string $documentShortText = null,
-        // Stromverteiler (Migration 117): Angaben aus dem Artikelformular;
+        // Stromverteiler (Migration 117/118): Angaben aus dem Artikelformular,
+        // gespeichert nur bei Kategorie "Stromverteiler" (sonst entfernt);
         // false = kein Stromverteiler (mehr), null = unverändert lassen.
         public readonly \App\Application\PowerDistributor\PowerDistributorInput|false|null $powerDistributor = null,
     ) {

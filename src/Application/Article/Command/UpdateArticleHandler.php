@@ -116,7 +116,10 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $distributor = null;
         $requiresElectricalInspection = $command->requiresElectricalInspection;
         $protectionClass = $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null;
-        if ($command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput && !$command->isBundle) {
+        // Stromverteiler = Artikel der Kategorie "Stromverteiler" (Migration 118).
+        $powerDistributorCategoryId = $this->powerDistributors !== null ? $this->categories->findPowerDistributorCategoryId() : null;
+        $isPowerDistributor = !$command->isBundle && $powerDistributorCategoryId !== null && $command->categoryId === $powerDistributorCategoryId;
+        if ($isPowerDistributor && $command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput) {
             [$distributorErrors, $distributor] = (new \App\Application\PowerDistributor\PowerDistributorBuilder())->build(
                 $article->id,
                 $command->powerDistributor,
@@ -163,7 +166,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         if ($this->powerDistributors !== null) {
             if ($distributor !== null) {
                 $this->powerDistributors->save($distributor);
-            } elseif ($command->powerDistributor === false || $command->isBundle) {
+            } elseif ($command->powerDistributor === false || $command->isBundle || ($command->powerDistributor !== null && !$isPowerDistributor)) {
+                // Kategorie gewechselt, Bundle oder ausdrücklich kein Stromverteiler mehr.
                 $this->powerDistributors->delete($article->id);
             }
         }

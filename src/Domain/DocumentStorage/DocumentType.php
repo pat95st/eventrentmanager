@@ -11,7 +11,7 @@ namespace App\Domain\DocumentStorage;
  * Aufrufer: EmailInvoicePdfHandler, EmailOfferPdfHandler,
  * EmailPackingListPdfHandler, CreateReceiptHandler,
  * ConvertReceiptInboxAttachmentToReceiptHandler,
- * EmailDunningNoticeHandler).
+ * EmailDunningNoticeHandler, IssueInvoiceCorrectionHandler).
  */
 enum DocumentType: string
 {
@@ -20,6 +20,7 @@ enum DocumentType: string
     case PackingList = 'packing_list';
     case Receipt = 'receipt';
     case DunningNotice = 'dunning_notice';
+    case InvoiceCorrection = 'invoice_correction';
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum DocumentType: string
             self::PackingList => 'Packliste',
             self::Receipt => 'Beleg',
             self::DunningNotice => 'Mahnung',
+            self::InvoiceCorrection => 'Rechnungskorrektur',
         };
     }
 }

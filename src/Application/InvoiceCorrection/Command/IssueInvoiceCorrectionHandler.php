@@ -32,6 +32,12 @@ use PDO;
  *   Erstattung.
  * - War die Rechnung bezahlt, wird die Korrektur als "Erstattung/
  *   Nachzahlung offen" markiert (requiresSettlement).
+ * - Automatische Ablage (Migration 123): nach dem Ausstellen wird das PDF
+ *   auf alle für "Rechnungskorrektur" eingerichteten Speicherziele gelegt
+ *   (Einstellungen › Dokumentablage). Ein Fehler dabei verhindert das
+ *   Ausstellen nie; das Ergebnis steht im Upload-Protokoll.
+ *
+ * Rückgabe: ['number' => 'RK-0001', 'storage' => Ergebnisse je Speicherziel].
  */
 final class IssueInvoiceCorrectionHandler implements CommandHandlerInterface
 {
@@ -41,6 +47,10 @@ final class IssueInvoiceCorrectionHandler implements CommandHandlerInterface
         private readonly InvoiceCorrectionLineSource $lineSource,
         private readonly PDO $pdo,
         private readonly DocumentNumberSequence $numberSequence,
+        private readonly ?\App\Infrastructure\DocumentStorage\DocumentStoragePusher $documentStorage = null,
+        private readonly ?\App\Application\InvoiceCorrection\Query\GetInvoiceCorrectionHandler $getCorrection = null,
+        private readonly ?\App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator $pdfGenerator = null,
+        private readonly ?\App\Domain\Settings\CompanySettingsRepositoryInterface $companySettings = null,
     ) {
     }
 
@@ -94,6 +104,34 @@ final class IssueInvoiceCorrectionHandler implements CommandHandlerInterface
             throw $e;
         }
 
-        return $correction->correctionNumber;
+        return ['number' => $correction->correctionNumber, 'storage' => $this->fileAway($correction->id)];
+    }
+
+    /** @return array<int, array{targetName: string, success: bool, message: string}> */
+    private function fileAway(string $correctionId): array
+    {
+        if ($this->documentStorage === null || $this->getCorrection === null || $this->pdfGenerator === null || $this->companySettings === null) {
+            return [];
+        }
+        try {
+            $detail = $this->getCorrection->handle(new \App\Application\InvoiceCorrection\Query\GetInvoiceCorrection($correctionId));
+            $correction = $detail->correction;
+            $number = (string) $correction->correctionNumber;
+            $filename = ($correction->type === InvoiceCorrectionType::Cancellation ? 'Stornorechnung-' : 'Rechnungskorrektur-')
+                . preg_replace('/[^A-Za-z0-9._-]+/', '-', $number) . '.pdf';
+            $pdf = $this->pdfGenerator->generate($detail, $this->companySettings->get());
+
+            return $this->documentStorage->push(
+                \App\Domain\DocumentStorage\DocumentType::InvoiceCorrection,
+                $correctionId,
+                $pdf,
+                $filename,
+                ['{number}' => $number],
+            );
+        } catch (\Throwable $e) {
+            error_log('Rechnungskorrektur ' . $correctionId . ': automatische Ablage fehlgeschlagen: ' . $e->getMessage());
+
+            return [['targetName' => 'Dokumentablage', 'success' => false, 'message' => $e->getMessage()]];
+        }
     }
 }

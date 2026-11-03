@@ -129,8 +129,16 @@ final class InvoiceCorrectionController
     {
         $id = $request->param('id');
         try {
-            $number = $this->commands->dispatch(new IssueInvoiceCorrection($id));
-            Flash::success('Die Rechnungskorrektur wurde als ' . $number . ' ausgestellt.');
+            $result = $this->commands->dispatch(new IssueInvoiceCorrection($id));
+            $number = is_array($result) ? $result['number'] : (string) $result;
+            $storage = is_array($result) ? ($result['storage'] ?? []) : [];
+            $stored = array_filter($storage, static fn (array $r): bool => $r['success']);
+            $failed = array_filter($storage, static fn (array $r): bool => !$r['success']);
+            Flash::success('Die Rechnungskorrektur wurde als ' . $number . ' ausgestellt.'
+                . ($stored !== [] ? ' Abgelegt in: ' . implode(', ', array_map(static fn (array $r): string => $r['targetName'], $stored)) . '.' : ''));
+            if ($failed !== []) {
+                Flash::error('Automatische Ablage fehlgeschlagen (' . implode('; ', array_map(static fn (array $r): string => $r['targetName'] . ': ' . $r['message'], $failed)) . '). Details unter Einstellungen › Dokumentablage.');
+            }
         } catch (ConflictException | ValidationException $e) {
             Flash::error($e instanceof ValidationException ? implode(' ', $e->errors()) : $e->getMessage());
         } catch (NotFoundException $e) {

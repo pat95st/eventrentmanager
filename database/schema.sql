@@ -2845,3 +2845,15 @@ ALTER TABLE invoice_corrections
 INSERT IGNORE INTO email_templates (template_key, subject, body_html) VALUES
 ('invoice_correction', '{{document_title}} {{correction_number}} zu Rechnung {{invoice_number}}',
  '<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie unsere {{document_title}} {{correction_number}} zur Rechnung {{invoice_number}} vom {{invoice_date}}.</p>\n<p>Grund: {{reason}}<br>Betrag: {{amount}}</p>\n<p>{{payment_line}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>');
+
+-- Migration 123: Rechnungskorrekturen/Stornorechnungen automatisch ablegen
+-- (Nutzerwunsch). Erweitert den ENUM document_type um 'invoice_correction',
+-- damit ausgestellte Korrekturen über die Speicherziel-Zuordnungen
+-- (Einstellungen › Dokumentablage) auf ein Ziellaufwerk gelegt und im
+-- Upload-Protokoll erfasst werden – siehe IssueInvoiceCorrectionHandler.
+
+ALTER TABLE document_storage_assignments
+    MODIFY document_type ENUM('invoice', 'offer', 'packing_list', 'receipt', 'dunning_notice', 'invoice_correction') NOT NULL;
+
+ALTER TABLE document_storage_upload_log
+    MODIFY document_type ENUM('invoice', 'offer', 'packing_list', 'receipt', 'dunning_notice', 'invoice_correction') NOT NULL;

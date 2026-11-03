@@ -91,7 +91,7 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             }
         }
 
-        if (!$command->requiresElectricalInspection && $this->powerDistributors?->findByArticle($article->id) !== null) {
+        if ($command->powerDistributor === null && !$command->requiresElectricalInspection && $this->powerDistributors?->findByArticle($article->id) !== null) {
             $errors['protectionClass'] = 'Dieser Artikel ist ein Stromverteiler — die Elektroprüfung ist immer erforderlich.';
         }
 
@@ -111,6 +111,23 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         );
         $errors = array_merge($errors, $bundleErrors);
 
+        // Stromverteiler (Migration 117): Angaben aus dem Artikelformular
+        // mitprüfen; Elektroprüfung dann immer erforderlich (Standard SK I).
+        $distributor = null;
+        $requiresElectricalInspection = $command->requiresElectricalInspection;
+        $protectionClass = $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null;
+        if ($command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput && !$command->isBundle) {
+            [$distributorErrors, $distributor] = (new \App\Application\PowerDistributor\PowerDistributorBuilder())->build(
+                $article->id,
+                $command->powerDistributor,
+                $this->powerDistributors?->findByArticle($article->id),
+            );
+            $errors = array_merge($errors, $distributorErrors);
+            unset($errors['protectionClass']);
+            $requiresElectricalInspection = true;
+            $protectionClass = self::normalizeProtectionClass($command->protectionClass) ?? ProtectionClass::I;
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -127,8 +144,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $article->heightUnits = $command->is19Inch ? self::normalizeHeightUnits($command->heightUnits) : null;
         $article->installDepthCm = $command->is19Inch ? self::normalizeInstallDepth($command->installDepthCm) : null;
         $article->purchasePrice = Money::normalize($command->purchasePrice) ?: null;
-        $article->requiresElectricalInspection = $command->requiresElectricalInspection;
-        $article->protectionClass = $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null;
+        $article->requiresElectricalInspection = $requiresElectricalInspection;
+        $article->protectionClass = $protectionClass;
         $article->hasFirmware = $command->hasFirmware;
         $article->isBillable = $command->isBillable;
         $article->dailyRentalPrice = $command->isBillable ? (Money::normalize($command->dailyRentalPrice) ?: null) : null;
@@ -143,6 +160,13 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         }
 
         $this->articles->save($article);
+        if ($this->powerDistributors !== null) {
+            if ($distributor !== null) {
+                $this->powerDistributors->save($distributor);
+            } elseif ($command->powerDistributor === false || $command->isBundle) {
+                $this->powerDistributors->delete($article->id);
+            }
+        }
         if ($this->bundleComponents !== null) {
             // Kein Bundle (mehr) → Bestandteil-Liste leeren.
             $this->bundleComponents->replaceForBundle($article->id, $command->isBundle ? $components : []);

@@ -2,23 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Application\PowerDistributor\Command;
+namespace App\Application\PowerDistributor;
 
-use App\Application\Command\CommandHandlerInterface;
-use App\Application\Command\CommandInterface;
-use App\Domain\Article\ArticleRepositoryInterface;
-use App\Domain\Exception\NotFoundException;
-use App\Domain\Exception\ValidationException;
 use App\Domain\PowerDistributor\ConnectorType;
 use App\Domain\PowerDistributor\Outlet;
 use App\Domain\PowerDistributor\PowerDistributor;
-use App\Domain\PowerDistributor\PowerDistributorRepositoryInterface;
 use App\Domain\PowerDistributor\ProtectiveDevice;
 use App\Domain\PowerDistributor\ProtectiveDeviceType;
 use App\Shared\Uuid;
 
 /**
- * Prüft und speichert einen Stromverteiler:
+ * Prüft die Formularangaben eines Stromverteilers (Migration 117) und baut
+ * daraus das Domänenobjekt, genutzt von Create-/UpdateArticleHandler
+ * (Angaben direkt im Artikelformular).
+ *
  * - Zuleitung Pflicht.
  * - RCD: Typ und Auslösestrom Pflicht (Nennstrom optional).
  * - LS: Charakteristik und Sicherungsgröße Pflicht; optional hinter einem RCD.
@@ -26,45 +23,23 @@ use App\Shared\Uuid;
  * - Abgänge: Steckverbindung, Anzahl 1–99, Zuordnung zu einem Schutzorgan
  *   oder direkt an der Zuleitung.
  * Bezeichnungen werden, wenn leer, automatisch vergeben (F1, F2, …).
- * Der Artikel wird dabei immer auf "Elektroprüfung erforderlich" gesetzt
- * (Nutzerwunsch), mit der gewählten bzw. vorhandenen Schutzklasse.
+ * Fehlerschlüssel: powerDistributorInlet, powerDistributorDevices, powerDistributorOutlets.
  */
-final class SavePowerDistributorHandler implements CommandHandlerInterface
+final class PowerDistributorBuilder
 {
     private const UUID_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/';
 
-    public function __construct(
-        private readonly PowerDistributorRepositoryInterface $distributors,
-        private readonly ArticleRepositoryInterface $articles,
-    ) {
-    }
-
-    public function handle(CommandInterface $command): mixed
+    /** @return array{0: array<string, string>, 1: PowerDistributor|null} */
+    public function build(string $articleId, PowerDistributorInput $input, ?PowerDistributor $existing): array
     {
-        assert($command instanceof SavePowerDistributor);
-
-        $article = $this->articles->findById($command->articleId);
-        if ($article === null) {
-            throw new NotFoundException('Artikel wurde nicht gefunden.');
-        }
-        if ($article->isBundle) {
-            throw new ValidationException(['inlet_type' => 'Bundles können keine Stromverteiler sein.']);
-        }
-
         $errors = [];
-        // Nutzerwunsch: Stromverteiler sind immer elektrisch zu prüfen.
-        // Ohne Angabe gilt die vorhandene Schutzklasse des Artikels, sonst Schutzklasse I (Standard für Stromverteiler).
-        $protectionClass = \App\Domain\Article\ProtectionClass::tryFrom((string) $command->protectionClass)
-            ?? $article->protectionClass
-            ?? \App\Domain\Article\ProtectionClass::I;
         $deviceErrors = [];
         $outletErrors = [];
-        $inlet = ConnectorType::tryFrom((string) $command->inletType);
+        $inlet = ConnectorType::tryFrom((string) $input->inletType);
         if ($inlet === null) {
-            $errors['inlet_type'] = 'Bitte die Art der Zuleitung auswählen.';
+            $errors['powerDistributorInlet'] = 'Bitte die Art der Zuleitung auswählen.';
         }
 
-        $existing = $this->distributors->findByArticle($article->id);
         $existingIds = [];
         foreach ($existing?->devices ?? [] as $device) {
             $existingIds[$device->id] = true;
@@ -76,7 +51,7 @@ final class SavePowerDistributorHandler implements CommandHandlerInterface
         $rawUpstream = [];
         $usedLabels = [];
         $position = 0;
-        foreach (array_values($command->devices) as $i => $raw) {
+        foreach (array_values($input->devices) as $i => $raw) {
             $type = ProtectiveDeviceType::tryFrom((string) ($raw['type'] ?? ''));
             if ($type === null) {
                 continue; // leere Zeile
@@ -167,7 +142,7 @@ final class SavePowerDistributorHandler implements CommandHandlerInterface
 
         $outlets = [];
         $position = 0;
-        foreach (array_values($command->outlets) as $i => $raw) {
+        foreach (array_values($input->outlets) as $i => $raw) {
             $connector = ConnectorType::tryFrom((string) ($raw['connector_type'] ?? ''));
             if ($connector === null) {
                 continue;
@@ -191,26 +166,18 @@ final class SavePowerDistributorHandler implements CommandHandlerInterface
         }
 
         if ($deviceErrors !== []) {
-            $errors['devices'] = implode(' ', array_unique($deviceErrors));
+            $errors['powerDistributorDevices'] = implode(' ', array_unique($deviceErrors));
         }
         if ($outletErrors !== []) {
-            $errors['outlets'] = implode(' ', array_unique($outletErrors));
+            $errors['powerDistributorOutlets'] = implode(' ', array_unique($outletErrors));
         }
         if ($errors !== []) {
-            throw new ValidationException($errors);
+            return [$errors, null];
         }
 
-        $notes = trim((string) $command->notes);
-        $this->distributors->save(new PowerDistributor($article->id, $inlet, $notes !== '' ? $notes : null, $devices, $outlets));
+        $notes = trim((string) $input->notes);
 
-        if (!$article->requiresElectricalInspection || $article->protectionClass !== $protectionClass) {
-            $article->requiresElectricalInspection = true;
-            $article->protectionClass = $protectionClass;
-            $article->updatedAt = new \DateTimeImmutable();
-            $this->articles->save($article);
-        }
-
-        return null;
+        return [[], new PowerDistributor($articleId, $inlet, $notes !== '' ? $notes : null, $devices, $outlets)];
     }
 
     private function intOrNull(mixed $value): ?int

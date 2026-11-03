@@ -360,7 +360,8 @@ final class ArticleController
 
     public function create(Request $request): void
     {
-        $this->renderForm(null, [], []);
+        // "+ Neuer Stromverteiler" in der Artikelliste: Abschnitt vorausgewählt (Migration 117).
+        $this->renderForm(null, [], $request->query('stromverteiler') === '1' ? ['is_power_distributor' => true] : []);
     }
 
     /** Eigene Seite zum Anlegen eines Bundles (articles/bundle-form.php). */
@@ -393,6 +394,7 @@ final class ArticleController
             isBundle: $request->input('is_bundle') !== null,
             bundleComponents: $this->bundleComponentsFromRequest($request),
             documentShortText: $request->input('document_short_text', '') ?? '',
+            powerDistributor: $this->powerDistributorFromRequest($request) ?: null,
         );
 
         try {
@@ -569,6 +571,7 @@ final class ArticleController
             isBundle: $request->input('is_bundle') !== null,
             bundleComponents: $this->bundleComponentsFromRequest($request),
             documentShortText: $request->input('document_short_text', '') ?? '',
+            powerDistributor: $this->powerDistributorFromRequest($request),
         );
 
         try {
@@ -1114,8 +1117,8 @@ final class ArticleController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
-            // Stromverteiler (Migration 117): Elektroprüfung fest aktiviert.
-            'isPowerDistributor' => $article !== null && !$article->isBundle && $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($article->id)) !== null,
+            // Stromverteiler (Migration 117): Angaben direkt im Artikelformular.
+            'powerDistributor' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($article->id)) : null,
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 
@@ -1144,7 +1147,47 @@ final class ArticleController
             'is_bundle' => $command->isBundle,
             'bundle_components' => $command->bundleComponents,
             'document_short_text' => $command->documentShortText,
+            // Stromverteiler (Migration 117)
+            'is_power_distributor' => $command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput,
+            'power_distributor' => $command->powerDistributor instanceof \App\Application\PowerDistributor\PowerDistributorInput ? [
+                'inlet_type' => (string) $command->powerDistributor->inletType,
+                'notes' => (string) $command->powerDistributor->notes,
+                'devices' => $command->powerDistributor->devices,
+                'outlets' => $command->powerDistributor->outlets,
+            ] : null,
         ];
+    }
+
+    /**
+     * Stromverteiler-Angaben aus dem Artikelformular (Migration 117):
+     * Eingabe, false (Abschnitt vorhanden, aber kein Stromverteiler) oder null
+     * (Formular ohne diesen Abschnitt, z. B. Bundle-Formular).
+     */
+    private function powerDistributorFromRequest(Request $request): \App\Application\PowerDistributor\PowerDistributorInput|false|null
+    {
+        if ($request->input('power_distributor_section') === null) {
+            return null;
+        }
+        if ($request->input('is_power_distributor') === null) {
+            return false;
+        }
+        $rows = static function (mixed $raw): array {
+            $result = [];
+            foreach (is_array($raw) ? $raw : [] as $row) {
+                if (is_array($row)) {
+                    $result[] = array_map(static fn ($value) => is_string($value) ? $value : '', $row);
+                }
+            }
+
+            return $result;
+        };
+
+        return new \App\Application\PowerDistributor\PowerDistributorInput(
+            $request->input('pd_inlet_type'),
+            $request->input('pd_notes'),
+            $rows($request->post['pd_devices'] ?? []),
+            $rows($request->post['pd_outlets'] ?? []),
+        );
     }
 
     /**

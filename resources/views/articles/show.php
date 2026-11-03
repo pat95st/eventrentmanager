@@ -247,18 +247,14 @@ $availabilityStatusMeta = [
             </div>
         <?php endif; ?>
 
-        <!-- Stromverteiler (Migration 117) -->
-        <?php if (!$article->isBundle): ?>
+        <!-- Stromverteiler (Migration 117): Angaben werden im Artikelformular gepflegt -->
+        <?php if ($powerDistributor !== null): ?>
             <div id="stromverteiler" class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
                 <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Stromverteiler</h2>
-                    <a href="/artikel/<?= e($article->id) ?>/stromverteiler" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= $powerDistributor !== null ? 'Bearbeiten' : 'Als Stromverteiler einrichten' ?></a>
+                    <a href="/artikel/<?= e($article->id) ?>/bearbeiten#power_distributor_fields" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                 </div>
-                <?php if ($powerDistributor !== null): ?>
-                    <?= \App\Infrastructure\Http\View::render('power-distributors/_schema', ['distributor' => $powerDistributor]) ?>
-                <?php else: ?>
-                    <p class="text-xs text-slate-400 dark:text-slate-500">Ist dieser Artikel ein Stromverteiler, lassen sich hier Zuleitung, FI/LS und Abgänge hinterlegen.</p>
-                <?php endif; ?>
+                <?= \App\Infrastructure\Http\View::render('power-distributors/_schema', ['distributor' => $powerDistributor]) ?>
             </div>
         <?php endif; ?>
 

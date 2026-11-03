@@ -30,6 +30,8 @@ final class CreateArticleHandler implements CommandHandlerInterface
         private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
         private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
         private readonly ?InventoryNumberRepositoryInterface $inventoryNumbers = null,
+        // Stromverteiler (Migration 117)
+        private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
     ) {
     }
 
@@ -48,13 +50,28 @@ final class CreateArticleHandler implements CommandHandlerInterface
             null, false, $this->articles, $this->bundleComponents, $this->rentalBundles,
         );
         $errors = array_merge($errors, $bundleErrors);
+
+        // Stromverteiler (Migration 117): Angaben werden mitgeprüft; die
+        // Elektroprüfung ist dann immer erforderlich (Standard Schutzklasse I).
+        $articleId = Uuid::v4();
+        $distributor = null;
+        $requiresElectricalInspection = $command->requiresElectricalInspection;
+        $protectionClass = $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null;
+        if ($command->powerDistributor !== null && !$command->isBundle) {
+            [$distributorErrors, $distributor] = (new \App\Application\PowerDistributor\PowerDistributorBuilder())->build($articleId, $command->powerDistributor, null);
+            $errors = array_merge($errors, $distributorErrors);
+            unset($errors['protectionClass']);
+            $requiresElectricalInspection = true;
+            $protectionClass = self::normalizeProtectionClass($command->protectionClass) ?? ProtectionClass::I;
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
 
         $now = new DateTimeImmutable();
         $article = new Article(
-            id: Uuid::v4(),
+            id: $articleId,
             name: trim($command->name),
             manufacturerId: $command->manufacturerId,
             prefix: Prefix::normalize($command->prefix),
@@ -67,8 +84,8 @@ final class CreateArticleHandler implements CommandHandlerInterface
             heightUnits: $command->is19Inch ? self::normalizeHeightUnits($command->heightUnits) : null,
             installDepthCm: $command->is19Inch ? self::normalizeInstallDepth($command->installDepthCm) : null,
             purchasePrice: Money::normalize($command->purchasePrice) ?: null,
-            requiresElectricalInspection: $command->requiresElectricalInspection,
-            protectionClass: $command->requiresElectricalInspection ? self::normalizeProtectionClass($command->protectionClass) : null,
+            requiresElectricalInspection: $requiresElectricalInspection,
+            protectionClass: $protectionClass,
             hasFirmware: $command->hasFirmware,
             isBillable: $command->isBillable,
             isActive: true,
@@ -89,6 +106,9 @@ final class CreateArticleHandler implements CommandHandlerInterface
         $this->articles->save($article);
         if ($command->isBundle && $this->bundleComponents !== null) {
             $this->bundleComponents->replaceForBundle($article->id, $components);
+        }
+        if ($distributor !== null && $this->powerDistributors !== null) {
+            $this->powerDistributors->save($distributor);
         }
 
         return $article->id;

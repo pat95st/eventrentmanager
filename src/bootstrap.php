@@ -610,7 +610,7 @@ $commandBus->register(\App\Application\LaborTime\Command\CreateLaborTimeArticle:
 $commandBus->register(\App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, new UpdateLaborTimeArticleHandler($laborTimeArticleRepository));
 $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle::class, new DeleteLaborTimeArticleHandler($laborTimeArticleRepository));
 
-$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository));
+$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository));
 $commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository));
 $commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository, $articleSetRepository));
 $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, new \App\Application\Article\Command\SetArticleActiveHandler($articleRepository));
@@ -1110,8 +1110,6 @@ $queryBus->register(\App\Application\Customer\Query\ListCustomers::class, new Li
 $queryBus->register(\App\Application\Customer\Query\GetCustomer::class, new GetCustomerHandler($customerRepository));
 
 // Stromverteiler (Migration 117)
-$commandBus->register(\App\Application\PowerDistributor\Command\SavePowerDistributor::class, new \App\Application\PowerDistributor\Command\SavePowerDistributorHandler($powerDistributorRepository, $articleRepository));
-$commandBus->register(\App\Application\PowerDistributor\Command\RemovePowerDistributor::class, new \App\Application\PowerDistributor\Command\RemovePowerDistributorHandler($powerDistributorRepository));
 $queryBus->register(\App\Application\PowerDistributor\Query\GetPowerDistributor::class, new \App\Application\PowerDistributor\Query\GetPowerDistributorHandler($powerDistributorRepository));
 
 // Schriftarten (Migration 116)
@@ -1309,7 +1307,7 @@ $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
 $electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);
 $customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
-$powerDistributorController = new \App\Infrastructure\Http\Controllers\PowerDistributorController($commandBus, $queryBus);
+$powerDistributorController = new \App\Infrastructure\Http\Controllers\PowerDistributorController();
 $pdfFontSettingsController = new \App\Infrastructure\Http\Controllers\PdfFontSettingsController($commandBus, $queryBus, $fileStorage);
 $rackController = new \App\Infrastructure\Http\Controllers\RackController($commandBus, $queryBus);
 $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer));
@@ -1637,8 +1635,6 @@ $router->get('/artikel/{id}', $auth->guard(Permission::Artikelverwaltung, [$arti
 $router->get('/artikel/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'edit']));
 // Stromverteiler (Migration 117)
 $router->get('/artikel/{id}/stromverteiler', $auth->guard(Permission::Artikelverwaltung, [$powerDistributorController, 'edit']));
-$router->post('/artikel/{id}/stromverteiler', $auth->guard(Permission::Artikelverwaltung, [$powerDistributorController, 'update']));
-$router->post('/artikel/{id}/stromverteiler/loeschen', $auth->guard(Permission::Artikelverwaltung, [$powerDistributorController, 'destroy']));
 $router->post('/artikel/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'update']));
 $router->post('/artikel/{id}/verkaufsbestand-verkaufen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'sellFromStock']));
 $router->post('/artikel/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'destroy']));

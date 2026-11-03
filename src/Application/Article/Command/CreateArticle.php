@@ -34,6 +34,8 @@ final class CreateArticle implements CommandInterface
         public readonly array $bundleComponents = [],
         // Migration 109: Kurztext für Dokumente (null = Feld nicht übermittelt).
         public readonly ?string $documentShortText = null,
+        // Stromverteiler (Migration 117): Angaben direkt aus dem Artikelformular, null = kein Stromverteiler.
+        public readonly ?\App\Application\PowerDistributor\PowerDistributorInput $powerDistributor = null,
     ) {
     }
 }

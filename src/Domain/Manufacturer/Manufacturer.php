@@ -14,6 +14,9 @@ final class Manufacturer
         public ?string $prefix, // Präfix für generierte Inventurnummern, z. B. "BOS"; bei Altdaten ggf. noch null
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Migration 119: "Generisch" (selbst gebaute Artikel). Name erscheint
+        // nicht vor der Artikelbezeichnung, Hersteller ist nicht löschbar.
+        public readonly bool $isGeneric = false,
     ) {
     }
 }

@@ -25,6 +25,10 @@ final class DeleteManufacturerHandler implements CommandHandlerInterface
             throw new NotFoundException("Hersteller \"{$command->id}\" wurde nicht gefunden.");
         }
 
+        if ($manufacturer->isGeneric) {
+            throw new ConflictException('Der Hersteller „Generisch“ wird für selbst gebaute Artikel benötigt und kann nicht gelöscht werden.');
+        }
+
         if ($this->manufacturers->isUsedByArticles($command->id)) {
             throw new ConflictException('Dieser Hersteller wird noch von Artikeln verwendet. Bitte zuerst einen anderen Hersteller zuweisen.');
         }

@@ -22,6 +22,9 @@ use function App\Infrastructure\Http\e;
                     <div class="flex flex-wrap items-center justify-between gap-2 px-2 py-2.5 <?= $isEditing ? 'bg-brand-50 rounded-md ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800' : '' ?>">
                         <span class="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-200">
                             <?= e($manufacturer->name) ?>
+                            <?php if ($manufacturer->isGeneric): ?>
+                                <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600" title="Für selbst gebaute Artikel (z. B. Kabel); erscheint nicht vor dem Artikelnamen und kann nicht gelöscht werden.">eigene Fertigung</span>
+                            <?php endif; ?>
                             <?php if ($manufacturer->prefix !== null): ?>
                                 <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($manufacturer->prefix) ?></span>
                             <?php else: ?>
@@ -30,10 +33,12 @@ use function App\Infrastructure\Http\e;
                         </span>
                         <span class="flex items-center gap-3">
                             <a href="/hersteller/<?= e($manufacturer->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                            <?php if (!$manufacturer->isGeneric): ?>
                             <form method="post" action="/hersteller/<?= e($manufacturer->id) ?>/loeschen" data-confirm="Diesen Hersteller wirklich löschen?" data-confirm-style="danger">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                             </form>
+                            <?php endif; ?>
                         </span>
                     </div>
                 <?php endforeach; ?>

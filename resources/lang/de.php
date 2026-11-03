@@ -225,7 +225,7 @@ return [
     'articles.form.product_name' => 'Produktname *',
     'articles.form.manufacturer' => 'Hersteller *',
     'articles.form.manufacturer_placeholder' => 'Bitte wählen…',
-    'articles.form.manufacturer_hint' => 'Neue Hersteller lassen sich unter „Hersteller“ anlegen.',
+    'articles.form.manufacturer_hint' => 'Neue Hersteller lassen sich unter „Hersteller“ anlegen. Für selbst gebaute Artikel (z. B. Kabel) „Generisch“ wählen.',
     'articles.form.prefix' => 'Artikel-Präfix *',
     'articles.form.prefix_hint' => 'Zusammen mit dem Hersteller-Präfix Grundlage für die Inventurnummern (HERSTELLER-ARTIKEL-NUMMER).',
     'articles.form.category' => 'Kategorie',

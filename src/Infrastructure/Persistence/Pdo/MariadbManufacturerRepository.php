@@ -152,6 +152,7 @@ final class MariadbManufacturerRepository implements ManufacturerRepositoryInter
             prefix: $row['prefix'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            isGeneric: (bool) ($row['is_generic'] ?? false),
         );
     }
 }

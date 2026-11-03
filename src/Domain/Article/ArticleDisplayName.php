@@ -25,7 +25,9 @@ final class ArticleDisplayName
         // ArticleListItem) bei einem inkonsistenten Datensatz (gelöschter
         // Hersteller) bewusst null statt einer Exception liefern — die
         // Anzeige fällt dann auf die reine Artikelbezeichnung zurück.
-        return $manufacturer !== null
+        // "Generisch" (Migration 119, selbst gebaute Artikel) wird nicht
+        // vorangestellt: "XLR-Kabel 10 m" statt "Generisch XLR-Kabel 10 m".
+        return $manufacturer !== null && !$manufacturer->isGeneric
             ? trim($manufacturer->name . ' ' . $article->name)
             : $article->name;
     }

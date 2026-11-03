@@ -225,7 +225,7 @@ return [
     'articles.form.product_name' => 'Product name *',
     'articles.form.manufacturer' => 'Manufacturer *',
     'articles.form.manufacturer_placeholder' => 'Please select…',
-    'articles.form.manufacturer_hint' => 'New manufacturers can be added under "Manufacturers".',
+    'articles.form.manufacturer_hint' => 'New manufacturers can be added under "Manufacturers". For self-built items (e.g. cables) choose "Generisch".',
     'articles.form.prefix' => 'Article prefix *',
     'articles.form.prefix_hint' => 'Combined with the manufacturer prefix, this forms the inventory numbers (MANUFACTURER-ARTICLE-NUMBER).',
     'articles.form.category' => 'Category',

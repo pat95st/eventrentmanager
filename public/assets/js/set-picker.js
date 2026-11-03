@@ -62,7 +62,7 @@
     function openModal(onAdd) {
         var overlay = el('div', 'fixed inset-0 z-50 flex items-center justify-center p-4');
         overlay.style.background = 'rgba(15, 23, 42, 0.5)';
-        var panel = el('div', 'w-full max-w-lg overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-slate-900');
+        var panel = el('div', 'modal-panel w-full max-w-lg overflow-y-auto rounded-lg bg-white p-4 shadow-xl dark:bg-slate-900');
         panel.style.maxHeight = '85vh';
         overlay.appendChild(panel);
         panel.appendChild(el('h2', 'mb-3 text-base font-semibold text-slate-900 dark:text-slate-100', 'Set hinzufügen'));

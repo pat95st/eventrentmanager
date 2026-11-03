@@ -31,6 +31,8 @@ final class CategoryController
         $categories = $this->queries->ask(new ListCategories());
 
         echo View::page('categories/index', [
+            // Kategorie "Stromverteiler" ist nicht löschbar (Migration 118).
+            'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             'categories' => $categories,
             'editingCategory' => null,
             'errors' => [],
@@ -54,6 +56,8 @@ final class CategoryController
         }
 
         echo View::page('categories/index', [
+            // Kategorie "Stromverteiler" ist nicht löschbar (Migration 118).
+            'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             'categories' => $categories,
             'editingCategory' => $editingCategory,
             'errors' => [],
@@ -120,6 +124,8 @@ final class CategoryController
         }
 
         echo View::page('categories/index', [
+            // Kategorie "Stromverteiler" ist nicht löschbar (Migration 118).
+            'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             'categories' => $categories,
             'editingCategory' => $editingCategory,
             'errors' => $errors,

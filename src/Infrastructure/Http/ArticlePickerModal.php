@@ -29,7 +29,7 @@ if (!function_exists(__NAMESPACE__ . '\\renderArticlePickerModal')) {
     {
         ?>
 <div data-article-picker-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-    <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
+    <div class="modal-panel modal-panel-lg flex max-h-[85vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
         <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
             <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-100"><?= e(t('article_picker.title')) ?></h2>
             <button type="button" data-article-picker-close class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>

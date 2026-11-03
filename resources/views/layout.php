@@ -144,6 +144,27 @@ $canDocuments = $canRentals;
 -->
 <link rel="stylesheet" href="/assets/css/app.css">
 <style>
+  /* Modals (Nutzerwunsch): abgedunkelter Hintergrund, mehr Innenabstand,
+     etwas größer. Klassen wie bg-black/40 oder backdrop:… fehlen im
+     kompilierten app.css, daher hier zentral. */
+  .fixed.inset-0.z-50 { background-color: rgba(15, 23, 42, 0.55); padding: 1.5rem; }
+  dialog::backdrop { background-color: rgba(15, 23, 42, 0.55); }
+  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
+    .fixed.inset-0.z-50, dialog::backdrop { -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  }
+  .modal-panel { width: 100%; max-width: 40rem; max-height: 88vh; border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45); }
+  .modal-panel.modal-panel-lg { max-width: 52rem; }
+  .modal-panel.modal-panel-sm { max-width: 32rem; }
+  dialog.modal-panel { margin: auto; overflow: auto; }
+  .modal-panel.p-4, .modal-panel.p-5, .modal-panel > .p-4, .modal-panel > form.p-4 { padding: 1.5rem; }
+  .modal-panel > .px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .modal-panel > .py-3 { padding-top: 1rem; padding-bottom: 1rem; }
+  @media (max-width: 640px) {
+    .fixed.inset-0.z-50 { padding: 0.75rem; }
+    .modal-panel.p-4, .modal-panel.p-5, .modal-panel > .p-4, .modal-panel > form.p-4 { padding: 1.125rem; }
+    .modal-panel > .px-4 { padding-left: 1.125rem; padding-right: 1.125rem; }
+  }
+
   /* Weiches Ein-/Ausblenden der Modals, siehe /assets/js/modal-fade.js */
   .modal-fade { transition: opacity 180ms ease; }
   .modal-fade.modal-fade-out { opacity: 0; }
@@ -255,7 +276,7 @@ $canDocuments = $canRentals;
     style="danger" für den roten Bestätigen-Button) statt eines
     onsubmit="return confirm(...)"-Attributs.
   -->
-  <dialog id="global-confirm-dialog" class="w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+  <dialog id="global-confirm-dialog" class="modal-panel modal-panel-sm w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
     <div class="p-4">
       <p id="global-confirm-message" class="mb-4 text-sm text-slate-700 dark:text-slate-300"></p>
       <div class="flex justify-end gap-2">

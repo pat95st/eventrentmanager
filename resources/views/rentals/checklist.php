@@ -147,7 +147,7 @@ foreach ($detail->issuedItems as $issued) {
         </div>
     </form>
 
-    <dialog id="camera-scan-dialog" class="w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+    <dialog id="camera-scan-dialog" class="modal-panel w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
         <div class="p-4">
             <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.checklist.camera_scan_title')) ?></h3>
             <div class="relative overflow-hidden rounded-md bg-black">
@@ -215,7 +215,7 @@ foreach ($detail->issuedItems as $issued) {
                         </button>
                     </div>
 
-                    <dialog id="accessory-modal-<?= e($entry->item->id) ?>" class="w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+                    <dialog id="accessory-modal-<?= e($entry->item->id) ?>" class="modal-panel w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
                         <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/zubehoer-pruefung" class="p-4">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_item_id" value="<?= e($entry->item->id) ?>">
@@ -253,7 +253,7 @@ foreach ($detail->issuedItems as $issued) {
                         </button>
                     </div>
 
-                    <dialog id="pre-issue-check-modal-<?= e($entry->item->id) ?>" class="w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+                    <dialog id="pre-issue-check-modal-<?= e($entry->item->id) ?>" class="modal-panel w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
                         <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/vor-ausgabe-pruefung" class="p-4">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_item_id" value="<?= e($entry->item->id) ?>">

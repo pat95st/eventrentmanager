@@ -89,7 +89,7 @@ use function App\Infrastructure\Http\t;
 
 <!-- Exporteinstellungen der PDF-Preisliste (Nutzerwunsch) -->
 <div data-price-list-modal class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4">
-    <form method="get" action="/artikel/preisliste.pdf" target="_blank" class="w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900">
+    <form method="get" action="/artikel/preisliste.pdf" target="_blank" class="modal-panel w-full max-w-md rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900">
         <h2 class="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100"><?= e(t('articles.price_list.modal_title')) ?></h2>
         <fieldset class="mb-4">
             <legend class="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300"><?= e(t('articles.price_list.sort_label')) ?></legend>

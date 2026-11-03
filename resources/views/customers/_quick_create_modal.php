@@ -22,7 +22,7 @@ use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 ?>
 <div id="customer-quick-create-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4">
-    <div class="flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
+    <div class="modal-panel modal-panel-lg flex max-h-[90vh] w-full max-w-lg flex-col rounded-lg bg-white shadow-xl dark:bg-slate-900">
         <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
             <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('customers.quick_create.title')) ?></h3>
             <button type="button" id="customer-quick-create-close" class="text-lg leading-none text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>

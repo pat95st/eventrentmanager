@@ -71,7 +71,7 @@ foreach ($detail->issuedItems as $issued) {
         </div>
     </form>
 
-    <dialog id="camera-scan-dialog" class="w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+    <dialog id="camera-scan-dialog" class="modal-panel w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
         <div class="p-4">
             <h3 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('rentals.return_checklist.camera_scan_title')) ?></h3>
             <div class="relative overflow-hidden rounded-md bg-black">

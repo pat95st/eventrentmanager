@@ -148,6 +148,9 @@ final class InvoiceCorrectionPdfGenerator
         if (!$correction->isSmallBusiness) {
             $summary[] = ['zzgl. ' . $this->quantity($correction->vatRatePercent) . ' % USt', $correction->taxAmount(), false];
         }
+        if (abs($correction->roundingAmount()) >= 0.005) {
+            $summary[] = ['Rundungsdifferenz', $correction->roundingAmount(), false];
+        }
         $summary[] = [$correction->type === InvoiceCorrectionType::Cancellation ? 'Stornobetrag brutto' : 'Korrekturbetrag brutto', $correction->grossTotal(), true];
         $showNewTotal = $correction->type === InvoiceCorrectionType::Partial || $detail->issuedCorrections !== [];
         $needed = (count($summary) + ($showNewTotal ? 4 : 0)) * 15 + 90;

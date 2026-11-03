@@ -17,7 +17,6 @@ use App\Application\InvoiceCorrection\Query\GetNewInvoiceCorrection;
 use App\Application\InvoiceCorrection\Query\InvoiceCorrectionDetail;
 use App\Application\InvoiceCorrection\Query\ListInvoiceCorrections;
 use App\Application\Query\QueryBus;
-use App\Application\Settings\Query\GetCompanySettings;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -27,7 +26,7 @@ use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 use App\Infrastructure\Mail\MailerException;
-use App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator;
+use App\Infrastructure\InvoiceCorrection\InvoiceCorrectionDocuments;
 
 /**
  * Rechnungskorrekturen und Stornorechnungen (Migration 121), Menü
@@ -38,7 +37,7 @@ final class InvoiceCorrectionController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
-        private readonly InvoiceCorrectionPdfGenerator $pdfGenerator,
+        private readonly InvoiceCorrectionDocuments $documents,
     ) {
     }
 
@@ -186,11 +185,26 @@ final class InvoiceCorrectionController
         if ($detail === null) {
             return;
         }
-        $pdf = $this->pdfGenerator->generate($detail, $this->queries->ask(new GetCompanySettings()));
-        $correction = $detail->correction;
-        $name = ($correction->type === InvoiceCorrectionType::Cancellation ? 'Stornorechnung-' : 'Rechnungskorrektur-')
-            . preg_replace('/[^A-Za-z0-9._-]+/', '-', $correction->correctionNumber ?? 'Entwurf') . '.pdf';
+        [$name, $pdf] = $this->documents->pdf($detail);
         Response::raw($pdf, 200, 'application/pdf', ['Content-Disposition' => 'inline; filename="' . $name . '"']);
+    }
+
+    /** E-Rechnung (XRechnung-XML), nur für ausgestellte Korrekturen. */
+    public function exportXRechnung(Request $request): void
+    {
+        $detail = $this->load($request->param('id'));
+        if ($detail === null) {
+            return;
+        }
+        try {
+            [$name, $xml] = $this->documents->xml($detail);
+        } catch (ConflictException $e) {
+            Flash::error($e->getMessage());
+            Response::redirect('/rechnungskorrekturen/' . $detail->correction->id);
+
+            return;
+        }
+        Response::download($xml, $name, 'application/xml');
     }
 
     public function emailPdf(Request $request): void

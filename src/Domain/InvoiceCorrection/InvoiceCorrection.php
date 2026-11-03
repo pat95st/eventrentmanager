@@ -37,8 +37,9 @@ final class InvoiceCorrection
         public array $lines,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
-        // Stornorechnung: USt als exakte Umkehrung der Rechnung und bisheriger
-        // Korrekturen, damit sich in Summe genau 0,00 € ergibt (sonst Rundungscent).
+        // Stornorechnung: exakt umgekehrte USt der Rechnung und bisheriger
+        // Korrekturen; die Abweichung zur berechneten USt wird als
+        // Rundungsdifferenz ausgewiesen (roundingAmount()).
         public ?string $taxAmountFixed = null,
         // Letzter E-Mail-Versand (Migration 122).
         public ?DateTimeImmutable $sentAt = null,
@@ -61,18 +62,31 @@ final class InvoiceCorrection
         return round($sum, 2);
     }
 
+    /** USt nach EN 16931: Nettobetrag × Steuersatz, kaufmännisch gerundet. */
     public function taxAmount(): float
     {
-        if ($this->isSmallBusiness) {
+        return $this->isSmallBusiness ? 0.0 : round($this->netTotal() * (float) $this->vatRatePercent / 100, 2);
+    }
+
+    /**
+     * Rundungsdifferenz (nur Stornorechnung): Unterschied zwischen der exakt
+     * umgekehrten USt der Rechnung/Korrekturen ($taxAmountFixed) und der nach
+     * Regel berechneten USt, meist ±0,01 €. Damit ergibt das Storno in
+     * Summe genau 0,00 €; in der E-Rechnung als BT-114 (PayableRoundingAmount).
+     */
+    public function roundingAmount(): float
+    {
+        if ($this->isSmallBusiness || $this->taxAmountFixed === null) {
             return 0.0;
         }
+        $difference = round((float) $this->taxAmountFixed - $this->taxAmount(), 2);
 
-        return $this->taxAmountFixed !== null ? (float) $this->taxAmountFixed : round($this->netTotal() * (float) $this->vatRatePercent / 100, 2);
+        return abs($difference) < 0.005 ? 0.0 : $difference;
     }
 
     public function grossTotal(): float
     {
-        return round($this->netTotal() + $this->taxAmount(), 2);
+        return round($this->netTotal() + $this->taxAmount() + $this->roundingAmount(), 2);
     }
 
     /** Erstattung/Nachzahlung noch offen? */

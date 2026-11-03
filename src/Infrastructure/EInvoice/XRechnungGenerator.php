@@ -109,67 +109,9 @@ final class XRechnungGenerator
             : $invoice->invoiceNumber;
         $this->append($dom, $root, $cbc, 'cbc:BuyerReference', $buyerReference); // BT-10
 
-        // --- BG-4 Seller -----------------------------------------------
-        $supplierParty = $this->appendEl($dom, $root, $cac, 'cac:AccountingSupplierParty');
-        $sellerParty = $this->appendEl($dom, $supplierParty, $cac, 'cac:Party');
+        $this->appendParties($dom, $root, $detail->customer, $companySettings, $invoiceSettings, $sellerEmail);
 
-        $sellerAddress = $this->appendEl($dom, $sellerParty, $cac, 'cac:PostalAddress'); // BG-5
-        $this->append($dom, $sellerAddress, $cbc, 'cbc:StreetName', $companySettings->street ?? '');
-        $this->append($dom, $sellerAddress, $cbc, 'cbc:CityName', $companySettings->city ?? '');
-        $this->append($dom, $sellerAddress, $cbc, 'cbc:PostalZone', $companySettings->postalCode ?? '');
-        $sellerCountry = $this->appendEl($dom, $sellerAddress, $cac, 'cac:Country');
-        $this->append($dom, $sellerCountry, $cbc, 'cbc:IdentificationCode', 'DE'); // BT-40, siehe Klassen-Doc
-
-        if ($invoiceSettings->vatId !== null && trim($invoiceSettings->vatId) !== '') {
-            $sellerTaxScheme = $this->appendEl($dom, $sellerParty, $cac, 'cac:PartyTaxScheme');
-            $this->append($dom, $sellerTaxScheme, $cbc, 'cbc:CompanyID', $invoiceSettings->vatId); // BT-31
-            $sellerTaxSchemeId = $this->appendEl($dom, $sellerTaxScheme, $cac, 'cac:TaxScheme');
-            $this->append($dom, $sellerTaxSchemeId, $cbc, 'cbc:ID', 'VAT');
-        }
-
-        $sellerLegalEntity = $this->appendEl($dom, $sellerParty, $cac, 'cac:PartyLegalEntity');
-        $this->append($dom, $sellerLegalEntity, $cbc, 'cbc:RegistrationName', $companySettings->name ?? ''); // BT-27
-
-        if ($sellerEmail !== null && trim($sellerEmail) !== '') {
-            $sellerContact = $this->appendEl($dom, $sellerParty, $cac, 'cac:Contact');
-            $this->append($dom, $sellerContact, $cbc, 'cbc:ElectronicMail', $sellerEmail);
-        }
-
-        // --- BG-7 Buyer --------------------------------------------------
-        $customerParty = $this->appendEl($dom, $root, $cac, 'cac:AccountingCustomerParty');
-        $buyerParty = $this->appendEl($dom, $customerParty, $cac, 'cac:Party');
-
-        $buyerAddress = $this->appendEl($dom, $buyerParty, $cac, 'cac:PostalAddress'); // BG-8
-        $customer = $detail->customer;
-        $this->append($dom, $buyerAddress, $cbc, 'cbc:StreetName', $customer?->street ?? '');
-        $this->append($dom, $buyerAddress, $cbc, 'cbc:CityName', $customer?->city ?? '');
-        $this->append($dom, $buyerAddress, $cbc, 'cbc:PostalZone', $customer?->postalCode ?? '');
-        $buyerCountry = $this->appendEl($dom, $buyerAddress, $cac, 'cac:Country');
-        $this->append($dom, $buyerCountry, $cbc, 'cbc:IdentificationCode', 'DE'); // BT-55, siehe Klassen-Doc
-
-        $buyerLegalEntity = $this->appendEl($dom, $buyerParty, $cac, 'cac:PartyLegalEntity');
-        $this->append($dom, $buyerLegalEntity, $cbc, 'cbc:RegistrationName', $customer?->displayName() ?? ''); // BT-44
-
-        // --- BG-16 Payment means ------------------------------------------
-        // Gewählte bzw. Standard-Bankverbindung (Migration 105), Fallback auf
-        // die alte Bankverbindung aus den Rechnungseinstellungen.
-        $bankAccount = $detail->bankAccount;
-        $payeeIban = $bankAccount?->iban ?? ($invoiceSettings->iban !== null ? str_replace(' ', '', trim($invoiceSettings->iban)) : null);
-        $payeeAccountName = $bankAccount !== null ? ($bankAccount->accountHolder ?? $bankAccount->bankName) : $invoiceSettings->bankName;
-        $payeeBic = $bankAccount !== null ? $bankAccount->bic : $invoiceSettings->bic;
-        if ($payeeIban !== null && $payeeIban !== '') {
-            $paymentMeans = $this->appendEl($dom, $root, $cac, 'cac:PaymentMeans');
-            $this->append($dom, $paymentMeans, $cbc, 'cbc:PaymentMeansCode', '58');
-            $account = $this->appendEl($dom, $paymentMeans, $cac, 'cac:PayeeFinancialAccount');
-            $this->append($dom, $account, $cbc, 'cbc:ID', $payeeIban); // BT-84
-            if ($payeeAccountName !== null && trim($payeeAccountName) !== '') {
-                $this->append($dom, $account, $cbc, 'cbc:Name', $payeeAccountName); // BT-85
-            }
-            if ($payeeBic !== null && trim($payeeBic) !== '') {
-                $branch = $this->appendEl($dom, $account, $cac, 'cac:FinancialInstitutionBranch');
-                $this->append($dom, $branch, $cbc, 'cbc:ID', trim($payeeBic)); // BT-86
-            }
-        }
+        $this->appendPaymentMeans($dom, $root, $detail->bankAccount, $invoiceSettings);
 
         // --- BT-20 Payment terms (Zahlungsart mit Zahlungsziel, Migration 106)
         if ($detail->paymentMethod !== null) {
@@ -319,6 +261,215 @@ final class XRechnungGenerator
     }
 
     /**
+     * E-Rechnung zu einer ausgestellten Rechnungskorrektur bzw. Stornorechnung
+     * (Migration 121), gleiche Feldzuordnung wie generate():
+     *
+     * - Korrekturbetrag negativ (Gutschrift, Storno): UBL-CreditNote mit
+     *   Typcode 381, Beträge positiv aus Sicht der Gutschrift.
+     * - Korrekturbetrag positiv (Nachberechnung): UBL-Invoice mit Typcode 384
+     *   (korrigierte Rechnung).
+     * - Bezug auf die ursprüngliche Rechnung über BG-3 (BillingReference),
+     *   Grund der Korrektur als BT-22 (Note).
+     * - Alle Positionen der Korrektur sind eigene Zeilen (auch Rabatt,
+     *   Pauschalen, Versand), daher keine dokumentweiten Zu-/Abschläge.
+     *   Negative Zeilen werden mit negativer Menge und positivem Preis
+     *   abgebildet (BR-27: der Einzelpreis darf nicht negativ sein).
+     */
+    public function generateCorrection(
+        \App\Application\InvoiceCorrection\Query\InvoiceCorrectionDetail $detail,
+        CompanySettings $companySettings,
+        InvoiceSettings $invoiceSettings,
+        ?string $paymentNote = null,
+        ?string $sellerEmail = null,
+    ): string {
+        $correction = $detail->correction;
+        $invoice = $detail->invoice->invoice;
+        if ($correction === null || $correction->isDraft() || $correction->correctionNumber === null || $correction->correctionDate === null) {
+            throw new ConflictException('Für einen Entwurf kann keine E-Rechnung erzeugt werden – bitte die Rechnungskorrektur zuerst ausstellen.');
+        }
+
+        $isCredit = $correction->grossTotal() < 0;
+        $sign = $isCredit ? -1.0 : 1.0;
+        $cbc = 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+        $cac = 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
+
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+        $root = $dom->createElementNS(
+            $isCredit ? 'urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2' : 'urn:oasis:names:specification:ubl:schema:xsd:Invoice-2',
+            $isCredit ? 'CreditNote' : 'Invoice'
+        );
+        $root->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:cac', $cac);
+        $root->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:cbc', $cbc);
+        $dom->appendChild($root);
+
+        $this->append($dom, $root, $cbc, 'cbc:CustomizationID', 'urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_3.0');
+        $this->append($dom, $root, $cbc, 'cbc:ProfileID', 'urn:fdc:peppol.eu:2017:poacc:billing:01:1.0');
+        $this->append($dom, $root, $cbc, 'cbc:ID', $correction->correctionNumber); // BT-1
+        $this->append($dom, $root, $cbc, 'cbc:IssueDate', $correction->correctionDate->format('Y-m-d')); // BT-2
+        $this->append($dom, $root, $cbc, $isCredit ? 'cbc:CreditNoteTypeCode' : 'cbc:InvoiceTypeCode', $isCredit ? '381' : '384'); // BT-3
+        $this->append($dom, $root, $cbc, 'cbc:Note', $correction->type->label() . ' zu Rechnung ' . ($invoice->invoiceNumber ?? '') . '. Grund: ' . $correction->reason); // BT-22
+        $this->append($dom, $root, $cbc, 'cbc:DocumentCurrencyCode', 'EUR'); // BT-5
+
+        $buyerReference = $invoice->buyerReference !== null && trim($invoice->buyerReference) !== ''
+            ? $invoice->buyerReference
+            : ($invoice->invoiceNumber ?? $correction->correctionNumber);
+        $this->append($dom, $root, $cbc, 'cbc:BuyerReference', $buyerReference); // BT-10
+
+        // BG-3 Rechnungsreferenz auf die korrigierte Rechnung
+        if ($invoice->invoiceNumber !== null) {
+            $billingReference = $this->appendEl($dom, $root, $cac, 'cac:BillingReference');
+            $documentReference = $this->appendEl($dom, $billingReference, $cac, 'cac:InvoiceDocumentReference');
+            $this->append($dom, $documentReference, $cbc, 'cbc:ID', $invoice->invoiceNumber); // BT-25
+            if ($invoice->invoiceDate !== null) {
+                $this->append($dom, $documentReference, $cbc, 'cbc:IssueDate', $invoice->invoiceDate->format('Y-m-d')); // BT-26
+            }
+        }
+
+        $this->appendParties($dom, $root, $detail->invoice->customer, $companySettings, $invoiceSettings, $sellerEmail);
+        $this->appendPaymentMeans($dom, $root, $detail->invoice->bankAccount, $invoiceSettings);
+        if ($paymentNote !== null && trim($paymentNote) !== '') {
+            $paymentTerms = $this->appendEl($dom, $root, $cac, 'cac:PaymentTerms');
+            $this->append($dom, $paymentTerms, $cbc, 'cbc:Note', $paymentNote); // BT-20
+        }
+
+        $taxCategoryId = $correction->isSmallBusiness ? 'E' : 'S';
+        $taxPercent = $correction->isSmallBusiness ? '0.00' : $this->money((float) $correction->vatRatePercent);
+        $net = $sign * $correction->netTotal();
+        $tax = $sign * $correction->taxAmount();
+        $rounding = $sign * $correction->roundingAmount();
+        $gross = $sign * $correction->grossTotal();
+
+        $taxTotal = $this->appendEl($dom, $root, $cac, 'cac:TaxTotal');
+        $this->append($dom, $taxTotal, $cbc, 'cbc:TaxAmount', $this->money($tax), ['currencyID' => 'EUR']); // BT-110
+        $taxSubtotal = $this->appendEl($dom, $taxTotal, $cac, 'cac:TaxSubtotal');
+        $this->append($dom, $taxSubtotal, $cbc, 'cbc:TaxableAmount', $this->money($net), ['currencyID' => 'EUR']); // BT-116
+        $this->append($dom, $taxSubtotal, $cbc, 'cbc:TaxAmount', $this->money($tax), ['currencyID' => 'EUR']); // BT-117
+        $taxCategory = $this->appendEl($dom, $taxSubtotal, $cac, 'cac:TaxCategory');
+        $this->append($dom, $taxCategory, $cbc, 'cbc:ID', $taxCategoryId);
+        $this->append($dom, $taxCategory, $cbc, 'cbc:Percent', $taxPercent);
+        if ($correction->isSmallBusiness) {
+            $this->append($dom, $taxCategory, $cbc, 'cbc:TaxExemptionReason', 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.'); // BT-121
+        }
+        $taxScheme = $this->appendEl($dom, $taxCategory, $cac, 'cac:TaxScheme');
+        $this->append($dom, $taxScheme, $cbc, 'cbc:ID', 'VAT');
+
+        $monetaryTotal = $this->appendEl($dom, $root, $cac, 'cac:LegalMonetaryTotal');
+        $this->append($dom, $monetaryTotal, $cbc, 'cbc:LineExtensionAmount', $this->money($net), ['currencyID' => 'EUR']); // BT-106
+        $this->append($dom, $monetaryTotal, $cbc, 'cbc:TaxExclusiveAmount', $this->money($net), ['currencyID' => 'EUR']); // BT-109
+        $this->append($dom, $monetaryTotal, $cbc, 'cbc:TaxInclusiveAmount', $this->money($net + $tax), ['currencyID' => 'EUR']); // BT-112
+        if (abs($rounding) >= 0.005) {
+            $this->append($dom, $monetaryTotal, $cbc, 'cbc:PayableRoundingAmount', $this->money($rounding), ['currencyID' => 'EUR']); // BT-114
+        }
+        $this->append($dom, $monetaryTotal, $cbc, 'cbc:PayableAmount', $this->money($gross), ['currencyID' => 'EUR']); // BT-115
+
+        $index = 1;
+        foreach ($correction->lines as $correctionLine) {
+            $amount = $sign * $correctionLine->lineTotal();
+            $quantity = abs((float) $correctionLine->quantity);
+            if ($amount < 0) {
+                $quantity = -$quantity;
+            }
+            $line = $this->appendEl($dom, $root, $cac, $isCredit ? 'cac:CreditNoteLine' : 'cac:InvoiceLine');
+            $this->append($dom, $line, $cbc, 'cbc:ID', (string) $index++); // BT-126
+            $this->append($dom, $line, $cbc, $isCredit ? 'cbc:CreditedQuantity' : 'cbc:InvoicedQuantity', rtrim(rtrim(number_format($quantity, 2, '.', ''), '0'), '.'), ['unitCode' => 'C62']); // BT-129
+            $this->append($dom, $line, $cbc, 'cbc:LineExtensionAmount', $this->money($amount), ['currencyID' => 'EUR']); // BT-131
+
+            $item = $this->appendEl($dom, $line, $cac, 'cac:Item');
+            $this->append($dom, $item, $cbc, 'cbc:Name', $correctionLine->description); // BT-153
+            $classified = $this->appendEl($dom, $item, $cac, 'cac:ClassifiedTaxCategory');
+            $this->append($dom, $classified, $cbc, 'cbc:ID', $taxCategoryId);
+            $this->append($dom, $classified, $cbc, 'cbc:Percent', $taxPercent);
+            $lineTaxScheme = $this->appendEl($dom, $classified, $cac, 'cac:TaxScheme');
+            $this->append($dom, $lineTaxScheme, $cbc, 'cbc:ID', 'VAT');
+
+            $price = $this->appendEl($dom, $line, $cac, 'cac:Price');
+            $this->append($dom, $price, $cbc, 'cbc:PriceAmount', $this->money(abs((float) $correctionLine->unitPrice)), ['currencyID' => 'EUR']); // BT-146
+        }
+
+        $xml = $dom->saveXML();
+        if ($xml === false) {
+            throw new ConflictException('Das XRechnung-XML konnte nicht erzeugt werden.');
+        }
+
+        return $xml;
+    }
+
+    /** BG-4 Verkäufer und BG-7 Käufer (gemeinsam für Rechnung und Rechnungskorrektur). */
+    private function appendParties(DOMDocument $dom, DOMElement $root, ?\App\Domain\Customer\Customer $customer, CompanySettings $companySettings, InvoiceSettings $invoiceSettings, ?string $sellerEmail): void
+    {
+        $cbc = 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+        $cac = 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
+
+        // --- BG-4 Seller -----------------------------------------------
+        $supplierParty = $this->appendEl($dom, $root, $cac, 'cac:AccountingSupplierParty');
+        $sellerParty = $this->appendEl($dom, $supplierParty, $cac, 'cac:Party');
+
+        $sellerAddress = $this->appendEl($dom, $sellerParty, $cac, 'cac:PostalAddress'); // BG-5
+        $this->append($dom, $sellerAddress, $cbc, 'cbc:StreetName', $companySettings->street ?? '');
+        $this->append($dom, $sellerAddress, $cbc, 'cbc:CityName', $companySettings->city ?? '');
+        $this->append($dom, $sellerAddress, $cbc, 'cbc:PostalZone', $companySettings->postalCode ?? '');
+        $sellerCountry = $this->appendEl($dom, $sellerAddress, $cac, 'cac:Country');
+        $this->append($dom, $sellerCountry, $cbc, 'cbc:IdentificationCode', 'DE'); // BT-40, siehe Klassen-Doc
+
+        if ($invoiceSettings->vatId !== null && trim($invoiceSettings->vatId) !== '') {
+            $sellerTaxScheme = $this->appendEl($dom, $sellerParty, $cac, 'cac:PartyTaxScheme');
+            $this->append($dom, $sellerTaxScheme, $cbc, 'cbc:CompanyID', $invoiceSettings->vatId); // BT-31
+            $sellerTaxSchemeId = $this->appendEl($dom, $sellerTaxScheme, $cac, 'cac:TaxScheme');
+            $this->append($dom, $sellerTaxSchemeId, $cbc, 'cbc:ID', 'VAT');
+        }
+
+        $sellerLegalEntity = $this->appendEl($dom, $sellerParty, $cac, 'cac:PartyLegalEntity');
+        $this->append($dom, $sellerLegalEntity, $cbc, 'cbc:RegistrationName', $companySettings->name ?? ''); // BT-27
+
+        if ($sellerEmail !== null && trim($sellerEmail) !== '') {
+            $sellerContact = $this->appendEl($dom, $sellerParty, $cac, 'cac:Contact');
+            $this->append($dom, $sellerContact, $cbc, 'cbc:ElectronicMail', $sellerEmail);
+        }
+
+        // --- BG-7 Buyer --------------------------------------------------
+        $customerParty = $this->appendEl($dom, $root, $cac, 'cac:AccountingCustomerParty');
+        $buyerParty = $this->appendEl($dom, $customerParty, $cac, 'cac:Party');
+
+        $buyerAddress = $this->appendEl($dom, $buyerParty, $cac, 'cac:PostalAddress'); // BG-8
+                $this->append($dom, $buyerAddress, $cbc, 'cbc:StreetName', $customer?->street ?? '');
+        $this->append($dom, $buyerAddress, $cbc, 'cbc:CityName', $customer?->city ?? '');
+        $this->append($dom, $buyerAddress, $cbc, 'cbc:PostalZone', $customer?->postalCode ?? '');
+        $buyerCountry = $this->appendEl($dom, $buyerAddress, $cac, 'cac:Country');
+        $this->append($dom, $buyerCountry, $cbc, 'cbc:IdentificationCode', 'DE'); // BT-55, siehe Klassen-Doc
+
+        $buyerLegalEntity = $this->appendEl($dom, $buyerParty, $cac, 'cac:PartyLegalEntity');
+        $this->append($dom, $buyerLegalEntity, $cbc, 'cbc:RegistrationName', $customer?->displayName() ?? ''); // BT-44
+    }
+
+    /** BG-16 Zahlungsanweisung (Überweisung), gemeinsam für Rechnung und Rechnungskorrektur. */
+    private function appendPaymentMeans(DOMDocument $dom, DOMElement $root, ?\App\Domain\Settings\BankAccount $bankAccount, InvoiceSettings $invoiceSettings): void
+    {
+        $cbc = 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2';
+        $cac = 'urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2';
+
+        // --- BG-16 Payment means ------------------------------------------
+        // Gewählte bzw. Standard-Bankverbindung (Migration 105), Fallback auf
+        // die alte Bankverbindung aus den Rechnungseinstellungen.
+                $payeeIban = $bankAccount?->iban ?? ($invoiceSettings->iban !== null ? str_replace(' ', '', trim($invoiceSettings->iban)) : null);
+        $payeeAccountName = $bankAccount !== null ? ($bankAccount->accountHolder ?? $bankAccount->bankName) : $invoiceSettings->bankName;
+        $payeeBic = $bankAccount !== null ? $bankAccount->bic : $invoiceSettings->bic;
+        if ($payeeIban !== null && $payeeIban !== '') {
+            $paymentMeans = $this->appendEl($dom, $root, $cac, 'cac:PaymentMeans');
+            $this->append($dom, $paymentMeans, $cbc, 'cbc:PaymentMeansCode', '58');
+            $account = $this->appendEl($dom, $paymentMeans, $cac, 'cac:PayeeFinancialAccount');
+            $this->append($dom, $account, $cbc, 'cbc:ID', $payeeIban); // BT-84
+            if ($payeeAccountName !== null && trim($payeeAccountName) !== '') {
+                $this->append($dom, $account, $cbc, 'cbc:Name', $payeeAccountName); // BT-85
+            }
+            if ($payeeBic !== null && trim($payeeBic) !== '') {
+                $branch = $this->appendEl($dom, $account, $cac, 'cac:FinancialInstitutionBranch');
+                $this->append($dom, $branch, $cbc, 'cbc:ID', trim($payeeBic)); // BT-86
+            }
+        }
+    }
+
+    /**
      * Formatiert einen Geldbetrag IMMER mit "." als Dezimaltrennzeichen
      * (UBL/XML-Vorgabe) — bewusst NICHT number_format($v, 2, ',', '.') wie
      * bei der deutschen Bildschirm-/PDF-Darstellung an anderer Stelle im
@@ -326,7 +477,7 @@ final class XRechnungGenerator
      */
     private function money(float $value): string
     {
-        return number_format($value, 2, '.', '');
+        return number_format(abs($value) < 0.005 ? 0.0 : $value, 2, '.', '');
     }
 
     /** @param array<string, string> $attributes */

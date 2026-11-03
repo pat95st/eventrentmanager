@@ -35,6 +35,7 @@ $gross = $correction->grossTotal();
         <?php endif; ?>
         <a href="/rechnungskorrekturen/<?= e($correction->id) ?>/pdf" target="_blank" class="<?= $btn ?>"><?= $correction->isDraft() ? 'PDF-Vorschau' : 'PDF' ?></a>
         <?php if (!$correction->isDraft()): ?>
+            <a href="/rechnungskorrekturen/<?= e($correction->id) ?>/xrechnung" class="<?= $btn ?>" data-no-viewer title="XRechnung (UBL) – <?= $correction->grossTotal() < 0 ? 'Gutschrift, Typ 381' : 'korrigierte Rechnung, Typ 384' ?>">E-Rechnung (XML)</a>
             <?php $defaultRecipient = $correction->sentTo ?? ($detail->invoice->contact?->email ?? null) ?? ($detail->invoice->customer?->email ?? ''); ?>
             <details class="relative">
                 <summary class="cursor-pointer list-none <?= $btn ?>">Per E-Mail senden</summary>
@@ -48,7 +49,7 @@ $gross = $correction->grossTotal();
                         <label for="mail_note" class="block text-xs text-slate-500 dark:text-slate-400">Anmerkung (optional)</label>
                         <textarea id="mail_note" name="note" rows="2" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"></textarea>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Das PDF wird angehängt. Den Text änderst du unter Einstellungen › E-Mail-Vorlagen.</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">PDF und E-Rechnung (XML) werden angehängt. Den Text änderst du unter Einstellungen › E-Mail-Vorlagen.</p>
                     <button type="submit" class="w-full rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= $correction->sentAt !== null ? 'Erneut senden' : 'Senden' ?></button>
                 </form>
             </details>
@@ -118,6 +119,9 @@ $gross = $correction->grossTotal();
         <div class="flex justify-between"><dt class="text-slate-500 dark:text-slate-400">Korrektur netto</dt><dd class="" style="font-variant-numeric:tabular-nums"><?= e($money($correction->netTotal())) ?></dd></div>
         <?php if (!$correction->isSmallBusiness): ?>
             <div class="flex justify-between"><dt class="text-slate-500 dark:text-slate-400">USt <?= e($plain($correction->vatRatePercent)) ?> %</dt><dd class="" style="font-variant-numeric:tabular-nums"><?= e($money($correction->taxAmount())) ?></dd></div>
+        <?php endif; ?>
+        <?php if (abs($correction->roundingAmount()) >= 0.005): ?>
+            <div class="flex justify-between"><dt class="text-slate-500 dark:text-slate-400">Rundungsdifferenz</dt><dd style="font-variant-numeric:tabular-nums"><?= e($money($correction->roundingAmount())) ?></dd></div>
         <?php endif; ?>
         <div class="flex justify-between font-semibold"><dt>Korrektur brutto</dt><dd class="" style="font-variant-numeric:tabular-nums"><?= e($money($gross)) ?></dd></div>
         <div class="flex justify-between border-t border-slate-100 pt-1 text-slate-600 dark:border-slate-800 dark:text-slate-400"><dt>Rechnungsbetrag bisher</dt><dd class="" style="font-variant-numeric:tabular-nums"><?= e($money($detail->grossBefore())) ?></dd></div>

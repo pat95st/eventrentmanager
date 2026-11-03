@@ -13,20 +13,18 @@ use App\Application\Mail\EmailTemplateRenderer;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\InvoiceCorrection\InvoiceCorrectionRepositoryInterface;
-use App\Domain\InvoiceCorrection\InvoiceCorrectionType;
 use App\Domain\Mail\EmailTemplateKey;
 use App\Domain\Mail\MailCategory;
-use App\Domain\Settings\CompanySettingsRepositoryInterface;
 use App\Infrastructure\Mail\MailAttachment;
 use App\Infrastructure\Mail\MailerInterface;
-use App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator;
+use App\Infrastructure\InvoiceCorrection\InvoiceCorrectionDocuments;
 use DateTimeImmutable;
 
 use function App\Infrastructure\Http\e;
 
 /**
  * Verschickt eine ausgestellte Rechnungskorrektur bzw. Stornorechnung als
- * PDF per E-Mail (Vorlage "Rechnungskorrektur / Stornorechnung per E-Mail",
+ * PDF und E-Rechnung (XRechnung-XML) per E-Mail (Vorlage "Rechnungskorrektur / Stornorechnung per E-Mail",
  * analog EmailDunningNoticeHandler) und vermerkt Zeitpunkt und Empfänger.
  * Entwürfe werden nicht verschickt – sie haben noch keine Nummer.
  */
@@ -34,8 +32,7 @@ final class EmailInvoiceCorrectionHandler implements CommandHandlerInterface
 {
     public function __construct(
         private readonly GetInvoiceCorrectionHandler $getCorrection,
-        private readonly CompanySettingsRepositoryInterface $companySettings,
-        private readonly InvoiceCorrectionPdfGenerator $pdfGenerator,
+        private readonly InvoiceCorrectionDocuments $documents,
         private readonly MailerInterface $mailer,
         private readonly EmailTemplateRenderer $templateRenderer,
         private readonly InvoiceCorrectionRepositoryInterface $corrections,
@@ -58,12 +55,15 @@ final class EmailInvoiceCorrectionHandler implements CommandHandlerInterface
             throw new ConflictException('Bitte die Rechnungskorrektur zuerst ausstellen – Entwürfe können nicht verschickt werden.');
         }
 
-        $pdf = $this->pdfGenerator->generate($detail, $this->companySettings->get());
-        $pdfFilename = ($correction->type === InvoiceCorrectionType::Cancellation ? 'Stornorechnung-' : 'Rechnungskorrektur-')
-            . preg_replace('/[^A-Za-z0-9._-]+/', '-', (string) $correction->correctionNumber) . '.pdf';
+        [$pdfFilename, $pdf] = $this->documents->pdf($detail);
+        [$xmlFilename, $xml] = $this->documents->xml($detail);
 
         $rendered = $this->templateRenderer->render(EmailTemplateKey::InvoiceCorrection, $this->variables($detail, $command->note));
-        $attachments = [new MailAttachment($pdfFilename, 'application/pdf', $pdf)];
+        // PDF und E-Rechnung (XRechnung-XML), wie beim Rechnungsversand.
+        $attachments = [
+            new MailAttachment($pdfFilename, 'application/pdf', $pdf),
+            new MailAttachment($xmlFilename, 'application/xml', $xml),
+        ];
         if ($rendered->logoAttachment !== null) {
             $attachments[] = $rendered->logoAttachment;
         }
@@ -98,7 +98,7 @@ final class EmailInvoiceCorrectionHandler implements CommandHandlerInterface
             'invoice_date' => e($invoice->invoiceDate?->format('d.m.Y') ?? ''),
             'reason' => nl2br(e($correction->reason)),
             'amount' => number_format($correction->grossTotal(), 2, ',', '.') . ' €',
-            'payment_line' => e($this->pdfGenerator->paymentText($detail)),
+            'payment_line' => e($this->documents->paymentText($detail)),
             'note_html' => $note !== '' ? '<p><strong>Anmerkung:</strong><br>' . nl2br(e($note)) . '</p>' : '',
         ];
     }

@@ -2,6 +2,8 @@
 /** @var \App\Application\Article\Query\ArticleDetail $detail */
 /** @var list<array{article_id: string, label: string, quantity: int}> $bundleComponentRows */
 /** @var list<array{id: string, label: string}> $containingBundles */
+/** @var \App\Domain\PowerDistributor\PowerDistributor|null $powerDistributor Stromverteiler-Angaben (Migration 117) */
+$powerDistributor ??= null;
 /** @var string|null $editInventoryId */
 /** @var string|null $editAccessoryId */
 /** @var string|null $editPreIssueCheckId */
@@ -93,6 +95,11 @@ $availabilityStatusMeta = [
             <?php if ($article->is19Inch): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600">
                     <?= e(t('articles.show.is_19_inch_badge')) ?><?= $article->heightUnits !== null ? ' · ' . $article->heightUnits . ' HE' : '' ?>
+                </span>
+            <?php endif; ?>
+            <?php if ($powerDistributor !== null): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700">
+                    Stromverteiler · <?= e($powerDistributor->inletType->shortLabel()) ?>
                 </span>
             <?php endif; ?>
             <?php if ($article->hasFirmware): ?>
@@ -237,6 +244,21 @@ $availabilityStatusMeta = [
                 <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">
                     <?= t('articles.show.rental_prices_hint', ['link' => '<a href="/einstellungen/preisstaffelung" class="underline">' . e(t('articles.show.price_tiers_link')) . '</a>']) ?>
                 </p>
+            </div>
+        <?php endif; ?>
+
+        <!-- Stromverteiler (Migration 117) -->
+        <?php if (!$article->isBundle): ?>
+            <div id="stromverteiler" class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Stromverteiler</h2>
+                    <a href="/artikel/<?= e($article->id) ?>/stromverteiler" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= $powerDistributor !== null ? 'Bearbeiten' : 'Als Stromverteiler einrichten' ?></a>
+                </div>
+                <?php if ($powerDistributor !== null): ?>
+                    <?= \App\Infrastructure\Http\View::render('power-distributors/_schema', ['distributor' => $powerDistributor]) ?>
+                <?php else: ?>
+                    <p class="text-xs text-slate-400 dark:text-slate-500">Ist dieser Artikel ein Stromverteiler, lassen sich hier Zuleitung, FI/LS und Abgänge hinterlegen.</p>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 

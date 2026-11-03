@@ -17,10 +17,11 @@ foreach ($categories as $category) {
 }
 
 $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback ?? '';
-$requiresElectricalInspection = array_key_exists('requires_electrical_inspection', $old)
+$isPowerDistributor ??= false;
+$requiresElectricalInspection = $isPowerDistributor || (array_key_exists('requires_electrical_inspection', $old)
     ? (bool) $old['requires_electrical_inspection']
-    : ($article?->requiresElectricalInspection ?? false);
-$protectionClassValue = $val('protection_class', $article?->protectionClass?->value);
+    : ($article?->requiresElectricalInspection ?? false));
+$protectionClassValue = $val('protection_class', $article?->protectionClass?->value ?? ($isPowerDistributor ? 'I' : null));
 // Neue Artikel sind standardmäßig abrechenbar; nur wer bewusst das Häkchen
 // entfernt (z. B. für Zubehör wie Kabel), bekommt is_billable = false.
 $isBillable = array_key_exists('is_billable', $old)
@@ -157,8 +158,12 @@ $bundleComponentRows ??= [];
     <div class="space-y-6">
     <div class="flex flex-wrap items-center gap-6">
         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-            <input type="checkbox" id="requires_electrical_inspection" name="requires_electrical_inspection" value="1" <?= $requiresElectricalInspection ? 'checked' : '' ?>>
+            <?php if ($isPowerDistributor): ?>
+                <input type="hidden" name="requires_electrical_inspection" value="1">
+            <?php endif; ?>
+            <input type="checkbox" id="requires_electrical_inspection" <?= $isPowerDistributor ? 'disabled' : 'name="requires_electrical_inspection"' ?> value="1" <?= $requiresElectricalInspection ? 'checked' : '' ?>>
             <?= e(t('articles.form.electrical_inspection_checkbox')) ?>
+            <?php if ($isPowerDistributor): ?><span class="text-xs text-slate-500 dark:text-slate-400">(bei Stromverteilern immer erforderlich)</span><?php endif; ?>
         </label>
 
         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">

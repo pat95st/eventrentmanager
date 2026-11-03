@@ -468,6 +468,8 @@ final class ArticleController
             'detail' => $detail,
             'bundleComponentRows' => $detail->article->isBundle ? $this->bundleComponentRows($detail->article->id) : [],
             'containingBundles' => $this->containingBundles($detail->article->id),
+            // Stromverteiler (Migration 117)
+            'powerDistributor' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($detail->article->id)),
             'editInventoryId' => $editInventoryId,
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
@@ -1112,6 +1114,8 @@ final class ArticleController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
+            // Stromverteiler (Migration 117): Elektroprüfung fest aktiviert.
+            'isPowerDistributor' => $article !== null && !$article->isBundle && $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($article->id)) !== null,
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 

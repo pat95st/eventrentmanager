@@ -29,6 +29,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         private readonly ?ArticleBundleComponentRepositoryInterface $bundleComponents = null,
         private readonly ?RentalBundleRepositoryInterface $rentalBundles = null,
         private readonly ?InventoryNumberRepositoryInterface $inventoryNumbers = null,
+        // Stromverteiler (Migration 117): Elektroprüfung immer erforderlich.
+        private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
     ) {
     }
 
@@ -87,6 +89,10 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             if (self::normalizeInstallDepth($command->installDepthCm) === null) {
                 $errors['installDepthCm'] = 'Bitte eine gültige Einbautiefe in cm angeben (z. B. 55.5).';
             }
+        }
+
+        if (!$command->requiresElectricalInspection && $this->powerDistributors?->findByArticle($article->id) !== null) {
+            $errors['protectionClass'] = 'Dieser Artikel ist ein Stromverteiler — die Elektroprüfung ist immer erforderlich.';
         }
 
         if ($command->requiresElectricalInspection && !$command->isBundle && self::normalizeProtectionClass($command->protectionClass) === null) {

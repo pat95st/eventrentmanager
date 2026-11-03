@@ -212,7 +212,8 @@ final class InvoiceCorrectionPdfGenerator
         return $writer->output();
     }
 
-    private function paymentText(InvoiceCorrectionDetail $detail): string
+    /** Hinweis zu Erstattung/Zahlung, auch für die E-Mail (EmailInvoiceCorrectionHandler). */
+    public function paymentText(InvoiceCorrectionDetail $detail): string
     {
         $correction = $detail->correction;
         $gross = $correction->grossTotal();

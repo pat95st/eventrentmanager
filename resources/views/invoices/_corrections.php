@@ -48,6 +48,7 @@ if ($corrections === [] && !$canCorrect) {
                         <a href="/rechnungskorrekturen/<?= e($c->id) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($c->title()) ?></a>
                         <?php if ($c->correctionDate !== null): ?><span class="text-xs text-slate-500 dark:text-slate-400"><?= e($c->correctionDate->format('d.m.Y')) ?></span><?php endif; ?>
                         <?= View::render('invoice-corrections/_badge', ['correction' => $c]) ?>
+                        <?php if ($c->sentAt !== null): ?><span class="text-xs text-slate-500 dark:text-slate-400" title="<?= e('an ' . $c->sentTo) ?>">✉ <?= e($c->sentAt->format('d.m.Y')) ?></span><?php endif; ?>
                     </span>
                     <span class="flex items-center gap-3">
                         <span class=" <?= $c->grossTotal() < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-300' ?>" style="font-variant-numeric:tabular-nums"><?= e($money($c->grossTotal())) ?></span>

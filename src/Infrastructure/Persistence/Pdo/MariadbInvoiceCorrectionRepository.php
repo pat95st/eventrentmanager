@@ -127,6 +127,12 @@ final class MariadbInvoiceCorrectionRepository implements InvoiceCorrectionRepos
         return $this->hydrateAll($stmt->fetchAll());
     }
 
+    public function markSent(string $id, DateTimeImmutable $sentAt, string $recipient): void
+    {
+        $this->pdo->prepare('UPDATE invoice_corrections SET sent_at = :sent_at, sent_to = :sent_to WHERE id = :id')
+            ->execute(['sent_at' => $sentAt->format('Y-m-d H:i:s'), 'sent_to' => mb_substr($recipient, 0, 255), 'id' => $id]);
+    }
+
     public function delete(string $id): void
     {
         $this->pdo->prepare('DELETE FROM invoice_corrections WHERE id = :id')->execute(['id' => $id]);
@@ -175,6 +181,8 @@ final class MariadbInvoiceCorrectionRepository implements InvoiceCorrectionRepos
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
             taxAmountFixed: $row['tax_amount_fixed'] !== null ? (string) $row['tax_amount_fixed'] : null,
+            sentAt: ($row['sent_at'] ?? null) !== null ? new DateTimeImmutable($row['sent_at']) : null,
+            sentTo: $row['sent_to'] ?? null,
         ), $rows);
     }
 }

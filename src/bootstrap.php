@@ -967,6 +967,8 @@ $commandBus->register(\App\Application\InvoiceCorrection\Command\DeleteInvoiceCo
 $commandBus->register(\App\Application\InvoiceCorrection\Command\IssueInvoiceCorrection::class, new \App\Application\InvoiceCorrection\Command\IssueInvoiceCorrectionHandler($invoiceCorrectionRepository, $invoiceRepository, $invoiceCorrectionLineSource, $pdo, $documentNumberSequence));
 $commandBus->register(\App\Application\InvoiceCorrection\Command\MarkInvoiceCorrectionSettled::class, new \App\Application\InvoiceCorrection\Command\MarkInvoiceCorrectionSettledHandler($invoiceCorrectionRepository));
 $getInvoiceCorrectionHandler = new \App\Application\InvoiceCorrection\Query\GetInvoiceCorrectionHandler($invoiceCorrectionRepository, $invoiceCorrectionLineSource, $invoiceSettingsRepository);
+$invoiceCorrectionPdfGenerator = new \App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator($fileStorage, $documentFooter, $pdfAmountFormatter);
+$commandBus->register(\App\Application\InvoiceCorrection\Command\EmailInvoiceCorrection::class, new \App\Application\InvoiceCorrection\Command\EmailInvoiceCorrectionHandler($getInvoiceCorrectionHandler, $companySettingsRepository, $invoiceCorrectionPdfGenerator, $mailer, $emailTemplateRenderer, $invoiceCorrectionRepository));
 $queryBus->register(\App\Application\InvoiceCorrection\Query\GetInvoiceCorrection::class, $getInvoiceCorrectionHandler);
 $queryBus->register(\App\Application\InvoiceCorrection\Query\GetNewInvoiceCorrection::class, $getInvoiceCorrectionHandler);
 $queryBus->register(\App\Application\InvoiceCorrection\Query\ListInvoiceCorrections::class, new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrectionsHandler($invoiceCorrectionRepository, $invoiceRepository, $customerRepository));
@@ -1426,7 +1428,7 @@ $dunningLevelController = new \App\Infrastructure\Http\Controllers\DunningLevelC
 $bankAccountSettingsController = new \App\Infrastructure\Http\Controllers\BankAccountSettingsController($commandBus, $queryBus);
 $paymentMethodSettingsController = new \App\Infrastructure\Http\Controllers\PaymentMethodSettingsController($commandBus, $queryBus);
 $dunningController = new \App\Infrastructure\Http\Controllers\DunningController($commandBus, $queryBus, $dunningPdfGenerator);
-$invoiceCorrectionController = new \App\Infrastructure\Http\Controllers\InvoiceCorrectionController($commandBus, $queryBus, new \App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator($fileStorage, $documentFooter, $pdfAmountFormatter));
+$invoiceCorrectionController = new \App\Infrastructure\Http\Controllers\InvoiceCorrectionController($commandBus, $queryBus, $invoiceCorrectionPdfGenerator);
 $pricingSettingsController = new PricingSettingsController($commandBus, $queryBus);
 $invoicePdfTemplateSettingsController = new InvoicePdfTemplateSettingsController($commandBus, $queryBus);
 $receiptController = new ReceiptController($commandBus, $queryBus, $fileStorage);
@@ -1978,6 +1980,7 @@ $router->post('/rechnungskorrekturen/{id}/ausstellen', $auth->guard(Permission::
 $router->post('/rechnungskorrekturen/{id}/erledigt', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'settle']));
 $router->post('/rechnungskorrekturen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'destroy']));
 $router->get('/rechnungskorrekturen/{id}/pdf', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'exportPdf']));
+$router->post('/rechnungskorrekturen/{id}/email', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceCorrectionController, 'emailPdf']));
 $router->get('/mahnungen/{dunningId}/pdf', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'exportPdf']));
 $router->post('/mahnungen/{dunningId}/email', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'emailPdf']));
 

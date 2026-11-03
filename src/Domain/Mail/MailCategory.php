@@ -21,6 +21,7 @@ enum MailCategory: string
     case PackingListPdf = 'packing_list_pdf';
     case InvoicePdf = 'invoice_pdf';
     case DunningNotice = 'dunning_notice';
+    case InvoiceCorrection = 'invoice_correction';
     case TestMail = 'test_mail';
     case ReceiptInboxNotification = 'receipt_inbox_notification';
     case RentalPickupReminder = 'rental_pickup_reminder';
@@ -38,6 +39,7 @@ enum MailCategory: string
             self::PackingListPdf => 'Packliste per E-Mail',
             self::InvoicePdf => 'Rechnung per E-Mail',
             self::DunningNotice => 'Mahnung per E-Mail',
+            self::InvoiceCorrection => 'Rechnungskorrektur per E-Mail',
             self::TestMail => 'SMTP-Test-Mail',
             self::ReceiptInboxNotification => 'Neue Beleg-E-Mail im Posteingang',
             self::RentalPickupReminder => 'Erinnerung: Abholung',

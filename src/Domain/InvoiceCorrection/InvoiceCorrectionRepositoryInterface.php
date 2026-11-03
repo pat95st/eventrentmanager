@@ -21,4 +21,7 @@ interface InvoiceCorrectionRepositoryInterface
     public function findIssued(): array;
 
     public function delete(string $id): void;
+
+    /** Vermerkt den E-Mail-Versand (Migration 122). */
+    public function markSent(string $id, \DateTimeImmutable $sentAt, string $recipient): void;
 }

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Http\Controllers;
 use App\Application\Command\CommandBus;
 use App\Application\InvoiceCorrection\Command\CreateInvoiceCorrection;
 use App\Application\InvoiceCorrection\Command\DeleteInvoiceCorrection;
+use App\Application\InvoiceCorrection\Command\EmailInvoiceCorrection;
 use App\Application\InvoiceCorrection\Command\InvoiceCorrectionInput;
 use App\Application\InvoiceCorrection\Command\IssueInvoiceCorrection;
 use App\Application\InvoiceCorrection\Command\MarkInvoiceCorrectionSettled;
@@ -25,6 +26,7 @@ use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
+use App\Infrastructure\Mail\MailerException;
 use App\Infrastructure\Pdf\InvoiceCorrectionPdfGenerator;
 
 /**
@@ -181,6 +183,27 @@ final class InvoiceCorrectionController
         $name = ($correction->type === InvoiceCorrectionType::Cancellation ? 'Stornorechnung-' : 'Rechnungskorrektur-')
             . preg_replace('/[^A-Za-z0-9._-]+/', '-', $correction->correctionNumber ?? 'Entwurf') . '.pdf';
         Response::raw($pdf, 200, 'application/pdf', ['Content-Disposition' => 'inline; filename="' . $name . '"']);
+    }
+
+    public function emailPdf(Request $request): void
+    {
+        $id = $request->param('id');
+        $recipient = trim($request->input('recipient_email', '') ?? '');
+        try {
+            $this->commands->dispatch(new EmailInvoiceCorrection($id, $recipient, $request->input('note')));
+            Flash::success('Die Rechnungskorrektur wurde an ' . $recipient . ' verschickt.');
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (ConflictException $e) {
+            Flash::error($e->getMessage());
+        } catch (MailerException $e) {
+            Flash::error('Die E-Mail konnte nicht verschickt werden: ' . $e->getMessage());
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+        Response::redirect('/rechnungskorrekturen/' . $id);
     }
 
     private function load(string $id): ?InvoiceCorrectionDetail

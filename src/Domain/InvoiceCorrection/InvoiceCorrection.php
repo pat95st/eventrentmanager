@@ -40,6 +40,9 @@ final class InvoiceCorrection
         // Stornorechnung: USt als exakte Umkehrung der Rechnung und bisheriger
         // Korrekturen, damit sich in Summe genau 0,00 € ergibt (sonst Rundungscent).
         public ?string $taxAmountFixed = null,
+        // Letzter E-Mail-Versand (Migration 122).
+        public ?DateTimeImmutable $sentAt = null,
+        public ?string $sentTo = null,
     ) {
     }
 

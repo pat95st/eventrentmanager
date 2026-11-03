@@ -34,8 +34,33 @@ $gross = $correction->grossTotal();
             </form>
         <?php endif; ?>
         <a href="/rechnungskorrekturen/<?= e($correction->id) ?>/pdf" target="_blank" class="<?= $btn ?>"><?= $correction->isDraft() ? 'PDF-Vorschau' : 'PDF' ?></a>
+        <?php if (!$correction->isDraft()): ?>
+            <?php $defaultRecipient = $correction->sentTo ?? ($detail->invoice->contact?->email ?? null) ?? ($detail->invoice->customer?->email ?? ''); ?>
+            <details class="relative">
+                <summary class="cursor-pointer list-none <?= $btn ?>">Per E-Mail senden</summary>
+                <form method="post" action="/rechnungskorrekturen/<?= e($correction->id) ?>/email" class="absolute right-0 z-10 mt-2 w-80 space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                    <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
+                    <div>
+                        <label for="recipient_email" class="block text-xs text-slate-500 dark:text-slate-400">Empfänger</label>
+                        <input type="email" id="recipient_email" name="recipient_email" required value="<?= e((string) $defaultRecipient) ?>" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800">
+                    </div>
+                    <div>
+                        <label for="mail_note" class="block text-xs text-slate-500 dark:text-slate-400">Anmerkung (optional)</label>
+                        <textarea id="mail_note" name="note" rows="2" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"></textarea>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Das PDF wird angehängt. Den Text änderst du unter Einstellungen › E-Mail-Vorlagen.</p>
+                    <button type="submit" class="w-full rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= $correction->sentAt !== null ? 'Erneut senden' : 'Senden' ?></button>
+                </form>
+            </details>
+        <?php endif; ?>
     </div>
 </div>
+
+<?php if ($correction->sentAt !== null): ?>
+    <p class="mb-4 text-sm text-slate-500 dark:text-slate-400">Per E-Mail verschickt am <?= e($correction->sentAt->format('d.m.Y, H:i')) ?> Uhr an <?= e((string) $correction->sentTo) ?>.</p>
+<?php elseif (!$correction->isDraft()): ?>
+    <p class="mb-4 text-sm text-amber-700 dark:text-amber-400">Noch nicht per E-Mail verschickt.</p>
+<?php endif; ?>
 
 <?php if ($correction->awaitsSettlement()): ?>
     <div class="mb-6 flex flex-wrap items-end justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30">

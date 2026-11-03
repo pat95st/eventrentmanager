@@ -21,6 +21,7 @@ enum EmailTemplateKey: string
     case PackingListPdf = 'packing_list_pdf';
     case InvoicePdf = 'invoice_pdf';
     case DunningNotice = 'dunning_notice';
+    case InvoiceCorrection = 'invoice_correction';
     case RentalPickupReminder = 'rental_pickup_reminder';
     case RentalReturnReminder = 'rental_return_reminder';
     case RentalCustomerChecklist = 'rental_customer_checklist';
@@ -35,6 +36,7 @@ enum EmailTemplateKey: string
             self::PackingListPdf => 'Packliste per E-Mail',
             self::InvoicePdf => 'Rechnung per E-Mail',
             self::DunningNotice => 'Mahnung per E-Mail',
+            self::InvoiceCorrection => 'Rechnungskorrektur / Stornorechnung per E-Mail',
             self::RentalPickupReminder => 'Erinnerung: Abholung',
             self::RentalReturnReminder => 'Erinnerung: Rückgabe',
             self::RentalCustomerChecklist => 'Kunden-Checkliste (Vollständigkeitsprüfung)',
@@ -51,6 +53,7 @@ enum EmailTemplateKey: string
             self::PackingListPdf => 'Wird verschickt, wenn die Packliste einer Veranstaltung als PDF an einen Kunden gemailt wird.',
             self::InvoicePdf => 'Wird verschickt, wenn eine Rechnung als PDF (inkl. XRechnung-XML-Anhang bei finalisierten Rechnungen) an einen Kunden gemailt wird.',
             self::DunningNotice => 'Wird verschickt, wenn für eine überfällige Rechnung eine Mahnung als PDF an einen Kunden gemailt wird (manuell oder automatisch, siehe Mahnwesen-Einstellungen).',
+            self::InvoiceCorrection => 'Wird verschickt, wenn eine ausgestellte Rechnungskorrektur oder Stornorechnung als PDF an einen Kunden gemailt wird.',
             self::RentalPickupReminder => 'Wird automatisch verschickt, wenn der Abholtermin einer Vermietung innerhalb des eingestellten Vorlaufs bevorsteht (siehe Einstellungen -> Erinnerungen).',
             self::RentalReturnReminder => 'Wird automatisch verschickt, wenn der Rückgabetermin einer Vermietung innerhalb des eingestellten Vorlaufs bevorsteht (siehe Einstellungen -> Erinnerungen).',
             self::RentalCustomerChecklist => 'Enthält den Link zur Kunden-Checkliste (Vollständigkeitsprüfung vor dem Abbau) — manuell über die Veranstaltungs-Detailseite verschickt oder automatisch vor dem Rückgabetermin (siehe Einstellungen -> Erinnerungen).',
@@ -105,6 +108,17 @@ enum EmailTemplateKey: string
                 'due_date' => 'Ursprüngliches Fälligkeitsdatum der Rechnung, formatiert (TT.MM.JJJJ)',
                 'total_due' => 'Gesamtbetrag inkl. Mahngebühr, formatiert (z. B. "123,45 €")',
             ],
+            self::InvoiceCorrection => [
+                'customer_name' => 'Name des Kunden mit führendem Komma (leer, falls kein Kunde verknüpft ist)',
+                'document_title' => '"Rechnungskorrektur" oder "Stornorechnung"',
+                'correction_number' => 'Nummer der Korrektur (z. B. RK-0001)',
+                'invoice_number' => 'Nummer der korrigierten Rechnung',
+                'invoice_date' => 'Datum der korrigierten Rechnung (TT.MM.JJJJ)',
+                'reason' => 'Grund der Korrektur',
+                'amount' => 'Korrekturbetrag brutto, formatiert (z. B. "-96,27 €")',
+                'payment_line' => 'Hinweis zur Erstattung bzw. Zahlung (wie im PDF)',
+                'note_html' => 'Vom Versender frei eingegebene Anmerkung als HTML-Absatz, oder leer',
+            ],
             self::RentalPickupReminder => [
                 'customer_name' => 'Name des Kunden',
                 'event_name' => 'Name der Veranstaltung',
@@ -136,6 +150,7 @@ enum EmailTemplateKey: string
             self::PackingListPdf => 'Packliste für Ihre Veranstaltung',
             self::InvoicePdf => 'Ihre Rechnung {{invoice_number}}',
             self::DunningNotice => '{{dunning_level_name}}: Rechnung {{invoice_number}}',
+            self::InvoiceCorrection => '{{document_title}} {{correction_number}} zu Rechnung {{invoice_number}}',
             self::RentalPickupReminder => 'Erinnerung: Abholung für {{event_name}}',
             self::RentalReturnReminder => 'Erinnerung: Rückgabe für {{event_name}}',
             self::RentalCustomerChecklist => 'Vollständigkeits-Checkliste für {{event_name}}',
@@ -152,6 +167,7 @@ enum EmailTemplateKey: string
             self::PackingListPdf => "<p>Guten Tag,</p>\n<p>im Anhang finden Sie die Packliste für folgende Veranstaltung:</p>\n<p>Veranstaltung: {{event_name}}<br>Kunde: {{customer_name}}<br>{{location_line}}Zeitraum: {{date_range}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
             self::InvoicePdf => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie Ihre Rechnung {{invoice_number}} (inkl. XRechnung-XML zur elektronischen Weiterverarbeitung).</p>\n<p>{{location_line}}Leistungszeitraum: {{date_range}}<br>Fällig am: {{due_date}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
             self::DunningNotice => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie eine {{dunning_level_name}} zu unserer Rechnung {{invoice_number}}, die am {{due_date}} fällig war.</p>\n<p>Offener Gesamtbetrag: {{total_due}}</p>\n<p>Bitte begleichen Sie den Betrag umgehend. Sollte dies bereits geschehen sein, betrachten Sie diese E-Mail als gegenstandslos.</p>\n<p>Mit freundlichen Grüßen</p>",
+            self::InvoiceCorrection => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie unsere {{document_title}} {{correction_number}} zur Rechnung {{invoice_number}} vom {{invoice_date}}.</p>\n<p>Grund: {{reason}}<br>Betrag: {{amount}}</p>\n<p>{{payment_line}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
             self::RentalPickupReminder => "<p>Guten Tag {{customer_name}},</p>\n<p>wir möchten Sie an die bevorstehende Abholung für folgende Veranstaltung erinnern:</p>\n<p>Veranstaltung: {{event_name}}<br>Abholtermin: {{pickup_at}}<br>{{warehouse_line}}</p>\n<p>Mit freundlichen Grüßen</p>",
             self::RentalReturnReminder => "<p>Guten Tag {{customer_name}},</p>\n<p>wir möchten Sie an die bevorstehende Rückgabe für folgende Veranstaltung erinnern:</p>\n<p>Veranstaltung: {{event_name}}<br>Rückgabetermin: {{return_at}}<br>{{warehouse_line}}</p>\n<p>Mit freundlichen Grüßen</p>",
             self::RentalCustomerChecklist => "<p>Guten Tag {{customer_name}},</p>\n<p>bitte prüfen Sie vor dem Abbau über folgenden Link, ob alle für Ihre Veranstaltung ausgegebenen Artikel vollständig vorhanden sind:</p>\n<p><a href=\"{{link}}\">{{link}}</a></p>\n<p>Veranstaltung: {{event_name}}<br>Rückgabetermin: {{return_at}}</p>\n<p>Mit freundlichen Grüßen</p>",

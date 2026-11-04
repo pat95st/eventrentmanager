@@ -112,6 +112,12 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
       <h1 class="mb-1 text-lg font-semibold text-slate-900 dark:text-slate-100"><?= e(t('auth.login.heading')) ?></h1>
       <p class="mb-5 text-sm text-slate-500 dark:text-slate-400"><?= e(t('auth.login.subheading')) ?></p>
 
+      <?php if (($notice ?? null) !== null): ?>
+        <div class="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300" role="status">
+          <?= e($notice) ?>
+        </div>
+      <?php endif; ?>
+
       <?php if (isset($errors['credentials'])): ?>
         <div class="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300">
           <?= e($errors['credentials']) ?>

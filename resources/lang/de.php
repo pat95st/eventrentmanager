@@ -78,7 +78,7 @@ return [
     'nav.vehicles' => 'Fahrzeuge',
     'nav.vouchers' => 'Gutscheine',
     'nav.documents' => 'Dokumente',
-    'nav.rentals' => 'Veranstaltung',
+    'nav.rentals' => 'Veranstaltungen',
     'nav.rentals_all' => 'Alle Veranstaltungen',
     'nav.venues' => 'Veranstaltungsorte',
     'nav.calendar' => 'Kalender',

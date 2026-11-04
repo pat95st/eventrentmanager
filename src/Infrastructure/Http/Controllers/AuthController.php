@@ -40,7 +40,8 @@ final class AuthController
             return;
         }
 
-        echo View::render('auth/login', ['errors' => [], 'email' => '']);
+        // Hinweis z. B. nach automatischer Abmeldung wegen Inaktivität (AuthGuard).
+        echo View::render('auth/login', ['errors' => [], 'email' => '', 'notice' => Flash::consumeError()]);
     }
 
     public function login(Request $request): void

@@ -39,6 +39,7 @@ final class SettingsSections
                     ['key' => 'settings-rechtliches', 'href' => '/einstellungen/rechtliches', 'label' => t('nav.legal_settings')],
                     ['key' => 'settings-integrationen', 'href' => '/einstellungen/integrationen', 'label' => t('nav.integration_settings')],
                     ['key' => 'settings-api', 'href' => '/einstellungen/api', 'label' => t('nav.api_settings')],
+                    ['key' => 'settings-sicherheit', 'href' => '/einstellungen/sicherheit', 'label' => 'Sicherheit'],
                     ['key' => 'settings-kalender', 'href' => '/einstellungen/kalender', 'label' => t('nav.calendar_settings')],
                 ],
             ],

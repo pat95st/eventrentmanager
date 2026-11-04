@@ -461,6 +461,10 @@ $rentalReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRenta
 $rentalReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalReminderSettingsRepository($pdo);
 $rentalCustomerChecklistTokenRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalCustomerChecklistTokenRepository($pdo);
 $overageSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOverageSettingsRepository($pdo);
+// Sicherheits-Einstellungen (Migration 127): Session-Timeout, MUSS vor dem
+// ersten session_start() gesetzt werden (siehe SessionTimeout).
+$securitySettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbSecuritySettingsRepository($pdo);
+\App\Infrastructure\Http\Auth\SessionTimeout::configure($securitySettingsRepository->get()->sessionTimeoutMinutes, __DIR__ . '/../storage/sessions');
 $vehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbVehicleRepository($pdo);
 $rentalVehicleLoadRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalVehicleLoadRepository($pdo);
 $rentalVehicleTowRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalVehicleTowRepository($pdo);
@@ -940,6 +944,8 @@ $commandBus->register(\App\Application\Settings\Command\UpdatePricingSettings::c
 $commandBus->register(\App\Application\Settings\Command\UpdatePriceRounding::class, new \App\Application\Settings\Command\UpdatePriceRoundingHandler($pricingSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateOverageSettings::class, new \App\Application\Settings\Command\UpdateOverageSettingsHandler($overageSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetOverageSettings::class, new \App\Application\Settings\Query\GetOverageSettingsHandler($overageSettingsRepository));
+$commandBus->register(\App\Application\Settings\Command\UpdateSecuritySettings::class, new \App\Application\Settings\Command\UpdateSecuritySettingsHandler($securitySettingsRepository));
+$queryBus->register(\App\Application\Settings\Query\GetSecuritySettings::class, new \App\Application\Settings\Query\GetSecuritySettingsHandler($securitySettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateInvoicePdfSettings::class, new UpdateInvoicePdfSettingsHandler($invoicePdfSettingsRepository, $htmlSanitizer));
 $commandBus->register(\App\Application\Settings\Command\UpdatePdfDesignSettings::class, new \App\Application\Settings\Command\UpdatePdfDesignSettingsHandler($pdfDesignSettingsRepository));
 
@@ -1498,6 +1504,8 @@ $pdfLayoutSettingsController = new \App\Infrastructure\Http\Controllers\PdfLayou
 $rentalReminderSettingsController = new \App\Infrastructure\Http\Controllers\RentalReminderSettingsController($commandBus, $queryBus);
 $invoiceDueReminderSettingsController = new \App\Infrastructure\Http\Controllers\InvoiceDueReminderSettingsController($commandBus, $queryBus);
 $overageSettingsController = new \App\Infrastructure\Http\Controllers\OverageSettingsController($commandBus, $queryBus);
+$securitySettingsController = new \App\Infrastructure\Http\Controllers\SecuritySettingsController($commandBus, $queryBus);
+$sessionStatusController = new \App\Infrastructure\Http\Controllers\SessionStatusController($userSessionRepository);
 $legalPageController = new LegalPageController($queryBus);
 $localeController = new LocaleController($commandBus, $userRepository);
 
@@ -2218,6 +2226,12 @@ $router->post('/einstellungen/rechnungserinnerungen', $auth->guard(Permission::A
 
 $router->get('/einstellungen/ueberziehung', $auth->guard(Permission::Administration, [$overageSettingsController, 'edit']));
 $router->post('/einstellungen/ueberziehung', $auth->guard(Permission::Administration, [$overageSettingsController, 'update']));
+// Sicherheit (Migration 127): nur Administratoren
+$router->get('/einstellungen/sicherheit', $auth->guard(Permission::Administration, [$securitySettingsController, 'edit']));
+$router->post('/einstellungen/sicherheit', $auth->guard(Permission::Administration, [$securitySettingsController, 'update']));
+// Hinweis vor automatischer Abmeldung: Status bewusst ohne Guard (zählt nicht als Aktivität)
+$router->get('/sitzung/status', [$sessionStatusController, 'status']);
+$router->get('/sitzung/verlaengern', $auth->guard(null, [$sessionStatusController, 'extend']));
 
 // Etikettendrucker (nur Administration).
 $router->get('/einstellungen/etikettendrucker', $auth->guard(Permission::Administration, [$labelPrinterController, 'index']));

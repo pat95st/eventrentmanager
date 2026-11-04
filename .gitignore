@@ -5,6 +5,8 @@
 # doch im Projektordner landet.
 /database.yaml
 /storage/uploads/*
+# PHP-Sitzungen (Session-Timeout, siehe App\Infrastructure\Http\Auth\SessionTimeout)
+/storage/sessions/
 !/storage/uploads/.gitkeep
 !/storage/uploads/articles/.gitkeep
 !/storage/uploads/rma/.gitkeep

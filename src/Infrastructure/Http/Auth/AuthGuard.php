@@ -6,9 +6,11 @@ namespace App\Infrastructure\Http\Auth;
 
 use App\Domain\Auth\UserSession;
 use App\Domain\Auth\UserSessionRepositoryInterface;
+use App\Domain\Settings\SecuritySettings;
 use App\Domain\User\Permission;
 use App\Domain\User\TwoFactorMethod;
 use App\Domain\User\UserRepositoryInterface;
+use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Locale;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
@@ -73,7 +75,11 @@ final class AuthGuard
 
             $userId = Session::userId();
             if ($userId === null) {
-                Session::setRedirectAfterLogin($request->path);
+                // Nach der Anmeldung zurück zur angefragten Seite (inkl. Filter/Seite),
+                // aber nicht zu Hintergrund-Abrufen (AJAX), die keine Seite sind.
+                if (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === '') {
+                    Session::setRedirectAfterLogin($request->path . ($request->method === 'GET' && ($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . $_SERVER['QUERY_STRING'] : ''));
+                }
                 Response::redirect('/login');
 
                 return;
@@ -102,6 +108,21 @@ final class AuthGuard
 
             if ($currentSession === null) {
                 Session::logout();
+                Response::redirect('/login');
+
+                return;
+            }
+
+            // Automatische Abmeldung nach Inaktivität (Einstellungen ›
+            // Sicherheit, siehe SessionTimeout). Die angefragte Seite wird
+            // gemerkt, damit es nach der Anmeldung dort weitergeht.
+            if (SessionTimeout::remaining($currentSession->lastSeenAt) <= 0) {
+                $this->sessions->deleteById($currentSession->id);
+                Session::logout();
+                Flash::error('Du wurdest nach ' . SecuritySettings::formatMinutes(SessionTimeout::minutes()) . ' ohne Aktivität automatisch abgemeldet. Bitte melde dich erneut an.');
+                if ($request->method === 'GET' && ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === '') {
+                    Session::setRedirectAfterLogin($request->path . (($_SERVER['QUERY_STRING'] ?? '') !== '' ? '?' . $_SERVER['QUERY_STRING'] : ''));
+                }
                 Response::redirect('/login');
 
                 return;

@@ -85,11 +85,13 @@
   }
 
   var ICON_ERROR = '<svg class="le-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-8-5a.75.75 0 0 1 .75.75v4.5a.75.75 0 0 1-1.5 0v-4.5A.75.75 0 0 1 10 5Zm0 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>';
+  var ICON_CLOCK = '<svg class="le-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .2.08.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z" clip-rule="evenodd"/></svg>';
   var ICON_OFFLINE = '<svg class="le-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M2.22 2.22a.75.75 0 0 1 1.06 0l14.5 14.5a.75.75 0 1 1-1.06 1.06l-3.1-3.1a3.5 3.5 0 0 0-4.62-.62l-1.05-1.05a5 5 0 0 1 3.66-.16L9.9 11.1a6.5 6.5 0 0 0-4.31 1.95.75.75 0 0 1-1.06-1.06 8 8 0 0 1 3.4-2.07L6.3 8.27A9.5 9.5 0 0 0 2.53 10.6a.75.75 0 1 1-1.06-1.06 11 11 0 0 1 3.71-2.4L2.22 3.28a.75.75 0 0 1 0-1.06ZM10 5.5c-.5 0-.99.03-1.47.1L7.2 4.27A11 11 0 0 1 18.53 9.54a.75.75 0 0 1-1.06 1.06A9.5 9.5 0 0 0 10 5.5Zm0 9a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z"/></svg>';
 
   /**
    * Meldung anzeigen. options: reload (Button "Neu laden"), login (Button
-   * "Anmelden"), sticky (bleibt bis zum Schließen), warn (gelb statt rot).
+   * "Anmelden"), actions ([{label, onClick(toast)}]), sticky (bleibt bis zum
+   * Schließen), warn (gelb statt rot), icon ('clock').
    */
   function show(message, options) {
     options = options || {};
@@ -106,7 +108,7 @@
     var toast = document.createElement('div');
     toast.className = 'le-toast' + (options.warn ? ' le-warn' : '');
     toast.setAttribute('role', 'alert');
-    toast.innerHTML = (options.warn ? ICON_OFFLINE : ICON_ERROR) + '<div class="le-text"></div>';
+    toast.innerHTML = (options.icon === 'clock' ? ICON_CLOCK : (options.warn ? ICON_OFFLINE : ICON_ERROR)) + '<div class="le-text"></div>';
     toast.querySelector('.le-text').textContent = message;
 
     var actions = document.createElement('div');
@@ -126,6 +128,14 @@
       login.textContent = 'Anmelden';
       actions.appendChild(login);
     }
+    (options.actions || []).forEach(function (action) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'le-btn';
+      button.textContent = action.label;
+      button.addEventListener('click', function () { action.onClick(toast); });
+      actions.appendChild(button);
+    });
     if (actions.children.length) {
       toast.querySelector('.le-text').appendChild(actions);
     }
@@ -153,6 +163,7 @@
   }
 
   window.showLoadError = show;
+  window.hideLoadError = remove;
 
   // ---- Abrufe überwachen ------------------------------------------------
 

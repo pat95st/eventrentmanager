@@ -27,6 +27,11 @@ $isPowerDistributor = $powerDistributorCategoryId !== null && $val('category_id'
 $requiresElectricalInspection = $isPowerDistributor || (array_key_exists('requires_electrical_inspection', $old)
     ? (bool) $old['requires_electrical_inspection']
     : ($article?->requiresElectricalInspection ?? false));
+// Leitungen (Migration 125): Kategorie "Leitungen" gewählt.
+$cable ??= null;
+$cableCategoryId ??= null;
+$cableSettings ??= null;
+$isCable = $cableCategoryId !== null && $val('category_id', $article?->categoryId) === $cableCategoryId;
 $protectionClassValue = $val('protection_class', $article?->protectionClass?->value ?? ($isPowerDistributor ? 'I' : null));
 // Neue Artikel sind standardmäßig abrechenbar; nur wer bewusst das Häkchen
 // entfernt (z. B. für Zubehör wie Kabel), bekommt is_billable = false.
@@ -202,6 +207,58 @@ $bundleComponentRows ??= [];
         </div>
     </div>
 
+    <!-- Leitungen (Migration 125): erscheint bei Kategorie "Leitungen" -->
+    <?php if ($cableCategoryId !== null && $cableSettings !== null): ?>
+    <?php
+        $cableTypeSelected = $val('cable_type_id', $cable?->cable->cableTypeId);
+        $cableConnectorA = $val('cable_connector_a', $cable?->cable->connectorAId);
+        $cableConnectorB = $val('cable_connector_b', $cable?->cable->connectorBId);
+        $cableLength = $val('cable_length', $cable !== null ? rtrim(rtrim(number_format((float) $cable->cable->lengthM, 2, ',', ''), '0'), ',') : null);
+        $cableErr = fn (string $key) => isset($errors[$key]) ? '<p class="mt-1 text-xs text-red-600 dark:text-red-400">' . e($errors[$key]) . '</p>' : '';
+        $cableInput = 'mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700';
+    ?>
+    <div id="cable_section" class="rounded-md border border-brand-200 bg-brand-50 p-4 dark:border-brand-800 dark:bg-brand-950/40 <?= $isCable ? '' : 'hidden' ?>"
+         data-cable-category="<?= e($cableCategoryId) ?>"
+         data-cable-config="<?= e((string) json_encode($cableSettings->formConfig(), JSON_UNESCAPED_UNICODE)) ?>"
+         data-new-article="<?= $article === null ? '1' : '0' ?>">
+        <input type="hidden" name="cable_section" value="1">
+        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Leitung</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Leitungstyp, Länge und die beiden Steckverbinder wählen – angeboten werden nur Steckverbinder, die zum Leitungstyp passen. Leitungstypen, Steckverbinder und sinnvolle Kombinationen pflegst du unter <a href="/einstellungen/leitungen" class="underline">Einstellungen › Leitungen</a>. Bleibt der Produktname leer, wird er aus den Angaben gebildet.</p>
+        <?php if ($cableSettings->types === []): ?>
+            <p class="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">Es sind noch keine Leitungstypen angelegt.</p>
+        <?php endif; ?>
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+                <label for="cable_type_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Leitungstyp *</label>
+                <select id="cable_type_id" name="cable_type_id" class="<?= $cableInput ?>">
+                    <option value="">Bitte wählen…</option>
+                    <?php foreach ($cableSettings->types as $cableTypeOption): ?>
+                        <option value="<?= e($cableTypeOption->id) ?>" <?= $cableTypeSelected === $cableTypeOption->id ? 'selected' : '' ?>><?= e($cableTypeOption->name) ?><?= $cableTypeOption->requiresElectricalInspection ? ' (prüfpflichtig)' : '' ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <?= $cableErr('cable_type_id') ?>
+            </div>
+            <div>
+                <label for="cable_length" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Länge in m *</label>
+                <input type="text" inputmode="decimal" id="cable_length" name="cable_length" value="<?= e($cableLength) ?>" placeholder="z. B. 10 oder 2,5" class="<?= $cableInput ?> max-w-[10rem]">
+                <?= $cableErr('cable_length') ?>
+            </div>
+            <?php foreach (['cable_connector_a' => [$cableConnectorA, 'Steckverbinder Seite A *'], 'cable_connector_b' => [$cableConnectorB, 'Steckverbinder Seite B *']] as $cableField => [$cableSelected, $cableLabel]): ?>
+                <div>
+                    <label for="<?= $cableField ?>" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e($cableLabel) ?></label>
+                    <select id="<?= $cableField ?>" name="<?= $cableField ?>" data-cable-connector class="<?= $cableInput ?>">
+                        <option value="">Bitte wählen…</option>
+                        <?php foreach ($cableSettings->connectors as $connectorOption): ?>
+                            <option value="<?= e($connectorOption->id) ?>" <?= $cableSelected === $connectorOption->id ? 'selected' : '' ?>><?= e($connectorOption->name) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?= $cableErr($cableField) ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-2 <?= $is19Inch ? '' : 'hidden' ?>">
         <div>
             <label for="height_units" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.height_units')) ?></label>
@@ -348,3 +405,4 @@ $bundleComponentRows ??= [];
     })();
 </script>
 <script src="/assets/js/power-distributor-fields.js"></script>
+<script src="/assets/js/cable-fields.js"></script>

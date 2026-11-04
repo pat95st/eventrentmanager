@@ -79,6 +79,7 @@ final class SettingsSections
                 'label' => t('nav.settings_group_other'),
                 'pages' => [
                     ['key' => 'settings-etikettendrucker', 'href' => '/einstellungen/etikettendrucker', 'label' => t('nav.label_printers')],
+                    ['key' => 'settings-leitungen', 'href' => '/einstellungen/leitungen', 'label' => 'Leitungen'],
                     ['key' => 'settings-speicherziele', 'href' => '/einstellungen/speicherziele', 'label' => t('nav.document_storage')],
                     ['key' => 'settings-erinnerungen', 'href' => '/einstellungen/erinnerungen', 'label' => t('nav.rental_reminder_settings')],
                     ['key' => 'settings-sicherung', 'href' => '/einstellungen/sicherung', 'label' => t('nav.backup_settings')],

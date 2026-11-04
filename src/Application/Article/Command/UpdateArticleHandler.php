@@ -31,6 +31,7 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         private readonly ?InventoryNumberRepositoryInterface $inventoryNumbers = null,
         // Stromverteiler (Migration 117): Elektroprüfung immer erforderlich.
         private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
+        private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
     ) {
     }
 
@@ -131,11 +132,28 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $protectionClass = self::normalizeProtectionClass($command->protectionClass) ?? ProtectionClass::I;
         }
 
+        // Leitungen (Migration 125): Artikel der Kategorie "Leitungen" bestehen aus
+        // Leitungstyp, Länge und zwei passenden Steckverbindern. Ohne Namen wird
+        // er daraus gebildet.
+        $cable = null;
+        $cableType = null;
+        $cableCategoryId = $this->cables !== null ? $this->categories->findCableCategoryId() : null;
+        $isCable = !$command->isBundle && $cableCategoryId !== null && $command->categoryId === $cableCategoryId;
+        if ($isCable && ($command->cable !== null || false)) {
+            [$cableErrors, $cable, $cableType] = (new \App\Application\Cable\CableBuilder($this->cables))->build($article->id, $command->cable ?? new \App\Application\Cable\CableInput(null, null, null, null));
+            $errors = array_merge($errors, $cableErrors);
+            unset($errors['name']);
+        }
+        $articleName = trim($command->name);
+        if ($articleName === '' && $cable !== null && $cableType !== null) {
+            $articleName = \App\Application\Cable\CableBuilder::suggestName($cableType, $cable, $this->cables->findConnectorById($cable->connectorAId), $this->cables->findConnectorById($cable->connectorBId));
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
 
-        $article->name = trim($command->name);
+        $article->name = $articleName;
         $article->manufacturerId = $command->manufacturerId;
         $article->prefix = $prefix;
         $article->categoryId = $command->categoryId;
@@ -169,6 +187,14 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             } elseif ($command->powerDistributor === false || $command->isBundle || ($command->powerDistributor !== null && !$isPowerDistributor)) {
                 // Kategorie gewechselt, Bundle oder ausdrücklich kein Stromverteiler mehr.
                 $this->powerDistributors->delete($article->id);
+            }
+        }
+        if ($this->cables !== null) {
+            if ($cable !== null) {
+                $this->cables->saveArticleCable($cable);
+            } elseif ($command->isBundle || ($command->cable !== null && !$isCable)) {
+                // Kategorie gewechselt oder Bundle: keine Leitung mehr.
+                $this->cables->deleteArticleCable($article->id);
             }
         }
         if ($this->bundleComponents !== null) {

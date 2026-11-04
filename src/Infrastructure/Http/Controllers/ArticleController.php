@@ -396,6 +396,7 @@ final class ArticleController
             bundleComponents: $this->bundleComponentsFromRequest($request),
             documentShortText: $request->input('document_short_text', '') ?? '',
             powerDistributor: $this->powerDistributorFromRequest($request) ?: null,
+            cable: $this->cableFromRequest($request),
         );
 
         try {
@@ -473,6 +474,8 @@ final class ArticleController
             'containingBundles' => $this->containingBundles($detail->article->id),
             // Stromverteiler (Migration 117)
             'powerDistributor' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($detail->article->id)),
+            // Leitungen (Migration 125)
+            'cable' => $detail->article->isBundle ? null : $this->articleCable($detail->article->id),
             'editInventoryId' => $editInventoryId,
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
@@ -573,6 +576,7 @@ final class ArticleController
             bundleComponents: $this->bundleComponentsFromRequest($request),
             documentShortText: $request->input('document_short_text', '') ?? '',
             powerDistributor: $this->powerDistributorFromRequest($request),
+            cable: $this->cableFromRequest($request),
         );
 
         try {
@@ -1121,6 +1125,10 @@ final class ArticleController
             // Stromverteiler (Migration 117): Angaben direkt im Artikelformular.
             'powerDistributor' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($article->id)) : null,
             'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
+            // Leitungen (Migration 125): Typ, Länge, Steckverbinder direkt im Artikelformular.
+            'cable' => $article !== null && !$article->isBundle ? $this->articleCable($article->id) : null,
+            'cableCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
+            'cableSettings' => $this->cableSettings(),
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 
@@ -1156,6 +1164,11 @@ final class ArticleController
                 'devices' => $command->powerDistributor->devices,
                 'outlets' => $command->powerDistributor->outlets,
             ] : null,
+            // Leitungen (Migration 125)
+            'cable_type_id' => $command->cable?->cableTypeId,
+            'cable_length' => $command->cable?->length,
+            'cable_connector_a' => $command->cable?->connectorAId,
+            'cable_connector_b' => $command->cable?->connectorBId,
         ];
     }
 
@@ -1186,6 +1199,39 @@ final class ArticleController
             $rows($request->post['pd_devices'] ?? []),
             $rows($request->post['pd_outlets'] ?? []),
         );
+    }
+
+    /** Leitungsangaben aus dem Artikelformular (Migration 125), null ohne diesen Abschnitt. */
+    private function cableFromRequest(Request $request): ?\App\Application\Cable\CableInput
+    {
+        if ($request->input('cable_section') === null) {
+            return null;
+        }
+
+        return new \App\Application\Cable\CableInput(
+            $request->input('cable_type_id'),
+            $request->input('cable_length'),
+            $request->input('cable_connector_a'),
+            $request->input('cable_connector_b'),
+        );
+    }
+
+    private function articleCable(string $articleId): ?\App\Application\Cable\Query\ArticleCableDetail
+    {
+        try {
+            return $this->queries->ask(new \App\Application\Cable\Query\GetArticleCable($articleId));
+        } catch (\PDOException) {
+            return null; // Migration 125 noch nicht eingespielt
+        }
+    }
+
+    private function cableSettings(): ?\App\Application\Cable\Query\CableSettings
+    {
+        try {
+            return $this->queries->ask(new \App\Application\Cable\Query\GetCableSettings());
+        } catch (\PDOException) {
+            return null;
+        }
     }
 
     /**

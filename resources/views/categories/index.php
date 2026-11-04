@@ -5,6 +5,8 @@
 /** @var array<string, mixed> $old */
 /** @var string|null $powerDistributorCategoryId */
 $powerDistributorCategoryId ??= null;
+/** @var string|null $cableCategoryId Kategorie "Leitungen" (Migration 125) */
+$cableCategoryId ??= null;
 
 use function App\Infrastructure\Http\e;
 
@@ -15,15 +17,15 @@ foreach ($categories as $category) {
 
 $countByCategory = []; // Kategorie-ID => Anzahl Artikel wird hier nicht geladen (siehe Artikel-Übersicht für Filter mit Zahl)
 
-$renderNode = function (?string $parentId, int $depth) use (&$renderNode, &$byParent, $editingCategory, $powerDistributorCategoryId): void {
+$renderNode = function (?string $parentId, int $depth) use (&$renderNode, &$byParent, $editingCategory, $powerDistributorCategoryId, $cableCategoryId): void {
     foreach ($byParent[$parentId ?? ''] ?? [] as $category) {
         $isEditing = $editingCategory !== null && $editingCategory->id === $category->id;
         ?>
         <div class="flex flex-wrap items-center justify-between gap-2 rounded-md px-3 py-2 <?= $isEditing ? 'bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:ring-brand-800' : 'hover:bg-slate-50 dark:hover:bg-slate-800' ?>" style="margin-left: <?= $depth * 20 ?>px">
-            <span class="text-sm text-slate-800 dark:text-slate-200"><?= e($category->name) ?><?php if ($category->id === $powerDistributorCategoryId): ?> <span class="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700" title="Artikel dieser Kategorie sind Stromverteiler; die Kategorie kann umbenannt, aber nicht gelöscht werden.">Stromverteiler</span><?php endif; ?></span>
+            <span class="text-sm text-slate-800 dark:text-slate-200"><?= e($category->name) ?><?php if ($category->id === $powerDistributorCategoryId): ?> <span class="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700" title="Artikel dieser Kategorie sind Stromverteiler; die Kategorie kann umbenannt, aber nicht gelöscht werden.">Stromverteiler</span><?php endif; ?><?php if ($category->id === $cableCategoryId): ?> <span class="ml-1 rounded bg-brand-50 px-1.5 py-0.5 text-xs text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800" title="Artikel dieser Kategorie sind Leitungen; die Kategorie kann umbenannt, aber nicht gelöscht werden.">Leitungen</span><?php endif; ?></span>
             <span class="flex items-center gap-3">
                 <a href="/kategorien/<?= e($category->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
-                <?php if ($category->id !== $powerDistributorCategoryId): ?>
+                <?php if ($category->id !== $powerDistributorCategoryId && $category->id !== $cableCategoryId): ?>
                 <form method="post" action="/kategorien/<?= e($category->id) ?>/loeschen" data-confirm="Diese Kategorie wirklich löschen?" data-confirm-style="danger">
                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>

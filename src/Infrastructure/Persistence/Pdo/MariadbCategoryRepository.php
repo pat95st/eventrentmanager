@@ -110,6 +110,17 @@ final class MariadbCategoryRepository implements CategoryRepositoryInterface
         return $id !== false && $id !== null && $id !== 0 ? (string) $id : null;
     }
 
+    public function findCableCategoryId(): ?string
+    {
+        try {
+            $id = $this->pdo->query('SELECT id FROM categories WHERE is_cable = 1 LIMIT 1')->fetchColumn();
+        } catch (\PDOException) {
+            return null; // Migration 125 noch nicht eingespielt
+        }
+
+        return $id !== false && $id !== null && $id !== 0 ? (string) $id : null;
+    }
+
     public function delete(string $id): void
     {
         $stmt = $this->pdo->prepare('DELETE FROM categories WHERE id = :id');

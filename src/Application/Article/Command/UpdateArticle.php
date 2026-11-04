@@ -39,6 +39,8 @@ final class UpdateArticle implements CommandInterface
         // gespeichert nur bei Kategorie "Stromverteiler" (sonst entfernt);
         // false = kein Stromverteiler (mehr), null = unverändert lassen.
         public readonly \App\Application\PowerDistributor\PowerDistributorInput|false|null $powerDistributor = null,
+        // Leitungen (Migration 125): null = Formular ohne Leitungs-Abschnitt (unverändert lassen).
+        public readonly ?\App\Application\Cable\CableInput $cable = null,
     ) {
     }
 }

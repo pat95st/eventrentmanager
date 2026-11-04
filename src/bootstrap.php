@@ -422,6 +422,7 @@ $customerContactRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCust
 $caseItemRepository = new MariadbCaseItemRepository($pdo);
 $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
 $powerDistributorRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPowerDistributorRepository($pdo);
+$cableRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCableRepository($pdo); // Leitungen (Migration 125)
 $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepository($pdo);
 // Schriftarten je Bereich für alle PDFs (Migration 116), erst beim ersten PDF geladen.
 \App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
@@ -611,8 +612,13 @@ $commandBus->register(\App\Application\LaborTime\Command\CreateLaborTimeArticle:
 $commandBus->register(\App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, new UpdateLaborTimeArticleHandler($laborTimeArticleRepository));
 $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle::class, new DeleteLaborTimeArticleHandler($laborTimeArticleRepository));
 
-$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository));
-$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository));
+$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
+$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
+// Leitungen (Migration 125)
+$cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
+foreach ([\App\Application\Cable\Command\SaveCableType::class, \App\Application\Cable\Command\DeleteCableType::class, \App\Application\Cable\Command\SaveConnectorType::class, \App\Application\Cable\Command\DeleteConnectorType::class] as $cableCommand) {
+    $commandBus->register($cableCommand, $cableSettingsHandler);
+}
 $commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository, $articleSetRepository));
 $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, new \App\Application\Article\Command\SetArticleActiveHandler($articleRepository));
 $commandBus->register(\App\Application\Article\Command\AddArticleImage::class, new AddArticleImageHandler($articleRepository, $fileStorage));
@@ -1068,6 +1074,10 @@ $commandBus->register(\App\Application\AddressBook\Command\DeleteCardDavCredenti
 // dem Command-Bus, instanziiert) ---------------------------------------------
 $queryBus->register(\App\Application\Category\Query\ListCategories::class, new ListCategoriesHandler($categoryRepository));
 $queryBus->register(\App\Application\Category\Query\GetPowerDistributorCategoryId::class, new \App\Application\Category\Query\GetPowerDistributorCategoryIdHandler($categoryRepository));
+$queryBus->register(\App\Application\Category\Query\GetCableCategoryId::class, new \App\Application\Category\Query\GetCableCategoryIdHandler($categoryRepository));
+$cableQueryHandler = new \App\Application\Cable\Query\CableQueryHandler($cableRepository);
+$queryBus->register(\App\Application\Cable\Query\GetCableSettings::class, $cableQueryHandler);
+$queryBus->register(\App\Application\Cable\Query\GetArticleCable::class, $cableQueryHandler);
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFolders::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFoldersHandler($closingTextTemplateFolderRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplates::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplatesHandler($closingTextTemplateRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));
@@ -1322,6 +1332,7 @@ $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageUploadLog:
 $dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository, $supplierRepository);
 $reportingController = new \App\Infrastructure\Http\Controllers\ReportingController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
+$cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
 $articleSetController = new \App\Infrastructure\Http\Controllers\ArticleSetController($commandBus, $queryBus);
@@ -2078,6 +2089,13 @@ $router->get('/einstellungen/email-vorlagen/{key}', $auth->guard(Permission::Adm
 $router->post('/einstellungen/email-vorlagen/{key}', $auth->guard(Permission::Administration, [$emailTemplateSettingsController, 'update']));
 $router->post('/einstellungen/email-vorlagen/{key}/zuruecksetzen', $auth->guard(Permission::Administration, [$emailTemplateSettingsController, 'reset']));
 
+$router->get('/einstellungen/leitungen', $auth->guard(Permission::Administration, [$cableSettingsController, 'edit']));
+$router->post('/einstellungen/leitungen/typen', $auth->guard(Permission::Administration, [$cableSettingsController, 'createType']));
+$router->post('/einstellungen/leitungen/typen/{id}', $auth->guard(Permission::Administration, [$cableSettingsController, 'saveType']));
+$router->post('/einstellungen/leitungen/typen/{id}/loeschen', $auth->guard(Permission::Administration, [$cableSettingsController, 'deleteType']));
+$router->post('/einstellungen/leitungen/steckverbinder', $auth->guard(Permission::Administration, [$cableSettingsController, 'createConnector']));
+$router->post('/einstellungen/leitungen/steckverbinder/{id}', $auth->guard(Permission::Administration, [$cableSettingsController, 'saveConnector']));
+$router->post('/einstellungen/leitungen/steckverbinder/{id}/loeschen', $auth->guard(Permission::Administration, [$cableSettingsController, 'deleteConnector']));
 $router->get('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'edit']));
 $router->post('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'update']));
 

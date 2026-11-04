@@ -4,6 +4,8 @@
 /** @var list<array{id: string, label: string}> $containingBundles */
 /** @var \App\Domain\PowerDistributor\PowerDistributor|null $powerDistributor Stromverteiler-Angaben (Migration 117) */
 $powerDistributor ??= null;
+/** @var \App\Application\Cable\Query\ArticleCableDetail|null $cable Leitungsangaben (Migration 125) */
+$cable ??= null;
 /** @var string|null $editInventoryId */
 /** @var string|null $editAccessoryId */
 /** @var string|null $editPreIssueCheckId */
@@ -100,6 +102,11 @@ $availabilityStatusMeta = [
             <?php if ($powerDistributor !== null): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700">
                     Stromverteiler · <?= e($powerDistributor->inletType->shortLabel()) ?>
+                </span>
+            <?php endif; ?>
+            <?php if ($cable !== null): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800">
+                    Leitung · <?= e($cable->cable->lengthLabel()) ?>
                 </span>
             <?php endif; ?>
             <?php if ($article->hasFirmware): ?>
@@ -255,6 +262,22 @@ $availabilityStatusMeta = [
                     <a href="/artikel/<?= e($article->id) ?>/bearbeiten#power_distributor_fields" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                 </div>
                 <?= \App\Infrastructure\Http\View::render('power-distributors/_schema', ['distributor' => $powerDistributor]) ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Leitung (Migration 125): Angaben werden im Artikelformular gepflegt -->
+        <?php if ($cable !== null): ?>
+            <div id="leitung" class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Leitung</h2>
+                    <a href="/artikel/<?= e($article->id) ?>/bearbeiten#cable_section" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                </div>
+                <dl class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Leitungstyp</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->type?->name ?? '–') ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Länge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->cable->lengthLabel()) ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite A</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorA?->name ?? '–') ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite B</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorB?->name ?? '–') ?></dd></div>
+                </dl>
             </div>
         <?php endif; ?>
 

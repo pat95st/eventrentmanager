@@ -36,6 +36,8 @@ final class CreateArticle implements CommandInterface
         public readonly ?string $documentShortText = null,
         // Stromverteiler (Migration 117/118): Angaben aus dem Artikelformular, genutzt bei Kategorie "Stromverteiler".
         public readonly ?\App\Application\PowerDistributor\PowerDistributorInput $powerDistributor = null,
+        // Leitungen (Migration 125): nur ausgewertet, wenn die Kategorie "Leitungen" gewählt ist.
+        public readonly ?\App\Application\Cable\CableInput $cable = null,
     ) {
     }
 }

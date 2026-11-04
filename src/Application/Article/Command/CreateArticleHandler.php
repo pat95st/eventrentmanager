@@ -32,6 +32,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
         private readonly ?InventoryNumberRepositoryInterface $inventoryNumbers = null,
         // Stromverteiler (Migration 117)
         private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
+        private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
     ) {
     }
 
@@ -71,6 +72,23 @@ final class CreateArticleHandler implements CommandHandlerInterface
             $protectionClass = self::normalizeProtectionClass($command->protectionClass) ?? ProtectionClass::I;
         }
 
+        // Leitungen (Migration 125): Artikel der Kategorie "Leitungen" bestehen aus
+        // Leitungstyp, Länge und zwei passenden Steckverbindern. Ohne Namen wird
+        // er daraus gebildet.
+        $cable = null;
+        $cableType = null;
+        $cableCategoryId = $this->cables !== null ? $this->categories->findCableCategoryId() : null;
+        $isCable = !$command->isBundle && $cableCategoryId !== null && $command->categoryId === $cableCategoryId;
+        if ($isCable && ($command->cable !== null || true)) {
+            [$cableErrors, $cable, $cableType] = (new \App\Application\Cable\CableBuilder($this->cables))->build($articleId, $command->cable ?? new \App\Application\Cable\CableInput(null, null, null, null));
+            $errors = array_merge($errors, $cableErrors);
+            unset($errors['name']);
+        }
+        $articleName = trim($command->name);
+        if ($articleName === '' && $cable !== null && $cableType !== null) {
+            $articleName = \App\Application\Cable\CableBuilder::suggestName($cableType, $cable, $this->cables->findConnectorById($cable->connectorAId), $this->cables->findConnectorById($cable->connectorBId));
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -78,7 +96,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
         $now = new DateTimeImmutable();
         $article = new Article(
             id: $articleId,
-            name: trim($command->name),
+            name: $articleName,
             manufacturerId: $command->manufacturerId,
             prefix: Prefix::normalize($command->prefix),
             categoryId: $command->categoryId,
@@ -115,6 +133,9 @@ final class CreateArticleHandler implements CommandHandlerInterface
         }
         if ($distributor !== null && $this->powerDistributors !== null) {
             $this->powerDistributors->save($distributor);
+        }
+        if ($cable !== null && $this->cables !== null) {
+            $this->cables->saveArticleCable($cable);
         }
 
         return $article->id;

@@ -25,4 +25,7 @@ interface CategoryRepositoryInterface
 
     /** ID der Kategorie "Stromverteiler" (Migration 118, categories.is_power_distributor), falls vorhanden. */
     public function findPowerDistributorCategoryId(): ?string;
+
+    /** ID der Kategorie "Leitungen" (Migration 125, categories.is_cable), falls vorhanden. */
+    public function findCableCategoryId(): ?string;
 }

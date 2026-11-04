@@ -222,6 +222,7 @@ final class VenueController
             breakerRating: $request->input('breaker_rating', '') ?? '',
             rcdTripCurrent: $request->input('rcd_trip_current', '') ?? '',
             location: $this->nullIfEmpty($request->input('location')),
+            fuseType: $request->input('fuse_type'),
         );
 
         try {
@@ -250,6 +251,7 @@ final class VenueController
             breakerRating: $request->input('breaker_rating', '') ?? '',
             rcdTripCurrent: $request->input('rcd_trip_current', '') ?? '',
             location: $this->nullIfEmpty($request->input('location')),
+            fuseType: $request->input('fuse_type'),
         );
 
         try {

@@ -251,6 +251,7 @@ echo BackgroundLayer::styles();
                             ['zoom', 'Zoom', BackgroundStyle::MIN_ZOOM, BackgroundStyle::MAX_ZOOM, $style->zoom, '%'],
                             ['position_x', 'Ausschnitt waagerecht (links ↔ rechts)', 0, 100, $style->positionX, '%'],
                             ['position_y', 'Ausschnitt senkrecht (oben ↕ unten)', 0, 100, $style->positionY, '%'],
+                            ['blur', 'Unschärfe', 0, BackgroundStyle::MAX_BLUR, $style->blur, ' px'],
                         ];
                         ?>
                         <div>
@@ -270,7 +271,7 @@ echo BackgroundLayer::styles();
                                     <label for="<?= e($prefix . '-' . $name) ?>" class="text-xs font-medium text-slate-600 dark:text-slate-400"><?= e($label) ?></label>
                                     <output for="<?= e($prefix . '-' . $name) ?>" class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric:tabular-nums"><?= (int) $value ?><?= e($unit) ?></output>
                                 </div>
-                                <input type="range" id="<?= e($prefix . '-' . $name) ?>" name="<?= e($name) ?>" min="<?= (int) $min ?>" max="<?= (int) $max ?>" step="<?= $name === 'zoom' ? 5 : 1 ?>" value="<?= (int) $value ?>" class="mt-1 w-full" style="accent-color:rgb(var(--color-brand-600, 37 99 235))">
+                                <input type="range" id="<?= e($prefix . '-' . $name) ?>" name="<?= e($name) ?>" min="<?= (int) $min ?>" max="<?= (int) $max ?>" step="<?= $name === 'zoom' ? 5 : 1 ?>" data-unit="<?= e($unit) ?>" value="<?= (int) $value ?>" class="mt-1 w-full" style="accent-color:rgb(var(--color-brand-600, 37 99 235))">
                             </div>
                         <?php endforeach; ?>
                         <div class="flex flex-wrap items-center justify-between gap-2">

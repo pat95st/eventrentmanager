@@ -32,6 +32,7 @@ final class UpdateVenuePowerConnectionHandler implements CommandHandlerInterface
             $command->breakerRating,
             $command->rcdTripCurrent,
             $command->location,
+            $command->fuseType,
         );
 
         if ($errors !== []) {
@@ -42,6 +43,7 @@ final class UpdateVenuePowerConnectionHandler implements CommandHandlerInterface
         $connection->breakerRating = $data['breakerRating'];
         $connection->rcdTripCurrent = $data['rcdTripCurrent'];
         $connection->location = $data['location'];
+        $connection->fuseType = $data['fuseType'];
 
         $this->connections->save($connection);
 

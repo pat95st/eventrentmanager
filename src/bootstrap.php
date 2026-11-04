@@ -1145,6 +1145,7 @@ $queryBus->register(\App\Application\Firmware\Query\ListFirmwareUpdatesAvailable
 ));
 
 $queryBus->register(\App\Application\ElectricalInspection\Query\ListElectricalInspectionsForInventoryNumber::class, new ListElectricalInspectionsForInventoryNumberHandler($electricalInspectionRepository));
+$queryBus->register(\App\Application\ElectricalInspection\Query\ListRecentElectricalInspections::class, new \App\Application\ElectricalInspection\Query\ListRecentElectricalInspectionsHandler($electricalInspectionRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository));
 $queryBus->register(\App\Application\ElectricalInspection\Query\GetElectricalInspection::class, new GetElectricalInspectionHandler($electricalInspectionRepository));
 
 $queryBus->register(\App\Application\Rma\Query\ListRmasForInventoryNumber::class, new ListRmasForInventoryNumberHandler($rmaRepository, $rmaDocumentRepository, $rmaPackagePhotoRepository, $receiptRepository, $rmaReceiptRepository));
@@ -1373,7 +1374,7 @@ $laborTimeArticleController = new LaborTimeArticleController($commandBus, $query
 $articleController = new ArticleController($commandBus, $queryBus, $fileStorage, new PriceListPdfGenerator($fileStorage, $pdfAmountFormatter), new PriceListCsvExporter(), $saleStockLotRepository, $customerRepository, $articleBundleComponentRepository);
 $rmaController = new RmaController($commandBus, $queryBus, $fileStorage);
 $firmwareController = new \App\Infrastructure\Http\Controllers\FirmwareController($queryBus);
-$electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus);
+$electricalInspectionController = new ElectricalInspectionController($commandBus, $queryBus, $inventoryNumberRepository, $rmaRepository);
 $customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
 $powerDistributorController = new \App\Infrastructure\Http\Controllers\PowerDistributorController();
 $pdfFontSettingsController = new \App\Infrastructure\Http\Controllers\PdfFontSettingsController($commandBus, $queryBus, $fileStorage);
@@ -1461,7 +1462,7 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
@@ -1772,8 +1773,10 @@ $router->post('/inventurnummern/{inventoryNumberId}/rma/{id}/versandfotos', $aut
 $router->get('/inventurnummern/{inventoryNumberId}/rma/{id}/versandfotos/{photoId}', $auth->guard(Permission::Artikelverwaltung, [$rmaController, 'viewPackagePhoto']));
 $router->post('/inventurnummern/{inventoryNumberId}/rma-versandfotos/{photoId}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$rmaController, 'deletePackagePhoto']));
 
-$router->get('/inventurnummern/{inventoryNumberId}/elektropruefungen', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'index']));
-$router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'store']));
+// Erfassen auch mit dem Recht "Elektroprüfung"; Bearbeiten/Löschen nur Artikelverwaltung.
+$router->get('/elektropruefung', $auth->guard([Permission::Artikelverwaltung, Permission::Elektropruefung], [$electricalInspectionController, 'search']));
+$router->get('/inventurnummern/{inventoryNumberId}/elektropruefungen', $auth->guard([Permission::Artikelverwaltung, Permission::Elektropruefung], [$electricalInspectionController, 'index']));
+$router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen', $auth->guard([Permission::Artikelverwaltung, Permission::Elektropruefung], [$electricalInspectionController, 'store']));
 $router->get('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'edit']));
 $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'update']));
 $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'destroy']));

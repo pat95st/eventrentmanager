@@ -18,10 +18,16 @@ use App\Shared\Uuid;
  *
  * - Zuleitung Pflicht.
  * - RCD: Typ und Auslösestrom Pflicht (Nennstrom optional).
- * - LS: Charakteristik und Sicherungsgröße Pflicht; optional hinter einem RCD.
+ * - LS: Charakteristik und Sicherungsgröße Pflicht; optional hinter einem RCD,
+ *   auch als drei einzelne 1-polige LS (je Phase).
  * - FI/LS: alle vier Angaben Pflicht.
+ * - Sicherung (Neozed/Diazed, Migration 129): System und Größe Pflicht, nur
+ *   1-polig oder drei einzelne; optional hinter einem RCD.
+ * - Einphasige Schutzorgane: Phase L1/L2/L3 optional.
  * - Abgänge: Steckverbindung, Anzahl 1–99, Zuordnung zu einem Schutzorgan
- *   oder direkt an der Zuleitung.
+ *   oder direkt an der Zuleitung. CEE rot nicht an 1-/2-poliger
+ *   Absicherung; einphasige Abgänge an dreiphasiger Absicherung brauchen
+ *   eine Phase.
  * Bezeichnungen werden, wenn leer, automatisch vergeben (F1, F2, …).
  * Fehlerschlüssel: powerDistributorInlet, powerDistributorDevices, powerDistributorOutlets.
  */
@@ -86,9 +92,28 @@ final class PowerDistributorBuilder
                 }
             }
 
+            // Drei einzelne 1-polige Geräte (je Phase) – nur bei LS und Sicherungen (Migration 129).
+            $threeSingle = ($raw['three_single'] ?? '') === '1' && in_array($type, [ProtectiveDeviceType::Mcb, ProtectiveDeviceType::Fuse], true);
+            $fuseSystem = null;
+            if ($type === ProtectiveDeviceType::Fuse) {
+                // Neozed/Diazed gibt es nur 1-polig – oder als drei einzelne für CEE rot.
+                $poles = $threeSingle ? 3 : 1;
+                $fuseSystem = (string) ($raw['fuse_system'] ?? '');
+                if (!array_key_exists($fuseSystem, ProtectiveDevice::FUSE_SYSTEMS)) {
+                    $deviceErrors[] = "Schutzorgan {$number}: bitte Neozed oder Diazed auswählen.";
+                    $fuseSystem = null;
+                }
+            } elseif ($threeSingle) {
+                $poles = 3;
+            }
+
             $characteristic = null;
             $rated = $this->intOrNull($raw['rated_current_a'] ?? null);
-            if ($type->hasOvercurrentProtection()) {
+            if ($type === ProtectiveDeviceType::Fuse) {
+                if (!in_array($rated, ProtectiveDevice::FUSE_RATED_CURRENTS_A, true)) {
+                    $deviceErrors[] = "Schutzorgan {$number} (Sicherung): bitte die Sicherungsgröße auswählen.";
+                }
+            } elseif ($type->hasOvercurrentProtection()) {
                 $characteristic = (string) ($raw['characteristic'] ?? '');
                 if (!in_array($characteristic, ProtectiveDevice::CHARACTERISTICS, true)) {
                     $deviceErrors[] = "Schutzorgan {$number} ({$type->label()}): bitte die Charakteristik auswählen.";
@@ -100,7 +125,17 @@ final class PowerDistributorBuilder
                 $deviceErrors[] = "Schutzorgan {$number}: ungültiger Nennstrom.";
             }
 
-            $devices[] = new ProtectiveDevice($id, $label, $type, $poles, $rcdType ?: null, $residual, $rated, $characteristic ?: null, null, $position++);
+            $device = new ProtectiveDevice($id, $label, $type, $poles, $rcdType ?: null, $residual, $rated, $characteristic ?: null, null, $position++, $fuseSystem, $threeSingle);
+            // Angeschlossene Phase nur bei einphasigen Schutzorganen.
+            $phase = trim((string) ($raw['phase'] ?? ''));
+            if ($phase !== '' && $device->isSinglePhase()) {
+                if (in_array($phase, ProtectiveDevice::PHASES, true)) {
+                    $device->phase = $phase;
+                } else {
+                    $deviceErrors[] = "Schutzorgan {$number}: ungültige Phase.";
+                }
+            }
+            $devices[] = $device;
             if ($label !== '') {
                 $usedLabels[mb_strtolower($label)] = true;
             }
@@ -131,8 +166,8 @@ final class PowerDistributorBuilder
             }
             $upstreamId = $idByKey[$upstreamKey] ?? null;
             $upstream = $upstreamId !== null ? ($byId[$upstreamId] ?? null) : null;
-            if ($device->type !== ProtectiveDeviceType::Mcb) {
-                $deviceErrors[] = "{$device->label}: Nur ein LS-Schalter kann hinter einem FI liegen.";
+            if (!$device->type->canBeBehindRcd()) {
+                $deviceErrors[] = "{$device->label}: Nur LS-Schalter und Sicherungen können hinter einem FI liegen.";
             } elseif ($upstream === null || $upstream->type !== ProtectiveDeviceType::Rcd) {
                 $deviceErrors[] = "{$device->label}: Als vorgeschaltetes Schutzorgan kann nur ein RCD (FI) gewählt werden.";
             } else {
@@ -162,7 +197,26 @@ final class PowerDistributorBuilder
                 }
             }
             $label = mb_substr(trim((string) ($raw['label'] ?? '')), 0, 50);
-            $outlets[] = new Outlet(Uuid::v4(), $connector, $quantity, $label !== '' ? $label : null, $deviceId, $position++);
+            $device = $deviceId !== null ? $byId[$deviceId] : null;
+            $phase = null;
+            if ($connector->isThreePhase()) {
+                // CEE rot braucht alle drei Phasen: keine einzelne 1-polige (oder 2-polige) Absicherung.
+                if ($device !== null && $device->suppliesThreePhase() === false) {
+                    $outletErrors[] = "Abgang {$number} ({$connector->shortLabel()}): braucht eine 3-/4-polige Absicherung oder 3 einzelne LS bzw. Sicherungen – {$device->label} ist " . ($device->poles ?? 1) . '-polig.';
+                }
+            } else {
+                // Einphasiger Abgang an dreiphasiger Absicherung (oder direkt an CEE-rot-Zuleitung): Phase L1/L2/L3.
+                $threePhaseSupply = $device !== null ? $device->suppliesThreePhase() === true : $inlet?->isThreePhase() === true;
+                $rawPhase = trim((string) ($raw['phase'] ?? ''));
+                if ($threePhaseSupply) {
+                    if (in_array($rawPhase, ProtectiveDevice::PHASES, true)) {
+                        $phase = $rawPhase;
+                    } elseif ($device !== null) {
+                        $outletErrors[] = "Abgang {$number} ({$connector->shortLabel()}): bitte die verwendete Phase (L1, L2 oder L3) wählen – {$device->label} ist dreiphasig.";
+                    }
+                }
+            }
+            $outlets[] = new Outlet(Uuid::v4(), $connector, $quantity, $label !== '' ? $label : null, $deviceId, $position++, $phase);
         }
 
         if ($deviceErrors !== []) {

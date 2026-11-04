@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Venue\Command;
 
 use App\Domain\Venue\CircuitBreakerRating;
+use App\Domain\Venue\PowerConnectionFuseType;
 use App\Domain\Venue\PowerConnectionType;
 use App\Domain\Venue\RcdTripCurrent;
 
@@ -27,8 +28,15 @@ trait ValidatesVenuePowerConnectionInput
         string $breakerRating,
         string $rcdTripCurrent,
         ?string $location,
+        ?string $fuseType = null,
     ): array {
         $errors = [];
+
+        // Migration 129: LS-Schalter (Standard) oder Neozed/Diazed.
+        $fuseEnum = $fuseType === null || $fuseType === '' ? PowerConnectionFuseType::CircuitBreaker : PowerConnectionFuseType::tryFrom($fuseType);
+        if ($fuseEnum === null) {
+            $errors['fuseType'] = 'Bitte eine gültige Art der Absicherung auswählen.';
+        }
 
         $typeEnum = PowerConnectionType::tryFrom($type);
         if ($typeEnum === null) {
@@ -37,7 +45,9 @@ trait ValidatesVenuePowerConnectionInput
 
         $breakerEnum = CircuitBreakerRating::tryFrom($breakerRating);
         if ($breakerEnum === null) {
-            $errors['breakerRating'] = 'Bitte eine gültige Leitungsschutzschalter-Größe auswählen.';
+            $errors['breakerRating'] = 'Bitte eine gültige Sicherungsgröße auswählen.';
+        } elseif ($fuseEnum !== null && $fuseEnum->isFuse() && $breakerEnum->amps() > 100) {
+            $errors['breakerRating'] = 'Neozed-/Diazed-Sicherungen gibt es nur bis 100 A.';
         }
 
         $rcdEnum = RcdTripCurrent::tryFrom($rcdTripCurrent);
@@ -55,6 +65,7 @@ trait ValidatesVenuePowerConnectionInput
             'breakerRating' => $breakerEnum,
             'rcdTripCurrent' => $rcdEnum,
             'location' => $location,
+            'fuseType' => $fuseEnum,
         ]];
     }
 }

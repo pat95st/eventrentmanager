@@ -23,6 +23,9 @@ enum Permission: string
     // zur Veranstaltungsplanung als zur Material-Logistik gehören, siehe
     // architektur-und-setup.md Abschnitt „Minutenprogramme“).
     case Minutenprogramme = 'minutenprogramme';
+    // Nur Elektroprüfungen erfassen (Nutzerwunsch); der Benutzer wird dabei
+    // automatisch als Prüfer eingetragen. Artikelverwaltung darf das auch.
+    case Elektropruefung = 'elektropruefung';
 
     public function label(): string
     {
@@ -32,12 +35,13 @@ enum Permission: string
             self::Kundenverwaltung => 'Kundenverwaltung',
             self::AusgabeRuecknahme => 'Ausgabe und Rücknahme',
             self::Minutenprogramme => 'Minutenprogramme',
+            self::Elektropruefung => 'Elektroprüfung',
         };
     }
 
     /** @return Permission[] Alle Rechte in fester Anzeigereihenfolge. */
     public static function all(): array
     {
-        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme];
+        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme, self::Elektropruefung];
     }
 }

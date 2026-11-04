@@ -36,25 +36,80 @@ final class PowerDistributor
         return null;
     }
 
-    /** Lesbare Absicherung eines Abgangs, z. B. "hinter FI F1 (Typ A 30 mA) und LS F2 (C16)". */
+    /** Lesbare Absicherung eines Abgangs, z. B. "hinter FI F1 (Typ A 30 mA) und LS F2 (C16)" plus Phase. */
     public function protectionOf(Outlet $outlet): string
+    {
+        $phase = $this->phaseOf($outlet);
+
+        return $this->protectionText($outlet) . ($phase !== null ? ' · Phase ' . $phase : '');
+    }
+
+    private function protectionText(Outlet $outlet): string
     {
         $device = $this->device($outlet->deviceId);
         if ($device === null) {
             return 'direkt von der Zuleitung (ohne Schutzorgan)';
         }
+        $name = $device->type->shortLabel() . ' ' . $device->label . ' (' . $device->specification() . ')';
         if ($device->type === ProtectiveDeviceType::Rcbo) {
-            return 'hinter FI/LS ' . $device->label . ' (' . $device->specification() . ')';
+            return 'hinter ' . $name;
         }
         if ($device->type === ProtectiveDeviceType::Rcd) {
-            return 'nur hinter FI ' . $device->label . ' (' . $device->specification() . ')';
+            return 'nur hinter ' . $name;
         }
         $upstream = $this->device($device->upstreamDeviceId);
         if ($upstream === null) {
-            return 'nur hinter LS ' . $device->label . ' (' . $device->specification() . ')';
+            return 'nur hinter ' . $name;
         }
 
-        return 'hinter FI ' . $upstream->label . ' (' . $upstream->specification() . ') und LS ' . $device->label . ' (' . $device->specification() . ')';
+        return 'hinter FI ' . $upstream->label . ' (' . $upstream->specification() . ') und ' . $name;
+    }
+
+    /**
+     * Phase, an der ein einphasiger Abgang hängt: am Abgang gewählt (bei
+     * dreiphasiger Absicherung) oder vom einphasigen Schutzorgan übernommen.
+     */
+    public function phaseOf(Outlet $outlet): ?string
+    {
+        if ($outlet->connectorType->isThreePhase()) {
+            return null;
+        }
+        if ($outlet->phase !== null) {
+            return $outlet->phase;
+        }
+        $device = $this->device($outlet->deviceId);
+
+        return $device !== null && $device->isSinglePhase() ? $device->phase : null;
+    }
+
+    /** Hat der Verteiler Schmelzsicherungen (Neozed/Diazed)? Dann Ersatzsicherungen mitnehmen. */
+    public function hasFuses(): bool
+    {
+        foreach ($this->devices as $device) {
+            if ($device->type === ProtectiveDeviceType::Fuse) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Benötigte Sicherungseinsätze, z. B. ["Neozed 16 A" => 4, "Diazed 25 A" => 3].
+     *
+     * @return array<string, int>
+     */
+    public function fuseSummary(): array
+    {
+        $summary = [];
+        foreach ($this->devices as $device) {
+            $description = $device->fuseDescription();
+            if ($description !== null) {
+                $summary[$description] = ($summary[$description] ?? 0) + $device->fuseCount();
+            }
+        }
+
+        return $summary;
     }
 
     /** Hat der Abgang Fehlerstromschutz? */

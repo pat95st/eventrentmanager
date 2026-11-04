@@ -58,6 +58,7 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             positionX: (int) ($row[$prefix . 'position_x'] ?? 50),
             positionY: (int) ($row[$prefix . 'position_y'] ?? 50),
             zoom: (int) ($row[$prefix . 'zoom'] ?? 100),
+            blur: (int) ($row[$prefix . 'blur'] ?? 0),
         );
     }
 
@@ -70,10 +71,10 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
                 logo_max_height_px = :logo_max_height_px, dark_logo_filename = :dark_logo_filename,
                 background_image_filename = :background_image_filename,
                 background_opacity = :bg_opacity, background_fit = :bg_fit, background_position_x = :bg_x,
-                background_position_y = :bg_y, background_zoom = :bg_zoom,
+                background_position_y = :bg_y, background_zoom = :bg_zoom, background_blur = :bg_blur,
                 login_background_filename = :login_background_filename,
                 login_background_opacity = :lbg_opacity, login_background_fit = :lbg_fit, login_background_position_x = :lbg_x,
-                login_background_position_y = :lbg_y, login_background_zoom = :lbg_zoom,
+                login_background_position_y = :lbg_y, login_background_zoom = :lbg_zoom, login_background_blur = :lbg_blur,
                 phone = :phone, email = :email, website = :website, favicon_filename = :favicon_filename
              WHERE id = 1'
         );
@@ -98,12 +99,14 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             'bg_x' => $settings->backgroundStyle->positionX,
             'bg_y' => $settings->backgroundStyle->positionY,
             'bg_zoom' => $settings->backgroundStyle->zoom,
+            'bg_blur' => $settings->backgroundStyle->blur,
             'login_background_filename' => $settings->loginBackgroundFilename,
             'lbg_opacity' => $settings->loginBackgroundStyle->opacity,
             'lbg_fit' => $settings->loginBackgroundStyle->fit,
             'lbg_x' => $settings->loginBackgroundStyle->positionX,
             'lbg_y' => $settings->loginBackgroundStyle->positionY,
             'lbg_zoom' => $settings->loginBackgroundStyle->zoom,
+            'lbg_blur' => $settings->loginBackgroundStyle->blur,
         ]);
     }
 }

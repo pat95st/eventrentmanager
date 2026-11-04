@@ -80,6 +80,7 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
         </form>
     </div>
 </div>
+<?php require __DIR__ . '/_spare_fuses.php'; /* Ersatzsicherungen (Migration 129) */ ?>
 
 <?php if ($venue !== null): ?>
     <div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

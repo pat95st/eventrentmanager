@@ -71,4 +71,10 @@ enum PowerConnectionType: string
             self::Festanschluss,
         ];
     }
+
+    /** Dreiphasig (400 V CEE rot)? Festanschluss gilt als dreiphasig (Migration 129). */
+    public function isThreePhase(): bool
+    {
+        return in_array($this, [self::Cee16A400V, self::Cee32A400V, self::Cee63A400V, self::Cee125A400V, self::Festanschluss], true);
+    }
 }

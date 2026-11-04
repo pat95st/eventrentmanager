@@ -47,6 +47,9 @@ final class MariadbPowerDistributorRepository implements PowerDistributorReposit
                 characteristic: $d['characteristic'] ?? null,
                 upstreamDeviceId: $d['upstream_device_id'] ?? null,
                 sortOrder: (int) $d['sort_order'],
+                fuseSystem: $d['fuse_system'] ?? null,
+                threeSingle: (bool) ($d['three_single'] ?? false),
+                phase: $d['phase'] ?? null,
             ), $devices->fetchAll()),
             outlets: array_values(array_filter(array_map(static fn (array $o) => ConnectorType::tryFrom((string) $o['connector_type']) !== null ? new Outlet(
                 id: $o['id'],
@@ -55,6 +58,7 @@ final class MariadbPowerDistributorRepository implements PowerDistributorReposit
                 label: $o['label'] ?? null,
                 deviceId: $o['device_id'] ?? null,
                 sortOrder: (int) $o['sort_order'],
+                phase: $o['phase'] ?? null,
             ) : null, $outlets->fetchAll()))),
         );
     }
@@ -77,8 +81,8 @@ final class MariadbPowerDistributorRepository implements PowerDistributorReposit
             $this->pdo->prepare('DELETE FROM power_distributor_devices WHERE article_id = :id')->execute(['id' => $distributor->articleId]);
 
             $insertDevice = $this->pdo->prepare(
-                'INSERT INTO power_distributor_devices (id, article_id, label, device_type, poles, rcd_type, residual_current_ma, rated_current_a, characteristic, upstream_device_id, sort_order)
-                 VALUES (:id, :article_id, :label, :device_type, :poles, :rcd_type, :residual_current_ma, :rated_current_a, :characteristic, NULL, :sort_order)'
+                'INSERT INTO power_distributor_devices (id, article_id, label, device_type, poles, rcd_type, residual_current_ma, rated_current_a, characteristic, upstream_device_id, sort_order, fuse_system, three_single, phase)
+                 VALUES (:id, :article_id, :label, :device_type, :poles, :rcd_type, :residual_current_ma, :rated_current_a, :characteristic, NULL, :sort_order, :fuse_system, :three_single, :phase)'
             );
             foreach ($distributor->devices as $device) {
                 $insertDevice->execute([
@@ -92,6 +96,9 @@ final class MariadbPowerDistributorRepository implements PowerDistributorReposit
                     'rated_current_a' => $device->ratedCurrentA,
                     'characteristic' => $device->characteristic,
                     'sort_order' => $device->sortOrder,
+                    'fuse_system' => $device->fuseSystem,
+                    'three_single' => $device->threeSingle ? 1 : 0,
+                    'phase' => $device->phase,
                 ]);
             }
             // Vorgeschaltete RCDs erst nach dem Einfügen aller Schutzorgane setzen (Fremdschlüssel).
@@ -103,8 +110,8 @@ final class MariadbPowerDistributorRepository implements PowerDistributorReposit
             }
 
             $insertOutlet = $this->pdo->prepare(
-                'INSERT INTO power_distributor_outlets (id, article_id, connector_type, quantity, label, device_id, sort_order)
-                 VALUES (:id, :article_id, :connector_type, :quantity, :label, :device_id, :sort_order)'
+                'INSERT INTO power_distributor_outlets (id, article_id, connector_type, quantity, label, device_id, sort_order, phase)
+                 VALUES (:id, :article_id, :connector_type, :quantity, :label, :device_id, :sort_order, :phase)'
             );
             foreach ($distributor->outlets as $outlet) {
                 $insertOutlet->execute([
@@ -115,6 +122,7 @@ final class MariadbPowerDistributorRepository implements PowerDistributorReposit
                     'label' => $outlet->label,
                     'device_id' => $outlet->deviceId,
                     'sort_order' => $outlet->sortOrder,
+                    'phase' => $outlet->phase,
                 ]);
             }
 

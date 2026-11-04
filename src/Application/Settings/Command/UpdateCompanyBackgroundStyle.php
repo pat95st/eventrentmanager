@@ -17,6 +17,7 @@ final class UpdateCompanyBackgroundStyle implements CommandInterface
         public readonly int $positionX,
         public readonly int $positionY,
         public readonly int $zoom,
+        public readonly int $blur = 0, // Migration 129
     ) {
     }
 }

@@ -195,6 +195,7 @@ final class CompanySettingsController
             positionX: (int) ($request->input('position_x') ?? 50),
             positionY: (int) ($request->input('position_y') ?? 50),
             zoom: (int) ($request->input('zoom') ?? 100),
+            blur: (int) ($request->input('blur') ?? 0),
         ));
         Flash::success('Darstellung des Hintergrunds wurde gespeichert.');
         Response::redirect('/einstellungen/firma#hintergrund-' . $slot->value);

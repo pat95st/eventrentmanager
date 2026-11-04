@@ -50,7 +50,7 @@ $backgroundImageUrl = CompanyBranding::backgroundImageUrl();
 // verwaltung und stecken daher hier (nicht mehr bei "Veranstaltungen").
 // Jeder Menüpunkt wird nur angezeigt, wenn der angemeldete Benutzer das
 // zugehörige Recht besitzt (siehe Zuordnung in bootstrap.php).
-$articlesGroupKeys = ['articles', 'sets', 'cases', 'racks', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'firmware', 'notice_documents', 'warehouses'];
+$articlesGroupKeys = ['articles', 'sets', 'cases', 'racks', 'manufacturers', 'arbeitszeit', 'categories', 'rma', 'electrical-inspection', 'firmware', 'notice_documents', 'warehouses'];
 $articlesChildren = [
     ['key' => 'articles', 'label' => t('nav.articles_all'), 'href' => '/artikel'],
     ['key' => 'sets', 'label' => t('nav.sets'), 'href' => '/sets'],
@@ -60,6 +60,7 @@ $articlesChildren = [
     ['key' => 'arbeitszeit', 'label' => t('nav.labor_time_articles'), 'href' => '/arbeitszeit-artikel'],
     ['key' => 'categories', 'label' => t('nav.categories'), 'href' => '/kategorien'],
     ['key' => 'rma', 'label' => t('nav.rma'), 'href' => '/rma'],
+    ['key' => 'electrical-inspection', 'label' => 'Elektroprüfung', 'href' => '/elektropruefung'],
     ['key' => 'firmware', 'label' => t('nav.firmware'), 'href' => '/firmware'],
     ['key' => 'notice_documents', 'label' => t('nav.notice_documents'), 'href' => '/hinweisdokumente'],
     ['key' => 'warehouses', 'label' => t('nav.warehouses'), 'href' => '/lagerorte'],
@@ -125,6 +126,9 @@ $canArticles = $currentUser?->has(Permission::Artikelverwaltung) ?? false;
 $canCustomers = $currentUser?->has(Permission::Kundenverwaltung) ?? false;
 $canRentals = $currentUser?->has(Permission::AusgabeRuecknahme) ?? false;
 $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
+// Eigener Menüpunkt "Elektroprüfung" für Benutzer mit diesem Recht, aber ohne
+// Artikelverwaltung (sonst steht er im Menü "Artikel").
+$canInspections = $currentUser !== null && !$canArticles && $currentUser->has(Permission::Elektropruefung);
 // "Kontakte" ist sichtbar, sobald mindestens einer der beiden Kindpunkte
 // (Kunden ODER Lieferanten) berechtigt ist; "Einkauf"/"Dokumente" teilen
 // sich jeweils ein einziges Recht mit allen ihren Kindpunkten (siehe oben).
@@ -182,6 +186,13 @@ $canDocuments = $canRentals;
     dialog[open], dialog[open]::backdrop, dialog.modal-closing, dialog.modal-closing::backdrop { animation: none; }
     .modal-fade { transition: none; }
   }
+  /* Untermenüs der Hauptnavigation: Breite nach dem längsten Eintrag (auch
+     bei breiteren Schriftarten) mit gleichem Abstand links und rechts; mit
+     Hintergrundbild nahezu deckend, damit der Inhalt darunter nicht durchscheint. */
+  .nav-flyout { width: max-content; min-width: 11rem; max-width: 22rem; }
+  .nav-flyout > a { padding-left: 0.875rem; padding-right: 0.875rem; white-space: nowrap; }
+  body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu] { background-color: rgb(255 255 255 / 0.97) !important; }
+  html.dark body.has-bg-image .nav-flyout, html.dark body.has-bg-image [data-dropdown-menu] { background-color: rgb(15 23 42 / 0.97) !important; }
   /* Mobiles Menü im (sticky) Header: eigene Scrollfläche, sonst ist alles
      unterhalb des Bildschirmrands auf dem Handy nicht erreichbar. Die
      genaue Höhe setzt das Hamburger-Skript beim Öffnen. */
@@ -348,7 +359,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.articles')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($articlesChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -368,7 +379,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.contacts')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($contactsChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -391,7 +402,7 @@ $canDocuments = $canRentals;
               <span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
             <?php endif; ?>
           </a>
-          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($procurementChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -413,6 +424,13 @@ $canDocuments = $canRentals;
         ><?= e(t('nav.sales')) ?></a>
         <?php endif; ?>
 
+        <?php if ($canInspections): ?>
+        <a
+          href="/elektropruefung"
+          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'electrical-inspection' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+        >Elektroprüfung</a>
+        <?php endif; ?>
+
         <?php if ($canDocuments): ?>
         <div class="group relative">
           <a
@@ -422,7 +440,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.documents')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($documentsChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -442,7 +460,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.rentals')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="invisible absolute left-0 top-full z-10 w-44 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($rentalsChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -543,7 +561,7 @@ $canDocuments = $canRentals;
             <span class="hidden max-w-[10rem] truncate sm:inline"><?= e($currentUser->displayName()) ?></span>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </button>
-          <div class="invisible absolute right-0 top-full z-10 w-52 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute right-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <div class="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
             <a href="/profil/sicherheit" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
             <a href="/profil/sitzungen" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
@@ -662,6 +680,13 @@ $canDocuments = $canRentals;
         href="/verkaeufe"
         class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
       ><?= e(t('nav.sales')) ?></a>
+      <?php endif; ?>
+
+      <?php if ($canInspections): ?>
+      <a
+        href="/elektropruefung"
+        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'electrical-inspection' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+      >Elektroprüfung</a>
       <?php endif; ?>
 
       <?php if ($canDocuments): ?>

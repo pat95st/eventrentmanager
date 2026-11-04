@@ -25,20 +25,22 @@ use function App\Infrastructure\Http\t;
         <a href="/artikel/preisliste.csv" class="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('articles.price_list.export_csv')) ?>
         </a>
-        <a href="/artikel/neu?stromverteiler=1" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
-            + Neuer Stromverteiler
-        </a>
-        <?php if ($hasCableCategory ?? false): ?>
-            <a href="/artikel/neu?leitung=1" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
-                + Neue Leitung
-            </a>
-        <?php endif; ?>
-        <a href="/artikel/neues-bundle" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
-            + <?= e(t('articles.bundle.new')) ?>
-        </a>
-        <a href="/artikel/neu" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            + <?= e(t('articles.new')) ?>
-        </a>
+        <!-- Neuer Artikel: Auswahl der Artikelart (Nutzerwunsch) -->
+        <details class="relative inline-block text-left" data-dropdown>
+            <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700" aria-haspopup="menu">
+                + <?= e(t('articles.new')) ?>
+                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd"/></svg>
+            </summary>
+            <div data-dropdown-menu role="menu" class="absolute right-0 top-full z-20 mt-1 w-56 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                <a role="menuitem" href="/artikel/neu" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Standardartikel</a>
+                <a role="menuitem" href="/artikel/neues-bundle" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Bundle</a>
+                <div role="separator" class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+                <a role="menuitem" href="/artikel/neu?stromverteiler=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Stromverteiler</a>
+                <?php if ($hasCableCategory ?? false): ?>
+                    <a role="menuitem" href="/artikel/neu?leitung=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Leitung</a>
+                <?php endif; ?>
+            </div>
+        </details>
     </div>
 </div>
 

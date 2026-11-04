@@ -26,7 +26,35 @@ final class PowerConnection
         public RcdTripCurrent $rcdTripCurrent,
         public ?string $location,
         public readonly DateTimeImmutable $createdAt,
+        // Migration 129: LS-Schalter oder Schmelzsicherung (Neozed/Diazed).
+        public PowerConnectionFuseType $fuseType = PowerConnectionFuseType::CircuitBreaker,
     ) {
+    }
+
+    /** z. B. "LS 32 A" oder "Neozed 16 A (3 einzelne)". */
+    public function protectionLabel(): string
+    {
+        if (!$this->fuseType->isFuse()) {
+            return 'LS-Schalter ' . $this->breakerRating->value;
+        }
+        $three = $this->type->isThreePhase() ? ' (3 einzelne)' : '';
+
+        return $this->fuseType->label() . ' ' . $this->breakerRating->value . $three;
+    }
+
+    /** Hinweis-Text für Anschlüsse mit Schmelzsicherungen. */
+    public const SPARE_FUSE_HINT = 'Mit Schmelzsicherungen abgesichert: Ersatzsicherungen muss der Veranstaltungsort bereitstellen – bitte im Voraus anfragen.';
+
+    /** @param PowerConnection[] $connections */
+    public static function anyUsesFuses(array $connections): bool
+    {
+        foreach ($connections as $connection) {
+            if ($connection->fuseType->isFuse()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

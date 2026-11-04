@@ -27,6 +27,7 @@ final class UpdateCompanyBackgroundStyleHandler implements CommandHandlerInterfa
             positionX: $command->positionX,
             positionY: $command->positionY,
             zoom: $command->zoom,
+            blur: $command->blur,
         ));
         $this->settingsRepository->save($settings);
 

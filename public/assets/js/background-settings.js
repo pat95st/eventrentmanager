@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var DEFAULTS = { opacity: 100, fit: 'cover', position_x: 50, position_y: 50, zoom: 100 };
+  var DEFAULTS = { opacity: 100, fit: 'cover', position_x: 50, position_y: 50, zoom: 100, blur: 0 };
 
   document.querySelectorAll('form[data-bg-style]').forEach(function (form) {
     var layer = document.getElementById(form.getAttribute('data-bg-style') + '-layer');
@@ -35,11 +35,16 @@
       }
       media.style.transformOrigin = position;
       media.style.transform = value('zoom') !== 100 ? 'scale(' + value('zoom') / 100 + ')' : '';
+      var blur = value('blur') || 0;
+      media.style.filter = blur > 0 ? 'blur(' + blur + 'px)' : '';
+      media.style.inset = blur > 0 ? (-2 * blur) + 'px' : '';
+      media.style.width = blur > 0 ? 'auto' : '';
+      media.style.height = blur > 0 ? 'auto' : '';
 
       form.querySelectorAll('input[type="range"]').forEach(function (input) {
         var output = form.querySelector('output[for="' + input.id + '"]');
         if (output) {
-          output.textContent = input.value + '%';
+          output.textContent = input.value + (input.getAttribute('data-unit') || '%');
         }
       });
     }

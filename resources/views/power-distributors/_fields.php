@@ -31,10 +31,11 @@ if ($old !== null) {
         'rcd_type' => (string) ($d->rcdType ?? ''), 'residual_current_ma' => (string) ($d->residualCurrentMa ?? ''),
         'rated_current_a' => (string) ($d->ratedCurrentA ?? ''), 'characteristic' => (string) ($d->characteristic ?? ''),
         'upstream_key' => (string) ($d->upstreamDeviceId ?? ''),
+        'fuse_system' => (string) ($d->fuseSystem ?? ''), 'three_single' => $d->threeSingle ? '1' : '', 'phase' => (string) ($d->phase ?? ''),
     ], $distributor?->devices ?? []);
     $outletRows = array_map(static fn ($o) => [
         'connector_type' => $o->connectorType->value, 'quantity' => (string) $o->quantity, 'label' => (string) ($o->label ?? ''),
-        'device_key' => (string) ($o->deviceId ?? ''),
+        'device_key' => (string) ($o->deviceId ?? ''), 'phase' => (string) ($o->phase ?? ''),
     ], $distributor?->outlets ?? []);
 }
 $distributorErrors = array_values(array_filter([$errors['powerDistributorInlet'] ?? null, $errors['powerDistributorDevices'] ?? null, $errors['powerDistributorOutlets'] ?? null]));
@@ -74,7 +75,7 @@ $renderDeviceRow = static function (string $index, array $row) use ($input, $lab
             </div>
             <div>
                 <label class="<?= $label ?>">Polzahl</label>
-                <select name="<?= $name('poles') ?>" class="<?= $input ?>"><?= $options($assoc(ProtectiveDevice::POLES, '-polig'), $row['poles'] ?? '', '–') ?></select>
+                <select name="<?= $name('poles') ?>" class="<?= $input ?>" data-device-poles><?= $options($assoc(ProtectiveDevice::POLES, '-polig'), $row['poles'] ?? '', '–') ?></select>
             </div>
             <div class="flex items-end justify-end gap-3">
                 <button type="button" data-duplicate-row title="Mit allen Einstellungen duplizieren" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Duplizieren</button>
@@ -88,13 +89,27 @@ $renderDeviceRow = static function (string $index, array $row) use ($input, $lab
                 <label class="<?= $label ?>">Auslösestrom</label>
                 <select name="<?= $name('residual_current_ma') ?>" class="<?= $input ?>"><?= $options($assoc(ProtectiveDevice::RESIDUAL_CURRENTS_MA, ' mA'), $row['residual_current_ma'] ?? '30', '–') ?></select>
             </div>
+            <div data-fuse-field>
+                <label class="<?= $label ?>">System</label>
+                <select name="<?= $name('fuse_system') ?>" class="<?= $input ?>"><?= $options(ProtectiveDevice::FUSE_SYSTEMS, $row['fuse_system'] ?? 'neozed', '–') ?></select>
+            </div>
             <div data-mcb-field>
                 <label class="<?= $label ?>">Charakteristik</label>
                 <select name="<?= $name('characteristic') ?>" class="<?= $input ?>"><?= $options(array_combine(ProtectiveDevice::CHARACTERISTICS, ProtectiveDevice::CHARACTERISTICS), $row['characteristic'] ?? 'B', '–') ?></select>
             </div>
             <div>
                 <label class="<?= $label ?>" data-rated-label>Sicherungsgröße</label>
-                <select name="<?= $name('rated_current_a') ?>" class="<?= $input ?>"><?= $options($assoc(ProtectiveDevice::RATED_CURRENTS_A, ' A'), $row['rated_current_a'] ?? '', '–') ?></select>
+                <select name="<?= $name('rated_current_a') ?>" class="<?= $input ?>" data-rated-select data-mcb-currents="<?= e(implode(',', ProtectiveDevice::RATED_CURRENTS_A)) ?>" data-fuse-currents="<?= e(implode(',', ProtectiveDevice::FUSE_RATED_CURRENTS_A)) ?>" data-selected="<?= e($row['rated_current_a'] ?? '') ?>"><?= $options($assoc(ProtectiveDevice::RATED_CURRENTS_A, ' A'), $row['rated_current_a'] ?? '', '–') ?></select>
+            </div>
+            <div data-three-single-field class="flex items-end">
+                <label class="flex items-center gap-2 pb-1.5 text-xs text-slate-700 dark:text-slate-300" title="Drei einzelne 1-polige Geräte, je eines pro Phase – z. B. für einen CEE-rot-Abgang">
+                    <input type="checkbox" name="<?= $name('three_single') ?>" value="1" <?= ($row['three_single'] ?? '') === '1' ? 'checked' : '' ?> data-three-single>
+                    3 einzelne (je Phase)
+                </label>
+            </div>
+            <div data-phase-field>
+                <label class="<?= $label ?>">Phase</label>
+                <select name="<?= $name('phase') ?>" class="<?= $input ?>"><?= $options(array_combine(ProtectiveDevice::PHASES, ProtectiveDevice::PHASES), $row['phase'] ?? '', '–') ?></select>
             </div>
             <div data-upstream-field class="col-span-2">
                 <label class="<?= $label ?>">Vorgeschaltet</label>
@@ -113,7 +128,7 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
     <div data-outlet-row class="flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <div style="flex:3 1 12rem">
             <label class="<?= $label ?>">Steckverbindung</label>
-            <select name="<?= $name('connector_type') ?>" class="<?= $input ?>"><?= $options($connectorOptions, $row['connector_type'] ?? 'schuko') ?></select>
+            <select name="<?= $name('connector_type') ?>" class="<?= $input ?>" data-outlet-connector><?= $options($connectorOptions, $row['connector_type'] ?? 'schuko') ?></select>
         </div>
         <div style="flex:0 0 5rem">
             <label class="<?= $label ?>">Anzahl</label>
@@ -129,6 +144,10 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
                 <option value="">direkt von der Zuleitung</option>
             </select>
         </div>
+        <div style="flex:0 0 5.5rem" data-outlet-phase-field>
+            <label class="<?= $label ?>">Phase</label>
+            <select name="<?= $name('phase') ?>" class="<?= $input ?>" data-outlet-phase><?= $options(array_combine(ProtectiveDevice::PHASES, ProtectiveDevice::PHASES), $row['phase'] ?? '', '–') ?></select>
+        </div>
         <div class="flex justify-end gap-3" style="flex:0 0 auto">
             <button type="button" data-duplicate-row title="Mit allen Einstellungen duplizieren" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Duplizieren</button>
             <button type="button" data-remove-row class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
@@ -137,7 +156,7 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
     <?php
 };
 ?>
-<div data-distributor-fields class="space-y-4">
+<div data-distributor-fields class="space-y-4" data-three-phase-connectors="<?= e(implode(',', array_map(static fn ($c) => $c->value, array_filter(ConnectorType::cases(), static fn ($c) => $c->isThreePhase())))) ?>">
     <?php if ($distributorErrors !== []): ?>
         <div class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800">
             <?php foreach ($distributorErrors as $message): ?><p><?= e($message) ?></p><?php endforeach; ?>
@@ -147,7 +166,7 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
             <label for="pd_inlet_type" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Art der Zuleitung *</label>
-            <select id="pd_inlet_type" name="pd_inlet_type" class="mt-1 <?= $input ?>"><?= $options($connectorOptions, $inletType, 'Bitte wählen …') ?></select>
+            <select id="pd_inlet_type" name="pd_inlet_type" class="mt-1 <?= $input ?>" data-inlet-type><?= $options($connectorOptions, $inletType, 'Bitte wählen …') ?></select>
         </div>
         <div>
             <label for="pd_notes" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Bemerkung zum Verteiler</label>
@@ -159,7 +178,7 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div>
                 <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Schutzorgane</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">RCD (FI), LS-Schalter und FI/LS-Kombinationen. Ein LS kann hinter einem FI liegen. Ohne Bezeichnung wird F1, F2, … vergeben.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">RCD (FI), LS-Schalter, FI/LS-Kombinationen und Schmelzsicherungen (Neozed/Diazed, 1-polig oder 3 einzelne). LS und Sicherungen können hinter einem FI liegen; bei einphasigen Schutzorganen kann die Phase angegeben werden. Ohne Bezeichnung wird F1, F2, … vergeben.</p>
             </div>
             <button type="button" data-add-device class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">+ Schutzorgan</button>
         </div>
@@ -172,7 +191,7 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
             <div>
                 <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Abgänge</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Direkt von der Zuleitung, nur hinter FI, nur hinter LS, hinter FI und LS (LS mit vorgeschaltetem FI wählen) oder hinter FI/LS.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Direkt von der Zuleitung, nur hinter FI, nur hinter LS/Sicherung, hinter FI und LS (LS mit vorgeschaltetem FI wählen) oder hinter FI/LS. CEE rot braucht eine dreiphasige Absicherung; einphasige Abgänge an dreiphasiger Absicherung bekommen eine Phase.</p>
             </div>
             <button type="button" data-add-outlet class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">+ Abgang</button>
         </div>

@@ -1123,6 +1123,34 @@ final class ArticleController
         // Bundles haben ein eigenes, schlankes Formular (Nutzerwunsch).
         $bundleMode = ($article?->isBundle ?? false) || !empty($old['is_bundle']);
 
+        // Leitungen haben ebenfalls ein eigenes Formular (Nutzerwunsch): bei
+        // Artikeln der Kategorie "Leitungen" bzw. beim Anlegen über ?leitung=1.
+        $cableCategoryId = $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId());
+        $cableMode = !$bundleMode && $cableCategoryId !== null
+            && (array_key_exists('category_id', $old) ? $old['category_id'] === $cableCategoryId : $article?->categoryId === $cableCategoryId);
+        $cableSettingsForForm = $cableMode ? $this->cableSettings() : null;
+        if ($cableMode && $cableSettingsForForm !== null) {
+            $generic = null;
+            foreach ($manufacturers as $manufacturer) {
+                if ($manufacturer->isGeneric) {
+                    $generic = $manufacturer;
+                    break;
+                }
+            }
+            echo View::page('articles/cable-form', [
+                'article' => $article,
+                'errors' => $errors,
+                'old' => $old,
+                'editingId' => $editingId,
+                'cable' => $article !== null ? $this->articleCable($article->id) : null,
+                'cableCategoryId' => $cableCategoryId,
+                'cableSettings' => $cableSettingsForForm,
+                'genericManufacturer' => $generic,
+            ], activeNav: 'articles', title: $article !== null ? 'Leitung bearbeiten' : 'Neue Leitung');
+
+            return;
+        }
+
         echo View::page($bundleMode ? 'articles/bundle-form' : 'articles/form', [
             'article' => $article,
             'bundleComponentRows' => $bundleComponentRows,

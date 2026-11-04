@@ -15,6 +15,7 @@ final class UpdateVenuePowerConnection implements CommandInterface
         public readonly string $breakerRating,
         public readonly string $rcdTripCurrent,
         public readonly ?string $location,
+        public readonly ?string $fuseType = null, // Migration 129: mcb | neozed | diazed
     ) {
     }
 }

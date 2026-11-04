@@ -19,4 +19,12 @@ interface ElectricalInspectionRepositoryInterface
     public function countByInventoryNumber(string $inventoryNumberId): int;
 
     public function delete(string $id): void;
+
+    /**
+     * Zuletzt erfasste Prüfungen aller Geräte (neueste zuerst), optional
+     * gefiltert nach Inventurnummer oder Artikelname.
+     *
+     * @return ElectricalInspection[]
+     */
+    public function findRecent(int $limit, ?string $search = null): array;
 }

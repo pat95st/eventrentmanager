@@ -9,7 +9,7 @@
     var devices = form.querySelector('[data-devices]');
     var outlets = form.querySelector('[data-outlets]');
     var counter = Date.now();
-    var TYPE_LABEL = { rcd: 'FI', mcb: 'LS', rcbo: 'FI/LS' };
+    var TYPE_LABEL = { rcd: 'FI', mcb: 'LS', rcbo: 'FI/LS', fuse: 'Sicherung' };
 
     function fromTemplate(selector, replacements) {
         var html = form.querySelector(selector).innerHTML;
@@ -19,14 +19,37 @@
         return wrapper.firstElementChild;
     }
 
+    var THREE_PHASE = (form.getAttribute('data-three-phase-connectors') || '').split(',');
+    var inlet = form.querySelector('[data-inlet-type]');
+
     function deviceInfo() {
         var list = [];
         devices.querySelectorAll('[data-device-row]').forEach(function (row, i) {
             var type = row.querySelector('[data-device-type]').value;
             var label = row.querySelector('[data-device-label]').value.trim() || ('Schutzorgan ' + (i + 1));
-            list.push({ key: row.querySelector('[data-device-key]').value, type: type, label: label, row: row });
+            var threeSingleBox = row.querySelector('[data-three-single]');
+            var threeSingle = !!threeSingleBox && threeSingleBox.checked && (type === 'mcb' || type === 'fuse');
+            var poles = parseInt(row.querySelector('[data-device-poles]').value, 10);
+            if (type === 'fuse') { poles = threeSingle ? 3 : 1; } else if (threeSingle) { poles = 3; }
+            list.push({
+                key: row.querySelector('[data-device-key]').value, type: type, label: label, row: row,
+                threeSingle: threeSingle, poles: isNaN(poles) ? null : poles,
+                threePhase: threeSingle || (!isNaN(poles) && poles >= 3),
+                singlePhase: !threeSingle && !isNaN(poles) && poles <= 2
+            });
         });
         return list;
+    }
+
+    function setOptions(select, values) {
+        var current = select.value || select.getAttribute('data-selected') || '';
+        var wanted = values.join(',');
+        if (select.getAttribute('data-current-list') === wanted) { return; }
+        select.setAttribute('data-current-list', wanted);
+        select.innerHTML = '<option value="">–</option>' + values.map(function (v) {
+            return '<option value="' + v + '"' + (v === current ? ' selected' : '') + '>' + v + ' A</option>';
+        }).join('');
+        select.removeAttribute('data-selected');
     }
 
     function fillSelect(select, items, emptyText) {
@@ -46,6 +69,8 @@
         select.removeAttribute('data-selected');
     }
 
+    function show(el, visible) { if (el) { el.style.display = visible ? '' : 'none'; } }
+
     function refresh() {
         var list = deviceInfo();
         var byKey = {};
@@ -53,30 +78,54 @@
 
         list.forEach(function (d) {
             var row = d.row;
-            row.querySelectorAll('[data-rcd-field]').forEach(function (el) { el.style.display = d.type === 'mcb' ? 'none' : ''; });
-            row.querySelectorAll('[data-mcb-field]').forEach(function (el) { el.style.display = d.type === 'rcd' ? 'none' : ''; });
-            row.querySelector('[data-upstream-field]').style.display = d.type === 'mcb' ? '' : 'none';
+            row.querySelectorAll('[data-rcd-field]').forEach(function (el) { show(el, d.type === 'rcd' || d.type === 'rcbo'); });
+            row.querySelectorAll('[data-mcb-field]').forEach(function (el) { show(el, d.type === 'mcb' || d.type === 'rcbo'); });
+            row.querySelectorAll('[data-fuse-field]').forEach(function (el) { show(el, d.type === 'fuse'); });
+            show(row.querySelector('[data-three-single-field]'), d.type === 'mcb' || d.type === 'fuse');
+            show(row.querySelector('[data-device-poles]').parentNode, d.type !== 'fuse' && !d.threeSingle);
+            show(row.querySelector('[data-phase-field]'), d.singlePhase);
+            show(row.querySelector('[data-upstream-field]'), d.type === 'mcb' || d.type === 'fuse');
             row.querySelector('[data-rated-label]').textContent = d.type === 'rcd' ? 'Nennstrom (optional)' : 'Sicherungsgröße';
+            var rated = row.querySelector('[data-rated-select]');
+            setOptions(rated, (rated.getAttribute(d.type === 'fuse' ? 'data-fuse-currents' : 'data-mcb-currents') || '').split(','));
             var upstream = row.querySelector('[data-upstream-select]');
             fillSelect(upstream, list.filter(function (o) { return o.type === 'rcd' && o.key !== d.key; }).map(function (o) {
                 return { value: o.key, text: 'hinter FI ' + o.label };
-            }), 'kein FI (LS direkt an der Zuleitung)');
-            if (d.type !== 'mcb') { upstream.value = ''; }
+            }), 'kein FI (direkt an der Zuleitung)');
+            if (d.type !== 'mcb' && d.type !== 'fuse') { upstream.value = ''; }
         });
 
-        outlets.querySelectorAll('[data-outlet-device]').forEach(function (select) {
+        outlets.querySelectorAll('[data-outlet-row]').forEach(function (row) {
+            var select = row.querySelector('[data-outlet-device]');
+            var connector = row.querySelector('[data-outlet-connector]').value;
+            var threePhaseOutlet = THREE_PHASE.indexOf(connector) !== -1;
             fillSelect(select, list.map(function (d) {
                 var text;
+                var name = (TYPE_LABEL[d.type] || '') + ' ' + d.label;
                 if (d.type === 'rcd') {
-                    text = 'nur hinter FI ' + d.label;
+                    text = 'nur hinter ' + name;
                 } else if (d.type === 'rcbo') {
-                    text = 'hinter FI/LS ' + d.label;
+                    text = 'hinter ' + name;
                 } else {
                     var up = d.row.querySelector('[data-upstream-select]').value;
-                    text = up && byKey[up] ? 'hinter FI ' + byKey[up].label + ' und LS ' + d.label : 'nur hinter LS ' + d.label;
+                    text = up && byKey[up] ? 'hinter FI ' + byKey[up].label + ' und ' + name : 'nur hinter ' + name;
                 }
-                return { value: d.key, text: text };
+                if (d.threeSingle) { text += ' (3 × 1-polig)'; } else if (d.poles) { text += ' (' + d.poles + '-polig)'; }
+                return { value: d.key, text: text, invalid: threePhaseOutlet && d.singlePhase };
             }), 'direkt von der Zuleitung (ohne Schutzorgan)');
+            // CEE rot: einzelne 1-/2-polige Absicherungen nicht wählbar (eine bereits gewählte bleibt sichtbar, der Server meldet den Fehler).
+            Array.prototype.forEach.call(select.options, function (option) {
+                var d = byKey[option.value];
+                var invalid = !!d && threePhaseOutlet && d.singlePhase;
+                option.disabled = invalid && !option.selected;
+                if (invalid && option.textContent.indexOf('nicht für CEE rot') === -1) { option.textContent += ' – nicht für CEE rot'; }
+            });
+            var device = byKey[select.value];
+            var supplyThreePhase = device ? device.threePhase : (inlet && THREE_PHASE.indexOf(inlet.value) !== -1);
+            var phaseField = row.querySelector('[data-outlet-phase-field]');
+            var needsPhase = !threePhaseOutlet && supplyThreePhase;
+            show(phaseField, needsPhase);
+            if (!needsPhase) { row.querySelector('[data-outlet-phase]').value = ''; }
         });
     }
 
@@ -137,6 +186,10 @@
         refresh();
     });
     devices.addEventListener('change', refresh);
+    outlets.addEventListener('change', function (event) {
+        if (event.target.matches('[data-outlet-connector], [data-outlet-device]')) { refresh(); }
+    });
+    if (inlet) { inlet.addEventListener('change', refresh); }
     devices.addEventListener('input', function (event) { if (event.target.matches('[data-device-label]')) { refresh(); } });
 
     // Neue Zeilen ohne Schlüssel (nach Validierungsfehler) bekommen einen.

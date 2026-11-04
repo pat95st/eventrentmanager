@@ -91,7 +91,50 @@ final class RentalController
         private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
         // Racks (Migration 115): fest zugeordnete Racks gehen bei Ausgabe mit.
         private readonly ?\App\Domain\Rack\RackRepositoryInterface $racks = null,
+        // Stromverteiler mit Schmelzsicherungen: Hinweis auf Ersatzsicherungen (Migration 129).
+        private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
+        // Stromanschlüsse des Veranstaltungsorts: Hinweis bei Neozed/Diazed (Migration 129).
+        private readonly ?\App\Domain\Venue\VenuePowerConnectionRepositoryInterface $venuePowerConnections = null,
     ) {
+    }
+
+    /** Anschlüsse des Veranstaltungsorts mit Schmelzsicherungen (Hinweis: Ersatz vom Veranstaltungsort anfragen). */
+    private function venueFuseConnections(?string $venueId): array
+    {
+        if ($venueId === null || $this->venuePowerConnections === null) {
+            return [];
+        }
+
+        return array_values(array_filter($this->venuePowerConnections->findByVenue($venueId), static fn ($c) => $c->fuseType->isFuse()));
+    }
+
+    /**
+     * Stromverteiler mit Neozed-/Diazed-Sicherungen unter den Artikeln der
+     * Veranstaltung: Hinweis, Ersatzsicherungen mitzunehmen.
+     *
+     * @param iterable<object{article: \App\Domain\Article\Article}> $items
+     * @return list<array{name: string, fuses: array<string, int>}>
+     */
+    private function spareFuseHints(iterable $items): array
+    {
+        if ($this->powerDistributors === null) {
+            return [];
+        }
+        $hints = [];
+        $seen = [];
+        foreach ($items as $entry) {
+            $article = $entry->article;
+            if (isset($seen[$article->id])) {
+                continue;
+            }
+            $seen[$article->id] = true;
+            $distributor = $this->powerDistributors->findByArticle($article->id);
+            if ($distributor !== null && $distributor->hasFuses()) {
+                $hints[] = ['name' => $article->name, 'fuses' => $distributor->fuseSummary()];
+            }
+        }
+
+        return $hints;
     }
 
     /**
@@ -347,6 +390,8 @@ final class RentalController
             'voucher' => $voucher,
             'minutePrograms' => $minutePrograms,
             'noticeDocuments' => $noticeDocuments,
+            'spareFuseHints' => $this->spareFuseHints($detail->items),
+            'venueFuseConnections' => $this->venueFuseConnections($detail->rental->venueId),
         ], activeNav: 'rentals', title: t('rentals.page_title.detail', ['event' => $detail->rental->eventName]));
     }
 
@@ -864,6 +909,8 @@ final class RentalController
             'availableByArticle' => $availableByArticle,
             'rentalTermsMarkdown' => $this->legalSettings->get()->rentalTermsMarkdown,
             'fixedRacks' => $this->fixedRacks($detail, $availableByArticle),
+            'spareFuseHints' => $this->spareFuseHints($detail->items),
+            'venueFuseConnections' => $this->venueFuseConnections($detail->rental->venueId),
         ], activeNav: 'rentals', title: t('rentals.page_title.checklist', ['event' => $detail->rental->eventName]));
     }
 

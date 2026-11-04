@@ -23,6 +23,7 @@ foreach ($detail->issuedItems as $issued) {
         <?= e($detail->customer->displayName()) ?> · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>
     </p>
 </div>
+<?php require __DIR__ . '/_spare_fuses.php'; /* Ersatzsicherungen (Migration 129) */ ?>
 
 <?php if ($rental->termsSignedAt === null || $detail->customer->idCheckedAt === null): ?>
     <div class="mb-6 space-y-4 rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">

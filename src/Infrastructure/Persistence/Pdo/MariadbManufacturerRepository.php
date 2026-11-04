@@ -44,6 +44,13 @@ final class MariadbManufacturerRepository implements ManufacturerRepositoryInter
         return $row ? $this->hydrate($row) : null;
     }
 
+    public function findGeneric(): ?Manufacturer
+    {
+        $row = $this->pdo->query('SELECT * FROM manufacturers WHERE is_generic = 1 ORDER BY name LIMIT 1')->fetch();
+
+        return $row ? $this->hydrate($row) : null;
+    }
+
     public function findAll(?string $search = null, ?int $limit = null, ?int $offset = null): array
     {
         [$where, $params] = $this->buildSearchWhere($search);

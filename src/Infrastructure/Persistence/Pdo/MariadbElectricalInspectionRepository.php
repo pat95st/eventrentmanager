@@ -104,6 +104,29 @@ final class MariadbElectricalInspectionRepository implements ElectricalInspectio
         $stmt->execute(['id' => $id]);
     }
 
+    public function findRecent(int $limit, ?string $search = null): array
+    {
+        $limit = max(1, min(500, $limit));
+        $where = '';
+        $params = [];
+        if ($search !== null && trim($search) !== '') {
+            $where = 'WHERE n.number LIKE :q1 OR a.name LIKE :q2';
+            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], trim($search)) . '%';
+            $params = ['q1' => $like, 'q2' => $like];
+        }
+        $stmt = $this->pdo->prepare(
+            "SELECT ei.* FROM electrical_inspections ei
+             JOIN inventory_numbers n ON n.id = ei.inventory_number_id
+             JOIN articles a ON a.id = n.article_id
+             $where
+             ORDER BY ei.inspected_at DESC, ei.created_at DESC
+             LIMIT $limit"
+        );
+        $stmt->execute($params);
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     private function hydrate(array $row): ElectricalInspection
     {
         return new ElectricalInspection(

@@ -37,6 +37,7 @@ final class AddVenuePowerConnectionHandler implements CommandHandlerInterface
             $command->breakerRating,
             $command->rcdTripCurrent,
             $command->location,
+            $command->fuseType,
         );
 
         if ($errors !== []) {
@@ -51,6 +52,7 @@ final class AddVenuePowerConnectionHandler implements CommandHandlerInterface
             rcdTripCurrent: $data['rcdTripCurrent'],
             location: $data['location'],
             createdAt: new DateTimeImmutable(),
+            fuseType: $data['fuseType'],
         );
 
         $this->connections->save($connection);

@@ -139,6 +139,25 @@ body.has-bg-image .bg-white {
   backdrop-filter: blur(6px);
 }
 
+/* Formularfelder: halbtransparent passend zum Modus (im Dunkelmodus dunkel,
+   sonst stand weiße Schrift auf hellem Feld). */
+html:not(.dark) body.has-bg-image input,
+html:not(.dark) body.has-bg-image select,
+html:not(.dark) body.has-bg-image textarea {
+  background-color: rgb(255 255 255 / 0.9);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+html.dark body.has-bg-image input,
+html.dark body.has-bg-image select,
+html.dark body.has-bg-image textarea {
+  background-color: rgb(30 41 59 / 0.9);
+  color: rgb(241 245 249);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
 html.dark body.has-bg-image > header,
 html.dark body.has-bg-image > footer,
 html.dark body.has-bg-image .dark\:bg-slate-900 {

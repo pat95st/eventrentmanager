@@ -160,7 +160,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
                             <div class="text-sm">
                                 <span class="font-medium text-slate-800 dark:text-slate-200"><?= e($connection->type->value) ?></span>
                                 <span class="text-slate-500 dark:text-slate-400">
-                                    · <?= e(t('venues.power.breaker_rating')) ?>: <?= e($connection->breakerRating->value) ?>
+                                    · Absicherung: <?= e($connection->protectionLabel()) ?>
                                     · <?= e(t('venues.power.rcd_trip_current')) ?>: <?= e($connection->rcdTripCurrent->value) ?>
                                     <?php if ($connection->location !== null && $connection->location !== ''): ?>
                                         · <?= e(t('venues.power.location')) ?>: <?= e($connection->location) ?>
@@ -181,7 +181,15 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.power.breaker_rating')) ?></label>
+                                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Art der Absicherung</label>
+                                            <select name="fuse_type" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700">
+                                                <?php foreach (\App\Domain\Venue\PowerConnectionFuseType::cases() as $fuseOption): ?>
+                                                    <option value="<?= e($fuseOption->value) ?>" <?= $fuseOption === $connection->fuseType ? 'selected' : '' ?>><?= e($fuseOption->label()) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Sicherungsgröße</label>
                                             <select name="breaker_rating" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700">
                                                 <?php foreach (CircuitBreakerRating::all() as $breakerOption): ?>
                                                     <option value="<?= e($breakerOption->value) ?>" <?= $breakerOption === $connection->breakerRating ? 'selected' : '' ?>><?= e($breakerOption->value) ?></option>
@@ -220,6 +228,9 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
                                 <?= e(t('venues.power.warning_distributor_needed')) ?>
                             </p>
                         <?php endif; ?>
+                        <?php if ($connection->fuseType->isFuse()): ?>
+                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-400"><?= e(\App\Domain\Venue\PowerConnection::SPARE_FUSE_HINT) ?></p>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -236,7 +247,15 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.power.breaker_rating')) ?></label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Art der Absicherung</label>
+                <select name="fuse_type" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700">
+                    <?php foreach (\App\Domain\Venue\PowerConnectionFuseType::cases() as $fuseOption): ?>
+                        <option value="<?= e($fuseOption->value) ?>"><?= e($fuseOption->label()) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Sicherungsgröße</label>
                 <select name="breaker_rating" required class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700">
                     <?php foreach (CircuitBreakerRating::all() as $breakerOption): ?>
                         <option value="<?= e($breakerOption->value) ?>"><?= e($breakerOption->value) ?></option>

@@ -39,6 +39,13 @@ final class UpdateArticleHandler implements CommandHandlerInterface
     {
         assert($command instanceof UpdateArticle);
 
+        // Leitungen: feste Regeln (generischer Hersteller, immer Zubehör, Elektroprüfung nach Leitungstyp, …).
+        $cableRulesCategoryId = $this->cables !== null ? $this->categories->findCableCategoryId() : null;
+        $isCableArticle = !$command->isBundle && $cableRulesCategoryId !== null && $command->categoryId === $cableRulesCategoryId;
+        if ($isCableArticle) {
+            $command = (new \App\Application\Cable\CableArticleRules($this->manufacturers, $this->cables))->apply($command);
+        }
+
         $article = $this->articles->findById($command->id);
         if ($article === null) {
             throw new NotFoundException("Artikel \"{$command->id}\" wurde nicht gefunden.");
@@ -147,6 +154,13 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $articleName = trim($command->name);
         if ($articleName === '' && $cable !== null && $cableType !== null) {
             $articleName = \App\Application\Cable\CableBuilder::suggestName($cableType, $cable, $this->cables->findConnectorById($cable->connectorAId), $this->cables->findConnectorById($cable->connectorBId));
+        }
+
+        if ($isCableArticle) {
+            unset($errors['protectionClass']); // Leitungen haben keine Schutzklasse
+            if ($command->manufacturerId === '') {
+                $errors['manufacturerId'] = 'Für Leitungen wird der Hersteller „Generisch“ benötigt – bitte unter „Hersteller“ prüfen.';
+            }
         }
 
         if ($errors !== []) {

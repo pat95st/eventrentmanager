@@ -14,6 +14,8 @@ use App\Application\ElectricalInspection\Query\ListElectricalInspectionsForInven
 use App\Application\Query\QueryBus;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\User\Permission;
+use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
@@ -25,6 +27,9 @@ final class ElectricalInspectionController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        private readonly ?\App\Domain\InventoryNumber\InventoryNumberRepositoryInterface $inventoryNumbers = null,
+        // RMA-Einsätze des Geräts (ohne Kosten/Belege) auf der Prüfungsseite.
+        private readonly ?\App\Domain\Rma\RmaRepositoryInterface $rmas = null,
     ) {
     }
 
@@ -45,10 +50,11 @@ final class ElectricalInspectionController
         echo View::page('electrical-inspections/index', [
             'context' => $context,
             'inspections' => $inspections,
+            'rmas' => $this->rmas?->findByInventoryNumber($inventoryNumberId) ?? [],
             'editingInspection' => null,
             'errors' => [],
             'old' => [],
-        ], activeNav: 'articles', title: 'Elektroprüfungen: ' . $context->inventoryNumber->number);
+        ], activeNav: 'electrical-inspection', title: 'Elektroprüfungen: ' . $context->inventoryNumber->number);
     }
 
     public function edit(Request $request): void
@@ -70,10 +76,11 @@ final class ElectricalInspectionController
         echo View::page('electrical-inspections/index', [
             'context' => $context,
             'inspections' => $inspections,
+            'rmas' => $this->rmas?->findByInventoryNumber($inventoryNumberId) ?? [],
             'editingInspection' => $editingInspection,
             'errors' => [],
             'old' => [],
-        ], activeNav: 'articles', title: 'Elektroprüfungen: ' . $context->inventoryNumber->number);
+        ], activeNav: 'electrical-inspection', title: 'Elektroprüfungen: ' . $context->inventoryNumber->number);
     }
 
     public function store(Request $request): void
@@ -85,7 +92,7 @@ final class ElectricalInspectionController
             inspectedAt: $request->input('inspected_at'),
             validityYears: $request->input('validity_years'),
             passed: $request->input('passed') !== null,
-            inspector: $request->input('inspector'),
+            inspector: $this->inspectorFor($request),
             protectiveConductorResistanceOhm: $request->input('protective_conductor_resistance_ohm'),
             insulationResistanceMohm: $request->input('insulation_resistance_mohm'),
             protectiveConductorCurrentMa: $request->input('protective_conductor_current_ma'),
@@ -108,6 +115,51 @@ final class ElectricalInspectionController
 
         Flash::success('Elektroprüfung wurde erfasst.');
         Response::redirect('/inventurnummern/' . $inventoryNumberId . '/elektropruefungen');
+    }
+
+    /**
+     * Prüfer: Benutzer mit dem Recht „Elektroprüfung“ (ohne Artikelverwaltung)
+     * werden immer selbst eingetragen; sonst die Eingabe, leer = angemeldeter Benutzer.
+     */
+    private function inspectorFor(Request $request): ?string
+    {
+        $user = CurrentUser::get();
+        $name = $user?->displayName();
+        if ($user !== null && !$user->has(Permission::Artikelverwaltung)) {
+            return $name;
+        }
+        $input = trim((string) ($request->input('inspector') ?? ''));
+
+        return $input !== '' ? $input : $name;
+    }
+
+    /**
+     * Einstieg für das Recht „Elektroprüfung“ (/elektropruefung): Gerät über
+     * die Inventurnummer suchen (auch per Barcode-Scanner) und direkt zur
+     * Erfassung springen.
+     */
+    public function search(Request $request): void
+    {
+        $query = trim((string) ($request->query('nummer') ?? ''));
+        $notFound = false;
+        if ($query !== '') {
+            $inventoryNumber = $this->inventoryNumbers?->findByNumber($query) ?? $this->inventoryNumbers?->findByNumber(mb_strtoupper($query));
+            if ($inventoryNumber !== null) {
+                Response::redirect('/inventurnummern/' . $inventoryNumber->id . '/elektropruefungen');
+
+                return;
+            }
+            $notFound = true;
+        }
+
+        $filter = trim((string) ($request->query('suche') ?? ''));
+
+        echo View::page('electrical-inspections/search', [
+            'query' => $query,
+            'notFound' => $notFound,
+            'filter' => $filter,
+            'recent' => $this->queries->ask(new \App\Application\ElectricalInspection\Query\ListRecentElectricalInspections($filter !== '' ? $filter : null, 100)),
+        ], activeNav: 'electrical-inspection', title: 'Elektroprüfung');
     }
 
     public function update(Request $request): void

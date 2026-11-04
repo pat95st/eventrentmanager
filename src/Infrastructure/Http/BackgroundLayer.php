@@ -44,6 +44,8 @@ final class BackgroundLayer
     public static function layer(string $url, bool $video, BackgroundStyle $style, bool $preview = false, string $id = ''): string
     {
         $position = $style->cssPosition();
+        // Unschärfe: Ebene etwas größer ziehen, damit an den Rändern kein heller Saum entsteht.
+        $blur = $style->blur > 0 ? 'filter:blur(' . $style->blur . 'px);inset:-' . ($style->blur * 2) . 'px;width:auto;height:auto;' : '';
         $transform = $style->zoom !== 100
             ? 'transform:scale(' . self::number($style->zoom / 100) . ');transform-origin:' . $position . ';'
             : 'transform-origin:' . $position . ';';
@@ -53,13 +55,13 @@ final class BackgroundLayer
 
         if ($video) {
             $media = '<video class="bg-media" src="' . self::esc($url) . '" muted autoplay loop playsinline preload="auto" disablepictureinpicture data-bg-video'
-                . ' style="object-fit:' . $style->fit . ';object-position:' . $position . ';' . $transform . '"></video>'
+                . ' style="object-fit:' . $style->fit . ';object-position:' . $position . ';' . $transform . $blur . '"></video>'
                 // Bei "Bewegung reduzieren" (Betriebssystem-Einstellung) bleibt das Video stehen.
                 . '<script>(function(){var v=document.currentScript.previousElementSibling;'
                 . 'if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){v.removeAttribute("autoplay");v.pause();}})();</script>';
         } else {
             $media = '<div class="bg-media" style="background-image:url(\'' . self::esc($url) . '\');background-size:' . $style->fit
-                . ';background-position:' . $position . ';' . $transform . '"></div>';
+                . ';background-position:' . $position . ';' . $transform . $blur . '"></div>';
         }
 
         return '<div' . $attributes . '>' . $media . '</div>';

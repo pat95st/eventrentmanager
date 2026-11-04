@@ -124,8 +124,13 @@ $bundleComponentRows ??= [];
                 <option value=""><?= e(t('articles.form.category_none')) ?></option>
                 <?php
                 $selectedCategory = $val('category_id', $article?->categoryId);
-                $renderOptions = function (?string $parentId, int $depth) use (&$renderOptions, &$byParent, $selectedCategory) {
+                // Leitungen haben ein eigenes Formular ("Neuer Artikel › Leitung"), daher hier nicht wählbar.
+                $hiddenCategoryId = $cableCategoryId !== null && $selectedCategory !== $cableCategoryId ? $cableCategoryId : null;
+                $renderOptions = function (?string $parentId, int $depth) use (&$renderOptions, &$byParent, $selectedCategory, $hiddenCategoryId) {
                     foreach ($byParent[$parentId ?? ''] ?? [] as $category) {
+                        if ($category->id === $hiddenCategoryId) {
+                            continue;
+                        }
                         $selected = $selectedCategory === $category->id ? 'selected' : '';
                         echo '<option value="' . e($category->id) . '" ' . $selected . '>' . str_repeat('— ', $depth) . e($category->name) . '</option>';
                         $renderOptions($category->id, $depth + 1);

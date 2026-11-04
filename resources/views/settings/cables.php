@@ -1,7 +1,6 @@
 <?php
 /** @var \App\Application\Cable\Query\CableSettings $settings */
 
-use App\Domain\Article\ProtectionClass;
 use App\Infrastructure\Http\Csrf;
 
 use function App\Infrastructure\Http\e;
@@ -27,17 +26,8 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
     <div class="mt-3 flex flex-wrap items-end gap-4">
         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
             <input type="checkbox" name="requires_electrical_inspection" value="1" <?= $type?->requiresElectricalInspection ? 'checked' : '' ?>>
-            Elektroprüfung erforderlich (Vorauswahl im Artikel)
+            Elektroprüfung erforderlich (gilt für alle Leitungen dieses Typs)
         </label>
-        <div>
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400" for="pc-<?= e($prefix) ?>">Schutzklasse (Vorgabe)</label>
-            <select id="pc-<?= e($prefix) ?>" name="protection_class" class="<?= $input ?>">
-                <option value="">–</option>
-                <?php foreach (ProtectionClass::all() as $pc): ?>
-                    <option value="<?= e($pc->value) ?>" <?= $type?->protectionClass === $pc ? 'selected' : '' ?>><?= e($pc->label()) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
         <div>
             <label class="block text-xs font-medium text-slate-600 dark:text-slate-400" for="sort-<?= e($prefix) ?>">Reihenfolge</label>
             <input id="sort-<?= e($prefix) ?>" name="sort_order" type="number" value="<?= e((string) ($type?->sortOrder ?? '')) ?>" class="<?= $input ?>" style="width:6rem">
@@ -65,7 +55,7 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Leitungen</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
         Leitungstypen und Steckverbinder für Leitungs-Artikel (Kategorie „Leitungen“). Je Leitungstyp legst du fest, welche Steckverbinder sinnvoll sind –
-        nur diese stehen beim Anlegen eines Leitungs-Artikels zur Auswahl – und ob eine Elektroprüfung vorausgewählt wird.
+        nur diese stehen beim Anlegen eines Leitungs-Artikels zur Auswahl – und ob Leitungen dieses Typs eine Elektroprüfung brauchen.
     </p>
 </div>
 

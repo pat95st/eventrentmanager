@@ -44,6 +44,12 @@ enum ConnectorType: string
         };
     }
 
+    /** Dreiphasig (CEE rot, 400 V)? Alle anderen Steckverbindungen sind einphasig. */
+    public function isThreePhase(): bool
+    {
+        return in_array($this, [self::CeeRed16, self::CeeRed32, self::CeeRed63, self::CeeRed125], true);
+    }
+
     /** Farbe für die Darstellung (Tailwind-unabhängig, als CSS-Farbe). */
     public function color(): string
     {

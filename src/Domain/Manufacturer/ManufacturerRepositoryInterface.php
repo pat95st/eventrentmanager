@@ -10,6 +10,9 @@ interface ManufacturerRepositoryInterface
 
     public function findById(string $id): ?Manufacturer;
 
+    /** Der Hersteller „Generisch“ (Migration 119), z. B. für Leitungen. */
+    public function findGeneric(): ?Manufacturer;
+
     /**
      * $search/$limit/$offset bleiben optional (Default: alle, unsortiert
      * nach Übereinstimmung, alphabetisch) — ohne Angabe identisches

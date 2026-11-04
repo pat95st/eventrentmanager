@@ -68,7 +68,8 @@ final class AuthGuard
     ) {
     }
 
-    public function guard(?Permission $permission, callable $handler): callable
+    /** @param Permission|Permission[]|null $permission ein Recht, mehrere (eines davon genügt) oder null = nur angemeldet */
+    public function guard(Permission|array|null $permission, callable $handler): callable
     {
         return function (Request $request) use ($permission, $handler): void {
             Session::ensureStarted();
@@ -179,7 +180,8 @@ final class AuthGuard
                 return;
             }
 
-            if ($permission !== null && !$user->has($permission)) {
+            $allowed = $permission === null || array_filter(is_array($permission) ? $permission : [$permission], static fn (Permission $p) => $user->has($p)) !== [];
+            if (!$allowed) {
                 http_response_code(403);
                 echo View::page('errors/403', [], activeNav: '', title: 'Kein Zugriff');
 

@@ -16,14 +16,38 @@ $formAction = $editingInspection !== null ? $basePath . '/' . $editingInspection
 $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback ?? '';
 $validityYearsValue = $val('validity_years', $editingInspection !== null ? (string) $editingInspection->validityYears : '1');
 $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($editingInspection?->passed ?? true);
+// Recht "Elektroprüfung" ohne Artikelverwaltung: nur erfassen, Prüfer = angemeldeter Benutzer.
+$currentUserForInspection = \App\Infrastructure\Http\Auth\CurrentUser::get();
+$canManageInspections = $currentUserForInspection?->has(\App\Domain\User\Permission::Artikelverwaltung) ?? false;
+$currentInspectorName = $currentUserForInspection?->displayName() ?? '';
 ?>
 
 <div class="mb-6">
-    <a href="/artikel/<?= e($context->article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e(ArticleDisplayName::of($context->article, $context->manufacturer)) ?></a>
+    <?php if ($canManageInspections): ?>
+        <a href="/artikel/<?= e($context->article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e(ArticleDisplayName::of($context->article, $context->manufacturer)) ?></a>
+    <?php else: ?>
+        <a href="/elektropruefung" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Anderes Gerät prüfen</a>
+        <p class="mt-1 text-sm text-slate-600 dark:text-slate-300"><?= e(ArticleDisplayName::of($context->article, $context->manufacturer)) ?></p>
+    <?php endif; ?>
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">Elektroprüfungen (DGUV V3)</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
         Inventurnummer <span class="font-mono"><?= e($inv->number) ?></span>
     </p>
+    <!-- Geräteangaben für die Prüfung (bewusst ohne Preise, Lieferant und Belege) -->
+    <dl class="mt-3 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm sm:grid-cols-4 dark:border-slate-800 dark:bg-slate-900">
+        <div class="col-span-2">
+            <dt class="text-xs text-slate-400 dark:text-slate-500">Gerät</dt>
+            <dd class="font-medium text-slate-800 dark:text-slate-200"><?= e(ArticleDisplayName::of($context->article, $context->manufacturer)) ?></dd>
+        </div>
+        <div>
+            <dt class="text-xs text-slate-400 dark:text-slate-500">Schutzklasse</dt>
+            <dd class="text-slate-800 dark:text-slate-200"><?= $context->article->protectionClass !== null ? e($context->article->protectionClass->label()) : '–' ?></dd>
+        </div>
+        <div>
+            <dt class="text-xs text-slate-400 dark:text-slate-500">Angeschafft</dt>
+            <dd class="text-slate-800 dark:text-slate-200"><?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?></dd>
+        </div>
+    </dl>
     <?php if (!$context->article->requiresElectricalInspection): ?>
         <p class="mt-2 text-sm text-amber-700 dark:text-amber-400">
             Hinweis: Für diesen Artikel ist aktuell keine Elektroprüfung als nötig markiert. Erfasste Prüfungen bleiben trotzdem erhalten.
@@ -56,6 +80,7 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
                             <?php if ($inspection->inspector !== null): ?> · Prüfer: <?= e($inspection->inspector) ?><?php endif; ?>
                         </p>
                     </div>
+                    <?php if ($canManageInspections): ?>
                     <div class="flex items-center gap-3 text-xs">
                         <a href="<?= e($basePath) ?>/<?= e($inspection->id) ?>/bearbeiten" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                         <form method="post" action="<?= e($basePath) ?>/<?= e($inspection->id) ?>/loeschen" data-confirm="Diese Elektroprüfung wirklich löschen?" data-confirm-style="danger">
@@ -63,6 +88,7 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
                             <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                         </form>
                     </div>
+                    <?php endif; ?>
                 </div>
 
                 <?php
@@ -99,6 +125,31 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
+
+        <!-- RMA-Einsätze (ohne Kosten und Belege) -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">RMA-Einsätze</h2>
+            <?php if (($rmas ?? []) === []): ?>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Keine RMA-Einsätze für dieses Gerät.</p>
+            <?php else: ?>
+                <ul class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($rmas as $rma): ?>
+                        <li class="py-2 text-sm">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-medium text-slate-800 dark:text-slate-200"><?= e($rma->kind->label()) ?></span>
+                                <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"><?= e($rma->status()->label()) ?></span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">
+                                    <?= $rma->sentAt !== null ? 'ab ' . e($rma->sentAt->format('d.m.Y')) : 'angelegt ' . e($rma->createdAt->format('d.m.Y')) ?><?= $rma->returnedAt !== null ? ' · zurück ' . e($rma->returnedAt->format('d.m.Y')) : '' ?>
+                                </span>
+                            </div>
+                            <?php if ($rma->reason !== null && $rma->reason !== ''): ?><p class="text-xs text-slate-600 dark:text-slate-400">Grund: <?= e($rma->reason) ?></p><?php endif; ?>
+                            <?php if ($rma->serviceProvider !== null && $rma->serviceProvider !== ''): ?><p class="text-xs text-slate-500 dark:text-slate-400">Werkstatt: <?= e($rma->serviceProvider) ?><?= $rma->rmaReference !== null && $rma->rmaReference !== '' ? ' · Vorgang ' . e($rma->rmaReference) : '' ?></p><?php endif; ?>
+                            <?php if ($rma->notes !== null && $rma->notes !== ''): ?><p class="whitespace-pre-line text-xs text-slate-500 dark:text-slate-400"><?= e($rma->notes) ?></p><?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -134,8 +185,13 @@ $passedValue = array_key_exists('passed', $old) ? (bool) $old['passed'] : ($edit
 
             <div>
                 <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Prüfer / Prüffirma</label>
-                <input type="text" name="inspector" value="<?= e($val('inspector', $editingInspection?->inspector)) ?>"
-                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                <?php if ($canManageInspections): ?>
+                    <input type="text" name="inspector" value="<?= e($val('inspector', $editingInspection?->inspector ?? $currentInspectorName)) ?>"
+                           class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                <?php else: ?>
+                    <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"><?= e($currentInspectorName) ?></p>
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Du wirst automatisch als Prüfer eingetragen.</p>
+                <?php endif; ?>
             </div>
 
             <div class="border-t border-slate-100 pt-4 dark:border-slate-800">

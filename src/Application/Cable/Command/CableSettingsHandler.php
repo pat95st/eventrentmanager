@@ -6,7 +6,6 @@ namespace App\Application\Cable\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
-use App\Domain\Article\ProtectionClass;
 use App\Domain\Cable\CableRepositoryInterface;
 use App\Domain\Cable\CableType;
 use App\Domain\Cable\ConnectorType;
@@ -50,13 +49,8 @@ final class CableSettingsHandler implements CommandHandlerInterface
         } elseif ($this->cables->typeNameExists($name, $existing?->id)) {
             $errors['name'] = 'Diesen Leitungstyp gibt es bereits.';
         }
+        // Leitungen haben keine Schutzklasse (Nutzerwunsch); das Feld bleibt leer.
         $protectionClass = null;
-        if ($command->requiresElectricalInspection && ($command->protectionClass ?? '') !== '') {
-            $protectionClass = ProtectionClass::tryFrom((string) $command->protectionClass);
-            if ($protectionClass === null) {
-                $errors['protection_class'] = 'Bitte eine gültige Schutzklasse wählen.';
-            }
-        }
         $known = array_map(static fn (ConnectorType $c) => $c->id, $this->cables->findAllConnectors());
         $connectorIds = array_values(array_intersect(array_unique(array_map('strval', $command->connectorIds)), $known));
         if ($errors !== []) {

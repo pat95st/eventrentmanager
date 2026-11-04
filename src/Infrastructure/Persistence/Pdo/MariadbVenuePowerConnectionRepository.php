@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Pdo;
 
 use App\Domain\Venue\CircuitBreakerRating;
 use App\Domain\Venue\PowerConnection;
+use App\Domain\Venue\PowerConnectionFuseType;
 use App\Domain\Venue\PowerConnectionType;
 use App\Domain\Venue\RcdTripCurrent;
 use App\Domain\Venue\VenuePowerConnectionRepositoryInterface;
@@ -22,12 +23,12 @@ final class MariadbVenuePowerConnectionRepository implements VenuePowerConnectio
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO venue_power_connections (
-                id, venue_id, connection_type, breaker_rating, rcd_trip_current, location, created_at
+                id, venue_id, connection_type, breaker_rating, fuse_type, rcd_trip_current, location, created_at
              ) VALUES (
-                :id, :venue_id, :connection_type, :breaker_rating, :rcd_trip_current, :location, :created_at
+                :id, :venue_id, :connection_type, :breaker_rating, :fuse_type, :rcd_trip_current, :location, :created_at
              )
              ON DUPLICATE KEY UPDATE
-                connection_type = :connection_type2, breaker_rating = :breaker_rating2,
+                connection_type = :connection_type2, breaker_rating = :breaker_rating2, fuse_type = :fuse_type2,
                 rcd_trip_current = :rcd_trip_current2, location = :location2'
         );
 
@@ -36,11 +37,13 @@ final class MariadbVenuePowerConnectionRepository implements VenuePowerConnectio
             'venue_id' => $connection->venueId,
             'connection_type' => $connection->type->value,
             'breaker_rating' => $connection->breakerRating->value,
+            'fuse_type' => $connection->fuseType->value,
             'rcd_trip_current' => $connection->rcdTripCurrent->value,
             'location' => $connection->location,
             'created_at' => $connection->createdAt->format('Y-m-d H:i:s'),
             'connection_type2' => $connection->type->value,
             'breaker_rating2' => $connection->breakerRating->value,
+            'fuse_type2' => $connection->fuseType->value,
             'rcd_trip_current2' => $connection->rcdTripCurrent->value,
             'location2' => $connection->location,
         ]);
@@ -105,6 +108,7 @@ final class MariadbVenuePowerConnectionRepository implements VenuePowerConnectio
             rcdTripCurrent: RcdTripCurrent::from($row['rcd_trip_current']),
             location: $row['location'],
             createdAt: new DateTimeImmutable($row['created_at']),
+            fuseType: PowerConnectionFuseType::tryFrom((string) ($row['fuse_type'] ?? 'mcb')) ?? PowerConnectionFuseType::CircuitBreaker,
         );
     }
 }

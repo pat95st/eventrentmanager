@@ -126,7 +126,70 @@
             hideResults();
         }
 
-        function renderResults(fetchedItems) {
+        // Nachladen weiterer Treffer (Server liefert 20 je Seite plus
+        // hasMore/totalCount, siehe ArticleController::liveSearchResponse()).
+        var lastQuery = '';
+        var lastPage = 1;
+
+        function renderMoreButton(data) {
+            var old = resultsEl.querySelector('[data-live-search-more]');
+            if (old) { old.remove(); }
+            if (!data || !data.hasMore) { return; }
+            var more = document.createElement('button');
+            more.type = 'button';
+            more.setAttribute('data-live-search-more', '');
+            more.className = 'block w-full border-t border-slate-100 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:bg-slate-100 dark:border-slate-800 dark:text-brand-400 dark:hover:bg-slate-800';
+            more.textContent = 'Weitere Treffer anzeigen' + (data.totalCount ? ' (' + items.length + ' von ' + data.totalCount + ')' : '') + ' …';
+            more.addEventListener('mousedown', function (event) {
+                event.preventDefault();
+                more.disabled = true;
+                more.textContent = 'Lädt …';
+                fetch(url + '?q=' + encodeURIComponent(lastQuery) + '&seite=' + (lastPage + 1), { headers: { 'Accept': 'application/json' } })
+                    .then(function (response) { return response.ok ? response.json() : { items: [] }; })
+                    .then(function (next) {
+                        lastPage = next.page || (lastPage + 1);
+                        appendResults(next.items || []);
+                        renderMoreButton(next);
+                    })
+                    .catch(function () { more.disabled = false; more.textContent = 'Weitere Treffer anzeigen …'; });
+            });
+            resultsEl.appendChild(more);
+        }
+
+        function appendResults(newItems) {
+            var offset = items.length;
+            items = items.concat(newItems);
+            newItems.forEach(function (item) { resultsEl.appendChild(optionButton(item)); });
+            return offset;
+        }
+
+        function optionButton(item) {
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.setAttribute('data-live-search-option', '');
+            button.className = toolbarButtonClass;
+
+            var labelSpan = document.createElement('span');
+            labelSpan.className = 'truncate';
+            labelSpan.textContent = item.label;
+            button.appendChild(labelSpan);
+
+            if (item.sublabel) {
+                var subSpan = document.createElement('span');
+                subSpan.className = 'shrink-0 text-xs text-slate-400 dark:text-slate-500';
+                subSpan.textContent = item.sublabel;
+                button.appendChild(subSpan);
+            }
+
+            button.addEventListener('mousedown', function (event) {
+                event.preventDefault();
+                selectItem(item);
+            });
+
+            return button;
+        }
+
+        function renderResults(fetchedItems, data) {
             items = fetchedItems;
             resultsEl.innerHTML = '';
 
@@ -141,35 +204,8 @@
                 return;
             }
 
-            items.forEach(function (item, index) {
-                var button = document.createElement('button');
-                button.type = 'button';
-                button.setAttribute('data-live-search-option', '');
-                button.className = toolbarButtonClass;
-
-                var labelSpan = document.createElement('span');
-                labelSpan.className = 'truncate';
-                labelSpan.textContent = item.label;
-                button.appendChild(labelSpan);
-
-                if (item.sublabel) {
-                    var subSpan = document.createElement('span');
-                    subSpan.className = 'shrink-0 text-xs text-slate-400 dark:text-slate-500';
-                    subSpan.textContent = item.sublabel;
-                    button.appendChild(subSpan);
-                }
-
-                // mousedown statt click: läuft VOR dem blur-Handler des
-                // Textfelds, damit die Auswahl nicht durch das
-                // Zurückspringen auf confirmedLabel im blur-Handler
-                // überschrieben wird.
-                button.addEventListener('mousedown', function (event) {
-                    event.preventDefault();
-                    selectItem(item);
-                });
-
-                resultsEl.appendChild(button);
-            });
+            items.forEach(function (item) { resultsEl.appendChild(optionButton(item)); });
+            renderMoreButton(data);
 
             resultsEl.classList.remove('hidden');
             highlight(-1);
@@ -190,7 +226,9 @@
                 .then(function (response) { return response.ok ? response.json() : { items: [] }; })
                 .then(function (data) {
                     if (activeRequest === controller) {
-                        renderResults(data.items || []);
+                        lastQuery = query;
+                        lastPage = data.page || 1;
+                        renderResults(data.items || [], data);
                     }
                 })
                 .catch(function (error) {

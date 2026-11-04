@@ -191,8 +191,8 @@ $canDocuments = $canRentals;
      Hintergrundbild nahezu deckend, damit der Inhalt darunter nicht durchscheint. */
   .nav-flyout { width: max-content; min-width: 11rem; max-width: 22rem; }
   .nav-flyout > a { padding-left: 0.875rem; padding-right: 0.875rem; white-space: nowrap; }
-  body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu] { background-color: rgb(255 255 255 / 0.97) !important; }
-  html.dark body.has-bg-image .nav-flyout, html.dark body.has-bg-image [data-dropdown-menu] { background-color: rgb(15 23 42 / 0.97) !important; }
+  body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu], body.has-bg-image [data-live-search-results] { background-color: rgb(255 255 255 / 0.97) !important; }
+  html.dark body.has-bg-image .nav-flyout, html.dark body.has-bg-image [data-dropdown-menu], html.dark body.has-bg-image [data-live-search-results] { background-color: rgb(15 23 42 / 0.97) !important; }
   /* Mobiles Menü im (sticky) Header: eigene Scrollfläche, sonst ist alles
      unterhalb des Bildschirmrands auf dem Handy nicht erreichbar. Die
      genaue Höhe setzt das Hamburger-Skript beim Öffnen. */

@@ -190,11 +190,10 @@ final class ArticleController
         // Allgemeine Artikelsuche (Einkauf, Verkaufspositionen, Bundle-
         // Bestandteile …): Bundles haben keinen physischen Bestand und werden
         // hier ausgeblendet (Migration 107).
-        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true, excludeBundles: true));
+        $page = max(1, (int) ($request->query('seite') ?? 1));
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, $page, 20, onlyActive: true, excludeBundles: true));
 
-        Response::json([
-            'items' => array_map(self::toPickerItem(...), $result->items),
-        ]);
+        Response::json(self::liveSearchResponse($result));
     }
 
     /**
@@ -205,11 +204,27 @@ final class ArticleController
     public function searchForRental(Request $request): void
     {
         $search = $request->query('q');
-        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, 1, 20, onlyActive: true, onlyRentableIndividually: true));
+        $page = max(1, (int) ($request->query('seite') ?? 1));
+        $result = $this->queries->ask(new ListArticlesForDisplay($search, null, null, $page, 20, onlyActive: true, onlyRentableIndividually: true));
 
-        Response::json([
+        Response::json(self::liveSearchResponse($result));
+    }
+
+    /**
+     * Antwort der Live-Suche: 20 Treffer je Seite plus Gesamtzahl, damit das
+     * Feld weitere Treffer nachladen kann (public/assets/js/live-search.js,
+     * Nutzerhinweis „nicht alle Artikel werden angezeigt“).
+     *
+     * @return array<string, mixed>
+     */
+    private static function liveSearchResponse(\App\Application\Common\PaginatedResult $result): array
+    {
+        return [
             'items' => array_map(self::toPickerItem(...), $result->items),
-        ]);
+            'page' => $result->page,
+            'totalCount' => $result->totalCount,
+            'hasMore' => $result->page < $result->totalPages(),
+        ];
     }
 
     /**

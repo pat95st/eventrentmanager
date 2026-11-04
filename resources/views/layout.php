@@ -273,8 +273,8 @@ $canDocuments = $canRentals;
 </head>
 <body
   class="flex min-h-screen flex-col antialiased<?= $backgroundImageUrl !== null ? ' has-bg-image' : '' ?>"
-  <?php if ($backgroundImageUrl !== null): ?>style="--app-bg-image: url('<?= e($backgroundImageUrl) ?>');"<?php endif; ?>
 >
+  <?= \App\Infrastructure\Http\BackgroundLayer::render(\App\Domain\Settings\BackgroundSlot::App) ?>
   <!--
     Globales Bestätigungs-Modal: ersetzt window.confirm() im gesamten
     Frontend (siehe window.confirmModal()-Helfer weiter unten). Formulare

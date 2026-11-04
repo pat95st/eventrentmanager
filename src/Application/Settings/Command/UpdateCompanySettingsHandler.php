@@ -7,7 +7,6 @@ namespace App\Application\Settings\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Exception\ValidationException;
-use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\CompanySettingsRepositoryInterface;
 
 final class UpdateCompanySettingsHandler implements CommandHandlerInterface
@@ -27,26 +26,22 @@ final class UpdateCompanySettingsHandler implements CommandHandlerInterface
 
         $logoMaxHeightPx = $this->parseLogoMaxHeightPx($command->logoMaxHeightPx);
 
-        $settings = new CompanySettings(
-            name: $this->nullIfEmpty($command->name),
-            brandName: $this->nullIfEmpty($command->brandName),
-            street: $this->nullIfEmpty($command->street),
-            postalCode: $this->nullIfEmpty($command->postalCode),
-            city: $this->nullIfEmpty($command->city),
-            country: $this->nullIfEmpty($command->country),
-            // Logo und Hintergrundbild werden über eigene Commands (UploadCompanyLogo/
-            // DeleteCompanyLogo, UploadCompanyDarkLogo/DeleteCompanyDarkLogo,
-            // UploadCompanyBackgroundImage/DeleteCompanyBackgroundImage) verwaltet,
-            // damit ein reines Stammdaten-Speichern sie nicht versehentlich entfernt.
-            logoFilename: $current->logoFilename,
-            logoMaxHeightPx: $logoMaxHeightPx,
-            darkLogoFilename: $current->darkLogoFilename,
-            backgroundImageFilename: $current->backgroundImageFilename,
-            phone: $command->phone === null ? $current->phone : $this->nullIfEmpty($command->phone),
-            email: $command->email === null ? $current->email : $this->nullIfEmpty($command->email),
-            website: $command->website === null ? $current->website : $this->nullIfEmpty($command->website),
-            faviconFilename: $current->faviconFilename,
-        );
+        // clone: alle übrigen Felder (auch später ergänzte) bleiben erhalten.
+        $settings = clone $current;
+        $settings->name = $this->nullIfEmpty($command->name);
+        $settings->brandName = $this->nullIfEmpty($command->brandName);
+        $settings->street = $this->nullIfEmpty($command->street);
+        $settings->postalCode = $this->nullIfEmpty($command->postalCode);
+        $settings->city = $this->nullIfEmpty($command->city);
+        $settings->country = $this->nullIfEmpty($command->country);
+        // Logo und Hintergrundbild werden über eigene Commands (UploadCompanyLogo/
+        // DeleteCompanyLogo, UploadCompanyDarkLogo/DeleteCompanyDarkLogo,
+        // UploadCompanyBackgroundImage/DeleteCompanyBackgroundImage) verwaltet,
+        // damit ein reines Stammdaten-Speichern sie nicht versehentlich entfernt.
+        $settings->logoMaxHeightPx = $logoMaxHeightPx;
+        $settings->phone = $command->phone === null ? $current->phone : $this->nullIfEmpty($command->phone);
+        $settings->email = $command->email === null ? $current->email : $this->nullIfEmpty($command->email);
+        $settings->website = $command->website === null ? $current->website : $this->nullIfEmpty($command->website);
 
         $this->settingsRepository->save($settings);
 

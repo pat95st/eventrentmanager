@@ -813,6 +813,7 @@ $commandBus->register(\App\Application\Settings\Command\UploadCompanyFavicon::cl
 $commandBus->register(\App\Application\Settings\Command\DeleteCompanyFavicon::class, new \App\Application\Settings\Command\DeleteCompanyFaviconHandler($companySettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\UploadCompanyBackgroundImage::class, new UploadCompanyBackgroundImageHandler($companySettingsRepository, $fileStorage));
 $commandBus->register(\App\Application\Settings\Command\DeleteCompanyBackgroundImage::class, new DeleteCompanyBackgroundImageHandler($companySettingsRepository, $fileStorage));
+$commandBus->register(\App\Application\Settings\Command\UpdateCompanyBackgroundStyle::class, new \App\Application\Settings\Command\UpdateCompanyBackgroundStyleHandler($companySettingsRepository));
 
 $commandBus->register(\App\Application\Printing\Command\CreateLabelPrinter::class, new CreateLabelPrinterHandler($labelPrinterRepository));
 $commandBus->register(\App\Application\Printing\Command\UpdateLabelPrinter::class, new UpdateLabelPrinterHandler($labelPrinterRepository));
@@ -1568,6 +1569,7 @@ $router->get('/firmen-favicon', [$companySettingsController, 'showFavicon']);
 $router->get('/app.webmanifest', [$companySettingsController, 'appManifest']);
 $router->get('/app-icon/{variant}', [$companySettingsController, 'appIcon']);
 $router->get('/firmenhintergrund', [$companySettingsController, 'showBackgroundImage']);
+$router->get('/firmenhintergrund-anmeldung', [$companySettingsController, 'showLoginBackground']);
 
 // Passkey-Anmeldung (öffentlich, kein Benutzer angemeldet — siehe
 // AuthGuard::PUBLIC_PATHS, das ist der Sinn dieser beiden Routen).
@@ -2123,6 +2125,10 @@ $router->get('/einstellungen/firma/logo-dunkel', $auth->guard(Permission::Admini
 $router->post('/einstellungen/firma/hintergrundbild', $auth->guard(Permission::Administration, [$companySettingsController, 'uploadBackgroundImage']));
 $router->post('/einstellungen/firma/hintergrundbild/loeschen', $auth->guard(Permission::Administration, [$companySettingsController, 'deleteBackgroundImage']));
 $router->get('/einstellungen/firma/hintergrundbild', $auth->guard(Permission::Administration, [$companySettingsController, 'showBackgroundImage']));
+// Migration 126: Hintergründe je Bereich ({slot} = oberflaeche | anmeldung)
+$router->post('/einstellungen/firma/hintergrund/{slot}', $auth->guard(Permission::Administration, [$companySettingsController, 'uploadBackgroundImage']));
+$router->post('/einstellungen/firma/hintergrund/{slot}/loeschen', $auth->guard(Permission::Administration, [$companySettingsController, 'deleteBackgroundImage']));
+$router->post('/einstellungen/firma/hintergrund/{slot}/darstellung', $auth->guard(Permission::Administration, [$companySettingsController, 'updateBackgroundStyle']));
 
 $router->get('/einstellungen/integrationen', $auth->guard(Permission::Administration, [$integrationSettingsController, 'edit']));
 $router->post('/einstellungen/integrationen/basis-url', $auth->guard(Permission::Administration, [$integrationSettingsController, 'updateBase']));

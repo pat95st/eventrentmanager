@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Http;
 
+use App\Domain\Settings\BackgroundSlot;
+use App\Domain\Settings\BackgroundStyle;
 use App\Domain\Settings\CompanySettings;
 
 /**
@@ -69,7 +71,23 @@ final class CompanyBranding
      */
     public static function backgroundImageUrl(): ?string
     {
-        return self::versioned('/firmenhintergrund', self::$settings?->backgroundImageFilename);
+        return self::backgroundUrl(BackgroundSlot::App);
+    }
+
+    /** URL des Hintergrunds (Bild oder Video) für Oberfläche/Anmeldeseite, oder null (Migration 126). */
+    public static function backgroundUrl(BackgroundSlot $slot): ?string
+    {
+        return self::versioned($slot->publicPath(), self::$settings?->backgroundFilename($slot));
+    }
+
+    public static function backgroundIsVideo(BackgroundSlot $slot): bool
+    {
+        return CompanySettings::isVideoFilename(self::$settings?->backgroundFilename($slot));
+    }
+
+    public static function backgroundStyle(BackgroundSlot $slot): BackgroundStyle
+    {
+        return self::$settings?->backgroundStyle($slot) ?? new BackgroundStyle();
     }
 
     /**

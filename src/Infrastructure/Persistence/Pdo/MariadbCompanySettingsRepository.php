@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Pdo;
 
+use App\Domain\Settings\BackgroundStyle;
 use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\CompanySettingsRepositoryInterface;
 use PDO;
@@ -42,6 +43,21 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             email: $row['email'] ?? null,
             website: $row['website'] ?? null,
             faviconFilename: $row['favicon_filename'] ?? null,
+            backgroundStyle: $this->style($row, 'background_'),
+            loginBackgroundFilename: $row['login_background_filename'] ?? null,
+            loginBackgroundStyle: $this->style($row, 'login_background_'),
+        );
+    }
+
+    /** Darstellung eines Hintergrunds aus den Spalten mit $prefix (Migration 126). */
+    private function style(array $row, string $prefix): BackgroundStyle
+    {
+        return new BackgroundStyle(
+            opacity: (int) ($row[$prefix . 'opacity'] ?? 100),
+            fit: (string) ($row[$prefix . 'fit'] ?? BackgroundStyle::FIT_COVER),
+            positionX: (int) ($row[$prefix . 'position_x'] ?? 50),
+            positionY: (int) ($row[$prefix . 'position_y'] ?? 50),
+            zoom: (int) ($row[$prefix . 'zoom'] ?? 100),
         );
     }
 
@@ -53,6 +69,11 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
                 country = :country, logo_filename = :logo_filename,
                 logo_max_height_px = :logo_max_height_px, dark_logo_filename = :dark_logo_filename,
                 background_image_filename = :background_image_filename,
+                background_opacity = :bg_opacity, background_fit = :bg_fit, background_position_x = :bg_x,
+                background_position_y = :bg_y, background_zoom = :bg_zoom,
+                login_background_filename = :login_background_filename,
+                login_background_opacity = :lbg_opacity, login_background_fit = :lbg_fit, login_background_position_x = :lbg_x,
+                login_background_position_y = :lbg_y, login_background_zoom = :lbg_zoom,
                 phone = :phone, email = :email, website = :website, favicon_filename = :favicon_filename
              WHERE id = 1'
         );
@@ -72,6 +93,17 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             'email' => $settings->email,
             'website' => $settings->website,
             'favicon_filename' => $settings->faviconFilename,
+            'bg_opacity' => $settings->backgroundStyle->opacity,
+            'bg_fit' => $settings->backgroundStyle->fit,
+            'bg_x' => $settings->backgroundStyle->positionX,
+            'bg_y' => $settings->backgroundStyle->positionY,
+            'bg_zoom' => $settings->backgroundStyle->zoom,
+            'login_background_filename' => $settings->loginBackgroundFilename,
+            'lbg_opacity' => $settings->loginBackgroundStyle->opacity,
+            'lbg_fit' => $settings->loginBackgroundStyle->fit,
+            'lbg_x' => $settings->loginBackgroundStyle->positionX,
+            'lbg_y' => $settings->loginBackgroundStyle->positionY,
+            'lbg_zoom' => $settings->loginBackgroundStyle->zoom,
         ]);
     }
 }

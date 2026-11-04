@@ -7,7 +7,6 @@ namespace App\Application\Settings\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Exception\ValidationException;
-use App\Domain\Settings\CompanySettings;
 use App\Domain\Settings\CompanySettingsRepositoryInterface;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 use App\Shared\Uuid;
@@ -47,24 +46,9 @@ final class UploadCompanyLogoHandler implements CommandHandlerInterface
             $this->fileStorage->delete('company', $current->logoFilename);
         }
 
-        $settings = new CompanySettings(
-            name: $current->name,
-            street: $current->street,
-            postalCode: $current->postalCode,
-            city: $current->city,
-            country: $current->country,
-            logoFilename: $stored['storedFilename'],
-            // Siehe DeleteCompanyLogoHandler: unverändert durchreichen, statt
-            // stillschweigend auf den Standardwert zurückzufallen.
-            logoMaxHeightPx: $current->logoMaxHeightPx,
-            darkLogoFilename: $current->darkLogoFilename,
-            brandName: $current->brandName,
-            backgroundImageFilename: $current->backgroundImageFilename,
-            phone: $current->phone,
-            email: $current->email,
-            website: $current->website,
-            faviconFilename: $current->faviconFilename,
-        );
+        // clone: alle übrigen Felder (auch später ergänzte) bleiben erhalten.
+        $settings = clone $current;
+        $settings->logoFilename = $stored['storedFilename'];
 
         $this->settingsRepository->save($settings);
 

@@ -119,21 +119,17 @@
 /* ---------------------------------------------------------------------
    Hintergrundbild (Admin-Einstellung, siehe Einstellungen -> Firma und
    App\Infrastructure\Http\CompanyBranding::backgroundImageUrl()): ist ein
-   Hintergrundbild hinterlegt, trägt <body> die Klasse "has-bg-image" und
-   die CSS-Variable --app-bg-image (siehe resources/views/layout.php).
+   Hintergrund hinterlegt, trägt <body> die Klasse "has-bg-image" (siehe
+   resources/views/layout.php und BackgroundLayer).
    Damit das Bild tatsächlich zu sehen ist, werden die sonst blickdichten
    weißen/dunklen Flächen (Kopf-/Fußzeile, Karten/Panels im Inhaltsbereich)
    halbtransparent mit leichtem Weichzeichner ("Glaseffekt") dargestellt.
    Bewusst als globale CSS-Regel statt einer neuen Utility-Klasse in jeder
    einzelnen View, damit bestehende Templates unverändert bleiben.
    ------------------------------------------------------------------- */
-body.has-bg-image {
-  background-image: var(--app-bg-image);
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
+/* Das Bild/Video selbst liegt seit Migration 126 als eigene Ebene hinter der
+   Seite (App\Infrastructure\Http\BackgroundLayer), damit Deckkraft, Ausschnitt,
+   Zoom und Videos möglich sind. */
 
 body.has-bg-image > header,
 body.has-bg-image > footer,

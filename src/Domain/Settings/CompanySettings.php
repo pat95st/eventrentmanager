@@ -32,6 +32,50 @@ final class CompanySettings
         public ?string $website = null,
         // Migration 112: eigenes Favicon (Einstellungen › Firma)
         public ?string $faviconFilename = null,
+        // Migration 126: Darstellung des Oberflächen-Hintergrunds sowie ein
+        // eigener Hintergrund (Bild oder kurzes Video) für die Anmeldeseite.
+        // $backgroundImageFilename kann seitdem auch ein Video sein.
+        public BackgroundStyle $backgroundStyle = new BackgroundStyle(),
+        public ?string $loginBackgroundFilename = null,
+        public BackgroundStyle $loginBackgroundStyle = new BackgroundStyle(),
     ) {
+    }
+
+    public function backgroundFilename(BackgroundSlot $slot): ?string
+    {
+        return match ($slot) {
+            BackgroundSlot::App => $this->backgroundImageFilename,
+            BackgroundSlot::Login => $this->loginBackgroundFilename,
+        };
+    }
+
+    public function setBackgroundFilename(BackgroundSlot $slot, ?string $filename): void
+    {
+        match ($slot) {
+            BackgroundSlot::App => $this->backgroundImageFilename = $filename,
+            BackgroundSlot::Login => $this->loginBackgroundFilename = $filename,
+        };
+    }
+
+    public function backgroundStyle(BackgroundSlot $slot): BackgroundStyle
+    {
+        return match ($slot) {
+            BackgroundSlot::App => $this->backgroundStyle,
+            BackgroundSlot::Login => $this->loginBackgroundStyle,
+        };
+    }
+
+    public function setBackgroundStyle(BackgroundSlot $slot, BackgroundStyle $style): void
+    {
+        match ($slot) {
+            BackgroundSlot::App => $this->backgroundStyle = $style,
+            BackgroundSlot::Login => $this->loginBackgroundStyle = $style,
+        };
+    }
+
+    /** Ist der Hintergrund ein Video (MP4/WebM) statt eines Bildes? */
+    public static function isVideoFilename(?string $filename): bool
+    {
+        return $filename !== null && in_array(strtolower(pathinfo($filename, PATHINFO_EXTENSION)), ['mp4', 'webm'], true);
     }
 }

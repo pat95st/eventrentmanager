@@ -190,35 +190,105 @@ use function App\Infrastructure\Http\t;
     </form>
 </div>
 
-<div class="space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
-    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.company.background_image.title')) ?></h2>
-    <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.company.background_image.hint')) ?></p>
+</div>
+</div>
 
-    <?php if ($settings->backgroundImageFilename !== null): ?>
-        <div class="flex items-center gap-4">
-            <div class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
-                <img src="/einstellungen/firma/hintergrundbild" alt="<?= e(t('settings.company.background_image.alt')) ?>" class="h-full w-full object-cover">
+<?php
+use App\Domain\Settings\BackgroundSlot;
+use App\Domain\Settings\BackgroundStyle;
+use App\Infrastructure\Http\BackgroundLayer;
+use App\Infrastructure\Http\CompanyBranding;
+
+$fileInput = 'block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-800 dark:file:text-slate-300 dark:hover:file:bg-slate-700';
+$hints = [
+    BackgroundSlot::App->value => 'Wird hinter der gesamten Oberfläche angezeigt. Karten und Leisten werden dann halbtransparent dargestellt, damit der Hintergrund durchscheint.',
+    BackgroundSlot::Login->value => 'Wird auf der Anmeldeseite, bei der Zwei-Faktor-Abfrage und auf den Passwort-Seiten angezeigt.',
+];
+echo BackgroundLayer::styles();
+?>
+<section class="mt-6" aria-labelledby="hintergruende-titel">
+    <div class="mb-4 rounded-lg border border-slate-200 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+    <h2 id="hintergruende-titel" class="text-sm font-semibold text-slate-700 dark:text-slate-300">Hintergründe</h2>
+    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Bild (JPEG, PNG, WebP, max. 8 MB) oder kurzes Video (MP4, WebM, max. 50 MB). Videos laufen ohne Ton in Schleife; bei „Bewegung reduzieren“ im Betriebssystem bleiben sie stehen.</p>
+    </div>
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <?php foreach (BackgroundSlot::cases() as $slot): ?>
+            <?php
+            $filename = $settings->backgroundFilename($slot);
+            $style = $settings->backgroundStyle($slot);
+            $isVideo = BackgroundLayer::isVideo($filename);
+            $url = $filename !== null ? $slot->publicPath() . '?v=' . CompanyBranding::version($filename) : null;
+            $prefix = 'bg-' . $slot->value;
+            ?>
+            <div id="hintergrund-<?= e($slot->value) ?>" class="space-y-4 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e($slot->label()) ?></h3>
+                    <p class="text-xs text-slate-400 dark:text-slate-500"><?= e($hints[$slot->value]) ?></p>
+                </div>
+
+                <?php if ($url !== null): ?>
+                    <div class="relative overflow-hidden rounded-md border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950" style="aspect-ratio:16/10" data-bg-preview="<?= e($prefix) ?>">
+                        <?= BackgroundLayer::layer($url, $isVideo, $style, preview: true, id: $prefix . '-layer') ?>
+                        <!-- angedeutete Karte, damit man die Wirkung sieht -->
+                        <div class="absolute rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900" style="left:50%;top:50%;width:44%;height:42%;transform:translate(-50%,-50%);opacity:.85">
+                            <div class="rounded bg-slate-200 dark:bg-slate-800" style="height:8px;width:55%;margin:12px"></div>
+                            <div class="rounded bg-slate-100 dark:bg-slate-800" style="height:8px;width:75%;margin:0 12px"></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs text-slate-500 dark:text-slate-400"><?= $isVideo ? 'Video' : 'Bild' ?> hinterlegt</span>
+                        <form method="post" action="/einstellungen/firma/hintergrund/<?= e($slot->value) ?>/loeschen" data-confirm="<?= e($slot->label()) ?> entfernen?" data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">Entfernen</button>
+                        </form>
+                    </div>
+
+                    <form method="post" action="/einstellungen/firma/hintergrund/<?= e($slot->value) ?>/darstellung" class="space-y-3 border-t border-slate-100 pt-4 dark:border-slate-800" data-bg-style="<?= e($prefix) ?>">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <?php
+                        $sliders = [
+                            ['opacity', 'Deckkraft', BackgroundStyle::MIN_OPACITY, 100, $style->opacity, '%'],
+                            ['zoom', 'Zoom', BackgroundStyle::MIN_ZOOM, BackgroundStyle::MAX_ZOOM, $style->zoom, '%'],
+                            ['position_x', 'Ausschnitt waagerecht (links ↔ rechts)', 0, 100, $style->positionX, '%'],
+                            ['position_y', 'Ausschnitt senkrecht (oben ↕ unten)', 0, 100, $style->positionY, '%'],
+                        ];
+                        ?>
+                        <div>
+                            <span class="block text-xs font-medium text-slate-600 dark:text-slate-400">Einpassung</span>
+                            <div class="mt-1 flex flex-wrap gap-4">
+                                <?php foreach (BackgroundStyle::FITS as $fit): ?>
+                                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                        <input type="radio" name="fit" value="<?= e($fit) ?>" <?= $style->fit === $fit ? 'checked' : '' ?>>
+                                        <?= e(BackgroundStyle::fitLabel($fit)) ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php foreach ($sliders as [$name, $label, $min, $max, $value, $unit]): ?>
+                            <div>
+                                <div class="flex items-center justify-between gap-2">
+                                    <label for="<?= e($prefix . '-' . $name) ?>" class="text-xs font-medium text-slate-600 dark:text-slate-400"><?= e($label) ?></label>
+                                    <output for="<?= e($prefix . '-' . $name) ?>" class="text-xs text-slate-500 dark:text-slate-400" style="font-variant-numeric:tabular-nums"><?= (int) $value ?><?= e($unit) ?></output>
+                                </div>
+                                <input type="range" id="<?= e($prefix . '-' . $name) ?>" name="<?= e($name) ?>" min="<?= (int) $min ?>" max="<?= (int) $max ?>" step="<?= $name === 'zoom' ? 5 : 1 ?>" value="<?= (int) $value ?>" class="mt-1 w-full" style="accent-color:rgb(var(--color-brand-600, 37 99 235))">
+                            </div>
+                        <?php endforeach; ?>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <button type="button" class="text-xs font-medium text-slate-500 hover:underline dark:text-slate-400" data-bg-reset>Zurücksetzen</button>
+                            <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Darstellung speichern</button>
+                        </div>
+                    </form>
+                <?php else: ?>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Es ist noch kein Hintergrund hinterlegt.</p>
+                <?php endif; ?>
+
+                <form method="post" action="/einstellungen/firma/hintergrund/<?= e($slot->value) ?>" enctype="multipart/form-data" class="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <input type="file" name="background_image" required accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,.jpg,.jpeg,.png,.webp,.mp4,.webm" class="<?= $fileInput ?> min-w-0 flex-1" aria-label="<?= e($slot->label()) ?> auswählen">
+                    <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= $url !== null ? 'Ersetzen' : 'Hochladen' ?></button>
+                </form>
             </div>
-            <form method="post" action="/einstellungen/firma/hintergrundbild/loeschen" data-confirm="<?= e(t('settings.company.background_image.confirm_remove')) ?>" data-confirm-style="danger">
-              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
-                    <?= e(t('settings.company.background_image.remove')) ?>
-                </button>
-            </form>
-        </div>
-    <?php else: ?>
-        <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.company.background_image.none')) ?></p>
-    <?php endif; ?>
-
-    <form method="post" action="/einstellungen/firma/hintergrundbild" enctype="multipart/form-data" class="flex items-center gap-3">
-      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-        <input type="file" name="background_image" accept="image/*"
-               class="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-800 dark:file:text-slate-300 dark:hover:file:bg-slate-700">
-        <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
-            <?= e(t('settings.company.background_image.upload')) ?>
-        </button>
-    </form>
-    <?php if (isset($errors['background_image'])): ?><p class="text-xs text-red-600 dark:text-red-400"><?= e($errors['background_image']) ?></p><?php endif; ?>
-</div>
-</div>
-</div>
+        <?php endforeach; ?>
+    </div>
+</section>
+<script src="/assets/js/background-settings.js" defer></script>

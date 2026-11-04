@@ -85,7 +85,8 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
   })();
 </script>
 </head>
-<body class="flex min-h-screen items-center justify-center bg-slate-50 antialiased dark:bg-slate-950">
+<body class="flex min-h-screen items-center justify-center bg-slate-50 antialiased dark:bg-slate-950<?= \App\Infrastructure\Http\BackgroundLayer::bodyClass(\App\Domain\Settings\BackgroundSlot::Login) ?>">
+<?= \App\Infrastructure\Http\BackgroundLayer::render(\App\Domain\Settings\BackgroundSlot::Login) ?>
   <div class="w-full max-w-sm px-4">
     <div class="mb-6 flex justify-center">
       <?php if ($companyLogoUrl !== null): ?>

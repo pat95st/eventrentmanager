@@ -36,7 +36,7 @@ var CACHE_VERSION = 'static-v2';
 // jedem Upload, siehe CompanyBranding::versioned()). Eigener Cache, der beim
 // Versions-Bump oben NICHT geleert wird.
 var BRANDING_CACHE = 'branding-v1';
-var BRANDING_PATHS = ['/firmenlogo', '/firmenlogo-dark', '/firmenhintergrund', '/firmen-favicon', '/app-icon/192', '/app-icon/512', '/app-icon/maskable', '/app-icon/apple'];
+var BRANDING_PATHS = ['/firmenlogo', '/firmenlogo-dark', '/firmenhintergrund', '/firmenhintergrund-anmeldung', '/firmen-favicon', '/app-icon/192', '/app-icon/512', '/app-icon/maskable', '/app-icon/apple'];
 
 var PRECACHE_URLS = [
   '/assets/css/app.css',
@@ -90,6 +90,12 @@ self.addEventListener('fetch', function (event) {
   }
 
   var url = new URL(event.request.url);
+
+  // Videos (Hintergrundvideo) werden in Teilen (Range) geladen — die gehen
+  // direkt ans Netzwerk, ein gecachter Komplett-Abruf würde Safari stören.
+  if (event.request.headers.has('range') || event.request.destination === 'video') {
+    return;
+  }
 
   if (url.origin === self.location.origin && BRANDING_PATHS.indexOf(url.pathname) !== -1 && url.searchParams.has('v')) {
     // Cache-first: die URL ändert sich bei jedem neuen Upload, eine

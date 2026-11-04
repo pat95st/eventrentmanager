@@ -9,12 +9,16 @@ use App\Application\Query\QueryBus;
 use App\Application\Settings\Command\DeleteCompanyBackgroundImage;
 use App\Application\Settings\Command\DeleteCompanyDarkLogo;
 use App\Application\Settings\Command\DeleteCompanyLogo;
+use App\Application\Settings\Command\UpdateCompanyBackgroundStyle;
 use App\Application\Settings\Command\UpdateCompanySettings;
 use App\Application\Settings\Command\UploadCompanyBackgroundImage;
 use App\Application\Settings\Command\UploadCompanyDarkLogo;
 use App\Application\Settings\Command\UploadCompanyLogo;
 use App\Application\Settings\Query\GetCompanySettings;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Settings\BackgroundSlot;
+use App\Domain\Settings\BackgroundStyle;
+use App\Domain\Settings\CompanySettings;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
@@ -155,42 +159,84 @@ final class CompanySettingsController
 
     public function uploadBackgroundImage(Request $request): void
     {
+        $slot = $this->slot($request);
         $file = $request->file('background_image');
 
         if ($file !== null) {
             try {
-                $this->commands->dispatch(new UploadCompanyBackgroundImage($file));
-                Flash::success(t('settings.company.background_image.flash.uploaded'));
+                $this->commands->dispatch(new UploadCompanyBackgroundImage($file, $slot));
+                Flash::success(CompanySettings::isVideoFilename((string) ($file['name'] ?? '')) ? 'Hintergrundvideo wurde hochgeladen.' : t('settings.company.background_image.flash.uploaded'));
             } catch (ValidationException $e) {
                 Flash::error(implode(' ', $e->errors()));
             }
+        } else {
+            Flash::error('Die Datei kam nicht beim Server an – vermutlich ist sie größer als erlaubt (PHP: upload_max_filesize/post_max_size).');
         }
 
-        Response::redirect('/einstellungen/firma');
+        Response::redirect('/einstellungen/firma#hintergrund-' . $slot->value);
     }
 
     public function deleteBackgroundImage(Request $request): void
     {
-        $this->commands->dispatch(new DeleteCompanyBackgroundImage());
-        Flash::success(t('settings.company.background_image.flash.removed'));
-        Response::redirect('/einstellungen/firma');
+        $slot = $this->slot($request);
+        $this->commands->dispatch(new DeleteCompanyBackgroundImage($slot));
+        Flash::success('Hintergrund wurde entfernt.');
+        Response::redirect('/einstellungen/firma#hintergrund-' . $slot->value);
     }
 
-    /** Liefert das optionale Hintergrundbild aus, analog zu showLogo()/showDarkLogo(). */
+    /** Deckkraft, Einpassung, Ausschnitt und Zoom eines Hintergrunds speichern (Migration 126). */
+    public function updateBackgroundStyle(Request $request): void
+    {
+        $slot = $this->slot($request);
+        $this->commands->dispatch(new UpdateCompanyBackgroundStyle(
+            slot: $slot,
+            opacity: (int) ($request->input('opacity') ?? 100),
+            fit: (string) ($request->input('fit') ?? BackgroundStyle::FIT_COVER),
+            positionX: (int) ($request->input('position_x') ?? 50),
+            positionY: (int) ($request->input('position_y') ?? 50),
+            zoom: (int) ($request->input('zoom') ?? 100),
+        ));
+        Flash::success('Darstellung des Hintergrunds wurde gespeichert.');
+        Response::redirect('/einstellungen/firma#hintergrund-' . $slot->value);
+    }
+
+    /** Liefert das Hintergrundbild/-video der Oberfläche aus, analog zu showLogo()/showDarkLogo(). */
     public function showBackgroundImage(Request $request): void
     {
-        $settings = $this->queries->ask(new GetCompanySettings());
+        $this->sendBackground($request, BackgroundSlot::App);
+    }
 
-        if ($settings->backgroundImageFilename === null) {
+    /** Hintergrund der Anmeldeseite (öffentlich, wird vor der Anmeldung gebraucht). */
+    public function showLoginBackground(Request $request): void
+    {
+        $this->sendBackground($request, BackgroundSlot::Login);
+    }
+
+    private function sendBackground(Request $request, BackgroundSlot $slot): void
+    {
+        $settings = $this->queries->ask(new GetCompanySettings());
+        $filename = $settings->backgroundFilename($slot);
+
+        if ($filename === null) {
             Response::notFound(t('settings.company.error.no_background_image'));
 
             return;
         }
 
-        $absolutePath = $this->fileStorage->absolutePath('company', $settings->backgroundImageFilename);
-        $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
+        $absolutePath = $this->fileStorage->absolutePath('company', $filename);
+        $mimeType = match (strtolower(pathinfo($filename, PATHINFO_EXTENSION))) {
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            default => function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream',
+        };
 
-        Response::cachedFile($absolutePath, basename($settings->backgroundImageFilename), $mimeType, $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version($settings->backgroundImageFilename));
+        Response::cachedFile($absolutePath, basename($filename), $mimeType, $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version($filename));
+    }
+
+    /** Bereich aus der URL ({slot}), ohne Angabe die Oberfläche (alte Routen). */
+    private function slot(Request $request): BackgroundSlot
+    {
+        return BackgroundSlot::tryFrom((string) ($request->param('slot') ?? '')) ?? BackgroundSlot::App;
     }
 
     public function uploadFavicon(Request $request): void

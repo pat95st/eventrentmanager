@@ -59,11 +59,72 @@ final class Response
             self::notFound('Die Datei wurde nicht gefunden.');
         }
 
+        $size = (int) filesize($absolutePath);
         header('Content-Type: ' . $mimeType);
-        header('Content-Length: ' . (string) filesize($absolutePath));
         header('Content-Disposition: inline; filename="' . rawurlencode($downloadName) . '"');
+        header('Accept-Ranges: bytes');
+
+        // Teilabruf (Range) — Safari/iOS spielen Videos nur damit ab
+        // (Hintergrundvideos, Migration 126).
+        $range = self::parseRange($_SERVER['HTTP_RANGE'] ?? '', $size);
+        if ($range === false) {
+            http_response_code(416);
+            header('Content-Range: bytes */' . $size);
+            exit;
+        }
+        if ($range !== null) {
+            [$start, $end] = $range;
+            http_response_code(206);
+            header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
+            header('Content-Length: ' . (string) ($end - $start + 1));
+            $handle = fopen($absolutePath, 'rb');
+            if ($handle !== false) {
+                fseek($handle, $start);
+                $remaining = $end - $start + 1;
+                while ($remaining > 0 && !feof($handle)) {
+                    $chunk = fread($handle, min(65536, $remaining));
+                    if ($chunk === false || $chunk === '') {
+                        break;
+                    }
+                    echo $chunk;
+                    $remaining -= strlen($chunk);
+                }
+                fclose($handle);
+            }
+            exit;
+        }
+
+        header('Content-Length: ' . (string) $size);
         readfile($absolutePath);
         exit;
+    }
+
+    /**
+     * Wertet einen einfachen "Range: bytes=…"-Header aus.
+     *
+     * @return array{0: int, 1: int}|null|false [Start, Ende] (inklusive), null = ganze Datei, false = nicht erfüllbar
+     */
+    public static function parseRange(string $header, int $size): array|null|false
+    {
+        if ($header === '' || preg_match('/^bytes=(\d*)-(\d*)$/', trim($header), $m) !== 1 || ($m[1] === '' && $m[2] === '')) {
+            return null; // fehlend, mehrere Bereiche o. Ä.: ganze Datei
+        }
+        if ($size === 0) {
+            return false;
+        }
+        if ($m[1] === '') {
+            // "bytes=-500": die letzten 500 Bytes
+            $start = max(0, $size - (int) $m[2]);
+            $end = $size - 1;
+        } else {
+            $start = (int) $m[1];
+            $end = $m[2] === '' ? $size - 1 : min((int) $m[2], $size - 1);
+        }
+        if ($start >= $size || $start > $end) {
+            return false;
+        }
+
+        return [$start, $end];
     }
 
     /**

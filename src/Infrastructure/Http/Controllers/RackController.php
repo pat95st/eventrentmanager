@@ -176,7 +176,7 @@ final class RackController
             return;
         }
         try {
-            $this->commands->dispatch(new AddRackSlot($exemplarId, $request->input('inventory_number_id', '') ?? '', $request->input('start_unit')));
+            $this->commands->dispatch(new AddRackSlot($exemplarId, $request->input('inventory_number_id', '') ?? '', $request->input('start_unit'), $request->input('side')));
             Flash::success('Gerät wurde eingebaut.');
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));

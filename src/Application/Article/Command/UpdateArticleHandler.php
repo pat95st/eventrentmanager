@@ -162,6 +162,11 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $article->weightUnit = $command->weightUnit;
         $article->dimensions = $command->dimensions !== null && trim($command->dimensions) !== '' ? trim($command->dimensions) : null;
         $article->is19Inch = $command->is19Inch;
+        if (!$command->is19Inch) {
+            $article->rackWidth = \App\Domain\Rack\RackWidth::Full;
+        } elseif ($command->rackWidth !== null) {
+            $article->rackWidth = \App\Domain\Rack\RackWidth::tryFrom($command->rackWidth) ?? \App\Domain\Rack\RackWidth::Full;
+        }
         $article->heightUnits = $command->is19Inch ? self::normalizeHeightUnits($command->heightUnits) : null;
         $article->installDepthCm = $command->is19Inch ? self::normalizeInstallDepth($command->installDepthCm) : null;
         $article->purchasePrice = Money::normalize($command->purchasePrice) ?: null;
@@ -225,6 +230,7 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         $article->protectionClass = null;
         $article->hasFirmware = false;
         $article->is19Inch = false;
+        $article->rackWidth = \App\Domain\Rack\RackWidth::Full;
         $article->heightUnits = null;
         $article->installDepthCm = null;
         (new BundleWeightCalculator($this->articles))->apply($article, $components);

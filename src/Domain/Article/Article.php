@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Article;
 
+use App\Domain\Rack\RackWidth;
 use DateTimeImmutable;
 
 final class Article
@@ -48,7 +49,16 @@ final class Article
         // (ArticleImage::$id), das im PDF klein links neben dem Namen steht.
         public ?string $documentShortText = null,
         public ?string $documentImageId = null,
+        // Migration 128: Einbaubreite eines Rackeinbaugeräts (is19Inch):
+        // volle 19 Zoll oder halbe Breite 9,5 Zoll.
+        public RackWidth $rackWidth = RackWidth::Full,
     ) {
+    }
+
+    /** Kurzbezeichnung der Rackbreite, z. B. "19″" oder "9,5″". */
+    public function rackWidthBadge(): string
+    {
+        return $this->rackWidth === RackWidth::Half ? '9,5″' : '19″';
     }
 
     /** Das für Dokumente gewählte Galeriebild, falls es (noch) existiert. */

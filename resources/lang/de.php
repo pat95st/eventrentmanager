@@ -238,7 +238,7 @@ return [
     'articles.form.electrical_inspection_checkbox' => 'Elektroprüfung nötig (z. B. DGUV V3)',
     'articles.form.protection_class' => 'Schutzklasse',
     'articles.form.protection_class_placeholder' => 'Bitte auswählen …',
-    'articles.form.is_19_inch_checkbox' => '19-Zoll-Gerät (rack-montierbar)',
+    'articles.form.is_19_inch_checkbox' => 'Rackeinbaugerät (19 oder 9,5 Zoll)',
     'articles.form.height_units' => 'Höheneinheiten (HE)',
     'articles.form.install_depth_cm' => 'Einbautiefe (cm)',
     'articles.form.has_firmware_checkbox' => 'Gerät hat eine aktualisierbare Firmware',

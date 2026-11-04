@@ -41,6 +41,10 @@ $isBillable = array_key_exists('is_billable', $old)
 $is19Inch = array_key_exists('is_19_inch', $old)
     ? (bool) $old['is_19_inch']
     : ($article?->is19Inch ?? false);
+// Migration 128: Einbaubreite (19 Zoll / 9,5 Zoll)
+$rackWidthValue = array_key_exists('rack_width', $old) && $old['rack_width'] !== null
+    ? (string) $old['rack_width']
+    : ($article?->rackWidth->value ?? \App\Domain\Rack\RackWidth::Full->value);
 $hasFirmware = array_key_exists('has_firmware', $old)
     ? (bool) $old['has_firmware']
     : ($article?->hasFirmware ?? false);
@@ -259,7 +263,19 @@ $bundleComponentRows ??= [];
     </div>
     <?php endif; ?>
 
-    <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-2 <?= $is19Inch ? '' : 'hidden' ?>">
+    <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-3 <?= $is19Inch ? '' : 'hidden' ?>">
+        <fieldset>
+            <legend class="block text-xs font-medium text-slate-600 dark:text-slate-400">Einbaubreite</legend>
+            <div class="mt-2 flex flex-wrap gap-4">
+                <?php foreach (\App\Domain\Rack\RackWidth::cases() as $rackWidthOption): ?>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <input type="radio" name="rack_width" value="<?= e($rackWidthOption->value) ?>" <?= $rackWidthValue === $rackWidthOption->value ? 'checked' : '' ?>>
+                        <?= e($rackWidthOption->label()) ?>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">9,5-Zoll-Geräte passen in 9,5-Zoll-Racks oder zu zweit nebeneinander in ein 19-Zoll-Rack.</p>
+        </fieldset>
         <div>
             <label for="height_units" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.height_units')) ?></label>
             <input type="number" step="1" min="1" id="height_units" name="height_units" placeholder="z. B. 3"

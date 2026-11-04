@@ -96,7 +96,7 @@ $availabilityStatusMeta = [
             <?php endif; ?>
             <?php if ($article->is19Inch): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600">
-                    <?= e(t('articles.show.is_19_inch_badge')) ?><?= $article->heightUnits !== null ? ' · ' . $article->heightUnits . ' HE' : '' ?>
+                    <?= e($article->rackWidthBadge()) ?><?= $article->heightUnits !== null ? ' · ' . $article->heightUnits . ' HE' : '' ?>
                 </span>
             <?php endif; ?>
             <?php if ($powerDistributor !== null): ?>
@@ -193,6 +193,10 @@ $availabilityStatusMeta = [
                     <dd class="font-mono text-slate-800 dark:text-slate-200"><?= e($article->dimensions ?? '–') ?></dd>
                 </div>
                 <?php if ($article->is19Inch): ?>
+                    <div>
+                        <dt class="text-xs text-slate-400 dark:text-slate-500">Einbaubreite</dt>
+                        <dd class="font-mono text-slate-800 dark:text-slate-200"><?= e($article->rackWidth->label()) ?></dd>
+                    </div>
                     <div>
                         <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.height_units')) ?></dt>
                         <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $article->heightUnits !== null ? e((string) $article->heightUnits) . ' HE' : '–' ?></dd>

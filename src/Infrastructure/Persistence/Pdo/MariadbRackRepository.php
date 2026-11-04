@@ -10,6 +10,7 @@ use App\Domain\Rack\RackExemplar;
 use App\Domain\Rack\RackRailType;
 use App\Domain\Rack\RackRepositoryInterface;
 use App\Domain\Rack\RackSlot;
+use App\Domain\Rack\RackSlotSide;
 use App\Domain\Rack\RackWidth;
 use DateTimeImmutable;
 use PDO;
@@ -210,15 +211,16 @@ final class MariadbRackRepository implements RackRepositoryInterface
     public function saveSlot(RackSlot $slot): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO rack_slots (id, rack_exemplar_id, inventory_number_id, start_unit, created_at)
-             VALUES (:id, :rack_exemplar_id, :inventory_number_id, :start_unit, :created_at)
-             ON DUPLICATE KEY UPDATE start_unit = VALUES(start_unit)'
+            'INSERT INTO rack_slots (id, rack_exemplar_id, inventory_number_id, start_unit, side, created_at)
+             VALUES (:id, :rack_exemplar_id, :inventory_number_id, :start_unit, :side, :created_at)
+             ON DUPLICATE KEY UPDATE start_unit = VALUES(start_unit), side = VALUES(side)'
         );
         $stmt->execute([
             'id' => $slot->id,
             'rack_exemplar_id' => $slot->exemplarId,
             'inventory_number_id' => $slot->inventoryNumberId,
             'start_unit' => $slot->startUnit,
+            'side' => $slot->side?->value,
             'created_at' => $slot->createdAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -270,6 +272,7 @@ final class MariadbRackRepository implements RackRepositoryInterface
             inventoryNumberId: $row['inventory_number_id'],
             startUnit: (int) $row['start_unit'],
             createdAt: new DateTimeImmutable($row['created_at']),
+            side: RackSlotSide::tryFrom((string) ($row['side'] ?? '')),
         );
     }
 }

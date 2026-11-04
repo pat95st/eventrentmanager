@@ -238,7 +238,7 @@ return [
     'articles.form.electrical_inspection_checkbox' => 'Electrical safety inspection required (e.g. DGUV V3)',
     'articles.form.protection_class' => 'Protection class',
     'articles.form.protection_class_placeholder' => 'Please select…',
-    'articles.form.is_19_inch_checkbox' => '19-inch device (rack-mountable)',
+    'articles.form.is_19_inch_checkbox' => 'Rack-mount device (19 or 9.5 inch)',
     'articles.form.height_units' => 'Height units (U)',
     'articles.form.install_depth_cm' => 'Installation depth (cm)',
     'articles.form.has_firmware_checkbox' => 'Device has updatable firmware',

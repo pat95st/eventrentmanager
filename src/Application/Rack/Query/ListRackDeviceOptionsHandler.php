@@ -23,8 +23,8 @@ final class ListRackDeviceOptionsHandler implements QueryHandlerInterface
     }
 
     /**
-     * @return list<array{label: string, heightUnits: int, installDepthCm: string|null, devices: list<array{id: string, number: string, inRack: string|null}>}>
-     *         je 19-Zoll-Artikel (alphabetisch) seine aktiven Exemplare; inRack = ID des Rack-Exemplars, in dem das Gerät bereits steckt
+     * @return list<array{label: string, heightUnits: int, rackWidth: string, installDepthCm: string|null, devices: list<array{id: string, number: string, inRack: string|null}>}>
+     *         je Rackeinbaugerät-Artikel (alphabetisch) seine aktiven Exemplare; inRack = ID des Rack-Exemplars, in dem das Gerät bereits steckt
      */
     public function handle(QueryInterface $query): array
     {
@@ -54,6 +54,7 @@ final class ListRackDeviceOptionsHandler implements QueryHandlerInterface
             $groups[] = [
                 'label' => ArticleDisplayName::of($article, $manufacturerId !== null ? $manufacturers[$manufacturerId] : null),
                 'heightUnits' => max(1, (int) ($article->heightUnits ?? 1)),
+                'rackWidth' => $article->rackWidth->value, // Migration 128: '19' | '9.5'
                 'installDepthCm' => $article->installDepthCm,
                 'devices' => $devices,
             ];

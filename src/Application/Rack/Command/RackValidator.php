@@ -13,6 +13,7 @@ use App\Domain\Rack\RackExemplar;
 use App\Domain\Rack\RackRailType;
 use App\Domain\Rack\RackRepositoryInterface;
 use App\Domain\Rack\RackSlot;
+use App\Domain\Rack\RackSlotSide;
 use App\Domain\Rack\RackWidth;
 use App\Shared\Prefix;
 use DateTimeImmutable;
@@ -24,9 +25,11 @@ use DateTimeImmutable;
  *   Inventur- und Rack-Nummern bekommen die Exemplare (Migration 124).
  * - Feste Zuordnung: Geräte-Exemplar muss existieren und darf keinem anderen
  *   Rack fest zugeordnet sein.
- * - Einbau: nur Exemplare von 19-Zoll-Artikeln, HE-Bereich innerhalb des
+ * - Einbau: nur Exemplare von Rackeinbaugeräten, HE-Bereich innerhalb des
  *   Racks und frei, Gerät steckt nicht schon in einem Rack, Einbautiefe des
- *   Geräts passt (wenn bei beiden gepflegt).
+ *   Geräts passt (wenn bei beiden gepflegt). 9,5-Zoll-Geräte belegen im
+ *   19-Zoll-Rack eine Hälfte (Migration 128), 19-Zoll-Geräte passen nicht in
+ *   9,5-Zoll-Racks.
  */
 final class RackValidator
 {
@@ -93,6 +96,14 @@ final class RackValidator
         if ($width === null) {
             $errors['width'] = 'Bitte die Breite auswählen.';
         }
+        if ($existing !== null && $width !== null && $width !== $existing->width) {
+            foreach ($this->racks->findExemplars($existing->id) as $exemplar) {
+                if ($this->racks->findSlots($exemplar->id) !== []) {
+                    $errors['width'] = 'Die Breite lässt sich nur ändern, solange in keinem Exemplar Geräte eingebaut sind (' . $exemplar->rackNumber . ' ist bestückt).';
+                    break;
+                }
+            }
+        }
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -122,8 +133,17 @@ final class RackValidator
         return new Rack($id, $name, $prefix, $manufacturerId, $units, $depth, $railType, $width, $color, $input->hasShockMount, $input->hasWheels, $description, $now, $now);
     }
 
-    /** Prüft einen Einbau und liefert die Startposition. */
-    public function validateSlot(Rack $rack, RackExemplar $exemplar, string $inventoryNumberId, ?string $rawStartUnit): int
+    /**
+     * Prüft einen Einbau und liefert [Startposition, Seite].
+     *
+     * Breiten (Migration 128): 19-Zoll-Geräte nur in 19-Zoll-Racks (ganze
+     * Breite). 9,5-Zoll-Geräte in 9,5-Zoll-Racks belegen die ganze Breite, in
+     * 19-Zoll-Racks eine Hälfte (links/rechts) — so passen zwei nebeneinander.
+     * Ohne Angaben werden die erste freie Position und Seite gewählt.
+     *
+     * @return array{0: int, 1: ?RackSlotSide}
+     */
+    public function validateSlot(Rack $rack, RackExemplar $exemplar, string $inventoryNumberId, ?string $rawStartUnit, ?string $rawSide = null): array
     {
         $inventoryNumber = $this->inventoryNumbers->findById($inventoryNumberId);
         if ($inventoryNumber === null) {
@@ -131,8 +151,13 @@ final class RackValidator
         }
         $article = $this->articles->findById($inventoryNumber->articleId);
         if ($article === null || !$article->is19Inch) {
-            throw new ValidationException(['slot' => 'Nur Geräte von 19-Zoll-Artikeln können eingebaut werden.']);
+            throw new ValidationException(['slot' => 'Nur Rackeinbaugeräte (19 oder 9,5 Zoll) können eingebaut werden.']);
         }
+        $halfDevice = $article->rackWidth === RackWidth::Half;
+        if ($rack->width === RackWidth::Half && !$halfDevice) {
+            throw new ValidationException(['slot' => "Das Gerät {$inventoryNumber->number} ist 19 Zoll breit und passt nicht in ein 9,5-Zoll-Rack."]);
+        }
+        $needsSide = $rack->width === RackWidth::Full && $halfDevice;
 
         $existingSlot = $this->racks->findSlotByInventoryNumber($inventoryNumberId);
         if ($existingSlot !== null) {
@@ -141,28 +166,50 @@ final class RackValidator
         }
 
         $height = max(1, (int) ($article->heightUnits ?? 1));
+        $wantedSide = $needsSide ? RackSlotSide::tryFrom((string) $rawSide) : null;
+        $slots = $this->racks->findSlots($exemplar->id);
+
         $start = filter_var(trim((string) $rawStartUnit), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($start === false) {
-            $start = $this->firstFreeUnit($rack, $exemplar, $height);
-            if ($start === null) {
-                throw new ValidationException(['slot' => "Im Rack ist kein freier Bereich mit {$height} HE mehr."]);
+            $position = $this->firstFreePosition($rack, $slots, $height, $needsSide, $wantedSide);
+            if ($position === null) {
+                $where = $needsSide ? ($wantedSide !== null ? ' auf der ' . ($wantedSide === RackSlotSide::Left ? 'linken' : 'rechten') . ' Seite' : ' (halbe Breite)') : '';
+                throw new ValidationException(['slot' => "Im Rack ist kein freier Bereich mit {$height} HE{$where} mehr."]);
             }
-        }
-        $end = $start + $height - 1;
-        if ($end > $rack->heightUnits) {
-            throw new ValidationException(['slot' => "Das Gerät belegt {$height} HE und passt ab HE {$start} nicht mehr ins Rack ({$rack->heightUnits} HE)."]);
-        }
-        foreach ($this->racks->findSlots($exemplar->id) as $slot) {
-            if ($start <= $this->slotEnd($slot) && $end >= $slot->startUnit) {
-                throw new ValidationException(['slot' => "HE {$start}–{$end} ist bereits belegt."]);
-            }
+            [$start, $side] = $position;
+        } else {
+            $side = $this->checkPosition($rack, $slots, $start, $height, $needsSide, $wantedSide);
         }
 
         if ($rack->installDepthCm !== null && $article->installDepthCm !== null && (float) $article->installDepthCm > (float) $rack->installDepthCm) {
             throw new ValidationException(['slot' => 'Das Gerät ist mit ' . $this->formatCm($article->installDepthCm) . ' cm tiefer als die Einbautiefe des Racks (' . $this->formatCm($rack->installDepthCm) . ' cm).']);
         }
 
-        return $start;
+        return [$start, $side];
+    }
+
+    /** Prüft eine vorgegebene Startposition und liefert die (ggf. automatisch gewählte) Seite. */
+    private function checkPosition(Rack $rack, array $slots, int $start, int $height, bool $needsSide, ?RackSlotSide $wantedSide): ?RackSlotSide
+    {
+        $end = $start + $height - 1;
+        if ($end > $rack->heightUnits) {
+            throw new ValidationException(['slot' => "Das Gerät belegt {$height} HE und passt ab HE {$start} nicht mehr ins Rack ({$rack->heightUnits} HE)."]);
+        }
+        $range = $start === $end ? "HE {$start}" : "HE {$start}–{$end}";
+        $sides = $needsSide ? ($wantedSide !== null ? [$wantedSide] : [RackSlotSide::Left, RackSlotSide::Right]) : [null];
+        $side = false;
+        foreach ($sides as $candidate) {
+            if ($this->isFree($slots, $start, $end, $candidate)) {
+                $side = $candidate;
+                break;
+            }
+        }
+        if ($side === false) {
+            $detail = $needsSide && $wantedSide !== null ? ' (' . $wantedSide->label() . ')' : '';
+            throw new ValidationException(['slot' => "{$range}{$detail} ist bereits belegt."]);
+        }
+
+        return $side;
     }
 
     /** Prüft die feste Gerätezuordnung eines Exemplars; liefert die ID oder null. */
@@ -192,24 +239,33 @@ final class RackValidator
         return $slot->startUnit + max(1, (int) ($article?->heightUnits ?? 1)) - 1;
     }
 
-    private function firstFreeUnit(Rack $rack, RackExemplar $exemplar, int $height): ?int
+    /** Ist HE $start–$end auf der Seite $side (null = ganze Breite) frei? */
+    private function isFree(array $slots, int $start, int $end, ?RackSlotSide $side): bool
     {
-        $occupied = [];
-        foreach ($this->racks->findSlots($exemplar->id) as $slot) {
-            for ($u = $slot->startUnit; $u <= $this->slotEnd($slot); $u++) {
-                $occupied[$u] = true;
+        foreach ($slots as $slot) {
+            if ($start <= $this->slotEnd($slot) && $end >= $slot->startUnit && RackSlotSide::overlaps($side, $slot->side)) {
+                return false;
             }
         }
+
+        return true;
+    }
+
+    /**
+     * Erste freie Position von oben; bei halber Breite zuerst links, dann
+     * rechts (bzw. nur die gewünschte Seite).
+     *
+     * @param RackSlot[] $slots
+     * @return array{0: int, 1: ?RackSlotSide}|null
+     */
+    private function firstFreePosition(Rack $rack, array $slots, int $height, bool $needsSide, ?RackSlotSide $wantedSide): ?array
+    {
+        $sides = $needsSide ? ($wantedSide !== null ? [$wantedSide] : [RackSlotSide::Left, RackSlotSide::Right]) : [null];
         for ($start = 1; $start + $height - 1 <= $rack->heightUnits; $start++) {
-            $free = true;
-            for ($u = $start; $u < $start + $height; $u++) {
-                if (isset($occupied[$u])) {
-                    $free = false;
-                    break;
+            foreach ($sides as $side) {
+                if ($this->isFree($slots, $start, $start + $height - 1, $side)) {
+                    return [$start, $side];
                 }
-            }
-            if ($free) {
-                return $start;
             }
         }
 

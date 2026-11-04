@@ -149,7 +149,7 @@ final class RackLabelPdfGenerator
         // Fuß: fest zugeordnetes Gerät
         $footer = $entry->fixedDevice !== null
             ? 'Fest zugeordnet: ' . $entry->fixedDevice['label'] . ' (' . $entry->fixedDevice['number'] . ') – das Rack geht mit diesem Gerät mit.'
-            : 'Frei: ' . max(0, $rack->heightUnits - $entry->usedUnits()) . ' von ' . $rack->heightUnits . ' HE';
+            : 'Frei: ' . $entry->freeUnits() . ' von ' . $rack->heightUnits . ' HE' . ($entry->halfFreeUnits() > 0 ? ' (+ ' . $entry->halfFreeUnits() . ' halbe für 9,5 Zoll)' : '');
         $writer->line($margin, $margin + 22, $width - $margin, $margin + 22, 0.5, '0.6 0.6 0.6');
         $writer->text($margin, $margin + 8, $this->truncate($writer, $footer, 8.5, $width - 2 * $margin), 8.5, false, false, '0.25 0.25 0.25');
 
@@ -162,6 +162,11 @@ final class RackLabelPdfGenerator
         $lines = [];
         foreach ($entry->slots as $slot) {
             $units = $slot['startUnit'] === $slot['endUnit'] ? (string) $slot['startUnit'] : $slot['startUnit'] . '–' . $slot['endUnit'];
+            // 9,5-Zoll-Gerät im 19-Zoll-Rack (Migration 128): Seite mit angeben.
+            $side = $slot['side'] ?? null;
+            if ($side !== null) {
+                $units .= $side === 'left' ? ' L' : ' R';
+            }
             $lines[] = [$units, $slot['label'], $slot['number']];
         }
 

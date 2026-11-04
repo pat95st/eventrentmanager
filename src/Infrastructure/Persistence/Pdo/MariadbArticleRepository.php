@@ -9,6 +9,7 @@ use App\Domain\Article\ArticleImage;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Article\ProtectionClass;
 use DateTimeImmutable;
+use App\Domain\Rack\RackWidth;
 use PDO;
 
 final class MariadbArticleRepository implements ArticleRepositoryInterface
@@ -21,13 +22,13 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO articles
-                (id, name, manufacturer_id, prefix, category_id, description, document_short_text, document_image_id, weight_value, weight_unit, dimensions, is_19_inch, height_units, install_depth_cm, purchase_price, requires_electrical_inspection, protection_class, has_firmware, is_billable, is_rentable_individually, is_bundle, is_active, daily_rental_price, created_at, updated_at)
+                (id, name, manufacturer_id, prefix, category_id, description, document_short_text, document_image_id, weight_value, weight_unit, dimensions, is_19_inch, rack_width, height_units, install_depth_cm, purchase_price, requires_electrical_inspection, protection_class, has_firmware, is_billable, is_rentable_individually, is_bundle, is_active, daily_rental_price, created_at, updated_at)
              VALUES
-                (:id, :name, :manufacturer_id, :prefix, :category_id, :description, :document_short_text, :document_image_id, :weight_value, :weight_unit, :dimensions, :is_19_inch, :height_units, :install_depth_cm, :purchase_price, :requires_electrical_inspection, :protection_class, :has_firmware, :is_billable, :is_rentable_individually, :is_bundle, :is_active, :daily_rental_price, :created_at, :updated_at)
+                (:id, :name, :manufacturer_id, :prefix, :category_id, :description, :document_short_text, :document_image_id, :weight_value, :weight_unit, :dimensions, :is_19_inch, :rack_width, :height_units, :install_depth_cm, :purchase_price, :requires_electrical_inspection, :protection_class, :has_firmware, :is_billable, :is_rentable_individually, :is_bundle, :is_active, :daily_rental_price, :created_at, :updated_at)
              ON DUPLICATE KEY UPDATE
                 name = :name2, manufacturer_id = :manufacturer_id2, prefix = :prefix2, category_id = :category_id2,
                 description = :description2, document_short_text = :document_short_text2, document_image_id = :document_image_id2, weight_value = :weight_value2, weight_unit = :weight_unit2,
-                dimensions = :dimensions2, is_19_inch = :is_19_inch2, height_units = :height_units2,
+                dimensions = :dimensions2, is_19_inch = :is_19_inch2, rack_width = :rack_width2, height_units = :height_units2,
                 install_depth_cm = :install_depth_cm2, purchase_price = :purchase_price2,
                 requires_electrical_inspection = :requires_electrical_inspection2, protection_class = :protection_class2,
                 has_firmware = :has_firmware2,
@@ -47,6 +48,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             'weight_unit' => $article->weightUnit,
             'dimensions' => $article->dimensions,
             'is_19_inch' => $article->is19Inch ? 1 : 0,
+            'rack_width' => $article->rackWidth->value,
             'height_units' => $article->heightUnits,
             'install_depth_cm' => $article->installDepthCm,
             'purchase_price' => $article->purchasePrice,
@@ -71,6 +73,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             'weight_unit2' => $article->weightUnit,
             'dimensions2' => $article->dimensions,
             'is_19_inch2' => $article->is19Inch ? 1 : 0,
+            'rack_width2' => $article->rackWidth->value,
             'height_units2' => $article->heightUnits,
             'install_depth_cm2' => $article->installDepthCm,
             'purchase_price2' => $article->purchasePrice,
@@ -361,6 +364,7 @@ final class MariadbArticleRepository implements ArticleRepositoryInterface
             isBundle: (bool) ($row['is_bundle'] ?? false),
             documentShortText: $row['document_short_text'] ?? null,
             documentImageId: $row['document_image_id'] ?? null,
+            rackWidth: RackWidth::tryFrom((string) ($row['rack_width'] ?? '19')) ?? RackWidth::Full,
         );
     }
 }

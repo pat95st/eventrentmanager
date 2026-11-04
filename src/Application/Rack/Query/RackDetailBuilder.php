@@ -66,8 +66,12 @@ final class RackDetailBuilder
                 'startUnit' => $slot->startUnit,
                 'endUnit' => $slot->startUnit + $height - 1,
                 'heightUnits' => $height,
+                'side' => $slot->side?->value, // Migration 128: 'left' | 'right' | null (ganze Breite)
             ];
         }
+
+        // Von oben nach unten, bei gleicher HE links vor rechts (9,5-Zoll-Geräte, Migration 128).
+        usort($slots, static fn (array $a, array $b) => [$a['startUnit'], $a['side'] === 'right' ? 1 : 0] <=> [$b['startUnit'], $b['side'] === 'right' ? 1 : 0]);
 
         $fixedDevice = null;
         $issuedIn = null;
@@ -85,7 +89,7 @@ final class RackDetailBuilder
             }
         }
 
-        return new RackExemplarDetail($exemplar, $rack->heightUnits, $slots, $fixedDevice, $issuedIn);
+        return new RackExemplarDetail($exemplar, $rack->heightUnits, $slots, $fixedDevice, $issuedIn, $rack->width);
     }
 
     /** Vorschau der nächsten Rack-Nummer (RACK-0001 …), null ohne Migration 120/124. */

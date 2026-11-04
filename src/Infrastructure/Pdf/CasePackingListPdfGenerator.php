@@ -53,7 +53,7 @@ final class CasePackingListPdfGenerator
         $pageHeight = $writer->pageHeight();
         $contentWidth = $pageWidth - 2 * self::MARGIN;
         $pageNumber = 1;
-        $subtitle = $detail->case->name . ' · ' . $entry->inventoryNumber->number;
+        $subtitle = $detail->case->name . ' · ' . ($entry->inventoryNumber->caseNumber ?? $entry->inventoryNumber->number);
 
         $writer->addPage();
         $logoJpeg = $companySettings !== null ? $this->prepareLogoJpeg($companySettings) : null;
@@ -187,7 +187,7 @@ final class CasePackingListPdfGenerator
         $y -= 26;
         $writer->text(self::MARGIN, $y, $detail->case->name, 11, true);
         $y -= 14;
-        $writer->text(self::MARGIN, $y, 'Inventurnummer: ' . $entry->inventoryNumber->number . ' · Hersteller: ' . $detail->manufacturer->name, 9, false, false, '0.3 0.3 0.3');
+        $writer->text(self::MARGIN, $y, ($entry->inventoryNumber->caseNumber !== null ? 'Case-Nr.: ' . $entry->inventoryNumber->caseNumber . ' · ' : '') . 'Inventurnummer: ' . $entry->inventoryNumber->number . ' · Hersteller: ' . $detail->manufacturer->name, 9, false, false, '0.3 0.3 0.3');
         $y -= 16;
 
         if ($logoBottomY !== null) {

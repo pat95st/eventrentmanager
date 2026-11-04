@@ -76,17 +76,22 @@ final class GetCaseItemHandler implements QueryHandlerInterface
             $rawInventoryNumbers
         );
 
-        $nextInventoryNumberPreview = null;
+        $nextInventoryNumberPreview = ($manufacturer->prefix !== null && $caseItem->prefix !== null)
+            ? \App\Domain\CaseInventoryNumber\CaseInventoryNumberGenerator::nextNumber($rawInventoryNumbers, $manufacturer->prefix, $caseItem->prefix)
+            : null;
+
+        // Migration 124: Vorschau der nächsten Case-Nummer (CASE-0001 …).
+        $nextCaseNumberPreview = null;
         if ($this->numbering !== null) {
             try {
                 $settings = $this->numbering->findByType(\App\Domain\Numbering\NumberedDocumentType::CaseItem);
                 $year = \App\Domain\Numbering\DocumentNumberFormatter::previewYear($settings);
-                $nextInventoryNumberPreview = \App\Domain\Numbering\DocumentNumberFormatter::format($settings, $year, $this->numbering->getNextNumber(\App\Domain\Numbering\NumberedDocumentType::CaseItem, $year));
+                $nextCaseNumberPreview = \App\Domain\Numbering\DocumentNumberFormatter::format($settings, $year, $this->numbering->getNextNumber(\App\Domain\Numbering\NumberedDocumentType::CaseItem, $year));
             } catch (\RuntimeException) {
-                $nextInventoryNumberPreview = null; // Migration 120 fehlt
+                $nextCaseNumberPreview = null;
             }
         }
 
-        return new CaseItemDetail($caseItem, $manufacturer, $inventoryNumbers, $nextInventoryNumberPreview);
+        return new CaseItemDetail($caseItem, $manufacturer, $inventoryNumbers, $nextInventoryNumberPreview, $nextCaseNumberPreview);
     }
 }

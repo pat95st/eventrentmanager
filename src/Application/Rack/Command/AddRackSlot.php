@@ -10,7 +10,7 @@ use App\Application\Command\CommandInterface;
 final class AddRackSlot implements CommandInterface
 {
     public function __construct(
-        public readonly string $rackId,
+        public readonly string $exemplarId, // Rack-Exemplar (Migration 124)
         public readonly string $inventoryNumberId,
         public readonly ?string $startUnit,
     ) {

@@ -18,9 +18,9 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
     public function save(CaseInventoryNumber $caseInventoryNumber): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO case_inventory_numbers (id, case_id, number, acquisition_date, notice_html, created_at, updated_at)
-             VALUES (:id, :case_id, :number, :acquisition_date, :notice_html, :created_at, :updated_at)
-             ON DUPLICATE KEY UPDATE number = :number2, acquisition_date = :acquisition_date2, notice_html = :notice_html2, updated_at = :updated_at2'
+            'INSERT INTO case_inventory_numbers (id, case_id, number, case_number, acquisition_date, notice_html, created_at, updated_at)
+             VALUES (:id, :case_id, :number, :case_number, :acquisition_date, :notice_html, :created_at, :updated_at)
+             ON DUPLICATE KEY UPDATE number = :number2, case_number = :case_number2, acquisition_date = :acquisition_date2, notice_html = :notice_html2, updated_at = :updated_at2'
         );
 
         $acquisitionDate = $caseInventoryNumber->acquisitionDate?->format('Y-m-d');
@@ -29,11 +29,13 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
             'id' => $caseInventoryNumber->id,
             'case_id' => $caseInventoryNumber->caseId,
             'number' => $caseInventoryNumber->number,
+            'case_number' => $caseInventoryNumber->caseNumber,
             'acquisition_date' => $acquisitionDate,
             'notice_html' => $caseInventoryNumber->noticeHtml,
             'created_at' => $caseInventoryNumber->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $caseInventoryNumber->updatedAt->format('Y-m-d H:i:s'),
             'number2' => $caseInventoryNumber->number,
+            'case_number2' => $caseInventoryNumber->caseNumber,
             'acquisition_date2' => $acquisitionDate,
             'notice_html2' => $caseInventoryNumber->noticeHtml,
             'updated_at2' => $caseInventoryNumber->updatedAt->format('Y-m-d H:i:s'),
@@ -76,6 +78,14 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    public function existsByCaseNumber(string $caseNumber): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM case_inventory_numbers WHERE case_number = :case_number');
+        $stmt->execute(['case_number' => $caseNumber]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
     public function delete(string $id): void
     {
         $stmt = $this->pdo->prepare('DELETE FROM case_inventory_numbers WHERE id = :id');
@@ -92,6 +102,7 @@ final class MariadbCaseInventoryNumberRepository implements CaseInventoryNumberR
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
             noticeHtml: $row['notice_html'] ?? null,
+            caseNumber: $row['case_number'] ?? null,
         );
     }
 }

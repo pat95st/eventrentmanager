@@ -7,17 +7,16 @@ namespace App\Domain\Rack;
 use DateTimeImmutable;
 
 /**
- * Rack (Nutzerwunsch, Migration 115): einzelnes physisches Rack mit eigener
- * Inventarnummer, bestückt mit konkreten Geräte-Exemplaren (RackSlot).
- * Ist $fixedInventoryNumberId gesetzt, gehört das Rack fest zu diesem
- * Geräte-Exemplar und wird bei dessen Ausgabe automatisch mitgegeben.
+ * Rack-Typ (Migrationen 115/124), z. B. „10 HE Shockmount“: Ausstattung und
+ * Maße. Die physischen Racks sind RackExemplar-Datensätze mit eigener
+ * Rack-Nummer, Inventurnummer, Bestückung und fester Gerätezuordnung.
  */
 final class Rack
 {
     public function __construct(
         public readonly string $id,
         public string $name,
-        public string $inventoryNumber,
+        public ?string $prefix, // Kürzel für die Inventurnummern der Exemplare (HERSTELLER-KÜRZEL-0001), Migration 124
         public ?string $manufacturerId,
         public int $heightUnits,
         public ?string $installDepthCm, // als String (DECIMAL), siehe Article::$installDepthCm
@@ -26,7 +25,6 @@ final class Rack
         public ?string $color,
         public bool $hasShockMount,
         public bool $hasWheels,
-        public ?string $fixedInventoryNumberId,
         public ?string $description,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,

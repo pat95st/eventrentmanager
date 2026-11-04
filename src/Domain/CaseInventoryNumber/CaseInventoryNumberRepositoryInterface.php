@@ -15,5 +15,7 @@ interface CaseInventoryNumberRepositoryInterface
 
     public function existsByNumber(string $number, ?string $excludeId = null): bool;
 
+    public function existsByCaseNumber(string $caseNumber): bool;
+
     public function delete(string $id): void;
 }

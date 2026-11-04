@@ -177,7 +177,7 @@ final class CaseController
 
         $companySettings = $this->queries->ask(new \App\Application\Settings\Query\GetCompanySettings());
         $pdf = $this->packingListPdf->generate($detail, $entry, $companySettings);
-        $filename = 'Stueckliste-' . preg_replace('/[^A-Za-z0-9._-]+/', '-', $entry->inventoryNumber->number) . '.pdf';
+        $filename = 'Stueckliste-' . preg_replace('/[^A-Za-z0-9._-]+/', '-', $entry->inventoryNumber->caseNumber ?? $entry->inventoryNumber->number) . '.pdf';
         Response::raw($pdf, 200, 'application/pdf', ['Content-Disposition' => 'inline; filename="' . $filename . '"']);
     }
 
@@ -226,6 +226,7 @@ final class CaseController
         $command = new CreateCaseItem(
             name: $request->input('name', '') ?? '',
             manufacturerId: $request->input('manufacturer_id', '') ?? '',
+            prefix: $request->input('prefix', '') ?? '',
             description: $request->input('description'),
         );
 
@@ -299,6 +300,7 @@ final class CaseController
             id: $id,
             name: $request->input('name', '') ?? '',
             manufacturerId: $request->input('manufacturer_id', '') ?? '',
+            prefix: $request->input('prefix', '') ?? '',
             description: $request->input('description'),
         );
 
@@ -460,6 +462,7 @@ final class CaseController
         return [
             'name' => $command->name,
             'manufacturer_id' => $command->manufacturerId,
+            'prefix' => $command->prefix,
             'description' => $command->description,
         ];
     }

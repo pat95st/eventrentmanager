@@ -7,21 +7,24 @@ use function App\Infrastructure\Http\e;
 
 $rack = $detail->rack;
 $cm = static fn (?string $value) => $value !== null ? rtrim(rtrim(number_format((float) $value, 1, ',', ''), '0'), ',') . ' cm' : '–';
-$freeUnits = $rack->heightUnits - $detail->usedUnits();
 $csrf = e(\App\Infrastructure\Http\Csrf::token());
+$btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800';
+$smallBtn = 'inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800';
+$prefixPattern = $detail->manufacturer?->prefix !== null && $rack->prefix !== null ? $detail->manufacturer->prefix . '-' . $rack->prefix . '-…' : null;
 ?>
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
     <div>
         <a href="/racks" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Alle Racks</a>
         <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($rack->name) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
-            <span class="font-mono"><?= e($rack->inventoryNumber) ?></span>
-            <?php if ($detail->manufacturer !== null): ?> · <?= e($detail->manufacturer->name) ?><?php endif; ?>
+            <?= e($detail->manufacturer?->name ?? 'ohne Hersteller') ?>
+            <?php if ($prefixPattern !== null): ?> · <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($prefixPattern) ?></span><?php endif; ?>
+            · <?= count($detail->exemplars) ?> Exemplar<?= count($detail->exemplars) === 1 ? '' : 'e' ?>
         </p>
     </div>
     <div class="flex items-center gap-3">
-        <a href="/racks/<?= e($rack->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Bearbeiten</a>
-        <form method="post" action="/racks/<?= e($rack->id) ?>/loeschen" data-confirm="Dieses Rack löschen? Die eingebauten Geräte bleiben erhalten." data-confirm-style="danger">
+        <a href="/racks/<?= e($rack->id) ?>/bearbeiten" class="<?= $btn ?>">Rack-Typ bearbeiten</a>
+        <form method="post" action="/racks/<?= e($rack->id) ?>/loeschen" data-confirm="Diesen Rack-Typ mit allen <?= count($detail->exemplars) ?> Exemplaren löschen? Die eingebauten Geräte bleiben erhalten." data-confirm-style="danger">
             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">Löschen</button>
         </form>
@@ -30,74 +33,152 @@ $csrf = e(\App\Infrastructure\Http\Csrf::token());
 
 <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
     <div class="space-y-6 lg:col-span-2">
-        <!-- Belegung -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <div class="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Belegung</h2>
-                <span class="text-xs text-slate-500 dark:text-slate-400"><?= $detail->usedUnits() ?> von <?= $rack->heightUnits ?> HE belegt · <?= $freeUnits ?> frei</span>
+        <?php if ($detail->exemplars === []): ?>
+            <div class="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+                Noch keine Exemplare. Lege unten das erste Rack dieses Typs an – es bekommt automatisch eine Rack-Nummer und eine Inventurnummer.
             </div>
-            <div class="overflow-hidden rounded-md border border-slate-300 dark:border-slate-700">
-                <?php foreach ($detail->unitMap() as $unit => $slot): ?>
-                    <?php if ($slot === null): ?>
-                        <div class="flex items-center border-b border-slate-100 text-xs text-slate-400 last:border-b-0 dark:border-slate-800 dark:text-slate-600" style="height:1.75rem">
-                            <span style="width:3rem;flex-shrink:0" class="border-r border-slate-200 text-center font-mono dark:border-slate-700"><?= $unit ?></span>
-                            <span class="px-3">frei</span>
-                        </div>
-                    <?php else: ?>
-                        <div class="flex items-stretch border-b border-slate-200 bg-brand-50 last:border-b-0 dark:border-slate-700 dark:bg-brand-950/40" style="min-height:<?= 1.75 * $slot['heightUnits'] ?>rem">
-                            <span style="width:3rem;flex-shrink:0" class="flex items-center justify-center border-r border-slate-200 font-mono text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                                <?= $slot['startUnit'] === $slot['endUnit'] ? $slot['startUnit'] : $slot['startUnit'] . '–' . $slot['endUnit'] ?>
-                            </span>
-                            <div class="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-1">
-                                <div class="min-w-0 text-sm">
-                                    <span class="font-medium text-slate-800 dark:text-slate-100"><?= e($slot['label']) ?></span>
-                                    <span class="ml-2 font-mono text-xs text-slate-500 dark:text-slate-400"><?= e($slot['number']) ?></span>
-                                    <?php if ($detail->fixedDevice !== null && $detail->fixedDevice['inventoryNumberId'] === $slot['inventoryNumberId']): ?>
-                                        <span class="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">fest zugeordnet</span>
-                                    <?php endif; ?>
-                                </div>
-                                <form method="post" action="/rack-einbauten/<?= e($slot['slotId']) ?>/loeschen" data-confirm="Dieses Gerät aus dem Rack ausbauen?">
-                                    <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
-                                    <input type="hidden" name="rack_id" value="<?= e($rack->id) ?>">
-                                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Ausbauen</button>
-                                </form>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            </div>
+        <?php endif; ?>
 
-            <form method="post" action="/racks/<?= e($rack->id) ?>/einbauten" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
-                <div class="min-w-0 flex-1">
-                    <label class="block text-xs text-slate-500 dark:text-slate-400">Gerät einbauen (19-Zoll-Artikel)</label>
-                    <select name="inventory_number_id" required class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
-                        <option value="">Bitte wählen…</option>
-                        <?php foreach ($deviceOptions as $group): ?>
-                            <?php $free = array_values(array_filter($group['devices'], static fn ($device) => $device['inRack'] === null)); ?>
-                            <?php if ($free === []) { continue; } ?>
-                            <optgroup label="<?= e($group['label']) ?> (<?= $group['heightUnits'] ?> HE<?= $group['installDepthCm'] !== null ? ', ' . e($cm($group['installDepthCm'])) : '' ?>)">
-                                <?php foreach ($free as $device): ?>
-                                    <option value="<?= e($device['id']) ?>"><?= e($device['number']) ?></option>
-                                <?php endforeach; ?>
-                            </optgroup>
+        <?php foreach ($detail->exemplars as $entry): ?>
+            <?php $exemplar = $entry->exemplar; $freeUnits = $rack->heightUnits - $entry->usedUnits(); ?>
+            <div id="exemplar-<?= e($exemplar->id) ?>" class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+                    <div>
+                        <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Rack-Exemplar</p>
+                        <p class="font-mono font-semibold text-slate-900 dark:text-slate-100" style="font-size:1rem"><?= e($exemplar->rackNumber) ?></p>
+                        <p class="font-mono text-xs text-slate-600 dark:text-slate-400">Inventurnummer: <?= e($exemplar->inventoryNumber) ?></p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400"><?= $entry->usedUnits() ?> von <?= $rack->heightUnits ?> HE belegt · <?= $freeUnits ?> frei · Angeschafft: <?= $exemplar->acquisitionDate !== null ? e($exemplar->acquisitionDate->format('d.m.Y')) : '–' ?></p>
+                        <?php if ($entry->issuedIn !== null): ?>
+                            <p class="mt-1 text-xs text-amber-700 dark:text-amber-400">Unterwegs mit: <a class="underline" href="/veranstaltungen/<?= e($entry->issuedIn['rentalId']) ?>"><?= e($entry->issuedIn['eventName']) ?></a></p>
+                        <?php endif; ?>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">Beschriftung:</span>
+                        <a href="/rack-exemplare/<?= e($exemplar->id) ?>/beschriftung-front.pdf" target="_blank" class="<?= $smallBtn ?>" title="Für den vorderen Deckel (A6)">FRONT</a>
+                        <a href="/rack-exemplare/<?= e($exemplar->id) ?>/beschriftung-rear.pdf" target="_blank" class="<?= $smallBtn ?>" title="Für den hinteren Deckel (A6)">REAR</a>
+                        <a href="/rack-exemplare/<?= e($exemplar->id) ?>/beschriftung-inhalt.pdf" target="_blank" class="<?= $smallBtn ?>" title="Inhaltsliste für oben auf dem Rack (A5)">Inhalt (oben)</a>
+                        <form method="post" action="/rack-exemplare/<?= e($exemplar->id) ?>/loeschen" data-confirm="Rack <?= e($exemplar->rackNumber) ?> löschen? Die eingebauten Geräte bleiben erhalten, die Nummer wird nicht erneut vergeben." data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="p-4">
+                    <div class="overflow-hidden rounded-md border border-slate-300 dark:border-slate-700">
+                        <?php foreach ($entry->unitMap() as $unit => $slot): ?>
+                            <?php if ($slot === null): ?>
+                                <div class="flex items-center border-b border-slate-100 text-xs text-slate-400 last:border-b-0 dark:border-slate-800 dark:text-slate-600" style="height:1.75rem">
+                                    <span style="width:3rem;flex-shrink:0" class="border-r border-slate-200 text-center font-mono dark:border-slate-700"><?= $unit ?></span>
+                                    <span class="px-3">frei</span>
+                                </div>
+                            <?php else: ?>
+                                <div class="flex items-stretch border-b border-slate-200 bg-brand-50 last:border-b-0 dark:border-slate-700 dark:bg-brand-950/40" style="min-height:<?= 1.75 * $slot['heightUnits'] ?>rem">
+                                    <span style="width:3rem;flex-shrink:0" class="flex items-center justify-center border-r border-slate-200 font-mono text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                                        <?= $slot['startUnit'] === $slot['endUnit'] ? $slot['startUnit'] : $slot['startUnit'] . '–' . $slot['endUnit'] ?>
+                                    </span>
+                                    <div class="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 px-3 py-1">
+                                        <div class="min-w-0 text-sm">
+                                            <span class="font-medium text-slate-800 dark:text-slate-100"><?= e($slot['label']) ?></span>
+                                            <span class="ml-2 font-mono text-xs text-slate-500 dark:text-slate-400"><?= e($slot['number']) ?></span>
+                                            <?php if ($entry->fixedDevice !== null && $entry->fixedDevice['inventoryNumberId'] === $slot['inventoryNumberId']): ?>
+                                                <span class="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">fest zugeordnet</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <form method="post" action="/rack-einbauten/<?= e($slot['slotId']) ?>/loeschen" data-confirm="Dieses Gerät aus dem Rack ausbauen?">
+                                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                                            <input type="hidden" name="rack_id" value="<?= e($rack->id) ?>">
+                                            <input type="hidden" name="exemplar_id" value="<?= e($exemplar->id) ?>">
+                                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Ausbauen</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
+
+                    <form method="post" action="/rack-exemplare/<?= e($exemplar->id) ?>/einbauten" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                        <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                        <div class="min-w-0 flex-1">
+                            <label class="block text-xs text-slate-500 dark:text-slate-400">Gerät einbauen (19-Zoll-Artikel)</label>
+                            <select name="inventory_number_id" required class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                                <option value="">Bitte wählen…</option>
+                                <?php foreach ($deviceOptions as $group): ?>
+                                    <?php $free = array_values(array_filter($group['devices'], static fn ($device) => $device['inRack'] === null)); ?>
+                                    <?php if ($free === []) { continue; } ?>
+                                    <optgroup label="<?= e($group['label']) ?> (<?= $group['heightUnits'] ?> HE<?= $group['installDepthCm'] !== null ? ', ' . e($cm($group['installDepthCm'])) : '' ?>)">
+                                        <?php foreach ($free as $device): ?>
+                                            <option value="<?= e($device['id']) ?>"><?= e($device['number']) ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-slate-400">ab HE</label>
+                            <input type="number" name="start_unit" min="1" max="<?= $rack->heightUnits ?>" placeholder="auto" class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                        </div>
+                        <button type="submit" class="<?= $btn ?>">Einbauen</button>
+                    </form>
+
+                    <form method="post" action="/rack-exemplare/<?= e($exemplar->id) ?>" class="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                        <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                        <div class="min-w-0 flex-1">
+                            <label class="block text-xs text-slate-500 dark:text-slate-400">Fest zugeordnetes Gerät (Rack geht bei dessen Ausgabe mit)</label>
+                            <select name="fixed_inventory_number_id" class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                                <option value="">– keine feste Zuordnung –</option>
+                                <?php foreach ($deviceOptions as $group): ?>
+                                    <optgroup label="<?= e($group['label']) ?>">
+                                        <?php foreach ($group['devices'] as $device): ?>
+                                            <option value="<?= e($device['id']) ?>" <?= $exemplar->fixedInventoryNumberId === $device['id'] ? 'selected' : '' ?>><?= e($device['number']) ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-slate-400">Angeschafft</label>
+                            <input type="date" name="acquisition_date" value="<?= e($exemplar->acquisitionDate?->format('Y-m-d') ?? '') ?>" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                        </div>
+                        <button type="submit" class="<?= $btn ?>">Speichern</button>
+                    </form>
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400">ab HE</label>
-                    <input type="number" name="start_unit" min="1" max="<?= $rack->heightUnits ?>" placeholder="auto" class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
-                </div>
-                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Einbauen</button>
-            </form>
-            <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">Ohne Angabe wird der erste freie Bereich genommen. Die Höhe kommt aus dem Artikel (HE), die Einbautiefe wird geprüft.</p>
+            </div>
+        <?php endforeach; ?>
+
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Neues Exemplar</h2>
+            <?php if ($detail->nextInventoryNumberPreview === null): ?>
+                <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
+                    Um ein Exemplar anzulegen, müssen zuerst ein Hersteller-Kürzel (unter „Hersteller“) und ein Rack-Kürzel (<a href="/racks/<?= e($rack->id) ?>/bearbeiten" class="underline">Rack-Typ bearbeiten</a>) hinterlegt sein.
+                </p>
+            <?php else: ?>
+                <form method="post" action="/racks/<?= e($rack->id) ?>/exemplare" class="flex flex-wrap items-end gap-3">
+                    <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                    <div>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Rack-Nummer</span>
+                        <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->nextRackNumberPreview ?? 'RACK-…') ?></p>
+                    </div>
+                    <div>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Inventurnummer</span>
+                        <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->nextInventoryNumberPreview) ?></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400">Angeschafft</label>
+                        <input type="date" name="acquisition_date" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                    </div>
+                    <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Exemplar anlegen</button>
+                </form>
+                <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">Beide Nummern werden automatisch fortlaufend vergeben.</p>
+            <?php endif; ?>
         </div>
     </div>
 
     <div class="space-y-4">
         <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Details</h2>
+            <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Rack-Typ</h2>
             <dl class="space-y-2">
+                <div class="flex justify-between gap-3"><dt class="text-slate-500 dark:text-slate-400">Kürzel</dt><dd class="font-mono text-slate-800 dark:text-slate-200"><?= e($rack->prefix ?? '–') ?></dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-slate-500 dark:text-slate-400">Breite</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($rack->width->label()) ?></dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-slate-500 dark:text-slate-400">Höheneinheiten</dt><dd class="text-slate-800 dark:text-slate-200"><?= $rack->heightUnits ?> HE</dd></div>
                 <div class="flex justify-between gap-3"><dt class="text-slate-500 dark:text-slate-400">Einbautiefe</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cm($rack->installDepthCm)) ?></dd></div>
@@ -110,21 +191,6 @@ $csrf = e(\App\Infrastructure\Http\Csrf::token());
                 <p class="mt-3 whitespace-pre-line border-t border-slate-100 pt-3 text-slate-600 dark:border-slate-800 dark:text-slate-400"><?= e($rack->description) ?></p>
             <?php endif; ?>
         </div>
-
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Feste Zuordnung</h2>
-            <?php if ($detail->fixedDevice === null): ?>
-                <p class="text-slate-500 dark:text-slate-400">Keine — das Rack ist nicht fest an ein Gerät gebunden.</p>
-            <?php else: ?>
-                <p class="text-slate-800 dark:text-slate-200"><?= e($detail->fixedDevice['label']) ?></p>
-                <p class="font-mono text-xs text-slate-500 dark:text-slate-400"><?= e($detail->fixedDevice['number']) ?></p>
-                <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Wird dieses Gerät in einer Veranstaltung ausgegeben, geht das Rack automatisch mit.</p>
-                <?php if ($detail->issuedIn !== null): ?>
-                    <p class="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
-                        Gerade unterwegs mit: <a class="underline" href="/veranstaltungen/<?= e($detail->issuedIn['rentalId']) ?>"><?= e($detail->issuedIn['eventName']) ?></a>
-                    </p>
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
+        <p class="px-1 text-xs text-slate-500 dark:text-slate-400">Die Bestückung, die feste Gerätezuordnung und die Beschriftungen gelten je Exemplar.</p>
     </div>
 </div>

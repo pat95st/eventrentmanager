@@ -15,6 +15,7 @@ final class CaseItemDetail
         public readonly Manufacturer $manufacturer,
         public readonly array $inventoryNumbers,
         public readonly ?string $nextInventoryNumberPreview,
+        public readonly ?string $nextCaseNumberPreview = null, // Migration 124
     ) {
     }
 }

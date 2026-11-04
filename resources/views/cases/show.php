@@ -50,6 +50,9 @@ if (!function_exists('renderCaseNoticeField')) {
         <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($case->name) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
             <?= e($detail->manufacturer->name) ?>
+            <?php if ($detail->manufacturer->prefix !== null && $case->prefix !== null): ?>
+                · <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->manufacturer->prefix) ?>-<?= e($case->prefix) ?>-…</span>
+            <?php endif; ?>
         </p>
     </div>
     <div class="flex items-center gap-3">
@@ -96,7 +99,8 @@ if (!function_exists('renderCaseNoticeField')) {
                             <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800">
                                 <div>
                                     <p class="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">Case-Exemplar</p>
-                                    <p class="font-mono text-base font-semibold text-slate-900 dark:text-slate-100"><?= e($inv->number) ?></p>
+                                    <p class="font-mono text-base font-semibold text-slate-900 dark:text-slate-100"><?= e($inv->caseNumber ?? $inv->number) ?></p>
+                                    <?php if ($inv->caseNumber !== null): ?><p class="font-mono text-xs text-slate-600 dark:text-slate-400">Inventurnummer: <?= e($inv->number) ?></p><?php endif; ?>
                                     <p class="text-xs text-slate-500 dark:text-slate-400">
                                         <?= $articleCount ?> Teile · <?= $photoCount ?> Foto<?= $photoCount === 1 ? '' : 's' ?> · Angeschafft: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
                                     </p>
@@ -229,12 +233,18 @@ if (!function_exists('renderCaseNoticeField')) {
             <?php if ($detail->nextInventoryNumberPreview === null): ?>
                 <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
                     <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
-                        Die Nummerierung für Case-Inventurnummern ist noch nicht eingerichtet (Migration 120, siehe Einstellungen › Nummerierung).
+                        Um ein neues Case-Exemplar anzulegen, müssen zuerst ein Hersteller-Kürzel
+                        (unter „Hersteller“) und ein Case-Kürzel (<a href="/cases/<?= e($case->id) ?>/bearbeiten" class="underline">Case bearbeiten</a>) hinterlegt werden.
                     </p>
                 </div>
             <?php else: ?>
                 <form method="post" action="/cases/<?= e($case->id) ?>/inventurnummern" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400">Neue Case-Nummer</label>
+                        <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->nextCaseNumberPreview ?? 'CASE-…') ?></p>
+                        <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500">Wird automatisch vergeben.</p>
+                    </div>
                     <div>
                         <label class="block text-xs text-slate-500 dark:text-slate-400">Neue Inventurnummer</label>
                         <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->nextInventoryNumberPreview) ?></p>

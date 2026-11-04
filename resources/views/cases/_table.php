@@ -23,13 +23,15 @@ foreach ($manufacturers as $manufacturer) {
         <div class="overflow-x-auto">
         <table class="w-full min-w-[480px] table-fixed text-left text-sm">
             <colgroup>
-                <col style="width: 45%">
+                <col style="width: 40%">
+                <col style="width: 20%">
                 <col style="width: 25%">
-                <col style="width: 30%">
+                <col style="width: 15%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2.5 break-words">Name</th>
+                    <th class="px-4 py-2.5 break-words">Präfix</th>
                     <th class="px-4 py-2.5 break-words">Hersteller</th>
                     <th class="px-4 py-2.5 break-words">Beschreibung</th>
                 </tr>
@@ -39,6 +41,9 @@ foreach ($manufacturers as $manufacturer) {
                     <?php $manufacturer = $manufacturerById[$case->manufacturerId] ?? null; ?>
                     <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/cases/<?= e($case->id) ?>'">
                         <td class="px-4 py-3 break-words font-medium text-slate-900 dark:text-slate-100"><?= e($case->name) ?></td>
+                        <td class="px-4 py-3 break-words font-mono text-xs text-slate-500 dark:text-slate-400">
+                            <?= ($manufacturer?->prefix !== null && $case->prefix !== null) ? e($manufacturer->prefix . '-' . $case->prefix) : '–' ?>
+                        </td>
                         <td class="px-4 py-3 break-words text-slate-600 dark:text-slate-400"><?= e($manufacturer?->name ?? '–') ?></td>
                         <td class="px-4 py-3 break-words text-slate-600 dark:text-slate-400"><?= e($case->description ?? '–') ?></td>
                     </tr>

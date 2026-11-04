@@ -24,7 +24,7 @@ final class ListRackDeviceOptionsHandler implements QueryHandlerInterface
 
     /**
      * @return list<array{label: string, heightUnits: int, installDepthCm: string|null, devices: list<array{id: string, number: string, inRack: string|null}>}>
-     *         je 19-Zoll-Artikel (alphabetisch) seine aktiven Exemplare; inRack = Rack-ID, in dem das Gerät bereits steckt
+     *         je 19-Zoll-Artikel (alphabetisch) seine aktiven Exemplare; inRack = ID des Rack-Exemplars, in dem das Gerät bereits steckt
      */
     public function handle(QueryInterface $query): array
     {
@@ -41,7 +41,7 @@ final class ListRackDeviceOptionsHandler implements QueryHandlerInterface
                 $devices[] = [
                     'id' => $inventoryNumber->id,
                     'number' => $inventoryNumber->number,
-                    'inRack' => $this->racks->findSlotByInventoryNumber($inventoryNumber->id)?->rackId,
+                    'inRack' => $this->racks->findSlotByInventoryNumber($inventoryNumber->id)?->exemplarId,
                 ];
             }
             if ($devices === []) {

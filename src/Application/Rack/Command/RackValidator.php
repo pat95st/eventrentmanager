@@ -9,17 +9,19 @@ use App\Domain\Exception\ValidationException;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Rack\Rack;
+use App\Domain\Rack\RackExemplar;
 use App\Domain\Rack\RackRailType;
 use App\Domain\Rack\RackRepositoryInterface;
 use App\Domain\Rack\RackSlot;
 use App\Domain\Rack\RackWidth;
+use App\Shared\Prefix;
 use DateTimeImmutable;
 
 /**
  * Prüfungen für Racks (Migration 115):
- * - Stammdaten: Bezeichnung, HE 1–60, Einbautiefe optional (> 0), Hersteller
- *   optional aus der Herstellerliste. Die Inventarnummer wird automatisch
- *   vergeben (RACK-0001 …, Migration 120).
+ * - Rack-Typ: Bezeichnung, Hersteller (Pflicht), Kürzel (Pflicht, je
+ *   Hersteller eindeutig), HE 1–60, Einbautiefe optional (> 0).
+ *   Inventur- und Rack-Nummern bekommen die Exemplare (Migration 124).
  * - Feste Zuordnung: Geräte-Exemplar muss existieren und darf keinem anderen
  *   Rack fest zugeordnet sein.
  * - Einbau: nur Exemplare von 19-Zoll-Artikeln, HE-Bereich innerhalb des
@@ -36,8 +38,7 @@ final class RackValidator
     ) {
     }
 
-    /** @param string $inventoryNumber bei neuen Racks die vergebene Nummer (RACK-0001 …), bei bestehenden ignoriert */
-    public function build(string $id, RackInput $input, ?Rack $existing, string $inventoryNumber = ''): Rack
+    public function build(string $id, RackInput $input, ?Rack $existing): Rack
     {
         $errors = [];
         $name = trim($input->name);
@@ -45,9 +46,21 @@ final class RackValidator
             $errors['name'] = 'Bitte eine Bezeichnung angeben.';
         }
 
+        // Hersteller und Kürzel bilden die Inventurnummern der Exemplare (wie bei Artikeln).
         $manufacturerId = $this->blank($input->manufacturerId);
-        if ($manufacturerId !== null && $this->manufacturers->findById($manufacturerId) === null) {
+        if ($manufacturerId === null) {
+            $errors['manufacturer_id'] = 'Bitte einen Hersteller auswählen (für selbst gebaute Racks „Generisch“).';
+        } elseif ($this->manufacturers->findById($manufacturerId) === null) {
             $errors['manufacturer_id'] = 'Der gewählte Hersteller existiert nicht.';
+        }
+
+        $prefix = Prefix::normalize($input->prefix);
+        if ($prefix === '') {
+            $errors['prefix'] = 'Bitte ein Kürzel angeben.';
+        } elseif (!Prefix::isValid($prefix)) {
+            $errors['prefix'] = 'Das Kürzel darf nur aus Großbuchstaben und Ziffern bestehen (max. 10 Zeichen).';
+        } elseif ($manufacturerId !== null && $this->racks->existsByPrefix($manufacturerId, $prefix, $existing?->id)) {
+            $errors['prefix'] = 'Dieses Kürzel wird bei diesem Hersteller bereits von einem anderen Rack-Typ verwendet.';
         }
 
         $units = filter_var(trim((string) $input->heightUnits), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 60]]);
@@ -56,10 +69,12 @@ final class RackValidator
             $units = 1;
         }
         if ($existing !== null && $units !== false) {
-            foreach ($this->racks->findSlots($existing->id) as $slot) {
-                if ($this->slotEnd($slot) > $units) {
-                    $errors['height_units'] = 'Es sind Geräte bis HE ' . $this->slotEnd($slot) . ' eingebaut — das Rack kann nicht kleiner werden.';
-                    break;
+            foreach ($this->racks->findExemplars($existing->id) as $exemplar) {
+                foreach ($this->racks->findSlots($exemplar->id) as $slot) {
+                    if ($this->slotEnd($slot) > $units) {
+                        $errors['height_units'] = 'In ' . $exemplar->rackNumber . ' sind Geräte bis HE ' . $this->slotEnd($slot) . ' eingebaut — der Rack-Typ kann nicht kleiner werden.';
+                        break 2;
+                    }
                 }
             }
         }
@@ -79,18 +94,6 @@ final class RackValidator
             $errors['width'] = 'Bitte die Breite auswählen.';
         }
 
-        $fixedId = $this->blank($input->fixedInventoryNumberId);
-        if ($fixedId !== null) {
-            if ($this->inventoryNumbers->findById($fixedId) === null) {
-                $errors['fixed_inventory_number_id'] = 'Das gewählte Geräte-Exemplar existiert nicht.';
-            } else {
-                $other = $this->racks->findByFixedInventoryNumber($fixedId);
-                if ($other !== null && $other->id !== $existing?->id) {
-                    $errors['fixed_inventory_number_id'] = "Dieses Gerät ist bereits dem Rack „{$other->name}“ fest zugeordnet.";
-                }
-            }
-        }
-
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -101,6 +104,7 @@ final class RackValidator
 
         if ($existing !== null) {
             $existing->name = $name;
+            $existing->prefix = $prefix;
             $existing->manufacturerId = $manufacturerId;
             $existing->heightUnits = $units;
             $existing->installDepthCm = $depth;
@@ -109,18 +113,17 @@ final class RackValidator
             $existing->color = $color;
             $existing->hasShockMount = $input->hasShockMount;
             $existing->hasWheels = $input->hasWheels;
-            $existing->fixedInventoryNumberId = $fixedId;
             $existing->description = $description;
             $existing->updatedAt = $now;
 
             return $existing;
         }
 
-        return new Rack($id, $name, $inventoryNumber, $manufacturerId, $units, $depth, $railType, $width, $color, $input->hasShockMount, $input->hasWheels, $fixedId, $description, $now, $now);
+        return new Rack($id, $name, $prefix, $manufacturerId, $units, $depth, $railType, $width, $color, $input->hasShockMount, $input->hasWheels, $description, $now, $now);
     }
 
     /** Prüft einen Einbau und liefert die Startposition. */
-    public function validateSlot(Rack $rack, string $inventoryNumberId, ?string $rawStartUnit): int
+    public function validateSlot(Rack $rack, RackExemplar $exemplar, string $inventoryNumberId, ?string $rawStartUnit): int
     {
         $inventoryNumber = $this->inventoryNumbers->findById($inventoryNumberId);
         if ($inventoryNumber === null) {
@@ -133,14 +136,14 @@ final class RackValidator
 
         $existingSlot = $this->racks->findSlotByInventoryNumber($inventoryNumberId);
         if ($existingSlot !== null) {
-            $other = $this->racks->findById($existingSlot->rackId);
-            throw new ValidationException(['slot' => "Das Gerät {$inventoryNumber->number} ist bereits im Rack „" . ($other?->name ?? '?') . '“ eingebaut.']);
+            $other = $this->racks->findExemplarById($existingSlot->exemplarId);
+            throw new ValidationException(['slot' => "Das Gerät {$inventoryNumber->number} ist bereits in Rack " . ($other?->rackNumber ?? '?') . ' eingebaut.']);
         }
 
         $height = max(1, (int) ($article->heightUnits ?? 1));
         $start = filter_var(trim((string) $rawStartUnit), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($start === false) {
-            $start = $this->firstFreeUnit($rack, $height);
+            $start = $this->firstFreeUnit($rack, $exemplar, $height);
             if ($start === null) {
                 throw new ValidationException(['slot' => "Im Rack ist kein freier Bereich mit {$height} HE mehr."]);
             }
@@ -149,7 +152,7 @@ final class RackValidator
         if ($end > $rack->heightUnits) {
             throw new ValidationException(['slot' => "Das Gerät belegt {$height} HE und passt ab HE {$start} nicht mehr ins Rack ({$rack->heightUnits} HE)."]);
         }
-        foreach ($this->racks->findSlots($rack->id) as $slot) {
+        foreach ($this->racks->findSlots($exemplar->id) as $slot) {
             if ($start <= $this->slotEnd($slot) && $end >= $slot->startUnit) {
                 throw new ValidationException(['slot' => "HE {$start}–{$end} ist bereits belegt."]);
             }
@@ -162,6 +165,24 @@ final class RackValidator
         return $start;
     }
 
+    /** Prüft die feste Gerätezuordnung eines Exemplars; liefert die ID oder null. */
+    public function validateFixedDevice(?string $rawInventoryNumberId, ?RackExemplar $exemplar): ?string
+    {
+        $fixedId = $this->blank($rawInventoryNumberId);
+        if ($fixedId === null) {
+            return null;
+        }
+        if ($this->inventoryNumbers->findById($fixedId) === null) {
+            throw new ValidationException(['fixed_inventory_number_id' => 'Das gewählte Geräte-Exemplar existiert nicht.']);
+        }
+        $other = $this->racks->findExemplarByFixedInventoryNumber($fixedId);
+        if ($other !== null && $other->id !== $exemplar?->id) {
+            throw new ValidationException(['fixed_inventory_number_id' => "Dieses Gerät ist bereits Rack {$other->rackNumber} fest zugeordnet."]);
+        }
+
+        return $fixedId;
+    }
+
     /** Letzte belegte HE eines Einbaus (Höhe aus dem Artikel, mindestens 1). */
     public function slotEnd(RackSlot $slot): int
     {
@@ -171,10 +192,10 @@ final class RackValidator
         return $slot->startUnit + max(1, (int) ($article?->heightUnits ?? 1)) - 1;
     }
 
-    private function firstFreeUnit(Rack $rack, int $height): ?int
+    private function firstFreeUnit(Rack $rack, RackExemplar $exemplar, int $height): ?int
     {
         $occupied = [];
-        foreach ($this->racks->findSlots($rack->id) as $slot) {
+        foreach ($this->racks->findSlots($exemplar->id) as $slot) {
             for ($u = $slot->startUnit; $u <= $this->slotEnd($slot); $u++) {
                 $occupied[$u] = true;
             }

@@ -9,6 +9,7 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Rack\Rack;
+use App\Domain\Rack\RackExemplar;
 use App\Domain\Rack\RackRepositoryInterface;
 use App\Domain\Rental\RentalIssuedItemRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -26,13 +27,32 @@ final class RackDetailBuilder
         private readonly ArticleRepositoryInterface $articles,
         private readonly RentalIssuedItemRepositoryInterface $issuedItems,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly ?\App\Domain\Numbering\DocumentNumberingSettingsRepositoryInterface $numbering = null,
     ) {
     }
 
     public function build(Rack $rack): RackDetail
     {
+        $exemplars = $this->racks->findExemplars($rack->id);
+        $manufacturer = $this->manufacturer($rack->manufacturerId);
+
+        $nextInventoryNumber = $manufacturer?->prefix !== null && $rack->prefix !== null
+            ? \App\Domain\Rack\RackInventoryNumberGenerator::nextNumber($exemplars, $manufacturer->prefix, $rack->prefix)
+            : null;
+
+        return new RackDetail(
+            $rack,
+            $manufacturer,
+            array_map(fn (RackExemplar $exemplar) => $this->exemplar($rack, $exemplar), $exemplars),
+            $nextInventoryNumber,
+            $this->nextRackNumber(),
+        );
+    }
+
+    private function exemplar(Rack $rack, RackExemplar $exemplar): RackExemplarDetail
+    {
         $slots = [];
-        foreach ($this->racks->findSlots($rack->id) as $slot) {
+        foreach ($this->racks->findSlots($exemplar->id) as $slot) {
             $device = $this->device($slot->inventoryNumberId);
             if ($device === null) {
                 continue;
@@ -51,12 +71,12 @@ final class RackDetailBuilder
 
         $fixedDevice = null;
         $issuedIn = null;
-        if ($rack->fixedInventoryNumberId !== null) {
-            $device = $this->device($rack->fixedInventoryNumberId);
+        if ($exemplar->fixedInventoryNumberId !== null) {
+            $device = $this->device($exemplar->fixedInventoryNumberId);
             if ($device !== null) {
-                $fixedDevice = ['inventoryNumberId' => $rack->fixedInventoryNumberId, 'number' => $device['number'], 'label' => $device['label']];
+                $fixedDevice = ['inventoryNumberId' => $exemplar->fixedInventoryNumberId, 'number' => $device['number'], 'label' => $device['label']];
             }
-            foreach ($this->issuedItems->findByInventoryNumber($rack->fixedInventoryNumberId) as $issued) {
+            foreach ($this->issuedItems->findByInventoryNumber($exemplar->fixedInventoryNumberId) as $issued) {
                 if ($issued->returnedAt === null) {
                     $rental = $this->rentals->findById($issued->rentalId);
                     $issuedIn = ['rentalId' => $issued->rentalId, 'eventName' => $rental?->eventName ?? 'Veranstaltung'];
@@ -65,7 +85,23 @@ final class RackDetailBuilder
             }
         }
 
-        return new RackDetail($rack, $this->manufacturer($rack->manufacturerId), $slots, $fixedDevice, $issuedIn);
+        return new RackExemplarDetail($exemplar, $rack->heightUnits, $slots, $fixedDevice, $issuedIn);
+    }
+
+    /** Vorschau der nächsten Rack-Nummer (RACK-0001 …), null ohne Migration 120/124. */
+    private function nextRackNumber(): ?string
+    {
+        if ($this->numbering === null) {
+            return null;
+        }
+        try {
+            $settings = $this->numbering->findByType(\App\Domain\Numbering\NumberedDocumentType::Rack);
+            $year = \App\Domain\Numbering\DocumentNumberFormatter::previewYear($settings);
+
+            return \App\Domain\Numbering\DocumentNumberFormatter::format($settings, $year, $this->numbering->getNextNumber(\App\Domain\Numbering\NumberedDocumentType::Rack, $year));
+        } catch (\RuntimeException) {
+            return null;
+        }
     }
 
     /** @return array{number: string, label: string, heightUnits: int}|null */

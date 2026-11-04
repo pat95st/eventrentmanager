@@ -99,7 +99,7 @@ final class RentalController
      * Ausgabe angebotenen Geräte-Exemplare.
      *
      * @param array<string, \App\Domain\InventoryNumber\InventoryNumber[]> $availableByArticle
-     * @return array<string, \App\Domain\Rack\Rack> Geräte-Exemplar-ID => Rack
+     * @return array<string, \App\Domain\Rack\FixedRack> Geräte-Exemplar-ID => fest zugeordnetes Rack-Exemplar
      */
     private function fixedRacks(\App\Application\Rental\Query\RentalDetail $detail, array $availableByArticle = []): array
     {
@@ -113,7 +113,7 @@ final class RentalController
             }
         }
 
-        return $this->racks->findByFixedInventoryNumbers($ids);
+        return $this->racks->findFixedRacks($ids);
     }
 
     /**

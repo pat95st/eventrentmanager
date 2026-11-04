@@ -663,7 +663,7 @@ $commandBus->register(\App\Application\Customer\Command\DeleteCustomer::class, n
 $commandBus->register(\App\Application\CaseItem\Command\CreateCaseItem::class, new CreateCaseItemHandler($caseItemRepository, $manufacturerRepository));
 $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseItem::class, new UpdateCaseItemHandler($caseItemRepository, $manufacturerRepository));
 $commandBus->register(\App\Application\CaseItem\Command\DeleteCaseItem::class, new DeleteCaseItemHandler($caseItemRepository));
-$commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumber::class, new AddCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseItemRepository, $pdo, $documentNumberSequence));
+$commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumber::class, new AddCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseItemRepository, $pdo, $documentNumberSequence, $manufacturerRepository));
 $commandBus->register(\App\Application\CaseItem\Command\UpdateCaseInventoryNumber::class, new UpdateCaseInventoryNumberHandler($caseInventoryNumberRepository));
 $commandBus->register(\App\Application\CaseItem\Command\DeleteCaseInventoryNumber::class, new DeleteCaseInventoryNumberHandler($caseInventoryNumberRepository, $caseInventoryNumberImageRepository, $fileStorage));
 $commandBus->register(\App\Application\CaseItem\Command\AddCaseInventoryNumberImage::class, new \App\Application\CaseItem\Command\AddCaseInventoryNumberImageHandler($caseInventoryNumberRepository, $caseInventoryNumberImageRepository, $fileStorage));
@@ -1140,14 +1140,19 @@ $queryBus->register(\App\Application\Settings\Query\GetPdfFontSettings::class, n
 
 // Racks (Migration 115)
 $rackValidator = new \App\Application\Rack\Command\RackValidator($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository);
-$rackDetailBuilder = new \App\Application\Rack\Query\RackDetailBuilder($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository, $rentalIssuedItemRepository, $rentalRepository);
-$commandBus->register(\App\Application\Rack\Command\CreateRack::class, new \App\Application\Rack\Command\CreateRackHandler($rackRepository, $rackValidator, $pdo, $documentNumberSequence));
+$rackDetailBuilder = new \App\Application\Rack\Query\RackDetailBuilder($rackRepository, $manufacturerRepository, $inventoryNumberRepository, $articleRepository, $rentalIssuedItemRepository, $rentalRepository, $documentNumberingSettingsRepository);
+$commandBus->register(\App\Application\Rack\Command\CreateRack::class, new \App\Application\Rack\Command\CreateRackHandler($rackRepository, $rackValidator));
+$commandBus->register(\App\Application\Rack\Command\AddRackExemplar::class, new \App\Application\Rack\Command\AddRackExemplarHandler($rackRepository, $manufacturerRepository, $rackValidator, $pdo, $documentNumberSequence));
+$commandBus->register(\App\Application\Rack\Command\UpdateRackExemplar::class, new \App\Application\Rack\Command\UpdateRackExemplarHandler($rackRepository, $rackValidator));
+$commandBus->register(\App\Application\Rack\Command\DeleteRackExemplar::class, new \App\Application\Rack\Command\DeleteRackExemplarHandler($rackRepository));
 $commandBus->register(\App\Application\Rack\Command\UpdateRack::class, new \App\Application\Rack\Command\UpdateRackHandler($rackRepository, $rackValidator));
 $commandBus->register(\App\Application\Rack\Command\DeleteRack::class, new \App\Application\Rack\Command\DeleteRackHandler($rackRepository));
 $commandBus->register(\App\Application\Rack\Command\AddRackSlot::class, new \App\Application\Rack\Command\AddRackSlotHandler($rackRepository, $rackValidator));
 $commandBus->register(\App\Application\Rack\Command\RemoveRackSlot::class, new \App\Application\Rack\Command\RemoveRackSlotHandler($rackRepository));
 $queryBus->register(\App\Application\Rack\Query\ListRacks::class, new \App\Application\Rack\Query\ListRacksHandler($rackRepository, $rackDetailBuilder));
-$queryBus->register(\App\Application\Rack\Query\GetRack::class, new \App\Application\Rack\Query\GetRackHandler($rackRepository, $rackDetailBuilder));
+$getRackHandler = new \App\Application\Rack\Query\GetRackHandler($rackRepository, $rackDetailBuilder);
+$queryBus->register(\App\Application\Rack\Query\GetRack::class, $getRackHandler);
+$queryBus->register(\App\Application\Rack\Query\GetRackByExemplar::class, $getRackHandler);
 $queryBus->register(\App\Application\Rack\Query\ListRackDeviceOptions::class, new \App\Application\Rack\Query\ListRackDeviceOptionsHandler($articleRepository, $inventoryNumberRepository, $manufacturerRepository, $rackRepository));
 
 $queryBus->register(\App\Application\CaseItem\Query\ListCaseItems::class, new ListCaseItemsHandler($caseItemRepository));
@@ -1328,7 +1333,7 @@ $electricalInspectionController = new ElectricalInspectionController($commandBus
 $customerController = new CustomerController($commandBus, $queryBus, $customerContactRepository);
 $powerDistributorController = new \App\Infrastructure\Http\Controllers\PowerDistributorController();
 $pdfFontSettingsController = new \App\Infrastructure\Http\Controllers\PdfFontSettingsController($commandBus, $queryBus, $fileStorage);
-$rackController = new \App\Infrastructure\Http\Controllers\RackController($commandBus, $queryBus);
+$rackController = new \App\Infrastructure\Http\Controllers\RackController($commandBus, $queryBus, new \App\Infrastructure\Pdf\RackLabelPdfGenerator($fileStorage));
 $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \App\Infrastructure\Pdf\CasePackingListPdfGenerator($fileStorage, $richTextPdfRenderer, $articleAccessoryRepository));
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
@@ -1752,7 +1757,13 @@ $router->get('/racks/{id}', $auth->guard(Permission::Artikelverwaltung, [$rackCo
 $router->get('/racks/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'edit']));
 $router->post('/racks/{id}', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'update']));
 $router->post('/racks/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'destroy']));
-$router->post('/racks/{id}/einbauten', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'addSlot']));
+$router->post('/racks/{id}/exemplare', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'addExemplar']));
+$router->post('/rack-exemplare/{id}', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'updateExemplar']));
+$router->post('/rack-exemplare/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'deleteExemplar']));
+$router->post('/rack-exemplare/{id}/einbauten', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'addSlot']));
+$router->get('/rack-exemplare/{id}/beschriftung-front.pdf', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'labelFront']));
+$router->get('/rack-exemplare/{id}/beschriftung-rear.pdf', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'labelRear']));
+$router->get('/rack-exemplare/{id}/beschriftung-inhalt.pdf', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'labelTop']));
 $router->post('/rack-einbauten/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$rackController, 'removeSlot']));
 $router->get('/cases', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'index']));
 $router->get('/cases/neu', $auth->guard(Permission::Artikelverwaltung, [$caseController, 'create']));

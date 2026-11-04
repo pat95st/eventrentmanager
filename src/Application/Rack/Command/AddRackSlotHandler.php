@@ -23,12 +23,13 @@ final class AddRackSlotHandler implements CommandHandlerInterface
     public function handle(CommandInterface $command): string
     {
         assert($command instanceof AddRackSlot);
-        $rack = $this->racks->findById($command->rackId);
-        if ($rack === null) {
+        $exemplar = $this->racks->findExemplarById($command->exemplarId);
+        $rack = $exemplar !== null ? $this->racks->findById($exemplar->rackId) : null;
+        if ($exemplar === null || $rack === null) {
             throw new NotFoundException('Rack wurde nicht gefunden.');
         }
-        $start = $this->validator->validateSlot($rack, $command->inventoryNumberId, $command->startUnit);
-        $slot = new RackSlot(Uuid::v4(), $rack->id, $command->inventoryNumberId, $start, new DateTimeImmutable());
+        $start = $this->validator->validateSlot($rack, $exemplar, $command->inventoryNumberId, $command->startUnit);
+        $slot = new RackSlot(Uuid::v4(), $exemplar->id, $command->inventoryNumberId, $start, new DateTimeImmutable());
         $this->racks->saveSlot($slot);
 
         return $slot->id;

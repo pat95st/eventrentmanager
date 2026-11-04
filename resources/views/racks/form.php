@@ -3,7 +3,6 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var \App\Domain\Manufacturer\Manufacturer[] $manufacturers */
-/** @var list<array{label: string, heightUnits: int, installDepthCm: string|null, devices: list<array{id: string, number: string, inRack: string|null}>}> $deviceOptions */
 
 use App\Domain\Rack\RackRailType;
 use App\Domain\Rack\RackWidth;
@@ -16,11 +15,10 @@ $checked = fn (string $key, bool $fallback) => $hasOld ? isset($old[$key]) : $fa
 $err = fn (string $key) => isset($errors[$key]) ? '<p class="mt-1 text-xs text-red-600 dark:text-red-400">' . e($errors[$key]) . '</p>' : '';
 $input = 'mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900';
 $depthDisplay = $rack?->installDepthCm !== null ? rtrim(rtrim(number_format((float) $rack->installDepthCm, 1, ',', ''), '0'), ',') : null;
-$fixedSelected = $val('fixed_inventory_number_id', $rack?->fixedInventoryNumberId);
 ?>
 <div class="mb-6">
     <a href="<?= $rack !== null ? '/racks/' . e($rack->id) : '/racks' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Zurück</a>
-    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $rack !== null ? 'Rack bearbeiten' : 'Neues Rack' ?></h1>
+    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $rack !== null ? 'Rack-Typ bearbeiten' : 'Neuer Rack-Typ' ?></h1>
 </div>
 
 <form method="post" action="<?= $rack !== null ? '/racks/' . e($rack->id) : '/racks' ?>" class="max-w-3xl space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
@@ -29,18 +27,18 @@ $fixedSelected = $val('fixed_inventory_number_id', $rack?->fixedInventoryNumberI
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Bezeichnung *</label>
-            <input id="name" name="name" value="<?= e($val('name', $rack?->name)) ?>" required class="<?= $input ?>" placeholder="z. B. Amp-Rack 1">
+            <input id="name" name="name" value="<?= e($val('name', $rack?->name)) ?>" required class="<?= $input ?>" placeholder="z. B. 10 HE Shockmount-Rack">
             <?= $err('name') ?>
         </div>
         <div>
-            <span class="block text-sm font-medium text-slate-700 dark:text-slate-300">Inventarnummer</span>
-            <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= $rack !== null ? e($rack->inventoryNumber) : 'wird automatisch vergeben' ?></p>
-            <?php if ($rack === null): ?><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Fortlaufend nach dem Schema RACK-0001 (anpassbar unter Einstellungen › Nummerierung).</p><?php endif; ?>
+            <label for="prefix" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Rack-Kürzel *</label>
+            <input id="prefix" name="prefix" value="<?= e($val('prefix', $rack?->prefix)) ?>" required maxlength="10" class="<?= $input ?> font-mono uppercase" placeholder="z. B. RK10">
+            <?php if (isset($errors['prefix'])): ?><?= $err('prefix') ?><?php else: ?><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Mit dem Hersteller-Kürzel Grundlage der Inventurnummern (HERSTELLER-KÜRZEL-0001). Jedes Exemplar bekommt zusätzlich eine Rack-Nummer (RACK-0001 …).</p><?php endif; ?>
         </div>
         <div>
-            <label for="manufacturer_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Hersteller</label>
-            <select id="manufacturer_id" name="manufacturer_id" class="<?= $input ?>">
-                <option value="">– kein Hersteller –</option>
+            <label for="manufacturer_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Hersteller *</label>
+            <select id="manufacturer_id" name="manufacturer_id" required class="<?= $input ?>">
+                <option value="">Bitte wählen…</option>
                 <?php $selectedManufacturer = $val('manufacturer_id', $rack?->manufacturerId); ?>
                 <?php foreach ($manufacturers as $manufacturer): ?>
                     <option value="<?= e($manufacturer->id) ?>" <?= $selectedManufacturer === $manufacturer->id ? 'selected' : '' ?>><?= e($manufacturer->name) ?></option>
@@ -94,21 +92,6 @@ $fixedSelected = $val('fixed_inventory_number_id', $rack?->fixedInventoryNumberI
         </label>
     </div>
 
-    <div>
-        <label for="fixed_inventory_number_id" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Fest zugeordnetes Gerät</label>
-        <select id="fixed_inventory_number_id" name="fixed_inventory_number_id" class="<?= $input ?>">
-            <option value="">– keine feste Zuordnung –</option>
-            <?php foreach ($deviceOptions as $group): ?>
-                <optgroup label="<?= e($group['label']) ?>">
-                    <?php foreach ($group['devices'] as $device): ?>
-                        <option value="<?= e($device['id']) ?>" <?= $fixedSelected === $device['id'] ? 'selected' : '' ?>><?= e($device['number']) ?></option>
-                    <?php endforeach; ?>
-                </optgroup>
-            <?php endforeach; ?>
-        </select>
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Ist ein Gerät gewählt, gehört das Rack fest dazu und wird bei der Ausgabe dieses Geräts in einer Veranstaltung automatisch mitgegeben. Zur Auswahl stehen Exemplare von 19-Zoll-Artikeln.</p>
-        <?= $err('fixed_inventory_number_id') ?>
-    </div>
 
     <div>
         <label for="description" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Bemerkung</label>

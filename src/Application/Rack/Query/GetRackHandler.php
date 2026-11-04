@@ -19,6 +19,15 @@ final class GetRackHandler implements QueryHandlerInterface
 
     public function handle(QueryInterface $query): RackDetail
     {
+        if ($query instanceof GetRackByExemplar) {
+            $exemplar = $this->racks->findExemplarById($query->exemplarId);
+            $rack = $exemplar !== null ? $this->racks->findById($exemplar->rackId) : null;
+            if ($rack === null) {
+                throw new NotFoundException('Rack wurde nicht gefunden.');
+            }
+
+            return $this->builder->build($rack);
+        }
         assert($query instanceof GetRack);
         $rack = $this->racks->findById($query->id);
         if ($rack === null) {

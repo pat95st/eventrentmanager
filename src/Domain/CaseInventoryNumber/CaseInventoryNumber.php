@@ -18,6 +18,8 @@ final class CaseInventoryNumber
         public DateTimeImmutable $updatedAt,
         // Migration 114: Hinweistext für die Stückliste (bereinigtes HTML).
         public ?string $noticeHtml = null,
+        // Migration 124: fortlaufende Case-Nummer (CASE-0001 …), zusätzlich zur Inventurnummer.
+        public ?string $caseNumber = null,
     ) {
     }
 }

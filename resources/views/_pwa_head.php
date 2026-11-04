@@ -28,6 +28,8 @@
 <link rel="apple-touch-icon" href="<?= htmlspecialchars($pwaBranding ? \App\Infrastructure\Http\CompanyBranding::appleTouchIconUrl() : '/assets/img/icons/apple-touch-icon.png', ENT_QUOTES) ?>">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Materialverleih">
+<!-- Fehlermeldungen, wenn Nachladen/Abschicken fehlschlägt (vor allem in der installierten App wichtig) -->
+<script src="/assets/js/load-errors.js"></script>
 <script>
   // Globale Registrierung des Service Workers für Installierbarkeit und
   // Offline-Verfügbarkeit der statischen Dateien (siehe public/sw.js). Die

@@ -30,7 +30,7 @@
 // nächsten Seitenaufruf einen neuen Cache an und räumt in activate() den
 // alten auf, statt auf die (im Hintergrund laufende, also nicht sofort
 // sichtbare) Stale-while-revalidate-Aktualisierung zu warten.
-var CACHE_VERSION = 'static-v2';
+var CACHE_VERSION = 'static-v3';
 
 // Firmenlogo/Hintergrund/Favicon mit Versionsparameter (?v=…, ändert sich bei
 // jedem Upload, siehe CompanyBranding::versioned()). Eigener Cache, der beim
@@ -38,7 +38,12 @@ var CACHE_VERSION = 'static-v2';
 var BRANDING_CACHE = 'branding-v1';
 var BRANDING_PATHS = ['/firmenlogo', '/firmenlogo-dark', '/firmenhintergrund', '/firmenhintergrund-anmeldung', '/firmen-favicon', '/app-icon/192', '/app-icon/512', '/app-icon/maskable', '/app-icon/apple'];
 
+// Ersatzseite, wenn eine Seite nicht geladen werden kann (siehe fetch-Handler).
+var OFFLINE_URL = '/offline.html';
+
 var PRECACHE_URLS = [
+  OFFLINE_URL,
+  '/assets/js/load-errors.js',
   '/assets/css/app.css',
   '/assets/js/barcode-scanner.js',
   '/manifest.webmanifest',
@@ -121,6 +126,25 @@ self.addEventListener('fetch', function (event) {
             }
             return response;
           });
+        });
+      })
+    );
+    return;
+  }
+
+  // Seitenaufrufe: immer frisch vom Netzwerk (nichts gecacht, siehe oben).
+  // Schlägt der Abruf fehl (keine Verbindung, Server nicht erreichbar),
+  // statt einer leeren Seite die Ersatzseite mit "Erneut versuchen" zeigen —
+  // in der installierten App gibt es keine Browser-Fehlerseite.
+  if (event.request.mode === 'navigate' && url.origin === self.location.origin) {
+    event.respondWith(
+      fetch(event.request).catch(function () {
+        return caches.match(OFFLINE_URL).then(function (cached) {
+          return cached || new Response(
+            '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Keine Verbindung</title>' +
+            '<p style="font-family:sans-serif;padding:2rem;text-align:center">Die Seite konnte nicht geladen werden. <a href="">Erneut versuchen</a></p>',
+            { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          );
         });
       })
     );

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<title>Keine Verbindung</title>
+<!--
+  Ersatzseite des Service Workers (public/sw.js), wenn eine Seite nicht
+  geladen werden kann (keine Verbindung / Server nicht erreichbar). Wird an
+  der ursprünglich aufgerufenen Adresse angezeigt, "Erneut versuchen" lädt
+  also genau diese Seite neu. Bewusst ohne externe Dateien.
+-->
+<style>
+  :root { color-scheme: light dark; --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0; --text: #0f172a; --muted: #64748b; --accent: #2563eb; --accent-hover: #1d4ed8; }
+  @media (prefers-color-scheme: dark) { :root:not(.light) { --bg: #020617; --card: #0f172a; --border: #1e293b; --text: #f1f5f9; --muted: #94a3b8; } }
+  :root.dark { --bg: #020617; --card: #0f172a; --border: #1e293b; --text: #f1f5f9; --muted: #94a3b8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { width: 100%; max-width: 26rem; padding: 28px 24px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); text-align: center; }
+  svg { width: 48px; height: 48px; color: var(--muted); }
+  h1 { margin: 12px 0 6px; font-size: 1.125rem; }
+  p { margin: 0 0 20px; color: var(--muted); font-size: .9rem; }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  button, a { display: inline-block; padding: 9px 16px; border-radius: 8px; font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; text-decoration: none; }
+  button { border: 0; background: var(--accent); color: #fff; }
+  button:hover { background: var(--accent-hover); }
+  a { border: 1px solid var(--border); color: var(--text); }
+  .status { margin-top: 16px; font-size: .8rem; color: var(--muted); min-height: 1.2em; }
+</style>
+<script>
+  try {
+    var t = localStorage.getItem('theme');
+    if (t === 'dark') document.documentElement.classList.add('dark');
+    if (t === 'light') document.documentElement.classList.add('light');
+  } catch (e) {}
+</script>
+</head>
+<body>
+<main role="alert">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l20 20"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/><path d="M16.85 11.25a10 10 0 0 1 2.22 1.68"/><path d="M5 13a10 10 0 0 1 5.24-2.76"/><circle cx="12" cy="20" r="1"/></svg>
+  <h1>Seite konnte nicht geladen werden</h1>
+  <p id="reason">Es besteht keine Verbindung zum Server. Bitte prüfe die Internetverbindung.</p>
+  <div class="actions">
+    <button type="button" id="retry">Erneut versuchen</button>
+    <a href="/">Zur Startseite</a>
+  </div>
+  <div class="status" id="status" aria-live="polite"></div>
+</main>
+<script>
+  (function () {
+    var status = document.getElementById('status');
+    if (navigator.onLine) {
+      document.getElementById('reason').textContent = 'Der Server ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.';
+    }
+    function retry() {
+      status.textContent = 'Wird neu geladen …';
+      window.location.reload();
+    }
+    document.getElementById('retry').addEventListener('click', retry);
+    // Sobald die Verbindung zurück ist, automatisch neu laden.
+    window.addEventListener('online', function () {
+      status.textContent = 'Verbindung wieder da – wird neu geladen …';
+      setTimeout(retry, 600);
+    });
+  })();
+</script>
+</body>
+</html>

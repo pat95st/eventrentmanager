@@ -891,7 +891,14 @@ $canDocuments = $canRentals;
         var url = endpoint + '?' + params.toString();
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-          .then(function (res) { return res.text(); })
+          .then(function (res) {
+            // Fehlerseite nicht in die Liste einsetzen; die Meldung zeigt
+            // public/assets/js/load-errors.js.
+            if (!res.ok || (res.redirected && new URL(res.url).pathname === '/login')) {
+              throw new Error('HTTP ' + res.status);
+            }
+            return res.text();
+          })
           .then(function (html) {
             container.innerHTML = html;
             container.classList.remove('opacity-50', 'pointer-events-none');

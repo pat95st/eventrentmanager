@@ -35,6 +35,8 @@ final class BankImportController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
         private readonly InvoiceRepositoryInterface $invoices,
+        // Kontoführung (Migration 131): Zielkonto für übernommene Umsätze
+        private readonly ?\App\Domain\Settings\BankAccountRepositoryInterface $bankAccounts = null,
     ) {
     }
 
@@ -74,6 +76,8 @@ final class BankImportController
             'format' => $result->format,
             'rows' => $enrichedRows,
             'openInvoiceNumbers' => $openInvoiceNumbers,
+            'bankAccounts' => $this->bankAccounts?->findAll() ?? [],
+            'defaultBankAccountId' => $this->bankAccounts?->findDefault()?->id,
         ], activeNav: 'bank_import', title: t('bank_import.title'));
     }
 
@@ -93,7 +97,13 @@ final class BankImportController
         }
 
         try {
-            $result = $this->commands->dispatch(new ConfirmBankImport($importId, $selections));
+            $ledgerAccountId = $request->input('ledger_account_id');
+            $result = $this->commands->dispatch(new ConfirmBankImport(
+                $importId,
+                $selections,
+                $ledgerAccountId !== null && $ledgerAccountId !== '' ? $ledgerAccountId : null,
+                array_map('intval', $request->inputArray('ledger')),
+            ));
         } catch (NotFoundException $e) {
             Flash::error($e->getMessage());
             Response::redirect('/zahlungsabgleich');
@@ -103,6 +113,10 @@ final class BankImportController
 
         if ($result->markedPaidCount > 0) {
             Flash::success(t('bank_import.flash.confirmed', ['count' => (string) $result->markedPaidCount]));
+        }
+        if ($result->ledgerBookedCount > 0 || $result->ledgerSkippedCount > 0) {
+            Flash::success($result->ledgerBookedCount . ' Umsätze in die Kontoführung übernommen'
+                . ($result->ledgerSkippedCount > 0 ? ', ' . $result->ledgerSkippedCount . ' bereits vorhandene übersprungen' : '') . '.');
         }
         if ($result->notFoundInvoiceNumbers !== []) {
             Flash::error(t('bank_import.flash.not_found', ['numbers' => implode(', ', $result->notFoundInvoiceNumbers)]));

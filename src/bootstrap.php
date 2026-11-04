@@ -557,6 +557,8 @@ $dunningPdfGenerator = new \App\Infrastructure\Pdf\DunningPdfGenerator($document
 $invoiceDueReminderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderRepository($pdo);
 $invoiceDueReminderSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoiceDueReminderSettingsRepository($pdo);
 $receiptRepository = new MariadbReceiptRepository($pdo);
+// Kontoführung (Migration 131)
+$accountLedgerRepository = new \App\Infrastructure\Persistence\Pdo\MariadbAccountLedgerRepository($pdo);
 $mailboxSettingsRepository = new MariadbMailboxSettingsRepository($pdo);
 $receiptInboxAllowedSenderRepository = new MariadbReceiptInboxAllowedSenderRepository($pdo);
 $receiptInboxMessageRepository = new MariadbReceiptInboxMessageRepository($pdo);
@@ -638,6 +640,13 @@ $commandBus->register(\App\Application\Article\Command\CreateArticle::class, new
 $commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
 // Leitungen (Migration 125)
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
+// Kontoführung (Migration 131)
+$commandBus->register(\App\Application\Banking\Command\SaveOpeningBalance::class, new \App\Application\Banking\Command\SaveOpeningBalanceHandler($accountLedgerRepository, $bankAccountRepository));
+$commandBus->register(\App\Application\Banking\Command\AddAccountTransaction::class, new \App\Application\Banking\Command\AddAccountTransactionHandler($accountLedgerRepository, $bankAccountRepository));
+$commandBus->register(\App\Application\Banking\Command\BookReceiptPayment::class, new \App\Application\Banking\Command\BookReceiptPaymentHandler($accountLedgerRepository, $bankAccountRepository, $receiptRepository, $supplierRepository));
+$commandBus->register(\App\Application\Banking\Command\BookInvoicePayment::class, new \App\Application\Banking\Command\BookInvoicePaymentHandler($accountLedgerRepository, $bankAccountRepository, $invoiceRepository, $customerRepository));
+$commandBus->register(\App\Application\Banking\Command\DeleteAccountTransaction::class, new \App\Application\Banking\Command\DeleteAccountTransactionHandler($accountLedgerRepository, $receiptRepository, $invoiceRepository));
+$queryBus->register(\App\Application\Banking\Query\GetAccountLedger::class, new \App\Application\Banking\Query\GetAccountLedgerHandler($accountLedgerRepository, $bankAccountRepository));
 // Betriebsurlaub (Migration 130)
 $commandBus->register(\App\Application\CompanyHoliday\Command\SaveCompanyHoliday::class, new \App\Application\CompanyHoliday\Command\SaveCompanyHolidayHandler($companyHolidayRepository));
 $commandBus->register(\App\Application\CompanyHoliday\Command\DeleteCompanyHoliday::class, new \App\Application\CompanyHoliday\Command\DeleteCompanyHolidayHandler($companyHolidayRepository));
@@ -919,7 +928,7 @@ $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceSent::class, n
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoicePaid::class, new MarkInvoicePaidHandler($invoiceRepository));
 // --- Onlinebanking-Import / Zahlungsabgleich (MT940/CAMT.053) ----------
 $commandBus->register(\App\Application\BankImport\Command\ImportBankStatement::class, new ImportBankStatementHandler($invoiceRepository, $bankImportStaging));
-$commandBus->register(\App\Application\BankImport\Command\ConfirmBankImport::class, new ConfirmBankImportHandler($invoiceRepository, $bankImportStaging));
+$commandBus->register(\App\Application\BankImport\Command\ConfirmBankImport::class, new ConfirmBankImportHandler($invoiceRepository, $bankImportStaging, $accountLedgerRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\BankImport\Command\CancelBankImport::class, new CancelBankImportHandler($bankImportStaging));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceCancelled::class, new MarkInvoiceCancelledHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository));
@@ -1374,6 +1383,7 @@ $statisticsController = new \App\Infrastructure\Http\Controllers\StatisticsContr
 $categoryController = new CategoryController($commandBus, $queryBus);
 $cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
 $companyHolidayController = new \App\Infrastructure\Http\Controllers\CompanyHolidayController($commandBus, $queryBus);
+$accountController = new \App\Infrastructure\Http\Controllers\AccountController($commandBus, $queryBus, $bankAccountRepository, $receiptRepository, $invoiceRepository, $supplierRepository);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
 $articleSetController = new \App\Infrastructure\Http\Controllers\ArticleSetController($commandBus, $queryBus);
@@ -1480,7 +1490,7 @@ $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBu
 $offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository, $rentalRepository, $customerRepository);
 $orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator, $rentalRepository, $customerRepository);
 $invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository, $userRepository);
-$bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository);
+$bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository, $bankAccountRepository);
 $invoiceSettingsController = new InvoiceSettingsController($commandBus, $queryBus);
 $numberingSettingsController = new DocumentNumberingSettingsController($commandBus, $queryBus);
 $dunningLevelController = new \App\Infrastructure\Http\Controllers\DunningLevelController($commandBus, $queryBus);
@@ -2043,6 +2053,14 @@ $router->get('/zahlungsabgleich', $auth->guard(Permission::AusgabeRuecknahme, [$
 $router->post('/zahlungsabgleich/importieren', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'import']));
 $router->post('/zahlungsabgleich/bestaetigen', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'confirm']));
 $router->post('/zahlungsabgleich/abbrechen', $auth->guard(Permission::AusgabeRuecknahme, [$bankImportController, 'cancel']));
+// Kontoführung (Migration 131)
+$router->get('/konten', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'index']));
+$router->get('/konten/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'show']));
+$router->post('/konten/{id}/anfangsbestand', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'saveOpeningBalance']));
+$router->post('/konten/{id}/buchungen', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'addTransaction']));
+$router->post('/konten/{id}/beleg', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'bookReceipt']));
+$router->post('/konten/{id}/rechnung', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'bookInvoice']));
+$router->post('/konten/buchungen/{transactionId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$accountController, 'deleteTransaction']));
 
 $router->post('/rechnungen/{id}/mahnungen', $auth->guard(Permission::AusgabeRuecknahme, [$dunningController, 'store']));
 // Rechnungskorrekturen / Stornorechnungen (Migration 121)

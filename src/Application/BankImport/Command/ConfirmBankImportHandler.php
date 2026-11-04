@@ -29,6 +29,9 @@ final class ConfirmBankImportHandler implements CommandHandlerInterface
     public function __construct(
         private readonly InvoiceRepositoryInterface $invoices,
         private readonly BankImportStaging $staging,
+        // Kontoführung (Migration 131)
+        private readonly ?\App\Domain\Banking\AccountLedgerRepositoryInterface $ledger = null,
+        private readonly ?\App\Domain\Settings\BankAccountRepositoryInterface $bankAccounts = null,
     ) {
     }
 
@@ -52,6 +55,7 @@ final class ConfirmBankImportHandler implements CommandHandlerInterface
             $markedPaidCount = 0;
             $notFound = [];
             $notPayable = [];
+            $invoiceIdByRow = [];
 
             foreach ($command->selections as $rowIndex => $invoiceNumberRaw) {
                 $invoiceNumber = trim((string) $invoiceNumberRaw);
@@ -67,6 +71,7 @@ final class ConfirmBankImportHandler implements CommandHandlerInterface
 
                     continue;
                 }
+                $invoiceIdByRow[(int) $rowIndex] = $invoice->id;
 
                 if ($invoice->status !== InvoiceStatus::Sent) {
                     $notPayable[] = $invoiceNumber;
@@ -82,9 +87,74 @@ final class ConfirmBankImportHandler implements CommandHandlerInterface
                 $markedPaidCount++;
             }
 
-            return new ConfirmBankImportResult($markedPaidCount, $notFound, $notPayable);
+            [$booked, $skipped] = $this->bookToLedger($command, $rowsByIndex, $invoiceIdByRow);
+
+            return new ConfirmBankImportResult($markedPaidCount, $notFound, $notPayable, $booked, $skipped);
         } finally {
             $this->staging->discard($command->importId);
         }
+    }
+
+    /**
+     * Umsätze in die Kontoführung übernehmen (Migration 131). Bereits
+     * übernommene Umsätze (gleicher Fingerabdruck) werden übersprungen, so
+     * dass derselbe Kontoauszug gefahrlos mehrfach importiert werden kann.
+     *
+     * @param array<int, array<string, mixed>> $rowsByIndex
+     * @param array<int, string> $invoiceIdByRow
+     * @return array{0: int, 1: int}
+     */
+    private function bookToLedger(ConfirmBankImport $command, array $rowsByIndex, array $invoiceIdByRow): array
+    {
+        if ($this->ledger === null || $command->ledgerAccountId === null || $command->ledgerAccountId === ''
+            || ($this->bankAccounts !== null && $this->bankAccounts->findById($command->ledgerAccountId) === null)) {
+            return [0, 0];
+        }
+        $wanted = array_flip(array_map('intval', $command->ledgerRows));
+        $occurrences = [];
+        $booked = 0;
+        $skipped = 0;
+        ksort($rowsByIndex);
+        foreach ($rowsByIndex as $rowIndex => $row) {
+            $fingerprint = implode('|', [
+                (string) $row['bookingDate'], (string) $row['amount'], !empty($row['isCredit']) ? 'C' : 'D',
+                trim((string) ($row['purpose'] ?? '')), trim((string) ($row['counterpartyName'] ?? '')), trim((string) ($row['reference'] ?? '')),
+            ]);
+            // Gleiche Umsätze am selben Tag (z. B. zwei identische Gebühren) unterscheiden.
+            $occurrences[$fingerprint] = ($occurrences[$fingerprint] ?? 0) + 1;
+            if (!isset($wanted[$rowIndex])) {
+                continue;
+            }
+            $hash = hash('sha256', $fingerprint . '|' . $occurrences[$fingerprint]);
+            if ($this->ledger->importHashExists($command->ledgerAccountId, $hash)) {
+                $skipped++;
+                continue;
+            }
+            $cents = abs(\App\Domain\Banking\AccountAmount::fromDecimal((string) $row['amount']));
+            $invoiceId = !empty($row['isCredit']) ? ($invoiceIdByRow[$rowIndex] ?? null) : null;
+            if ($invoiceId !== null && $this->ledger->findByInvoice($invoiceId) !== []) {
+                $invoiceId = null; // Zahlung ist bereits verbucht – nur als Umsatz übernehmen
+            }
+            $purpose = trim((string) ($row['purpose'] ?? ''));
+            $counterparty = trim((string) ($row['counterpartyName'] ?? ''));
+            $now = new DateTimeImmutable();
+            $this->ledger->save(new \App\Domain\Banking\AccountTransaction(
+                \App\Shared\Uuid::v4(),
+                $command->ledgerAccountId,
+                new DateTimeImmutable((string) $row['bookingDate']),
+                !empty($row['isCredit']) ? $cents : -$cents,
+                $invoiceId !== null ? \App\Domain\Banking\AccountTransactionKind::Invoice : \App\Domain\Banking\AccountTransactionKind::Import,
+                $purpose !== '' ? $purpose : ($counterparty !== '' ? $counterparty : 'Umsatz laut Kontoauszug'),
+                $counterparty !== '' ? $counterparty : null,
+                null,
+                $invoiceId,
+                $hash,
+                $now,
+                $now,
+            ));
+            $booked++;
+        }
+
+        return [$booked, $skipped];
     }
 }

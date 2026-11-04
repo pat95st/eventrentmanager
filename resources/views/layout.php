@@ -93,13 +93,14 @@ $isProcurementGroupActive = in_array($activeNav, $procurementGroupKeys, true) ||
 // bestätigungen, Rechnungen) sowie den Zahlungsabgleich — bewusst GETRENNT
 // von "Veranstaltungen", da diese Dokumente eigenständig (nicht nur aus
 // einer Veranstaltung heraus) angelegt werden können.
-$documentsGroupKeys = ['offers', 'order_confirmations', 'invoices', 'invoice-corrections', 'bank_import'];
+$documentsGroupKeys = ['offers', 'order_confirmations', 'invoices', 'invoice-corrections', 'bank_import', 'accounts'];
 $documentsChildren = [
     ['key' => 'offers', 'label' => t('nav.offers'), 'href' => '/angebote'],
     ['key' => 'order_confirmations', 'label' => t('nav.order_confirmations'), 'href' => '/auftragsbestaetigungen'],
     ['key' => 'invoices', 'label' => t('nav.invoices'), 'href' => '/rechnungen'],
     ['key' => 'invoice-corrections', 'label' => 'Rechnungskorrekturen', 'href' => '/rechnungskorrekturen'],
     ['key' => 'bank_import', 'label' => t('nav.bank_import'), 'href' => '/zahlungsabgleich'],
+    ['key' => 'accounts', 'label' => 'Kontoführung', 'href' => '/konten'],
 ];
 $isDocumentsGroupActive = in_array($activeNav, $documentsGroupKeys, true);
 
@@ -1206,9 +1207,65 @@ $canDocuments = $canRentals;
       // Ein Listener in der Capture-Phase ("toggle" blubbert nicht), damit
       // auch später eingefügte Dropdowns (z. B. per JS nachgeladene Zeilen)
       // korrekt positioniert werden.
+      // Übrige <details>-Aufklapper mit absolut positioniertem Inhalt (z. B.
+      // „Per E-Mail senden“-Formulare, „Route zum Veranstaltungsort“):
+      // bleiben absolut positioniert (Formulare mit Eingabefeldern sollen
+      // beim Scrollen nicht zugehen), bekommen aber ebenfalls die
+      // Vorfahren-Effekte abgeschaltet und einen hohen z-index — sonst
+      // liegen sie bei gesetztem Hintergrundbild hinter der nächsten Karte.
+      function liftAncestors(details) {
+        details._liftedAncestors = details._liftedAncestors || [];
+        for (var node = details.parentElement; node && node !== document.body; node = node.parentElement) {
+          var cs = window.getComputedStyle(node);
+          var backdrop = cs.backdropFilter || cs.webkitBackdropFilter || 'none';
+          if (backdrop !== 'none' || cs.filter !== 'none' || cs.transform !== 'none' || (cs.contain && cs.contain.indexOf('paint') !== -1)) {
+            details._liftedAncestors.push([node, node.getAttribute('style')]);
+            node.style.setProperty('backdrop-filter', 'none', 'important');
+            node.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+            node.style.setProperty('filter', 'none', 'important');
+            node.style.setProperty('transform', 'none', 'important');
+            node.style.setProperty('contain', 'none', 'important');
+          }
+        }
+      }
+      function restoreAncestors(details) {
+        (details._liftedAncestors || []).forEach(function (entry) {
+          if (entry[1] === null) { entry[0].removeAttribute('style'); } else { entry[0].setAttribute('style', entry[1]); }
+        });
+        details._liftedAncestors = [];
+      }
+      function popoverOf(details) {
+        for (var i = 0; i < details.children.length; i++) {
+          var child = details.children[i];
+          if (child.tagName !== 'SUMMARY' && window.getComputedStyle(child).position === 'absolute') {
+            return child;
+          }
+        }
+        return null;
+      }
+
       document.addEventListener('toggle', function (event) {
         var details = event.target;
-        if (!(details instanceof HTMLDetailsElement) || !details.hasAttribute('data-dropdown')) {
+        if (!(details instanceof HTMLDetailsElement)) {
+          return;
+        }
+        if (!details.hasAttribute('data-dropdown')) {
+          var popover = details.open ? popoverOf(details) : details._popover;
+          if (!popover) {
+            return;
+          }
+          if (details.open) {
+            details._popover = popover;
+            details._popoverZ = popover.style.zIndex;
+            popover.style.zIndex = '60';
+            liftAncestors(details);
+            // Unten aus dem Fenster ragend: Seite so weit scrollen, dass das Panel sichtbar ist.
+            var rect = popover.getBoundingClientRect();
+            if (rect.bottom > window.innerHeight) { popover.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+          } else {
+            popover.style.zIndex = details._popoverZ || '';
+            restoreAncestors(details);
+          }
           return;
         }
         if (details.open) {

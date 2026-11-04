@@ -15,6 +15,10 @@ final class ConfirmBankImport implements CommandInterface
     public function __construct(
         public readonly string $importId,
         public readonly array $selections,
+        // Kontoführung (Migration 131): Umsätze dieser Zeilen (rowIndex) auf
+        // das Konto $ledgerAccountId übernehmen; null = nicht übernehmen.
+        public readonly ?string $ledgerAccountId = null,
+        public readonly array $ledgerRows = [],
     ) {
     }
 }

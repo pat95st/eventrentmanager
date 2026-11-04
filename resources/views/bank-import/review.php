@@ -3,6 +3,10 @@
 /** @var \App\Domain\BankImport\BankStatementFormat $format */
 /** @var \App\Application\BankImport\Command\BankImportRow[] $rows */
 /** @var string[] $openInvoiceNumbers */
+/** @var \App\Domain\Settings\BankAccount[] $bankAccounts */
+/** @var string|null $defaultBankAccountId */
+$bankAccounts ??= [];
+$defaultBankAccountId ??= null;
 
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
@@ -23,6 +27,21 @@ use function App\Infrastructure\Http\t;
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <input type="hidden" name="import_id" value="<?= e($importId) ?>">
 
+    <?php if ($bankAccounts !== [] && $rows !== []): /* Kontoführung (Migration 131) */ ?>
+        <div class="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <div>
+                <label for="ledger_account_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Umsätze in die Kontoführung übernehmen</label>
+                <select id="ledger_account_id" name="ledger_account_id" class="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
+                    <option value="">nicht übernehmen</option>
+                    <?php foreach ($bankAccounts as $bankAccount): ?>
+                        <option value="<?= e($bankAccount->id) ?>" <?= $bankAccount->id === $defaultBankAccountId ? 'selected' : '' ?>><?= e($bankAccount->label) ?> (<?= e($bankAccount->formattedIban()) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <p class="max-w-md text-xs text-slate-500 dark:text-slate-400">Angehakt in der Spalte „Konto“. Bereits übernommene Umsätze werden beim erneuten Import übersprungen.</p>
+        </div>
+    <?php endif; ?>
+
     <?php if ($rows === []): ?>
         <p class="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
             <?= e(t('bank_import.review.empty')) ?>
@@ -40,6 +59,7 @@ use function App\Infrastructure\Http\t;
                         <th class="px-3 py-2.5"><?= e(t('bank_import.review.table.counterparty')) ?></th>
                         <th class="px-3 py-2.5"><?= e(t('bank_import.review.table.invoice_number')) ?></th>
                         <th class="px-3 py-2.5"><?= e(t('bank_import.review.table.status')) ?></th>
+                        <?php if ($bankAccounts !== []): ?><th class="px-3 py-2.5" title="In die Kontoführung übernehmen">Konto</th><?php endif; ?>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -73,6 +93,9 @@ use function App\Infrastructure\Http\t;
                                     <span class="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"><?= e(t('bank_import.review.status.no_match')) ?></span>
                                 <?php endif; ?>
                             </td>
+                            <?php if ($bankAccounts !== []): ?>
+                                <td class="px-3 py-2.5 text-center"><input type="checkbox" name="ledger[]" value="<?= e((string) $row->rowIndex) ?>" checked aria-label="In die Kontoführung übernehmen"></td>
+                            <?php endif; ?>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

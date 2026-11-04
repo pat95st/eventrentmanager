@@ -15,6 +15,9 @@ final class ConfirmBankImportResult
         public readonly int $markedPaidCount,
         public readonly array $notFoundInvoiceNumbers,
         public readonly array $notPayableInvoiceNumbers,
+        // Kontoführung (Migration 131)
+        public readonly int $ledgerBookedCount = 0,
+        public readonly int $ledgerSkippedCount = 0,
     ) {
     }
 }

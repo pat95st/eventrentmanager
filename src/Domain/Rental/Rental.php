@@ -47,7 +47,27 @@ final class Rental
         // storage/uploads/rental-terms-signatures/ gespeicherten PNG-Datei.
         public ?DateTimeImmutable $termsSignedAt = null,
         public ?string $termsSignatureFile = null,
+        // Migration 130: Zeitraum für andere Vermietungen sperren ("exklusiv").
+        public bool $blocksOtherRentals = false,
     ) {
+    }
+
+    /** Erster belegter Tag: Startdatum oder frühere Abholung (Migration 130). */
+    public function occupiedFrom(): DateTimeImmutable
+    {
+        $start = $this->startDate->setTime(0, 0);
+        $pickup = $this->pickupAt?->setTime(0, 0);
+
+        return $pickup !== null && $pickup < $start ? $pickup : $start;
+    }
+
+    /** Letzter belegter Tag: Enddatum oder spätere Rückgabe (Migration 130). */
+    public function occupiedUntil(): DateTimeImmutable
+    {
+        $end = $this->endDate->setTime(0, 0);
+        $return = $this->returnAt?->setTime(0, 0);
+
+        return $return !== null && $return > $end ? $return : $end;
     }
 
     /** Maximal mögliche Einsatztage für den gewählten Zeitraum (inklusive Start- und Endtag). */

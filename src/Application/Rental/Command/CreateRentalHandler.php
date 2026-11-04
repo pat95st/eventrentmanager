@@ -22,6 +22,7 @@ final class CreateRentalHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
         private readonly VenueRepositoryInterface $venues,
+        private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
     ) {
     }
 
@@ -40,6 +41,9 @@ final class CreateRentalHandler implements CommandHandlerInterface
             $command->deploymentDays,
         );
 
+        $pickupAt = $this->parseMoment($command->pickupAt, 'pickupAt', $errors);
+        $returnAt = $this->parseMoment($command->returnAt, 'returnAt', $errors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -56,7 +60,17 @@ final class CreateRentalHandler implements CommandHandlerInterface
             deploymentDays: $data['deploymentDays'],
             createdAt: $now,
             updatedAt: $now,
+            pickupAt: $pickupAt,
+            returnAt: $returnAt,
+            blocksOtherRentals: $command->blocksOtherRentals,
         );
+
+        // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
+        $holidays = $this->schedule?->holidaysDuring($rental->startDate, $rental->endDate) ?? [];
+        $this->applyScheduleRules($this->schedule, $rental, $holidays, true, $command->holidayConfirmed, $errors);
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
 
         $this->rentals->save($rental);
 

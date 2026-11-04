@@ -17,6 +17,7 @@ final class UpdateRentalLogisticsHandler implements CommandHandlerInterface
     public function __construct(
         private readonly RentalRepositoryInterface $rentals,
         private readonly WarehouseRepositoryInterface $warehouses,
+        private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
     ) {
     }
 
@@ -54,6 +55,24 @@ final class UpdateRentalLogisticsHandler implements CommandHandlerInterface
         $rental->returnAt = $returnAt;
         $rental->transportNote = $this->nullIfEmpty($command->transportNote);
         $rental->updatedAt = new DateTimeImmutable();
+
+        // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
+        if ($this->schedule !== null) {
+            $holidays = $this->schedule->holidaysDuring($rental->startDate, $rental->endDate);
+            $errors = $this->schedule->holidayLogisticsErrors($holidays, $pickupAt, $returnAt);
+            foreach (['pickupAt' => [$pickupAt, 'Ausgabe'], 'returnAt' => [$returnAt, 'Rücklieferung']] as $field => [$moment, $label]) {
+                if ($moment !== null && !isset($errors[$field]) && ($inHoliday = $this->schedule->holidaysDuring($moment, $moment)) !== []) {
+                    $errors[$field] = "Die {$label} fällt in den Betriebsurlaub ({$inHoliday[0]->label()}).";
+                }
+            }
+            $blocking = $this->schedule->blockingError($rental);
+            if ($blocking !== null) {
+                $errors['pickupAt'] = ($errors['pickupAt'] ?? '') === '' ? $blocking : $errors['pickupAt'] . ' ' . $blocking;
+            }
+            if ($errors !== []) {
+                throw new ValidationException($errors);
+            }
+        }
 
         $this->rentals->save($rental);
 

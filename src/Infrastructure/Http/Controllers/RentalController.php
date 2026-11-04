@@ -95,6 +95,8 @@ final class RentalController
         private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
         // Stromanschlüsse des Veranstaltungsorts: Hinweis bei Neozed/Diazed (Migration 129).
         private readonly ?\App\Domain\Venue\VenuePowerConnectionRepositoryInterface $venuePowerConnections = null,
+        // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
+        private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
     ) {
     }
 
@@ -261,6 +263,10 @@ final class RentalController
             eventName: $request->input('event_name', '') ?? '',
             eventLocation: $request->input('event_location', '') ?? '',
             deploymentDays: $request->input('deployment_days', '') ?? '',
+            blocksOtherRentals: $request->input('blocks_other_rentals') !== null,
+            pickupAt: $request->input('pickup_at', '') ?? '',
+            returnAt: $request->input('return_at', '') ?? '',
+            holidayConfirmed: $request->input('holiday_confirmed') === '1',
         );
 
         try {
@@ -392,6 +398,9 @@ final class RentalController
             'noticeDocuments' => $noticeDocuments,
             'spareFuseHints' => $this->spareFuseHints($detail->items),
             'venueFuseConnections' => $this->venueFuseConnections($detail->rental->venueId),
+            // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
+            'rentalHolidays' => $this->schedule?->holidaysDuring($detail->rental->startDate, $detail->rental->endDate) ?? [],
+            'blockingConflicts' => $this->schedule?->blockingConflicts($detail->rental) ?? [],
         ], activeNav: 'rentals', title: t('rentals.page_title.detail', ['event' => $detail->rental->eventName]));
     }
 
@@ -723,6 +732,10 @@ final class RentalController
             eventName: $request->input('event_name', '') ?? '',
             eventLocation: $request->input('event_location', '') ?? '',
             deploymentDays: $request->input('deployment_days', '') ?? '',
+            blocksOtherRentals: $request->input('blocks_other_rentals') !== null,
+            pickupAt: $request->input('pickup_at', '') ?? '',
+            returnAt: $request->input('return_at', '') ?? '',
+            holidayConfirmed: $request->input('holiday_confirmed') === '1',
         );
 
         try {
@@ -1142,6 +1155,11 @@ final class RentalController
             'customers' => $customers,
             'venues' => $venues,
             'needsDistributorFlagsByName' => $needsDistributorFlagsByName,
+            // Betriebsurlaub (Migration 130): für Hinweis, Abhol-/Rückgabefelder und Bestätigung im Formular.
+            'companyHolidays' => array_values(array_filter(
+                $this->schedule?->allHolidays() ?? [],
+                static fn ($h) => $h->endDate >= (new \DateTimeImmutable('today'))->modify('-1 year'),
+            )),
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
@@ -1158,6 +1176,9 @@ final class RentalController
             'event_name' => $command->eventName,
             'event_location' => $command->eventLocation,
             'deployment_days' => $command->deploymentDays,
+            'blocks_other_rentals' => $command->blocksOtherRentals,
+            'pickup_at' => $command->pickupAt,
+            'return_at' => $command->returnAt,
         ];
     }
 

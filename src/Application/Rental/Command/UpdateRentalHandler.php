@@ -21,6 +21,7 @@ final class UpdateRentalHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
         private readonly VenueRepositoryInterface $venues,
+        private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
     ) {
     }
 
@@ -44,9 +45,16 @@ final class UpdateRentalHandler implements CommandHandlerInterface
             $command->deploymentDays,
         );
 
+        $pickupAt = $this->parseMoment($command->pickupAt, 'pickupAt', $errors);
+        $returnAt = $this->parseMoment($command->returnAt, 'returnAt', $errors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
+
+        // Betriebsurlaub: bestätigen muss man nur Urlaube, in die die
+        // Veranstaltung durch diese Änderung neu hineinfällt.
+        $previousHolidayIds = array_map(static fn ($h) => $h->id, $this->schedule?->holidaysDuring($rental->startDate, $rental->endDate) ?? []);
 
         $rental->customerId = $data['customerId'];
         $rental->startDate = $data['startDate'];
@@ -55,7 +63,21 @@ final class UpdateRentalHandler implements CommandHandlerInterface
         $rental->eventLocation = $data['eventLocation'];
         $rental->venueId = $data['venueId'];
         $rental->deploymentDays = $data['deploymentDays'];
+        $rental->blocksOtherRentals = $command->blocksOtherRentals;
+        if ($pickupAt !== null) {
+            $rental->pickupAt = $pickupAt;
+        }
+        if ($returnAt !== null) {
+            $rental->returnAt = $returnAt;
+        }
         $rental->updatedAt = new DateTimeImmutable();
+
+        $holidays = $this->schedule?->holidaysDuring($rental->startDate, $rental->endDate) ?? [];
+        $newHolidays = array_filter($holidays, static fn ($h) => !in_array($h->id, $previousHolidayIds, true));
+        $this->applyScheduleRules($this->schedule, $rental, $holidays, $newHolidays !== [], $command->holidayConfirmed, $errors);
+        if ($errors !== []) {
+            throw new ValidationException($errors);
+        }
 
         $this->rentals->save($rental);
 

@@ -49,6 +49,8 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         // Sets (Migration 113)
         private readonly ?\App\Application\Rental\RentalSetPlanner $setPlanner = null,
         private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
+        // Exklusive Veranstaltungen (Migration 130)
+        private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
     ) {
     }
 
@@ -151,6 +153,10 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
             createdAt: $now,
             updatedAt: $now,
         );
+        $blocking = $this->schedule?->blockingError($rental);
+        if ($blocking !== null) {
+            throw new ValidationException(['startDate' => $blocking]);
+        }
         $this->rentals->save($rental);
 
         foreach ($individualQuantities as $articleId => $quantity) {

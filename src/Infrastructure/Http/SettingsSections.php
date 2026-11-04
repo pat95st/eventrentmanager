@@ -41,6 +41,7 @@ final class SettingsSections
                     ['key' => 'settings-api', 'href' => '/einstellungen/api', 'label' => t('nav.api_settings')],
                     ['key' => 'settings-sicherheit', 'href' => '/einstellungen/sicherheit', 'label' => 'Sicherheit'],
                     ['key' => 'settings-kalender', 'href' => '/einstellungen/kalender', 'label' => t('nav.calendar_settings')],
+                    ['key' => 'settings-betriebsurlaub', 'href' => '/einstellungen/betriebsurlaub', 'label' => 'Betriebsurlaub'],
                 ],
             ],
             'billing' => [

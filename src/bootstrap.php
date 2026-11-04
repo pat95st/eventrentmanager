@@ -456,6 +456,9 @@ $caseInventoryNumberImageRepository = new \App\Infrastructure\Persistence\Pdo\Ma
 $caseContentItemRepository = new MariadbCaseContentItemRepository($pdo);
 $supplierRepository = new MariadbSupplierRepository($pdo);
 $rentalRepository = new MariadbRentalRepository($pdo);
+// Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
+$companyHolidayRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCompanyHolidayRepository($pdo);
+$rentalScheduleRules = new \App\Application\Rental\RentalScheduleRules($rentalRepository, $companyHolidayRepository);
 $venueRepository = new MariadbVenueRepository($pdo);
 $venuePowerConnectionRepository = new MariadbVenuePowerConnectionRepository($pdo);
 $warehouseRepository = new MariadbWarehouseRepository($pdo);
@@ -635,6 +638,10 @@ $commandBus->register(\App\Application\Article\Command\CreateArticle::class, new
 $commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
 // Leitungen (Migration 125)
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
+// Betriebsurlaub (Migration 130)
+$commandBus->register(\App\Application\CompanyHoliday\Command\SaveCompanyHoliday::class, new \App\Application\CompanyHoliday\Command\SaveCompanyHolidayHandler($companyHolidayRepository));
+$commandBus->register(\App\Application\CompanyHoliday\Command\DeleteCompanyHoliday::class, new \App\Application\CompanyHoliday\Command\DeleteCompanyHolidayHandler($companyHolidayRepository));
+$queryBus->register(\App\Application\CompanyHoliday\Query\ListCompanyHolidays::class, new \App\Application\CompanyHoliday\Query\ListCompanyHolidaysHandler($companyHolidayRepository));
 foreach ([\App\Application\Cable\Command\SaveCableType::class, \App\Application\Cable\Command\DeleteCableType::class, \App\Application\Cable\Command\SaveConnectorType::class, \App\Application\Cable\Command\DeleteConnectorType::class] as $cableCommand) {
     $commandBus->register($cableCommand, $cableSettingsHandler);
 }
@@ -716,8 +723,8 @@ $commandBus->register(\App\Application\Voucher\Command\RedeemVoucherForRental::c
 $commandBus->register(\App\Application\Voucher\Command\RemoveVoucherRedemption::class, new \App\Application\Voucher\Command\RemoveVoucherRedemptionHandler($voucherRedemptionRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateVoucherSettings::class, new \App\Application\Settings\Command\UpdateVoucherSettingsHandler($voucherSettingsRepository));
 
-$commandBus->register(\App\Application\Rental\Command\CreateRental::class, new CreateRentalHandler($rentalRepository, $customerRepository, $venueRepository));
-$commandBus->register(\App\Application\Rental\Command\UpdateRental::class, new UpdateRentalHandler($rentalRepository, $customerRepository, $venueRepository));
+$commandBus->register(\App\Application\Rental\Command\CreateRental::class, new CreateRentalHandler($rentalRepository, $customerRepository, $venueRepository, $rentalScheduleRules));
+$commandBus->register(\App\Application\Rental\Command\UpdateRental::class, new UpdateRentalHandler($rentalRepository, $customerRepository, $venueRepository, $rentalScheduleRules));
 
 $commandBus->register(\App\Application\Venue\Command\CreateVenue::class, new CreateVenueHandler($venueRepository, $geocoder));
 $commandBus->register(\App\Application\Venue\Command\UpdateVenue::class, new UpdateVenueHandler($venueRepository, $geocoder));
@@ -728,7 +735,7 @@ $commandBus->register(\App\Application\Venue\Command\DeleteVenuePowerConnection:
 $commandBus->register(\App\Application\Warehouse\Command\CreateWarehouse::class, new CreateWarehouseHandler($warehouseRepository, $geocoder));
 $commandBus->register(\App\Application\Warehouse\Command\UpdateWarehouse::class, new UpdateWarehouseHandler($warehouseRepository, $geocoder));
 $commandBus->register(\App\Application\Warehouse\Command\DeleteWarehouse::class, new DeleteWarehouseHandler($warehouseRepository));
-$commandBus->register(\App\Application\Rental\Command\UpdateRentalLogistics::class, new UpdateRentalLogisticsHandler($rentalRepository, $warehouseRepository));
+$commandBus->register(\App\Application\Rental\Command\UpdateRentalLogistics::class, new UpdateRentalLogisticsHandler($rentalRepository, $warehouseRepository, $rentalScheduleRules));
 $commandBus->register(\App\Application\Rental\Command\DeleteRental::class, new DeleteRentalHandler($rentalRepository));
 $commandBus->register(\App\Application\Rental\Command\AddRentalItem::class, new AddRentalItemHandler($rentalItemRepository, $rentalRepository, $articleRepository, $inventoryNumberRepository, $rentalBundlePlanner));
 $commandBus->register(\App\Application\Rental\Command\UpdateRentalItem::class, new UpdateRentalItemHandler($rentalItemRepository, $rentalIssuedItemRepository, $inventoryNumberRepository, $rentalBundlePlanner));
@@ -846,7 +853,7 @@ $commandBus->register(\App\Application\Offer\Command\MarkOfferSent::class, new M
 $commandBus->register(\App\Application\Offer\Command\MarkOfferAccepted::class, new MarkOfferAcceptedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferDeclined::class, new MarkOfferDeclinedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new DeleteOfferHandler($offerRepository));
-$commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner, setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository));
+$commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner, setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository, schedule: $rentalScheduleRules));
 $offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
 $orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
@@ -1366,6 +1373,7 @@ $reportingController = new \App\Infrastructure\Http\Controllers\ReportingControl
 $statisticsController = new \App\Infrastructure\Http\Controllers\StatisticsController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
 $cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
+$companyHolidayController = new \App\Infrastructure\Http\Controllers\CompanyHolidayController($commandBus, $queryBus);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
 $manufacturerController = new ManufacturerController($commandBus, $queryBus);
 $articleSetController = new \App\Infrastructure\Http\Controllers\ArticleSetController($commandBus, $queryBus);
@@ -1462,7 +1470,7 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
@@ -2131,6 +2139,11 @@ $router->post('/einstellungen/email-vorlagen/{key}', $auth->guard(Permission::Ad
 $router->post('/einstellungen/email-vorlagen/{key}/zuruecksetzen', $auth->guard(Permission::Administration, [$emailTemplateSettingsController, 'reset']));
 
 $router->get('/einstellungen/leitungen', $auth->guard(Permission::Administration, [$cableSettingsController, 'edit']));
+// Betriebsurlaub (Migration 130)
+$router->get('/einstellungen/betriebsurlaub', $auth->guard(Permission::Administration, [$companyHolidayController, 'index']));
+$router->post('/einstellungen/betriebsurlaub', $auth->guard(Permission::Administration, [$companyHolidayController, 'store']));
+$router->post('/einstellungen/betriebsurlaub/{id}', $auth->guard(Permission::Administration, [$companyHolidayController, 'update']));
+$router->post('/einstellungen/betriebsurlaub/{id}/loeschen', $auth->guard(Permission::Administration, [$companyHolidayController, 'destroy']));
 $router->post('/einstellungen/leitungen/typen', $auth->guard(Permission::Administration, [$cableSettingsController, 'createType']));
 $router->post('/einstellungen/leitungen/typen/{id}', $auth->guard(Permission::Administration, [$cableSettingsController, 'saveType']));
 $router->post('/einstellungen/leitungen/typen/{id}/loeschen', $auth->guard(Permission::Administration, [$cableSettingsController, 'deleteType']));

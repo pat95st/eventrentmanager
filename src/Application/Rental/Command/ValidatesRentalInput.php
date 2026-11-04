@@ -90,6 +90,62 @@ trait ValidatesRentalInput
         ]];
     }
 
+    /**
+     * Regeln aus Migration 130 (Betriebsurlaub, exklusive Veranstaltungen)
+     * für die fertig befüllte $rental prüfen. $requireConfirmFor: Urlaube,
+     * deren Hinweis bestätigt sein muss (bei Neuanlage alle betroffenen).
+     *
+     * @param \App\Domain\CompanyHoliday\CompanyHoliday[] $holidays
+     * @param array<string, string> $errors
+     */
+    private function applyScheduleRules(
+        ?\App\Application\Rental\RentalScheduleRules $schedule,
+        \App\Domain\Rental\Rental $rental,
+        array $holidays,
+        bool $needsConfirmation,
+        bool $confirmed,
+        array &$errors,
+    ): void {
+        if ($schedule === null) {
+            return;
+        }
+        if ($holidays !== []) {
+            if ($needsConfirmation && !$confirmed) {
+                $errors['holiday'] = 'Die Veranstaltung fällt in den Betriebsurlaub ('
+                    . implode(', ', array_map(static fn ($h) => $h->label(), $holidays))
+                    . '). Bitte bestätigen, dass sie trotzdem angelegt werden soll.';
+            }
+            $errors += $schedule->holidayLogisticsErrors($holidays, $rental->pickupAt, $rental->returnAt);
+        }
+        foreach (['pickupAt' => [$rental->pickupAt, 'Abholung'], 'returnAt' => [$rental->returnAt, 'Rückgabe']] as $field => [$moment, $label]) {
+            if ($moment !== null && !isset($errors[$field]) && ($inHoliday = $schedule->holidaysDuring($moment, $moment)) !== []) {
+                $errors[$field] = "Die {$label} fällt in den Betriebsurlaub ({$inHoliday[0]->label()}).";
+            }
+        }
+        $blocking = $schedule->blockingError($rental);
+        if ($blocking !== null) {
+            $errors['blocksOtherRentals'] = $blocking;
+        }
+    }
+
+    /** Termin aus dem Formular ('Y-m-d\TH:i' bzw. 'Y-m-d'), leer = null. @param array<string, string> $errors */
+    private function parseMoment(string $value, string $field, array &$errors): ?DateTimeImmutable
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+        foreach (['Y-m-d\TH:i', 'Y-m-d H:i', 'Y-m-d\TH:i:s', 'Y-m-d'] as $format) {
+            $parsed = DateTimeImmutable::createFromFormat('!' . $format, $value);
+            if ($parsed !== false) {
+                return $parsed;
+            }
+        }
+        $errors[$field] = 'Bitte einen gültigen Termin angeben.';
+
+        return null;
+    }
+
     private function parseDate(string $value): ?DateTimeImmutable
     {
         $value = trim($value);

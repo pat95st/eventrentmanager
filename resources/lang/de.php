@@ -1707,7 +1707,7 @@ return [
     'settings.company.field.logo_max_height_px_hint' => 'Gilt für das Logo im Kopfbereich (Header, Anmelde-/Zwei-Faktor-Seite). Leer lassen für den Standardwert.',
     'settings.company.dark_logo.title' => 'Logo für Dunkelmodus (optional)',
     'settings.company.favicon.title' => 'Favicon',
-    'settings.company.favicon.hint' => 'Kleines Symbol im Browser-Tab und in Lesezeichen. ICO, PNG oder SVG, quadratisch (z. B. 32 × 32 oder 64 × 64 Pixel), höchstens 1 MB.',
+    'settings.company.favicon.hint' => 'Symbol im Browser-Tab, in Lesezeichen und als App-Icon der installierten App (Startbildschirm). ICO, PNG oder SVG, quadratisch, höchstens 1 MB. Für das App-Icon mindestens 512 × 512 Pixel als PNG (oder ICO mit PNG-Bild) – kleinere Bilder unter 144 Pixel werden dort nicht verwendet; bei SVG zeigt iOS weiterhin das Standard-Icon.',
     'settings.company.favicon.none' => 'Kein eigenes Favicon hinterlegt — es wird das Standardsymbol verwendet.',
     'settings.company.favicon.upload' => 'Favicon hochladen',
     'settings.company.favicon.remove' => 'Entfernen',

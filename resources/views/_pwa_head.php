@@ -7,13 +7,16 @@
 // dasselbe: eine PWA muss bereits auf dem Login-Bildschirm installierbar
 // sein, nicht erst nach der Anmeldung.
 //
-// Bewusst rein statisch (keine Firmenbranding-Daten aus der Datenbank):
-// Name, Farben und Icons kommen direkt aus public/manifest.webmanifest und
+// Name und Farben kommen aus public/manifest.webmanifest; ist unter
+// Einstellungen › Firma ein Favicon hinterlegt, wird es auch als App-Icon
+// verwendet (dynamisches Manifest /app.webmanifest, Icons /app-icon/…), sonst
+// gelten die Standard-Icons aus
 // public/assets/img/icons/ (siehe README, Abschnitt "Setup" /
 // public/assets/img/icons/README.md für den Hinweis, wie sie bei Bedarf
 // gegen ein eigenes Firmenlogo ausgetauscht werden können).
 ?>
-<link rel="manifest" href="/manifest.webmanifest">
+<?php $pwaBranding = class_exists(\App\Infrastructure\Http\CompanyBranding::class); /* Favicon als App-Icon: dynamisches Manifest */ ?>
+<link rel="manifest" href="<?= htmlspecialchars($pwaBranding ? \App\Infrastructure\Http\CompanyBranding::manifestUrl() : '/manifest.webmanifest', ENT_QUOTES) ?>">
 <meta name="theme-color" content="#2563eb">
 <?php $customFaviconUrl = class_exists(\App\Infrastructure\Http\CompanyBranding::class) ? \App\Infrastructure\Http\CompanyBranding::faviconUrl() : null; ?>
 <?php if ($customFaviconUrl !== null): /* eigenes Favicon aus Einstellungen › Firma (Migration 112) */ ?>
@@ -22,7 +25,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="/assets/img/icons/icon-192.png">
 <?php endif; ?>
-<link rel="apple-touch-icon" href="/assets/img/icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="<?= htmlspecialchars($pwaBranding ? \App\Infrastructure\Http\CompanyBranding::appleTouchIconUrl() : '/assets/img/icons/apple-touch-icon.png', ENT_QUOTES) ?>">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Materialverleih">
 <script>

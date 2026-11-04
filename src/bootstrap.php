@@ -1543,6 +1543,9 @@ $router->post('/sprache', [$localeController, 'switch']);
 $router->get('/firmenlogo', [$companySettingsController, 'showLogo']);
 $router->get('/firmenlogo-dark', [$companySettingsController, 'showDarkLogo']);
 $router->get('/firmen-favicon', [$companySettingsController, 'showFavicon']);
+// Favicon als App-Icon der installierten App (öffentlich wie das Favicon selbst)
+$router->get('/app.webmanifest', [$companySettingsController, 'appManifest']);
+$router->get('/app-icon/{variant}', [$companySettingsController, 'appIcon']);
 $router->get('/firmenhintergrund', [$companySettingsController, 'showBackgroundImage']);
 
 // Passkey-Anmeldung (öffentlich, kein Benutzer angemeldet — siehe

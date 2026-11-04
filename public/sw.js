@@ -36,7 +36,7 @@ var CACHE_VERSION = 'static-v2';
 // jedem Upload, siehe CompanyBranding::versioned()). Eigener Cache, der beim
 // Versions-Bump oben NICHT geleert wird.
 var BRANDING_CACHE = 'branding-v1';
-var BRANDING_PATHS = ['/firmenlogo', '/firmenlogo-dark', '/firmenhintergrund', '/firmen-favicon'];
+var BRANDING_PATHS = ['/firmenlogo', '/firmenlogo-dark', '/firmenhintergrund', '/firmen-favicon', '/app-icon/192', '/app-icon/512', '/app-icon/maskable', '/app-icon/apple'];
 
 var PRECACHE_URLS = [
   '/assets/css/app.css',

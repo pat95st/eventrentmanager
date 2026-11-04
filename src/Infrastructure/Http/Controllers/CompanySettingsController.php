@@ -217,6 +217,62 @@ final class CompanySettingsController
     }
 
     /** Liefert das eigene Favicon aus (öffentlich, auch für die Login-Seite), sonst das Standard-Favicon. */
+    /**
+     * Manifest der installierten App mit dem Favicon als App-Icon (sofern
+     * geeignet, siehe AppIconRenderer); Grundlage ist public/manifest.webmanifest.
+     */
+    public function appManifest(Request $request): void
+    {
+        $manifest = json_decode((string) file_get_contents(\App\Shared\ProjectPaths::rootDirectory() . '/public/manifest.webmanifest'), true) ?: [];
+        $settings = $this->queries->ask(new GetCompanySettings());
+        if ($settings->faviconFilename !== null) {
+            $path = $this->fileStorage->absolutePath('company', $settings->faviconFilename);
+            $renderer = new \App\Infrastructure\Branding\AppIconRenderer();
+            $v = \App\Infrastructure\Http\CompanyBranding::version($settings->faviconFilename);
+            if ($renderer->rasterSource($path) !== null) {
+                $manifest['icons'] = [
+                    ['src' => '/app-icon/192?v=' . $v, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => '/app-icon/512?v=' . $v, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                    ['src' => '/app-icon/maskable?v=' . $v, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ];
+            } elseif ($renderer->isSvg($path)) {
+                array_unshift($manifest['icons'], ['src' => '/firmen-favicon?v=' . $v, 'sizes' => 'any', 'type' => 'image/svg+xml', 'purpose' => 'any']);
+            }
+        }
+        header_remove('Pragma');
+        Response::raw(
+            (string) json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            200,
+            'application/manifest+json',
+            ['Cache-Control' => 'private, no-cache'],
+        );
+    }
+
+    /** App-Icon aus dem Favicon: /app-icon/192, /512, /maskable, /apple. */
+    public function appIcon(Request $request): void
+    {
+        $variant = $request->param('variant');
+        [$size, $padded, $fallback] = match ($variant) {
+            '192' => [192, false, 'icon-192.png'],
+            'maskable' => [512, true, 'icon-maskable-512.png'],
+            'apple' => [180, true, 'apple-touch-icon.png'],
+            default => [512, false, 'icon-512.png'],
+        };
+        $settings = $this->queries->ask(new GetCompanySettings());
+        $renderer = new \App\Infrastructure\Branding\AppIconRenderer();
+        $source = $settings->faviconFilename !== null ? $renderer->rasterSource($this->fileStorage->absolutePath('company', $settings->faviconFilename)) : null;
+        $png = $source !== null ? $renderer->render($source, $size, $padded) : null;
+        if ($png === null) {
+            Response::redirect('/assets/img/icons/' . $fallback);
+
+            return;
+        }
+        $immutable = $request->query('v') === \App\Infrastructure\Http\CompanyBranding::version((string) $settings->faviconFilename);
+        header_remove('Pragma');
+        header_remove('Expires');
+        Response::raw($png, 200, 'image/png', ['Cache-Control' => $immutable ? 'private, max-age=31536000, immutable' : 'private, no-cache']);
+    }
+
     public function showFavicon(Request $request): void
     {
         $settings = $this->queries->ask(new GetCompanySettings());

@@ -84,6 +84,27 @@ final class CompanyBranding
     }
 
     /**
+     * Manifest der installierten App: mit eigenem Favicon das dynamische
+     * Manifest (Favicon als App-Icon, siehe CompanySettingsController::
+     * appManifest()), sonst die statische Datei public/manifest.webmanifest.
+     */
+    public static function manifestUrl(): string
+    {
+        return self::versioned('/app.webmanifest', self::$settings?->faviconFilename) ?? '/manifest.webmanifest';
+    }
+
+    /** Apple-Touch-Icon (Startbildschirm iOS): aus dem Favicon, außer bei SVG (braucht ein Rasterbild). */
+    public static function appleTouchIconUrl(): string
+    {
+        $filename = self::$settings?->faviconFilename;
+        if ($filename === null || strtolower(pathinfo($filename, PATHINFO_EXTENSION)) === 'svg') {
+            return '/assets/img/icons/apple-touch-icon.png';
+        }
+
+        return self::versioned('/app-icon/apple', $filename) ?? '/assets/img/icons/apple-touch-icon.png';
+    }
+
+    /**
      * URL mit Versionsparameter aus dem gespeicherten Dateinamen (bei jedem
      * Upload eine neue UUID): so darf der Browser/die PWA die Datei dauerhaft
      * cachen und lädt sie erst nach einem neuen Upload wieder (siehe

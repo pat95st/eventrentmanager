@@ -8,7 +8,8 @@
 // Lösung: Links auf PDFs/Dateien werden in der App abgefangen und in einem
 // Vollbild-Overlay mit „Zurück“-Leiste angezeigt (Darstellung mit pdf.js,
 // public/assets/vendor/pdfjs). Bilder werden direkt angezeigt, andere
-// Dateitypen lassen sich über „Teilen/Sichern“ speichern. Im normalen
+// Dateitypen lassen sich über „Teilen/Sichern“ speichern. PDFs und Bilder
+// lassen sich außerdem direkt drucken. Im normalen
 // Browser-Tab bleibt alles wie bisher.
 //
 // Erkannt werden gleiche-Domain-Links, deren Pfad auf .pdf, /pdf, /download,
@@ -129,14 +130,37 @@
     zoomIn.setAttribute('aria-label', 'Vergrößern');
     zoomIn.addEventListener('click', function () { changeZoom(1); });
 
+    var print = button('Drucken');
+    print.disabled = true;
+    print.addEventListener('click', printFile);
+
     var share = button('Teilen');
     share.disabled = true;
     share.addEventListener('click', shareFile);
 
-    bar.appendChild(back);
+    // Schmale Bildschirme: Dateiname in eine eigene Zeile, Buttons kompakter.
+    if (window.innerWidth < 520) {
+      bar.style.flexWrap = 'wrap';
+      title.style.order = '10';
+      title.style.flexBasis = '100%';
+      title.style.fontSize = '0.75rem';
+      bar.style.gap = '0.35rem';
+      [back, zoomOut, zoomIn, print, share].forEach(function (b) {
+        b.style.padding = '0.4rem 0.5rem';
+        b.style.fontSize = '0.8125rem';
+      });
+      var spacer = document.createElement('span');
+      spacer.style.flex = '1';
+      bar.appendChild(back);
+      bar.appendChild(spacer);
+    }
+    if (!back.parentNode) {
+      bar.appendChild(back);
+    }
     bar.appendChild(title);
     bar.appendChild(zoomOut);
     bar.appendChild(zoomIn);
+    bar.appendChild(print);
     bar.appendChild(share);
 
     var pages = document.createElement('div');
@@ -147,7 +171,7 @@
     document.body.appendChild(overlay);
     document.documentElement.style.overflow = 'hidden';
 
-    return { title: title, pages: pages, share: share, zoomIn: zoomIn, zoomOut: zoomOut };
+    return { title: title, pages: pages, share: share, print: print, zoomIn: zoomIn, zoomOut: zoomOut };
   }
 
   function message(text, withSave) {
@@ -201,9 +225,16 @@
       current.ui.share.disabled = false;
 
       if (result.type.indexOf('pdf') !== -1) {
-        return showPdf(current);
+        current.kind = 'pdf';
+        return showPdf(current).then(function () {
+          if (current === state) {
+            current.ui.print.disabled = false;
+          }
+        });
       }
       if (result.type.indexOf('image/') === 0) {
+        current.kind = 'image';
+        current.ui.print.disabled = false;
         current.ui.pages.innerHTML = '';
         var img = document.createElement('img');
         img.src = URL.createObjectURL(result.blob);
@@ -301,6 +332,92 @@
       state.zoom = next;
       renderPages(state);
     }
+  }
+
+  /**
+   * Drucken: die Seiten werden in hoher Auflösung als Bilder in einen eigenen
+   * Druckbereich gelegt und window.print() aufgerufen; per @media print ist
+   * dann nur dieser Bereich sichtbar. Funktioniert auch in der installierten
+   * App (iOS/Android), wo ein PDF im iframe nicht zuverlässig druckbar ist.
+   */
+  function printFile() {
+    if (!state || state.printing || (state.kind !== 'pdf' && state.kind !== 'image')) {
+      return;
+    }
+    var current = state;
+    current.printing = true;
+    current.ui.print.disabled = true;
+    var label = current.ui.print.textContent;
+    current.ui.print.textContent = 'Wird vorbereitet …';
+
+    var root = document.createElement('div');
+    root.id = 'pdf-print-root';
+    var style = document.createElement('style');
+    style.textContent = '#pdf-print-root{display:none}'
+      + '@media print{body>*:not(#pdf-print-root){display:none!important}'
+      + '#pdf-print-root{display:block!important}'
+      + '#pdf-print-root img{display:block;width:100%;height:auto;page-break-after:always;break-after:page}'
+      + '#pdf-print-root img:last-child{page-break-after:auto;break-after:auto}'
+      + '@page{margin:0}html,body{background:#fff!important}}';
+    root.appendChild(style);
+
+    var images;
+    if (current.kind === 'image') {
+      var img = document.createElement('img');
+      img.src = current.objectUrl;
+      images = Promise.resolve([img]);
+    } else {
+      var chain = Promise.resolve([]);
+      for (var n = 1; n <= current.pdf.numPages; n++) {
+        (function (pageNumber) {
+          chain = chain.then(function (list) {
+            return current.pdf.getPage(pageNumber).then(function (page) {
+              var base = page.getViewport({ scale: 1 });
+              // ca. 200 dpi für A4, begrenzt wegen Speicher auf Mobilgeräten
+              var scale = Math.min(2.8, 1650 / base.width);
+              var viewport = page.getViewport({ scale: scale });
+              var canvas = document.createElement('canvas');
+              canvas.width = Math.floor(viewport.width);
+              canvas.height = Math.floor(viewport.height);
+              return page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise.then(function () {
+                var pageImg = document.createElement('img');
+                pageImg.src = canvas.toDataURL('image/jpeg', 0.92);
+                list.push(pageImg);
+                return list;
+              });
+            });
+          });
+        })(n);
+      }
+      images = chain;
+    }
+
+    images.then(function (list) {
+      list.forEach(function (img) { root.appendChild(img); });
+      document.body.appendChild(root);
+      return Promise.all(list.map(function (img) {
+        return img.complete ? Promise.resolve() : new Promise(function (resolve) { img.onload = img.onerror = resolve; });
+      }));
+    }).then(function () {
+      var cleanup = function () {
+        window.removeEventListener('afterprint', cleanup);
+        root.remove();
+        current.printing = false;
+        current.ui.print.disabled = false;
+        current.ui.print.textContent = label;
+      };
+      window.addEventListener('afterprint', cleanup);
+      current.ui.print.textContent = label;
+      window.print();
+      // Falls der Browser kein afterprint meldet (manche Mobilbrowser).
+      setTimeout(function () { if (current.printing) { cleanup(); } }, 60000);
+    }).catch(function () {
+      root.remove();
+      current.printing = false;
+      current.ui.print.disabled = false;
+      current.ui.print.textContent = label;
+      message('Das Dokument konnte nicht zum Drucken vorbereitet werden. Nutze „Teilen“ und drucke von dort.', true);
+    });
   }
 
   function shareFile() {

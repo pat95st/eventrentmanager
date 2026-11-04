@@ -1706,7 +1706,7 @@ return [
     'settings.company.field.logo_max_height_px_hint' => 'Applies to the logo in the header (header, login/two-factor page). Leave empty for the default value.',
     'settings.company.dark_logo.title' => 'Dark mode logo (optional)',
     'settings.company.favicon.title' => 'Favicon',
-    'settings.company.favicon.hint' => 'Small icon in the browser tab and bookmarks. ICO, PNG or SVG, square (e.g. 32 × 32 or 64 × 64 pixels), max. 1 MB.',
+    'settings.company.favicon.hint' => 'Icon in the browser tab, bookmarks and as the app icon of the installed app (home screen). ICO, PNG or SVG, square, max. 1 MB. For the app icon use at least 512 × 512 pixels as PNG (or ICO containing a PNG) – images below 144 pixels are not used there; with SVG iOS keeps the default icon.',
     'settings.company.favicon.none' => 'No custom favicon — the default icon is used.',
     'settings.company.favicon.upload' => 'Upload favicon',
     'settings.company.favicon.remove' => 'Remove',

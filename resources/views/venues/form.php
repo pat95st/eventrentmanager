@@ -121,6 +121,9 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
             <br><?= e(t('venues.form.status_label')) ?>:
             <?php if ($venue->hasCoordinates()): ?>
                 <span class="font-medium text-emerald-700 dark:text-emerald-400"><?= e(t('venues.form.coordinates_present')) ?></span>
+                <button type="button" data-map-modal data-lat="<?= e((string) $venue->latitude) ?>" data-lon="<?= e((string) $venue->longitude) ?>"
+                        data-title="<?= e($venue->name) ?>" data-address="<?= e(trim($venue->street . ', ' . $venue->postalCode . ' ' . $venue->city, ', ')) ?>"
+                        class="ml-1 font-medium text-brand-700 underline dark:text-brand-400">Karte anzeigen</button>
             <?php else: ?>
                 <span class="font-medium text-amber-700 dark:text-amber-400"><?= e(t('venues.form.coordinates_missing')) ?></span>
             <?php endif; ?>
@@ -327,3 +330,4 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
         </div>
     </div>
 <?php endif; ?>
+<?php require __DIR__ . '/../_map_modal.php'; /* Karten-Modal */ ?>

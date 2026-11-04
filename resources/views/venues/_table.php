@@ -51,9 +51,13 @@ use function App\Infrastructure\Http\t;
                         </td>
                         <td class="break-words px-4 py-3">
                             <?php if ($venue->hasCoordinates()): ?>
-                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700">
+                                <button type="button" data-map-modal
+                                        data-lat="<?= e((string) $venue->latitude) ?>" data-lon="<?= e((string) $venue->longitude) ?>"
+                                        data-title="<?= e($venue->name) ?>" data-address="<?= e(trim($venue->street . ', ' . $venue->postalCode . ' ' . $venue->city, ', ')) ?>"
+                                        title="Karte anzeigen"
+                                        class="inline-flex cursor-pointer items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-left text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700">
                                     <?= e(t('venues.table.coordinates_present')) ?>
-                                </span>
+                                </button>
                             <?php else: ?>
                                 <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-600">
                                     <?= e(t('venues.table.no_coordinates')) ?>

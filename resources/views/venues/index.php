@@ -45,3 +45,4 @@ use function App\Infrastructure\Http\t;
         });
     });
 </script>
+<?php require __DIR__ . '/../_map_modal.php'; /* Karten-Modal (außerhalb der per AJAX ersetzten Tabelle) */ ?>

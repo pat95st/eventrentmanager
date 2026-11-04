@@ -79,6 +79,9 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
             <br><?= e(t('warehouses.form.status_label')) ?>:
             <?php if ($warehouse->hasCoordinates()): ?>
                 <span class="font-medium text-emerald-700 dark:text-emerald-400"><?= e(t('warehouses.form.coordinates_present')) ?></span>
+                <button type="button" data-map-modal data-lat="<?= e((string) $warehouse->latitude) ?>" data-lon="<?= e((string) $warehouse->longitude) ?>"
+                        data-title="<?= e($warehouse->name) ?>" data-address="<?= e(trim($warehouse->street . ', ' . $warehouse->postalCode . ' ' . $warehouse->city, ', ')) ?>"
+                        class="ml-1 font-medium text-brand-700 underline dark:text-brand-400">Karte anzeigen</button>
             <?php else: ?>
                 <span class="font-medium text-amber-700 dark:text-amber-400"><?= e(t('warehouses.form.coordinates_missing')) ?></span>
             <?php endif; ?>
@@ -101,3 +104,4 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
         <a href="/lagerorte" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
     </div>
 </form>
+<?php require __DIR__ . '/../_map_modal.php'; /* Karten-Modal */ ?>

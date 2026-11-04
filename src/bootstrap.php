@@ -428,6 +428,9 @@ $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepos
 \App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
     $configuration = [];
     foreach ($pdfFontRepository->assignments() as $role => $fontId) {
+        if (str_starts_with($role, 'ui_')) {
+            continue; // Oberflächen-Schriften, siehe UiFonts
+        }
         $font = $pdfFontRepository->findById($fontId);
         if ($font !== null) {
             $configuration[$role] = array_map(static fn (?string $file) => $file !== null ? $fileStorage->absolutePath('fonts', $file) : null, $font->files());
@@ -436,6 +439,18 @@ $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepos
 
     return $configuration;
 });
+// Schriftarten der Oberfläche je Bereich (Einstellungen › Schriftarten, Rollen "ui_*").
+try {
+    $uiFonts = [];
+    foreach ($pdfFontRepository->assignments() as $role => $fontId) {
+        if (\App\Domain\Settings\UiFontRole::tryFrom($role) !== null && ($font = $pdfFontRepository->findById($fontId)) !== null) {
+            $uiFonts[$role] = $font;
+        }
+    }
+    \App\Infrastructure\Http\UiFonts::set($uiFonts);
+} catch (\PDOException) {
+    // Tabelle fehlt (Migration 116 nicht eingespielt): Systemschrift.
+}
 $rackRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRackRepository($pdo);
 $caseInventoryNumberImageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCaseInventoryNumberImageRepository($pdo);
 $caseContentItemRepository = new MariadbCaseContentItemRepository($pdo);
@@ -1153,6 +1168,7 @@ $pdfFontStorage = new \App\Application\Settings\Command\PdfFontStorage($pdfFontR
 $commandBus->register(\App\Application\Settings\Command\AddGoogleFont::class, new \App\Application\Settings\Command\AddGoogleFontHandler($pdfFontRepository, new \App\Infrastructure\Fonts\GoogleFontsDownloader(), $pdfFontStorage));
 $commandBus->register(\App\Application\Settings\Command\UploadPdfFont::class, new \App\Application\Settings\Command\UploadPdfFontHandler($pdfFontStorage));
 $commandBus->register(\App\Application\Settings\Command\DeletePdfFont::class, new \App\Application\Settings\Command\DeletePdfFontHandler($pdfFontRepository, $pdfFontStorage));
+$commandBus->register(\App\Application\Settings\Command\UpdateUiFontAssignments::class, new \App\Application\Settings\Command\UpdateUiFontAssignmentsHandler($pdfFontRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdatePdfFontAssignments::class, new \App\Application\Settings\Command\UpdatePdfFontAssignmentsHandler($pdfFontRepository));
 $queryBus->register(\App\Application\Settings\Query\GetPdfFontSettings::class, new \App\Application\Settings\Query\GetPdfFontSettingsHandler($pdfFontRepository));
 
@@ -2212,6 +2228,9 @@ $router->get('/einstellungen/schriften/vorschau.pdf', $auth->guard(Permission::A
 $router->post('/einstellungen/schriften/google', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'addGoogle']));
 $router->post('/einstellungen/schriften/hochladen', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'upload']));
 $router->post('/einstellungen/schriften/zuordnung', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'assign']));
+$router->post('/einstellungen/schriften/oberflaeche', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'assignUi']));
+// Schriftdateien der Oberfläche: öffentlich (Anmeldeseite), nur zugeordnete Schriften
+$router->get('/schriften/{id}/{style}', [$pdfFontSettingsController, 'publicFile']);
 $router->get('/einstellungen/schriften/{id}/datei', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'file']));
 $router->post('/einstellungen/schriften/{id}/loeschen', $auth->guard(Permission::Administration, [$pdfFontSettingsController, 'delete']));
 $router->post('/einstellungen/pdf-design', $auth->guard(Permission::Administration, [$pdfDesignSettingsController, 'update']));

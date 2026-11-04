@@ -9,6 +9,7 @@ use App\Application\Query\QueryBus;
 use App\Application\Settings\Command\AddGoogleFont;
 use App\Application\Settings\Command\DeletePdfFont;
 use App\Application\Settings\Command\UpdatePdfFontAssignments;
+use App\Application\Settings\Command\UpdateUiFontAssignments;
 use App\Application\Settings\Command\UploadPdfFont;
 use App\Application\Settings\Query\GetPdfFontSettings;
 use App\Domain\Exception\ConflictException;
@@ -16,10 +17,12 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Settings\PdfFont;
 use App\Domain\Settings\PdfFontRole;
+use App\Domain\Settings\UiFontRole;
 use App\Infrastructure\FileStorage\LocalFileStorage;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
+use App\Infrastructure\Http\UiFonts;
 use App\Infrastructure\Http\View;
 use App\Infrastructure\Pdf\SimplePdfWriter;
 
@@ -98,6 +101,52 @@ final class PdfFontSettingsController
             Flash::error(implode(' ', $e->errors()));
         }
         Response::redirect('/einstellungen/schriften');
+    }
+
+    /** Schriftarten je Bereich der Oberfläche speichern. */
+    public function assignUi(Request $request): void
+    {
+        $assignments = [];
+        foreach (UiFontRole::cases() as $role) {
+            $assignments[$role->value] = $request->input($role->value);
+        }
+        try {
+            $this->commands->dispatch(new UpdateUiFontAssignments($assignments));
+            Flash::success('Die Schriften der Oberfläche wurden gespeichert.');
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        }
+        Response::redirect('/einstellungen/schriften#oberflaeche');
+    }
+
+    /**
+     * Schriftdatei für die Oberfläche (/schriften/{id}/{schnitt}): öffentlich,
+     * weil schon die Anmeldeseite sie braucht — aber nur für Schriften, die
+     * einem Oberflächen-Bereich zugeordnet sind. Mit Versionsparameter ein Jahr
+     * im Browser zwischengespeichert.
+     */
+    public function publicFile(Request $request): void
+    {
+        $fontId = $request->param('id');
+        $style = $request->param('style');
+        if (!UiFonts::isPublic($fontId) || !in_array($style, PdfFont::STYLES, true)) {
+            Response::notFound('Schriftdatei wurde nicht gefunden.');
+
+            return;
+        }
+        foreach (UiFontRole::cases() as $role) {
+            $font = UiFonts::fontFor($role);
+            if ($font === null || $font->id !== $fontId) {
+                continue;
+            }
+            $file = $font->files()[$style] ?? null;
+            if ($file !== null && is_file($path = $this->fileStorage->absolutePath('fonts', $file))) {
+                Response::cachedFile($path, basename($file), 'font/ttf', $request->query('v') === UiFonts::version($file));
+
+                return;
+            }
+        }
+        Response::notFound('Schriftdatei wurde nicht gefunden.');
     }
 
     /** Schriftdatei für die Vorschau im Browser (@font-face), nur für angemeldete Administratoren. */

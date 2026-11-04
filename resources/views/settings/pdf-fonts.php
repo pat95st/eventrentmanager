@@ -4,6 +4,7 @@
 /** @var string[] $suggestions */
 
 use App\Domain\Settings\PdfFontRole;
+use App\Domain\Settings\UiFontRole;
 use function App\Infrastructure\Http\e;
 
 $csrf = e(\App\Infrastructure\Http\Csrf::token());
@@ -27,7 +28,7 @@ $card = 'rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 d
 
 <div class="mb-6">
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Schriftarten</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Schriften aus Google Fonts für die Bereiche in allen PDF-Dokumenten und -Listen (Angebot, AB, Rechnung, Mahnung, Packliste, Preisliste, Stückliste).</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Schriften aus Google Fonts (oder hochgeladen) für die Bereiche in allen PDF-Dokumenten und -Listen sowie für die Oberfläche der Anwendung.</p>
 </div>
 
 <div class="max-w-3xl space-y-6">
@@ -36,8 +37,8 @@ $card = 'rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 d
         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
         <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
-                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Schrift je Bereich</h2>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Ohne Auswahl gilt die Schrift von „Text“, ohne diese die bisherige Standardschrift Helvetica.</p>
+                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Dokumente (PDF): Schrift je Bereich</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Angebot, AB, Rechnung, Mahnung, Packliste, Preisliste, Stückliste. Ohne Auswahl gilt die Schrift von „Text“, ohne diese die bisherige Standardschrift Helvetica.</p>
             </div>
             <a href="/einstellungen/schriften/vorschau.pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Vorschau-PDF</a>
         </div>
@@ -63,6 +64,41 @@ $card = 'rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 d
 
         <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
             <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Zuordnung speichern</button>
+        </div>
+    </form>
+
+    <!-- Oberfläche -->
+    <form id="oberflaeche" method="post" action="/einstellungen/schriften/oberflaeche" class="<?= $card ?> space-y-5">
+        <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+        <div>
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Oberfläche: Schrift je Bereich</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Gilt für alle Benutzer, auch auf der Anmeldeseite und in der installierten App. Ohne Auswahl gilt die Schrift von „Text“, ohne diese die Systemschrift des Geräts.
+                Die Schriftdateien liefert der eigene Server aus – es wird nichts von Google geladen.
+            </p>
+        </div>
+
+        <?php foreach (UiFontRole::cases() as $role): ?>
+            <?php $selected = $assignments[$role->value] ?? ''; ?>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:items-center">
+                <div>
+                    <label for="<?= e($role->value) ?>" class="block text-sm font-medium text-slate-700 dark:text-slate-300"><?= e($role->label()) ?></label>
+                    <p class="text-xs text-slate-400 dark:text-slate-500"><?= e($role->hint()) ?></p>
+                </div>
+                <div>
+                    <select id="<?= e($role->value) ?>" name="<?= e($role->value) ?>" data-ui-font-select data-role="<?= e($role->value) ?>" data-preview="preview_<?= e($role->value) ?>" class="<?= $input ?>">
+                        <option value=""><?= match ($role) { UiFontRole::Body => 'Systemschrift (Standard)', UiFontRole::Numbers => 'Festbreitenschrift (Standard)', default => 'wie „Text“' } ?></option>
+                        <?php foreach ($fonts as $font): ?>
+                            <option value="<?= e($font->id) ?>" <?= $selected === $font->id ? 'selected' : '' ?>><?= e($font->family) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <p id="preview_<?= e($role->value) ?>" class="mt-1 truncate text-slate-700 dark:text-slate-300" style="font-size:1.05rem"><?= $role === UiFontRole::Numbers ? 'THO-PLM-0012 · RE-2026-0042 · K-10001' : 'Veranstaltungen · Artikel · ÄÖÜ äöü ß 1.249,00 €' ?></p>
+                </div>
+            </div>
+        <?php endforeach; ?>
+
+        <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+            <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Schriften der Oberfläche speichern</button>
         </div>
     </form>
 
@@ -154,6 +190,25 @@ $card = 'rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 d
     }
     document.querySelectorAll('[data-font-select]').forEach(function (select) { select.addEventListener('change', update); });
     update();
+
+    // Vorschau Oberfläche: ohne Auswahl "Text" bzw. System-/Festbreitenschrift.
+    var uiBody = document.getElementById('ui_body');
+    var SYSTEM = 'ui-sans-serif, system-ui, sans-serif';
+    var MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    function uiFamily(select) {
+        var role = select.getAttribute('data-role');
+        var value = select.value || (role !== 'ui_body' && role !== 'ui_numbers' && uiBody ? uiBody.value : '');
+        var fallback = role === 'ui_numbers' ? MONO : SYSTEM;
+        return value ? "'pdf-" + value + "', " + fallback : fallback;
+    }
+    function updateUi() {
+        document.querySelectorAll('[data-ui-font-select]').forEach(function (select) {
+            var preview = document.getElementById(select.getAttribute('data-preview'));
+            if (preview) { preview.style.fontFamily = uiFamily(select); }
+        });
+    }
+    document.querySelectorAll('[data-ui-font-select]').forEach(function (select) { select.addEventListener('change', updateUi); });
+    updateUi();
     document.querySelectorAll('[data-loading-text]').forEach(function (button) {
         button.closest('form').addEventListener('submit', function () { button.disabled = true; button.textContent = button.getAttribute('data-loading-text'); });
     });

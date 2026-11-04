@@ -17,6 +17,7 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Passwort festlegen - Materialverleih Verwaltung</title>
 <link rel="stylesheet" href="/assets/css/app.css">
+<?= class_exists(\App\Infrastructure\Http\UiFonts::class) ? \App\Infrastructure\Http\UiFonts::styles() : '' /* Schriftarten der Oberfläche */ ?>
 <?php require __DIR__ . '/../_pwa_head.php'; ?>
 <script>
   (function () {

@@ -102,7 +102,9 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
-  if (url.origin === self.location.origin && BRANDING_PATHS.indexOf(url.pathname) !== -1 && url.searchParams.has('v')) {
+  // Schriftdateien der Oberfläche (/schriften/{id}/{schnitt}?v=…) wie das Branding behandeln.
+  var isUiFont = url.origin === self.location.origin && url.pathname.indexOf('/schriften/') === 0 && url.searchParams.has('v');
+  if (isUiFont || (url.origin === self.location.origin && BRANDING_PATHS.indexOf(url.pathname) !== -1 && url.searchParams.has('v'))) {
     // Cache-first: die URL ändert sich bei jedem neuen Upload, eine
     // gecachte Antwort ist also nie veraltet. Ältere Versionen derselben
     // Datei werden beim Speichern der neuen entfernt.

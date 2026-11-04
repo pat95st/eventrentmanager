@@ -144,6 +144,7 @@ $canDocuments = $canRentals;
   siehe package.json ("npm run build:css") und README.
 -->
 <link rel="stylesheet" href="/assets/css/app.css">
+<?= class_exists(\App\Infrastructure\Http\UiFonts::class) ? \App\Infrastructure\Http\UiFonts::styles() : '' /* Schriftarten der Oberfläche */ ?>
 <style>
   /* Modals (Nutzerwunsch): abgedunkelter Hintergrund, mehr Innenabstand,
      etwas größer. Klassen wie bg-black/40 oder backdrop:… fehlen im

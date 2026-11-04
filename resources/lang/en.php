@@ -180,6 +180,7 @@ return [
     'articles.table.product_name' => 'Product name',
     'articles.table.prefix' => 'Prefix',
     'articles.table.dimensions' => 'Dimensions',
+    'articles.table.stock' => 'Stock',
     'articles.table.weight' => 'Weight',
     'articles.table.electrical_inspection' => 'Electrical inspection',
     'articles.table.electrical_inspection_required_short' => '⚡ required',

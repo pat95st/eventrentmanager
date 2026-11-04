@@ -78,6 +78,28 @@ final class MariadbInventoryNumberRepository implements InventoryNumberRepositor
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
 
+    public function countActiveByArticles(array $articleIds): array
+    {
+        $articleIds = array_values(array_unique(array_filter($articleIds)));
+        if ($articleIds === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($articleIds), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT n.article_id, COUNT(*) AS cnt FROM inventory_numbers n
+             LEFT JOIN sales s ON s.inventory_number_id = n.id
+             WHERE n.article_id IN ($placeholders) AND s.id IS NULL
+             GROUP BY n.article_id"
+        );
+        $stmt->execute($articleIds);
+        $counts = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $counts[$row['article_id']] = (int) $row['cnt'];
+        }
+
+        return $counts;
+    }
+
     public function findActiveByArticle(string $articleId): array
     {
         $stmt = $this->pdo->prepare(

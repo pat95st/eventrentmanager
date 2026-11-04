@@ -25,6 +25,8 @@ final class ArticleListItem
         // komplett scheitert — die Ansicht zeigt dann "–" statt eines Namens.
         public readonly ?Manufacturer $manufacturer,
         public readonly ?Category $category,
+        // Exemplare im Bestand (nicht verkauft); null bei Bundles (bestehen aus anderen Artikeln).
+        public readonly ?int $stockCount = null,
     ) {
     }
 }

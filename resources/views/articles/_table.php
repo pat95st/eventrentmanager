@@ -25,6 +25,7 @@ use function App\Infrastructure\Http\t;
                     <th class="px-4 py-2.5"><?= e(t('articles.table.product_name')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.prefix')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.category')) ?></th>
+                    <th class="px-4 py-2.5 text-right"><?= e(t('articles.table.stock')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.dimensions')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.weight')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('articles.table.electrical_inspection')) ?></th>
@@ -60,6 +61,9 @@ use function App\Infrastructure\Http\t;
                             <?= ($manufacturer?->prefix !== null && $article->prefix !== null) ? e($manufacturer->prefix . '-' . $article->prefix) : '–' ?>
                         </td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($category?->name ?? '–') ?></td>
+                        <td class="px-4 py-3 text-right font-medium text-slate-700 dark:text-slate-300" data-sort-value="<?= $item->stockCount ?? -1 ?>" style="font-variant-numeric:tabular-nums">
+                            <?php if ($item->stockCount === null): ?><span class="text-xs font-normal text-slate-400 dark:text-slate-500">–</span><?php else: ?><span class="<?= $item->stockCount === 0 ? 'text-red-600 dark:text-red-400' : '' ?>"><?= $item->stockCount ?></span><?php endif; ?>
+                        </td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($article->dimensions ?? '–') ?></td>
                         <td class="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                             <?= $article->weightValue !== null ? e($article->weightValue . ' ' . $article->weightUnit) : '–' ?>

@@ -1081,6 +1081,7 @@ $queryBus->register(\App\Application\Article\Query\ListArticlesForDisplay::class
     $listArticlesHandler,
     $manufacturerRepository,
     $categoryRepository,
+    $inventoryNumberRepository,
 ));
 $queryBus->register(\App\Application\Article\Query\GetArticle::class, new GetArticleHandler(
     $articleRepository,

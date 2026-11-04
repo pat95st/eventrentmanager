@@ -27,6 +27,14 @@ interface InventoryNumberRepositoryInterface
      */
     public function findActiveByArticle(string $articleId): array;
 
+    /**
+     * Anzahl der Exemplare im Bestand (nicht verkauft) je Artikel, für die Artikelliste.
+     *
+     * @param string[] $articleIds
+     * @return array<string, int> Artikel-ID => Anzahl (fehlende IDs = 0)
+     */
+    public function countActiveByArticles(array $articleIds): array;
+
     /** @return InventoryNumber[] */
     public function findByReceipt(string $receiptId): array;
 

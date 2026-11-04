@@ -26,6 +26,7 @@ final class ListArticlesForDisplayHandler implements QueryHandlerInterface
         private readonly ListArticlesHandler $listArticles,
         private readonly ManufacturerRepositoryInterface $manufacturers,
         private readonly CategoryRepositoryInterface $categories,
+        private readonly ?\App\Domain\InventoryNumber\InventoryNumberRepositoryInterface $inventoryNumbers = null,
     ) {
     }
 
@@ -48,9 +49,11 @@ final class ListArticlesForDisplayHandler implements QueryHandlerInterface
 
         $manufacturerCache = [];
         $categoryCache = [];
+        // Bestand je Einzelartikel mit einer Abfrage für die ganze Seite.
+        $stock = $this->inventoryNumbers?->countActiveByArticles(array_map(static fn (Article $a) => $a->id, array_filter($result->items, static fn (Article $a) => !$a->isBundle))) ?? null;
 
         $items = array_map(
-            function (Article $article) use (&$manufacturerCache, &$categoryCache): ArticleListItem {
+            function (Article $article) use (&$manufacturerCache, &$categoryCache, $stock): ArticleListItem {
                 if (!array_key_exists(($article->manufacturerId ?? ''), $manufacturerCache)) {
                     $manufacturerCache[($article->manufacturerId ?? '')] = $this->manufacturers->findById(($article->manufacturerId ?? ''));
                 }
@@ -63,7 +66,7 @@ final class ListArticlesForDisplayHandler implements QueryHandlerInterface
                     $category = $categoryCache[$article->categoryId];
                 }
 
-                return new ArticleListItem($article, $manufacturerCache[($article->manufacturerId ?? '')], $category);
+                return new ArticleListItem($article, $manufacturerCache[($article->manufacturerId ?? '')], $category, $stock === null || $article->isBundle ? null : ($stock[$article->id] ?? 0));
             },
             $result->items
         );

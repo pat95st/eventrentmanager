@@ -1944,6 +1944,7 @@ $router->post('/veranstaltungen/{id}/loeschen', $auth->guard(Permission::Ausgabe
 $router->post('/veranstaltungen/{id}/logistik', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateLogistics']));
 
 $router->post('/veranstaltungen/{id}/artikel', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'addItem']));
+$router->post('/veranstaltungen/{id}/artikel/mehrere', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'addItems']));
 $router->post('/veranstaltungsposten/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateItem']));
 $router->post('/veranstaltungsposten/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'deleteItem']));
 $router->post('/veranstaltungssets/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'removeSetBooking']));

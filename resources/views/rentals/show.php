@@ -397,23 +397,35 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
         </div>
     <?php endif; ?>
 
-    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/artikel" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-        <div>
-            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.article_label')) ?></label>
-            <select name="article_id" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                <option value=""><?= e(t('rentals.show.article_placeholder')) ?></option>
-                <?php foreach ($articles as $article): ?>
-                    <option value="<?= e($article->id) ?>"><?= e(($articleDisplayNames[$article->id] ?? $article->name) . ($article->isBundle ? ' (' . t('articles.badge.bundle') . ')' : '')) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div>
-            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.quantity_label')) ?></label>
-            <input type="number" name="quantity" min="1" value="1" class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-        </div>
-        <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-            <?= e(t('rentals.show.add')) ?>
+    <!-- Artikel hinzufügen über das Artikel-Auswahl-Modal der Dokumente (Nutzerwunsch):
+         mehrere Artikel samt Menge auf einmal, mit Suche und Hersteller-/Kategoriefilter. -->
+    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/artikel/mehrere" data-rental-picker-form class="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+        <div data-rental-picker-items hidden></div>
+        <button type="button" data-rental-picker-open class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+            + <?= e(t('rentals.show.add')) ?> …
         </button>
+        <span class="text-xs text-slate-400 dark:text-slate-500">Mehrere Artikel samt Menge auswählen – mit Suche und Filter nach Hersteller und Kategorie.</span>
     </form>
+    <script>
+        document.addEventListener('click', function (event) {
+            if (!event.target.closest('[data-rental-picker-open]') || !window.ArticlePicker) { return; }
+            window.ArticlePicker.open(function (items) {
+                var form = document.querySelector('[data-rental-picker-form]');
+                var box = form.querySelector('[data-rental-picker-items]');
+                box.innerHTML = '';
+                items.forEach(function (item, index) {
+                    ['article_id', 'quantity'].forEach(function (key) {
+                        var input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = 'items[' + index + '][' + key + ']';
+                        input.value = item[key];
+                        box.appendChild(input);
+                    });
+                });
+                if (items.length > 0) { form.submit(); }
+            });
+        });
+    </script>
 </div>
+<?php \App\Infrastructure\Http\renderArticlePickerModal(); /* Artikel-Auswahl-Modal */ ?>

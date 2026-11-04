@@ -783,6 +783,45 @@ final class RentalController
         Response::redirect('/veranstaltungen/' . $rentalId);
     }
 
+    /**
+     * Mehrere Artikel auf einmal hinzufügen (Artikel-Auswahl-Modal, wie bei
+     * den Dokumenten). Jede Zeile läuft durch AddRentalItem (Verfügbarkeit,
+     * Bundles usw.); fehlgeschlagene Zeilen werden gesammelt gemeldet.
+     */
+    public function addItems(Request $request): void
+    {
+        $rentalId = $request->param('id');
+        $rows = $request->post['items'] ?? [];
+        $added = 0;
+        $errors = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            if (!is_array($row) || trim((string) ($row['article_id'] ?? '')) === '') {
+                continue;
+            }
+            try {
+                $this->commands->dispatch(new AddRentalItem($rentalId, (string) $row['article_id'], (string) ($row['quantity'] ?? '1')));
+                $added++;
+            } catch (ValidationException $e) {
+                $errors[] = implode(' ', $e->errors());
+            } catch (NotFoundException $e) {
+                if ($added === 0 && $errors === [] && str_contains($e->getMessage(), $rentalId)) {
+                    Response::notFound($e->getMessage());
+
+                    return;
+                }
+                $errors[] = $e->getMessage();
+            }
+        }
+        if ($added > 0) {
+            Flash::success($added === 1 ? t('rentals.flash.item_added_full') : $added . ' Artikel wurden hinzugefügt.');
+        }
+        if ($errors !== []) {
+            Flash::error(implode(' ', array_unique($errors)));
+        }
+
+        Response::redirect('/veranstaltungen/' . $rentalId);
+    }
+
     /** Entfernt ein gebuchtes Bundle samt Bestandteil-Mengen (Migration 107). */
     public function removeBundle(Request $request): void
     {

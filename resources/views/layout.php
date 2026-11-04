@@ -189,6 +189,7 @@ $canDocuments = $canRentals;
 <script src="/assets/js/modal-fade.js"></script>
 <script src="/assets/js/sortable-tables.js" defer></script>
 <script src="/assets/js/pdf-viewer.js" defer></script>
+<script src="/assets/js/row-actions.js" defer></script>
 <?php require __DIR__ . '/_pwa_head.php'; ?>
 <script>
   // CSRF-Token einmal pro Seitenaufruf global verfügbar machen, für alle

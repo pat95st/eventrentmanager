@@ -60,7 +60,10 @@ $bundleComponentRows ??= [];
 
 <div class="mb-6">
     <a href="<?= $article !== null ? '/artikel/' . e($article->id) : '/artikel' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.form.back')) ?></a>
-    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $article !== null ? e(t('articles.edit')) : e(t('articles.new')) ?></h1>
+    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $editingId !== null ? e(t('articles.edit')) : ($article !== null ? 'Artikel duplizieren' : e(t('articles.new'))) ?></h1>
+<?php if ($article !== null && $editingId === null): ?>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Kopie von „<?= e($article->name) ?>“ – bitte ein neues Präfix für die Inventurnummern vergeben. Zubehör und Vor-Ausgabe-Checks werden mit übernommen, Inventurnummern und Bilder nicht.</p>
+<?php endif; ?>
 </div>
 
 <form
@@ -69,6 +72,7 @@ $bundleComponentRows ??= [];
     class="max-w-4xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+    <?php if ($article !== null && $editingId === null): /* Duplizieren: Quelle für Zubehör/Checks */ ?><input type="hidden" name="duplicate_of" value="<?= e($article->id) ?>"><?php endif; ?>
     <div>
         <label for="name" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.product_name')) ?></label>
         <input type="text" id="name" name="name" required
@@ -377,7 +381,7 @@ $bundleComponentRows ??= [];
     </div>
 </form>
 
-<?php if ($article !== null): ?>
+<?php if ($editingId !== null): ?>
     <p class="mt-4 max-w-2xl text-xs text-slate-400 dark:text-slate-500">
         <?= e(t('articles.form.images_hint')) ?>
     </p>

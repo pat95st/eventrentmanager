@@ -387,6 +387,48 @@ final class ArticleController
         $this->renderForm(null, [], $presetCategoryId !== null ? ['category_id' => $presetCategoryId] : []);
     }
 
+    /**
+     * Artikel duplizieren (Nutzerwunsch): Anlageformular mit allen Angaben
+     * des Artikels (inkl. Bundle-Bestandteilen, Stromverteiler- und
+     * Leitungsangaben), aber als NEUER Artikel. Präfix bleibt leer (muss je
+     * Hersteller eindeutig sein), der Name bekommt „(Kopie)“. Zubehör und
+     * Vor-Ausgabe-Checks kopiert store() nach dem Anlegen (duplicate_of).
+     */
+    public function duplicate(Request $request): void
+    {
+        try {
+            $detail = $this->queries->ask(new GetArticle($request->param('id')));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        $this->renderForm($detail->article, [], ['name' => $detail->article->name . ' (Kopie)', 'prefix' => '']);
+    }
+
+    /** Zubehör und Vor-Ausgabe-Checks des Quellartikels auf den neuen Artikel übertragen. */
+    private function copyArticleExtras(string $sourceId, string $targetId): void
+    {
+        try {
+            $source = $this->queries->ask(new GetArticle($sourceId));
+        } catch (NotFoundException) {
+            return;
+        }
+        foreach ($source->accessories as $accessory) {
+            try {
+                $this->commands->dispatch(new AddArticleAccessory($targetId, (string) $accessory->quantity, $accessory->description));
+            } catch (ValidationException) {
+            }
+        }
+        foreach ($source->preIssueChecks as $check) {
+            try {
+                $this->commands->dispatch(new AddArticlePreIssueCheck($targetId, $check->description));
+            } catch (ValidationException) {
+            }
+        }
+    }
+
     /** Eigene Seite zum Anlegen eines Bundles (articles/bundle-form.php). */
     public function createBundle(Request $request): void
     {
@@ -424,10 +466,22 @@ final class ArticleController
 
         try {
             $articleId = $this->commands->dispatch($command);
+            $duplicateOf = $this->nullIfEmpty($request->input('duplicate_of'));
+            if ($duplicateOf !== null) {
+                $this->copyArticleExtras($duplicateOf, (string) $articleId);
+            }
             Flash::success(t('articles.flash.created'));
             Response::redirect('/artikel/' . $articleId);
         } catch (ValidationException $e) {
-            $this->renderForm(null, $e->errors(), $this->oldFromCommand($command));
+            $source = null;
+            $duplicateOf = $this->nullIfEmpty($request->input('duplicate_of'));
+            if ($duplicateOf !== null) {
+                try {
+                    $source = $this->queries->ask(new GetArticle($duplicateOf))->article;
+                } catch (NotFoundException) {
+                }
+            }
+            $this->renderForm($source, $e->errors(), $this->oldFromCommand($command));
         }
     }
 

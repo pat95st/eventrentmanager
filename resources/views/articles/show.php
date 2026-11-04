@@ -154,6 +154,9 @@ $availabilityStatusMeta = [
         <a href="/artikel/<?= e($article->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('common.edit')) ?>
         </a>
+        <a href="/artikel/<?= e($article->id) ?>/duplizieren" title="Neuen Artikel mit denselben Angaben anlegen" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+            Duplizieren
+        </a>
         <?php if ($article->isActive): ?>
             <form method="post" action="/artikel/<?= e($article->id) ?>/deaktivieren" data-confirm="<?= e(t('articles.show.confirm_deactivate')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">

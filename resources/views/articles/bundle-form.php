@@ -25,7 +25,10 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
 
 <div class="mb-6">
     <a href="<?= $article !== null ? '/artikel/' . e($article->id) : '/artikel' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.form.back')) ?></a>
-    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $article !== null ? e(t('articles.bundle.edit')) : e(t('articles.bundle.new')) ?></h1>
+    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $editingId !== null ? e(t('articles.bundle.edit')) : ($article !== null ? 'Bundle duplizieren' : e(t('articles.bundle.new'))) ?></h1>
+<?php if ($article !== null && $editingId === null): ?>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Kopie von „<?= e($article->name) ?>“ – bitte ein neues Präfix für die Inventurnummern vergeben. Zubehör und Vor-Ausgabe-Checks werden mit übernommen, Inventurnummern und Bilder nicht.</p>
+<?php endif; ?>
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.bundle.subtitle')) ?></p>
 </div>
 
@@ -35,6 +38,7 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
     class="max-w-4xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+    <?php if ($article !== null && $editingId === null): /* Duplizieren: Quelle für Zubehör/Checks */ ?><input type="hidden" name="duplicate_of" value="<?= e($article->id) ?>"><?php endif; ?>
     <input type="hidden" name="is_bundle" value="1">
     <input type="hidden" name="is_billable" value="1">
 

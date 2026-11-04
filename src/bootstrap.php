@@ -1711,6 +1711,7 @@ $router->get('/artikel/preisliste.pdf', $auth->guard(Permission::Artikelverwaltu
 $router->get('/artikel/preisliste.csv', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'exportPriceListCsv']));
 $router->get('/artikel/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'show']));
 $router->get('/artikel/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'edit']));
+$router->get('/artikel/{id}/duplizieren', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'duplicate']));
 // Stromverteiler (Migration 117)
 $router->get('/artikel/{id}/stromverteiler', $auth->guard(Permission::Artikelverwaltung, [$powerDistributorController, 'edit']));
 $router->post('/artikel/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'update']));

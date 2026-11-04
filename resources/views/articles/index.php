@@ -28,6 +28,11 @@ use function App\Infrastructure\Http\t;
         <a href="/artikel/neu?stromverteiler=1" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
             + Neuer Stromverteiler
         </a>
+        <?php if ($hasCableCategory ?? false): ?>
+            <a href="/artikel/neu?leitung=1" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
+                + Neue Leitung
+            </a>
+        <?php endif; ?>
         <a href="/artikel/neues-bundle" class="rounded-md border border-brand-600 px-4 py-2 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-slate-800">
             + <?= e(t('articles.bundle.new')) ?>
         </a>

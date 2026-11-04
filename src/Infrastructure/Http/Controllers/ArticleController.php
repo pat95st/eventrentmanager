@@ -331,6 +331,8 @@ final class ArticleController
         $categories = $this->queries->ask(new ListCategories());
 
         $viewData = [
+            // "+ Neue Leitung" nur, wenn es die Kategorie "Leitungen" gibt (Migration 125).
+            'hasCableCategory' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()) !== null,
             'articles' => $result->items,
             'manufacturers' => $manufacturers,
             'categories' => $categories,
@@ -360,9 +362,14 @@ final class ArticleController
 
     public function create(Request $request): void
     {
-        // "+ Neuer Stromverteiler" in der Artikelliste: Abschnitt vorausgewählt (Migration 117).
-        $powerDistributorCategoryId = $request->query('stromverteiler') === '1' ? $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()) : null;
-        $this->renderForm(null, [], $powerDistributorCategoryId !== null ? ['category_id' => $powerDistributorCategoryId] : []);
+        // "+ Neuer Stromverteiler" / "+ Neue Leitung" in der Artikelliste: Kategorie
+        // und damit der passende Abschnitt vorausgewählt (Migrationen 117/125).
+        $presetCategoryId = match (true) {
+            $request->query('stromverteiler') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
+            $request->query('leitung') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
+            default => null,
+        };
+        $this->renderForm(null, [], $presetCategoryId !== null ? ['category_id' => $presetCategoryId] : []);
     }
 
     /** Eigene Seite zum Anlegen eines Bundles (articles/bundle-form.php). */

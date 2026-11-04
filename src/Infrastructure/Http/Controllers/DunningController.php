@@ -71,7 +71,7 @@ final class DunningController
         $layout = $this->queries->ask(new \App\Application\Settings\Query\GetPdfLayoutSettings(\App\Domain\Settings\PdfLayout\PdfDocumentType::Dunning));
         $pdf = $this->pdfGenerator->generate($detail, $companySettings, $layout);
 
-        Response::download($pdf, 'Mahnung-' . $detail->notice->dunningNumber . '.pdf', 'application/pdf');
+        Response::inlinePdf($pdf, 'Mahnung-' . $detail->notice->dunningNumber . '.pdf');
     }
 
     public function emailPdf(Request $request): void

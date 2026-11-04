@@ -330,7 +330,7 @@ final class InvoiceController
 
         $filename = 'Rechnung-' . ($detail->invoice->invoiceNumber ?? ('Entwurf-' . strtoupper(substr($detail->invoice->id, 0, 8)))) . '.pdf';
 
-        Response::download($pdf, $filename, 'application/pdf');
+        Response::inlinePdf($pdf, $filename);
     }
 
     /** Lädt das XRechnung-XML herunter — nur für finalisierte (bereits versendete) Rechnungen, siehe XRechnungGenerator. */

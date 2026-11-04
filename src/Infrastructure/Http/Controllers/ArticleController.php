@@ -104,7 +104,7 @@ final class ArticleController
             withShortTexts: $request->query('short_texts') === '1',
         );
 
-        Response::download($pdf, 'Preisliste.pdf', 'application/pdf');
+        Response::inlinePdf($pdf, 'Preisliste.pdf');
     }
 
     /** Exportiert dieselbe Preisliste als CSV-Download (siehe exportPriceListPdf). */

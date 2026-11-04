@@ -42,7 +42,7 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
         <a href="/veranstaltungen/<?= e($rental->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('common.edit')) ?>
         </a>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/packliste.pdf" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/packliste.pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('rentals.show.export_pdf')) ?>
         </a>
         <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rechnung-erstellen" data-confirm="<?= e(t('rentals.show.confirm_create_invoice')) ?>">

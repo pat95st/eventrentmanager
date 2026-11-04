@@ -82,7 +82,7 @@ $rows = $detail->orderedRows();
             <a href="/angebote/<?= e($offer->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('offers.show.edit_valid_until')) ?></a>
         <?php endif; ?>
 
-        <a href="/angebote/<?= e($offer->id) ?>/angebot.pdf" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+        <a href="/angebote/<?= e($offer->id) ?>/angebot.pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('offers.show.export_pdf')) ?>
         </a>
         <form method="post" action="/angebote/<?= e($offer->id) ?>/rechnung-erstellen" data-confirm="<?= e(t('offers.show.confirm_create_invoice')) ?>">

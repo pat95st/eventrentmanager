@@ -304,7 +304,7 @@ final class OrderConfirmationController
 
         $filename = 'Auftragsbestaetigung-' . $detail->orderConfirmation->orderConfirmationNumber . '.pdf';
 
-        Response::download($pdf, $filename, 'application/pdf');
+        Response::inlinePdf($pdf, $filename);
     }
 
     /** @param array<string, string> $errors @param array<string, mixed> $old */

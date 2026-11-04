@@ -112,7 +112,7 @@ $rows = $detail->orderedRows();
             <?php /* Versendete Rechnungen werden per Stornorechnung storniert (Migration 121), siehe Abschnitt "Rechnungskorrekturen". */ ?>
         <?php endif; ?>
 
-        <a href="/rechnungen/<?= e($invoice->id) ?>/pdf" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+        <a href="/rechnungen/<?= e($invoice->id) ?>/pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('invoices.show.export_pdf')) ?>
         </a>
         <?php if ($invoice->isFinalized()): ?>
@@ -182,7 +182,7 @@ $rows = $detail->orderedRows();
                         <?php endif; ?>
                     </span>
                     <span class="flex items-center gap-3">
-                        <a href="/mahnungen/<?= e($notice->id) ?>/pdf" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('invoices.show.dunning_export_pdf')) ?></a>
+                        <a href="/mahnungen/<?= e($notice->id) ?>/pdf" target="_blank" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('invoices.show.dunning_export_pdf')) ?></a>
                         <details class="relative">
                             <summary class="cursor-pointer list-none text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('invoices.show.send_email')) ?></summary>
                             <form method="post" action="/mahnungen/<?= e($notice->id) ?>/email"

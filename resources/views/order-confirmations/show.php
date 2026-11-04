@@ -78,7 +78,7 @@ $rows = $detail->orderedRows();
             </form>
         <?php endif; ?>
 
-        <a href="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/auftragsbestaetigung.pdf" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+        <a href="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/auftragsbestaetigung.pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('order_confirmations.show.export_pdf')) ?>
         </a>
     </div>

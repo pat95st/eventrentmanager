@@ -179,6 +179,20 @@ final class Response
     }
 
     /**
+     * Dynamisch erzeugtes PDF zur Anzeige im Browser bzw. in der PDF-Ansicht
+     * der App ausliefern (Content-Disposition: inline), statt es direkt
+     * herunterzuladen. Speichern bleibt über den PDF-Viewer möglich.
+     */
+    public static function inlinePdf(string $content, string $downloadName): void
+    {
+        header('Content-Type: application/pdf');
+        header('Content-Length: ' . (string) strlen($content));
+        header('Content-Disposition: inline; filename="' . rawurlencode($downloadName) . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
+        echo $content;
+        exit;
+    }
+
+    /**
      * Liefert dynamisch erzeugte Binärdaten (z. B. ein generiertes PDF) als
      * Download aus, statt eine bereits gespeicherte Datei zu streamen.
      */

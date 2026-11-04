@@ -685,7 +685,7 @@ final class RentalController
 
         $filename = 'Packliste-' . $this->sanitizeFilename($detail->rental->eventName !== '' ? $detail->rental->eventName : $detail->rental->id) . '.pdf';
 
-        Response::download($pdf, $filename, 'application/pdf');
+        Response::inlinePdf($pdf, $filename);
     }
 
     /** Verschickt dieselbe Packliste (siehe exportPackingListPdf) per E-Mail als PDF-Anhang statt als Download. */

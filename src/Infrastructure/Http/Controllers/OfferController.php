@@ -374,7 +374,7 @@ final class OfferController
 
         $filename = 'Angebot-' . strtoupper(substr($detail->offer->id, 0, 8)) . '.pdf';
 
-        Response::download($pdf, $filename, 'application/pdf');
+        Response::inlinePdf($pdf, $filename);
     }
 
     public function emailPdf(Request $request): void

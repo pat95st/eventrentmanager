@@ -1315,7 +1315,15 @@ $queryBus->register(\App\Application\Calendar\Query\ListCalendarsForUser::class,
 $queryBus->register(\App\Application\Calendar\Query\ListRentalsForCalendar::class, new \App\Application\Calendar\Query\ListRentalsForCalendarHandler($calendarRepository, $rentalRepository, $categoryRepository));
 $queryBus->register(\App\Application\Settings\Query\GetCalDavSigningSettings::class, new \App\Application\Settings\Query\GetCalDavSigningSettingsHandler($calDavSigningSettingsRepository));
 $queryBus->register(\App\Application\AddressBook\Query\ListCardDavCredentialsForUser::class, new \App\Application\AddressBook\Query\ListCardDavCredentialsForUserHandler($cardDavCredentialRepository));
-$queryBus->register(\App\Application\Reporting\Query\GetIncomeExpenseOverview::class, new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository, corrections: $invoiceCorrectionRepository));
+$incomeExpenseOverviewHandler = new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository, corrections: $invoiceCorrectionRepository);
+$queryBus->register(\App\Application\Reporting\Query\GetIncomeExpenseOverview::class, $incomeExpenseOverviewHandler);
+// Dashboard-Statistiken (Chart.js)
+$queryBus->register(\App\Application\Statistics\Query\GetStatistic::class, new \App\Application\Statistics\Query\GetStatisticHandler(
+    new \App\Infrastructure\Persistence\Pdo\MariadbStatisticsReadModel($pdo),
+    $incomeExpenseOverviewHandler,
+    $articleRepository,
+    $manufacturerRepository,
+));
 $queryBus->register(\App\Application\Reporting\Query\GetRevenueForecast::class, new \App\Application\Reporting\Query\GetRevenueForecastHandler($offerRepository, $orderConfirmationRepository, $invoiceRepository, $invoiceSettingsRepository));
 
 $queryBus->register(\App\Application\Printing\Query\ListLabelPrinters::class, new ListLabelPrintersHandler($labelPrinterRepository));
@@ -1331,6 +1339,7 @@ $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageUploadLog:
 // --- Controller --------------------------------------------------------
 $dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository, $supplierRepository);
 $reportingController = new \App\Infrastructure\Http\Controllers\ReportingController($queryBus);
+$statisticsController = new \App\Infrastructure\Http\Controllers\StatisticsController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
 $cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
@@ -1602,6 +1611,8 @@ $router->get('/passkeys', $auth->guard(null, [$passkeyController, 'list']));
 $router->post('/passkeys/{id}/loeschen', $auth->guard(null, [$passkeyController, 'delete']));
 
 $router->get('/', $auth->guard(null, [$dashboardController, 'index']));
+// Berechtigung je Statistik prüft der Controller (siehe StatisticKey::requiredPermission()).
+$router->get('/statistiken/{key}', $auth->guard(null, [$statisticsController, 'show']));
 
 $router->get('/kategorien', $auth->guard(Permission::Artikelverwaltung, [$categoryController, 'index']));
 $router->get('/kategorien/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$categoryController, 'edit']));

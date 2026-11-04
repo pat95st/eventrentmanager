@@ -10,6 +10,9 @@ use App\Application\Purchase\Query\ListPurchaseOrders;
 use App\Application\Query\QueryBus;
 use App\Application\Reporting\Query\GetIncomeExpenseOverview;
 use App\Application\Rma\Query\ListRmas;
+use App\Application\Statistics\Query\GetStatistic;
+use App\Application\Statistics\Query\StatisticChart;
+use App\Application\Statistics\StatisticKey;
 use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\Dashboard\DashboardWidget;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
@@ -62,7 +65,35 @@ final class DashboardController
         echo View::page('dashboard/index', [
             'widgets' => $widgets,
             'sections' => $sections,
+            'statistics' => $this->statistics(),
         ], activeNav: 'dashboard', title: t('dashboard.title'));
+    }
+
+    /**
+     * Diagramm-Karten für alle Statistiken, die der Benutzer sehen darf. Eine
+     * fehlerhafte Statistik soll das Dashboard nicht unbrauchbar machen.
+     *
+     * @return list<StatisticChart>
+     */
+    private function statistics(): array
+    {
+        $user = CurrentUser::get();
+        if ($user === null) {
+            return [];
+        }
+        $charts = [];
+        foreach (StatisticKey::cases() as $key) {
+            if (!$user->has($key->requiredPermission())) {
+                continue;
+            }
+            try {
+                $charts[] = $this->queries->ask(new GetStatistic($key));
+            } catch (\Throwable $e) {
+                error_log('Dashboard-Statistik ' . $key->value . ': ' . $e->getMessage());
+            }
+        }
+
+        return $charts;
     }
 
     /**

@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Domain\Dashboard\DashboardWidget[] $widgets */
 /** @var array<string, array{count: int, items: array<int, array{label: string, sub: string, href: ?string}>, href: string}> $sections */
+/** @var \App\Application\Statistics\Query\StatisticChart[] $statistics */
 
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
@@ -67,4 +68,34 @@ use function App\Infrastructure\Http\t;
             </div>
         <?php endforeach; ?>
     </div>
+<?php endif; ?>
+
+<?php if (($statistics ?? []) !== []): ?>
+    <section class="mt-8" aria-labelledby="statistiken-titel">
+        <h2 id="statistiken-titel" class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Statistiken</h2>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <?php foreach ($statistics as $chart): ?>
+                <a href="/statistiken/<?= e($chart->key->value) ?>" class="stat-card flex min-w-0 flex-col rounded-lg border border-slate-200 bg-white p-4 transition dark:border-slate-800 dark:bg-slate-900" data-stat="<?= e($chart->key->value) ?>">
+                    <div class="flex items-start justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100"><?= e($chart->key->label()) ?></h3>
+                        <span class="stat-card-more whitespace-nowrap text-xs font-medium text-brand-600 dark:text-brand-400">Details →</span>
+                    </div>
+                    <p class="mt-1 truncate font-bold text-slate-900 dark:text-slate-100" style="font-size:1.375rem;line-height:1.75rem" title="<?= e($chart->headline) ?>"><?= e($chart->headline) ?></p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400"><?= e($chart->headlineCaption) ?></p>
+                    <?php if ($chart->isEmpty()): ?>
+                        <div class="mt-3 flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-200 text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500" style="min-height:180px">Noch keine Daten</div>
+                    <?php else: ?>
+                        <div class="relative mt-3" style="height:180px">
+                            <canvas data-chart="<?= e($chart->toChartJson()) ?>" data-chart-compact="1" role="img" aria-label="<?= e($chart->key->label()) ?>"></canvas>
+                        </div>
+                    <?php endif; ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <style>
+        .stat-card:hover, .stat-card:focus-visible { border-color: rgb(var(--color-brand-300, 148 163 184)); box-shadow: 0 4px 12px -4px rgba(15, 23, 42, .15); outline: none; }
+        .stat-card:hover .stat-card-more, .stat-card:focus-visible .stat-card-more { text-decoration: underline; }
+    </style>
+    <script src="/assets/js/dashboard-charts.js" defer></script>
 <?php endif; ?>

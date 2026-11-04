@@ -189,6 +189,8 @@ $canDocuments = $canRentals;
   /* Untermenüs der Hauptnavigation: Breite nach dem längsten Eintrag (auch
      bei breiteren Schriftarten) mit gleichem Abstand links und rechts; mit
      Hintergrundbild nahezu deckend, damit der Inhalt darunter nicht durchscheint. */
+  /* Geöffnete Dropdowns immer über Karten/Filterleisten (z-20 fehlt im kompilierten CSS). */
+  details[data-dropdown] > [data-dropdown-menu] { z-index: 60 !important; }
   .nav-flyout { width: max-content; min-width: 11rem; max-width: 22rem; }
   .nav-flyout > a { padding-left: 0.875rem; padding-right: 0.875rem; white-space: nowrap; }
   body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu], body.has-bg-image [data-live-search-results] { background-color: rgb(255 255 255 / 0.97) !important; }
@@ -1130,13 +1132,41 @@ $canDocuments = $canRentals;
         var spaceBelow = window.innerHeight - summaryRect.bottom;
         var openUpward = serverHintUpward || (spaceBelow < menuRect.height && summaryRect.top > spaceBelow);
 
+        // Vorfahren mit backdrop-filter/filter/transform (z. B. die
+        // halbtransparenten Karten bei gesetztem Hintergrundbild) machen
+        // sich zum Bezugsrahmen für position:fixed — das Menü würde dann von
+        // deren overflow-hidden abgeschnitten (Bug: "3 Punkte"-Menüs in
+        // Listen). Solange das Dropdown offen ist, diese Effekte abschalten.
+        details._liftedAncestors = [];
+        for (var node = details.parentElement; node && node !== document.body; node = node.parentElement) {
+          var cs = window.getComputedStyle(node);
+          var backdrop = cs.backdropFilter || cs.webkitBackdropFilter || 'none';
+          if (backdrop !== 'none' || cs.filter !== 'none' || cs.transform !== 'none' || cs.perspective !== 'none' || (cs.contain && cs.contain.indexOf('paint') !== -1)) {
+            details._liftedAncestors.push([node, node.getAttribute('style')]);
+            node.style.setProperty('backdrop-filter', 'none', 'important');
+            node.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+            node.style.setProperty('filter', 'none', 'important');
+            node.style.setProperty('transform', 'none', 'important');
+            node.style.setProperty('contain', 'none', 'important');
+          }
+        }
+
         menu.style.position = 'fixed';
+        // Liegt ein Vorfahre mit filter/backdrop-filter/transform dazwischen
+        // (z. B. halbtransparente Karten bei gesetztem Hintergrundbild), ist
+        // DER statt des Fensters der Bezugsrahmen für position:fixed — den
+        // Versatz einmal messen und herausrechnen.
+        menu.style.top = '0px';
+        menu.style.left = '0px';
+        menu.style.bottom = '';
+        menu.style.right = 'auto';
+        var origin = menu.getBoundingClientRect();
+        var originX = origin.left;
+        var originY = origin.top;
         if (openUpward) {
-          menu.style.top = '';
-          menu.style.bottom = (window.innerHeight - summaryRect.top + 4) + 'px';
+          menu.style.top = Math.max(8, summaryRect.top - 4 - menuRect.height) - originY + 'px';
         } else {
-          menu.style.top = (summaryRect.bottom + 4) + 'px';
-          menu.style.bottom = '';
+          menu.style.top = (summaryRect.bottom + 4 - originY) + 'px';
         }
 
         // Lange Menüs (z. B. das mobile Einstellungsmenü) scrollbar halten,
@@ -1150,11 +1180,15 @@ $canDocuments = $canRentals;
 
         var left = summaryRect.right - menuRect.width;
         left = Math.max(8, Math.min(left, window.innerWidth - menuRect.width - 8));
-        menu.style.left = left + 'px';
+        menu.style.left = (left - originX) + 'px';
         menu.style.right = 'auto';
       }
 
       function resetDropdownMenuPosition(details) {
+        (details._liftedAncestors || []).forEach(function (entry) {
+          if (entry[1] === null) { entry[0].removeAttribute('style'); } else { entry[0].setAttribute('style', entry[1]); }
+        });
+        details._liftedAncestors = [];
         var menu = details.querySelector('[data-dropdown-menu]');
         if (!menu) {
           return;
@@ -1169,15 +1203,20 @@ $canDocuments = $canRentals;
         menu.style.right = '';
       }
 
-      document.querySelectorAll('details[data-dropdown]').forEach(function (details) {
-        details.addEventListener('toggle', function () {
-          if (details.open) {
-            positionDropdownMenu(details);
-          } else {
-            resetDropdownMenuPosition(details);
-          }
-        });
-      });
+      // Ein Listener in der Capture-Phase ("toggle" blubbert nicht), damit
+      // auch später eingefügte Dropdowns (z. B. per JS nachgeladene Zeilen)
+      // korrekt positioniert werden.
+      document.addEventListener('toggle', function (event) {
+        var details = event.target;
+        if (!(details instanceof HTMLDetailsElement) || !details.hasAttribute('data-dropdown')) {
+          return;
+        }
+        if (details.open) {
+          positionDropdownMenu(details);
+        } else {
+          resetDropdownMenuPosition(details);
+        }
+      }, true);
 
       // Scrollt die Seite (oder der Tabellen-Wrapper) während ein Dropdown
       // offen ist, würde die per position:fixed berechnete Position sonst

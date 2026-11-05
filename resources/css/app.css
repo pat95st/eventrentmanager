@@ -131,10 +131,28 @@
    Seite (App\Infrastructure\Http\BackgroundLayer), damit Deckkraft, Ausschnitt,
    Zoom und Videos möglich sind. */
 
-body.has-bg-image > header,
-body.has-bg-image > footer,
+/* Karten/Panels: nur halbtransparent, OHNE backdrop-filter — ein Filter
+   macht jede Karte zu einem eigenen Stapelkontext, dann lagen Dropdowns
+   und Aufklapper hinter der nächsten Karte (Bugreport "Dropdowns überdeckt"). */
 body.has-bg-image .bg-white {
+  background-color: rgb(255 255 255 / 0.86) !important;
+}
+
+html.dark body.has-bg-image .dark\:bg-slate-900 {
+  background-color: rgb(15 23 42 / 0.86) !important;
+}
+
+/* Kopf-/Fußzeile behalten den Glaseffekt (eigene Ebene, liegen ohnehin oben). */
+body.has-bg-image > header,
+body.has-bg-image > footer {
   background-color: rgb(255 255 255 / 0.82) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+html.dark body.has-bg-image > header,
+html.dark body.has-bg-image > footer {
+  background-color: rgb(15 23 42 / 0.82) !important;
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
@@ -144,24 +162,21 @@ body.has-bg-image .bg-white {
 html:not(.dark) body.has-bg-image input,
 html:not(.dark) body.has-bg-image select,
 html:not(.dark) body.has-bg-image textarea {
-  background-color: rgb(255 255 255 / 0.9);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
+  background-color: rgb(255 255 255 / 0.92);
 }
 
 html.dark body.has-bg-image input,
 html.dark body.has-bg-image select,
 html.dark body.has-bg-image textarea {
-  background-color: rgb(30 41 59 / 0.9);
+  background-color: rgb(30 41 59 / 0.92);
   color: rgb(241 245 249);
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
 }
 
-html.dark body.has-bg-image > header,
-html.dark body.has-bg-image > footer,
-html.dark body.has-bg-image .dark\:bg-slate-900 {
-  background-color: rgb(15 23 42 / 0.82) !important;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-}
+/* z-index-Hilfsklassen ausdrücklich (fehlten im kompilierten app.css,
+   wodurch z-10/z-20/z-50 an Dropdowns/Modals wirkungslos waren). */
+.z-0 { z-index: 0; }
+.z-10 { z-index: 10; }
+.z-20 { z-index: 20; }
+.z-30 { z-index: 30; }
+.z-40 { z-index: 40; }
+.z-50 { z-index: 50; }

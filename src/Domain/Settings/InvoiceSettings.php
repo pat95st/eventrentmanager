@@ -29,6 +29,32 @@ final class InvoiceSettings
         public ?string $bankName,
         public ?string $iban,
         public ?string $bic,
+        // Migration 133: Firmendaten für Regelbesteuerung (Pflichtangaben auf
+        // Geschäftsbriefen/Rechnungen) und anpassbarer Befreiungshinweis.
+        public ?string $taxOffice = null,          // Finanzamt
+        public ?string $legalForm = null,          // Rechtsform, z. B. GmbH
+        public ?string $registerCourt = null,      // Registergericht, z. B. Amtsgericht Nürnberg
+        public ?string $registerNumber = null,     // z. B. HRB 12345
+        public ?string $managingDirectors = null,  // Geschäftsführung / Inhaber
+        public ?string $smallBusinessNote = null,  // leer = DEFAULT_SMALL_BUSINESS_NOTE
     ) {
+    }
+
+    public const DEFAULT_SMALL_BUSINESS_NOTE = 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.';
+
+    /** Hinweistext zur Umsatzsteuerbefreiung auf Dokumenten (eigener Text oder Standard). */
+    public function smallBusinessNoteText(): string
+    {
+        $note = trim((string) $this->smallBusinessNote);
+
+        return $note !== '' ? $note : self::DEFAULT_SMALL_BUSINESS_NOTE;
+    }
+
+    /** Registereintrag für die Fußzeile, z. B. "Amtsgericht Nürnberg, HRB 12345". */
+    public function registerLine(): ?string
+    {
+        $parts = array_filter([trim((string) $this->registerCourt), trim((string) $this->registerNumber)], static fn ($v) => $v !== '');
+
+        return $parts === [] ? null : implode(', ', $parts);
     }
 }

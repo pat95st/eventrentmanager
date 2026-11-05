@@ -6,7 +6,8 @@ namespace App\Infrastructure\Http;
 
 /**
  * Zentrales Verzeichnis aller "/einstellungen/..."-Unterseiten, gruppiert in
- * vier thematische Bereiche (Firma, Abrechnung, Kommunikation, Sonstiges).
+ * sechs thematische Bereiche (Firma & Steuern, Dokumente & PDF, Preise &
+ * Zahlung, Kommunikation, Lager & Veranstaltungen, System).
  * Einzige Quelle der Wahrheit für zwei Stellen in resources/views/layout.php:
  *
  *  - die Hauptnavigation zeigt dort nur noch VIER Gruppen-Links (statt aller
@@ -31,61 +32,84 @@ final class SettingsSections
      */
     public static function groups(): array
     {
+        // Neu gegliedert (Nutzerwunsch "zusammengehörige Einstellungen
+        // finden"): sechs Themenbereiche statt vier, Steuer- und Bankdaten
+        // bei der Firma, alles zur Dokumentgestaltung beisammen, Preise und
+        // Zahlung getrennt von der PDF-Gestaltung, technische Einstellungen
+        // unter System. 'desc' erscheint auf der Übersichtsseite /einstellungen.
+        $page = static fn (string $key, string $href, string $label, string $desc) => ['key' => $key, 'href' => $href, 'label' => $label, 'desc' => $desc];
+
         return [
             'company' => [
-                'label' => t('nav.settings_group_company'),
+                'label' => 'Firma & Steuern',
+                'desc' => 'Firmendaten, Logo, Steuern, Bankverbindungen und Rechtliches',
                 'pages' => [
-                    ['key' => 'settings-firma', 'href' => '/einstellungen/firma', 'label' => t('nav.company_settings')],
-                    ['key' => 'settings-rechtliches', 'href' => '/einstellungen/rechtliches', 'label' => t('nav.legal_settings')],
-                    ['key' => 'settings-integrationen', 'href' => '/einstellungen/integrationen', 'label' => t('nav.integration_settings')],
-                    ['key' => 'settings-api', 'href' => '/einstellungen/api', 'label' => t('nav.api_settings')],
-                    ['key' => 'settings-sicherheit', 'href' => '/einstellungen/sicherheit', 'label' => 'Sicherheit'],
-                    ['key' => 'settings-kalender', 'href' => '/einstellungen/kalender', 'label' => t('nav.calendar_settings')],
-                    ['key' => 'settings-betriebsurlaub', 'href' => '/einstellungen/betriebsurlaub', 'label' => 'Betriebsurlaub'],
+                    $page('settings-firma', '/einstellungen/firma', 'Firma', 'Name, Anschrift, Kontakt, Logo, Favicon und Hintergründe'),
+                    $page('settings-rechnung', '/einstellungen/rechnung', 'Steuern & Firmendaten', 'Kleinunternehmer/Umsatzsteuer, Steuernummer, USt-IdNr., Handelsregister, Geschäftsführung, Befreiungshinweis'),
+                    $page('settings-bankverbindungen', '/einstellungen/bankverbindungen', t('nav.bank_accounts'), 'Firmenkonten für Dokumente und Kontoführung'),
+                    $page('settings-rechtliches', '/einstellungen/rechtliches', t('nav.legal_settings'), 'Vermietbedingungen, Impressum, Datenschutz'),
+                    $page('settings-betriebsurlaub', '/einstellungen/betriebsurlaub', 'Betriebsurlaub', 'Zeiträume ohne Ausgabe und Rücknahme'),
+                ],
+            ],
+            'documents' => [
+                'label' => 'Dokumente & PDF',
+                'desc' => 'Nummern, Vorlagen, Texte, Gestaltung und Ablage der Dokumente',
+                'pages' => [
+                    $page('settings-nummerierung', '/einstellungen/nummerierung', t('nav.numbering_settings'), 'Nummernkreise für Angebote, Rechnungen usw.'),
+                    $page('settings-pdf-design', '/einstellungen/pdf-design', t('nav.pdf_design_settings'), 'Akzentfarbe, Logo-Position, Währungsanzeige'),
+                    $page('settings-pdf-layout', '/einstellungen/pdf-layout', t('nav.pdf_layout_settings'), 'Anordnung der Blöcke auf den PDFs'),
+                    $page('settings-schriften', '/einstellungen/schriften', t('nav.pdf_fonts'), 'Schriften für Dokumente und Oberfläche'),
+                    $page('settings-rechnungsvorlage', '/einstellungen/rechnungsvorlage', t('nav.invoice_pdf_template'), 'Einleitungs- und Schlusstext auf Rechnungen'),
+                    $page('settings-angebotsvorlage', '/einstellungen/angebotsvorlage', t('nav.offer_pdf_template'), 'Einleitungs- und Schlusstext auf Angeboten'),
+                    $page('settings-starttexte', '/einstellungen/starttexte', t('nav.intro_texts'), 'Vorbelegte Starttexte je Dokumentart'),
+                    $page('settings-textvorlagen', '/einstellungen/textvorlagen', t('nav.closing_text_templates'), 'Wiederverwendbare Textbausteine'),
+                    $page('settings-speicherziele', '/einstellungen/speicherziele', t('nav.document_storage'), 'Automatische Ablage der PDFs auf Laufwerken'),
                 ],
             ],
             'billing' => [
-                'label' => t('nav.settings_group_billing'),
+                'label' => 'Preise & Zahlung',
+                'desc' => 'Preisregeln, Zahlungsarten, Mahnwesen und Erinnerungen',
                 'pages' => [
-                    ['key' => 'settings-rechnung', 'href' => '/einstellungen/rechnung', 'label' => t('nav.invoice_settings')],
-                    ['key' => 'settings-bankverbindungen', 'href' => '/einstellungen/bankverbindungen', 'label' => t('nav.bank_accounts')],
-                    ['key' => 'settings-zahlungsarten', 'href' => '/einstellungen/zahlungsarten', 'label' => t('nav.payment_methods')],
-                    ['key' => 'settings-nummerierung', 'href' => '/einstellungen/nummerierung', 'label' => t('nav.numbering_settings')],
-                    ['key' => 'settings-rechnungsvorlage', 'href' => '/einstellungen/rechnungsvorlage', 'label' => t('nav.invoice_pdf_template')],
-                    ['key' => 'settings-angebotsvorlage', 'href' => '/einstellungen/angebotsvorlage', 'label' => t('nav.offer_pdf_template')],
-                    ['key' => 'settings-starttexte', 'href' => '/einstellungen/starttexte', 'label' => t('nav.intro_texts')],
-                    ['key' => 'settings-textvorlagen', 'href' => '/einstellungen/textvorlagen', 'label' => t('nav.closing_text_templates')],
-                    ['key' => 'settings-pdf-design', 'href' => '/einstellungen/pdf-design', 'label' => t('nav.pdf_design_settings')],
-                    ['key' => 'settings-schriften', 'href' => '/einstellungen/schriften', 'label' => t('nav.pdf_fonts')],
-                    ['key' => 'settings-pdf-layout', 'href' => '/einstellungen/pdf-layout', 'label' => t('nav.pdf_layout_settings')],
-                    ['key' => 'settings-preise', 'href' => '/einstellungen/preise', 'label' => t('nav.pricing_settings')],
-                    ['key' => 'settings-gutscheine', 'href' => '/einstellungen/gutscheine', 'label' => t('nav.voucher_settings')],
-                    ['key' => 'settings-preisstaffelung', 'href' => '/einstellungen/preisstaffelung', 'label' => t('nav.price_tiers')],
-                    ['key' => 'settings-ueberziehung', 'href' => '/einstellungen/ueberziehung', 'label' => t('nav.overage_settings')],
-                    ['key' => 'settings-mahnwesen', 'href' => '/einstellungen/mahnwesen', 'label' => t('nav.dunning_levels')],
-                    ['key' => 'settings-rechnungserinnerungen', 'href' => '/einstellungen/rechnungserinnerungen', 'label' => t('nav.invoice_due_reminder_settings')],
+                    $page('settings-preisstaffelung', '/einstellungen/preisstaffelung', t('nav.price_tiers'), 'Faktor je Einsatztag und Preisrundung'),
+                    $page('settings-preise', '/einstellungen/preise', t('nav.pricing_settings'), 'Zubehörpauschale'),
+                    $page('settings-ueberziehung', '/einstellungen/ueberziehung', t('nav.overage_settings'), 'Pauschale bei verspäteter Rückgabe'),
+                    $page('settings-gutscheine', '/einstellungen/gutscheine', t('nav.voucher_settings'), 'Gültigkeit von Gutscheinen'),
+                    $page('settings-zahlungsarten', '/einstellungen/zahlungsarten', t('nav.payment_methods'), 'Zahlungsarten und Zahlungsziele'),
+                    $page('settings-mahnwesen', '/einstellungen/mahnwesen', t('nav.dunning_levels'), 'Mahnstufen, Gebühren, automatischer Versand'),
+                    $page('settings-rechnungserinnerungen', '/einstellungen/rechnungserinnerungen', t('nav.invoice_due_reminder_settings'), 'Erinnerung vor Fälligkeit'),
                 ],
             ],
             'communication' => [
                 'label' => t('nav.settings_group_communication'),
+                'desc' => 'E-Mail-Versand, Vorlagen, Posteingang, Push und Messenger',
                 'pages' => [
-                    ['key' => 'settings-smtp', 'href' => '/einstellungen/smtp', 'label' => t('nav.smtp_settings')],
-                    ['key' => 'settings-email-vorlagen', 'href' => '/einstellungen/email-vorlagen', 'label' => t('nav.email_templates')],
-                    ['key' => 'settings-mailserver', 'href' => '/einstellungen/mailserver', 'label' => t('nav.mailbox_settings')],
-                    ['key' => 'settings-push', 'href' => '/einstellungen/push', 'label' => t('nav.push_settings')],
-                    ['key' => 'settings-messenger', 'href' => '/einstellungen/messenger', 'label' => t('nav.messaging_settings')],
-                    ['key' => 'settings-messenger-vorlagen', 'href' => '/einstellungen/messenger-vorlagen', 'label' => t('nav.messaging_templates')],
+                    $page('settings-smtp', '/einstellungen/smtp', t('nav.smtp_settings'), 'Ausgangsserver für E-Mails'),
+                    $page('settings-email-vorlagen', '/einstellungen/email-vorlagen', t('nav.email_templates'), 'Texte der versendeten E-Mails'),
+                    $page('settings-erinnerungen', '/einstellungen/erinnerungen', t('nav.rental_reminder_settings'), 'Erinnerungen zu Abholung, Rückgabe und Checkliste'),
+                    $page('settings-mailserver', '/einstellungen/mailserver', t('nav.mailbox_settings'), 'Belege per E-Mail empfangen'),
+                    $page('settings-push', '/einstellungen/push', t('nav.push_settings'), 'Benachrichtigungen auf Geräte'),
+                    $page('settings-messenger', '/einstellungen/messenger', t('nav.messaging_settings'), 'WhatsApp, Telegram & Co.'),
+                    $page('settings-messenger-vorlagen', '/einstellungen/messenger-vorlagen', t('nav.messaging_templates'), 'Texte der Messenger-Nachrichten'),
                 ],
             ],
-            'other' => [
-                'label' => t('nav.settings_group_other'),
+            'operations' => [
+                'label' => 'Lager & Veranstaltungen',
+                'desc' => 'Leitungen, Etikettendruck und Kalender',
                 'pages' => [
-                    ['key' => 'settings-etikettendrucker', 'href' => '/einstellungen/etikettendrucker', 'label' => t('nav.label_printers')],
-                    ['key' => 'settings-leitungen', 'href' => '/einstellungen/leitungen', 'label' => 'Leitungen'],
-                    ['key' => 'settings-speicherziele', 'href' => '/einstellungen/speicherziele', 'label' => t('nav.document_storage')],
-                    ['key' => 'settings-erinnerungen', 'href' => '/einstellungen/erinnerungen', 'label' => t('nav.rental_reminder_settings')],
-                    ['key' => 'settings-sicherung', 'href' => '/einstellungen/sicherung', 'label' => t('nav.backup_settings')],
-                    ['key' => 'settings-ki-werbebilder', 'href' => '/einstellungen/ki-werbebilder', 'label' => t('nav.ai_ad_image_settings')],
+                    $page('settings-leitungen', '/einstellungen/leitungen', 'Leitungen', 'Leitungstypen und Steckverbinder'),
+                    $page('settings-etikettendrucker', '/einstellungen/etikettendrucker', t('nav.label_printers'), 'Drucker für Inventur-Etiketten'),
+                    $page('settings-kalender', '/einstellungen/kalender', t('nav.calendar_settings'), 'Kalender-Abos (CalDAV/ICS)'),
+                ],
+            ],
+            'system' => [
+                'label' => 'System & Integrationen',
+                'desc' => 'Sicherheit, Schnittstellen, Datensicherung',
+                'pages' => [
+                    $page('settings-sicherheit', '/einstellungen/sicherheit', 'Sicherheit', 'Automatische Abmeldung'),
+                    $page('settings-integrationen', '/einstellungen/integrationen', t('nav.integration_settings'), 'Google, WhatsApp und Basis-URL'),
+                    $page('settings-api', '/einstellungen/api', t('nav.api_settings'), 'REST-API und Zugriffs-Tokens'),
+                    $page('settings-ki-werbebilder', '/einstellungen/ki-werbebilder', t('nav.ai_ad_image_settings'), 'KI-Dienst für Werbebilder'),
+                    $page('settings-sicherung', '/einstellungen/sicherung', t('nav.backup_settings'), 'Export und Import der Daten'),
                 ],
             ],
         ];

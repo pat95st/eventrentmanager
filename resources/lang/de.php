@@ -1058,7 +1058,7 @@ return [
     // --- Rechnungen -------------------------------------------------------------
     'nav.invoices' => 'Rechnungen',
     'nav.bank_import' => 'Zahlungsabgleich',
-    'nav.invoice_settings' => 'Rechnungseinstellungen',
+    'nav.invoice_settings' => 'Steuern & Firmendaten',
     'nav.bank_accounts' => 'Bankverbindungen',
     'nav.payment_methods' => 'Zahlungsarten',
     'nav.numbering_settings' => 'Nummerierung',
@@ -1274,8 +1274,8 @@ return [
     'settings.numbering.preview' => 'Nächste Nummer: {example}',
     'settings.numbering.flash.saved' => 'Nummerierungseinstellungen wurden gespeichert.',
 
-    'settings.invoice_settings.title' => 'Rechnungseinstellungen',
-    'settings.invoice_settings.subtitle' => 'Firmenweite Einstellungen für die Rechnungsfunktion (Kleinunternehmer-Regelung, Steuersatz, Zahlungsziel, Bankverbindung).',
+    'settings.invoice_settings.title' => 'Steuern & Firmendaten',
+    'settings.invoice_settings.subtitle' => 'Umsatzsteuer (Kleinunternehmer oder Regelbesteuerung), Steuernummer, USt-IdNr., Handelsregister und Geschäftsführung für die Pflichtangaben auf Dokumenten.',
     'settings.invoice_settings.field.is_small_business' => 'Kleinunternehmer nach § 19 UStG',
     'settings.invoice_settings.field.is_small_business_hint' => 'Gilt für Rechnungen, Angebote und Auftragsbestätigungen. Aktiviert: keine Umsatzsteuer, mit Pflichthinweis nach § 19 UStG. Deaktiviert: die Dokumente weisen Nettosumme, Umsatzsteuer und Bruttobetrag aus; Steuernummer und USt-IdNr. erscheinen in der Fußzeile.',
     'settings.invoice_settings.field.vat_rate_percent' => 'Umsatzsteuersatz (%)',
@@ -1287,7 +1287,7 @@ return [
     'settings.invoice_settings.field.bank_name' => 'Bank',
     'settings.invoice_settings.field.iban' => 'IBAN',
     'settings.invoice_settings.field.bic' => 'BIC',
-    'settings.invoice_settings.flash.saved' => 'Rechnungseinstellungen wurden gespeichert.',
+    'settings.invoice_settings.flash.saved' => 'Steuer- und Firmendaten wurden gespeichert.',
     'settings.pricing.title' => 'Preis-Einstellungen',
     'settings.pricing.subtitle' => 'Firmenweite Preis-Einstellungen, die für Angebote UND Rechnungen gelten (Zubehörpauschale).',
     'settings.pricing.field.accessory_flat_rate_percent' => 'Zubehörpauschale (%)',

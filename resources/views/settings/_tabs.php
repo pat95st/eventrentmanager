@@ -17,6 +17,7 @@ $settingsGroup = \App\Infrastructure\Http\SettingsSections::groups()[$settingsGr
 ?>
 <nav data-settings-tabs="<?= e($settingsGroupKey) ?>" class="mb-6 overflow-x-auto border-b border-slate-200 dark:border-slate-800" aria-label="<?= e($settingsGroup['label']) ?>">
     <div class="flex gap-1 whitespace-nowrap">
+        <a href="/einstellungen" title="Alle Einstellungen" class="border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">&larr; <?= e($settingsGroup['label']) ?></a>
         <?php foreach ($settingsGroup['pages'] as $settingsPage): ?>
             <?php $isActiveSettingsTab = $settingsPage['key'] === $activeNav; ?>
             <a

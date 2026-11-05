@@ -20,6 +20,13 @@ final class UpdateInvoiceSettings implements CommandInterface
         public readonly ?string $bankName = null,
         public readonly ?string $iban = null,
         public readonly ?string $bic = null,
+        // Migration 133 — null = bisherigen Wert unverändert lassen
+        public readonly ?string $taxOffice = null,
+        public readonly ?string $legalForm = null,
+        public readonly ?string $registerCourt = null,
+        public readonly ?string $registerNumber = null,
+        public readonly ?string $managingDirectors = null,
+        public readonly ?string $smallBusinessNote = null,
     ) {
     }
 }

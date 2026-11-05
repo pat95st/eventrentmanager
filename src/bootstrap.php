@@ -970,6 +970,7 @@ $commandBus->register(\App\Application\Settings\Command\UpdateInvoiceDueReminder
 $queryBus->register(\App\Application\Settings\Query\GetInvoiceDueReminderSettings::class, new \App\Application\Settings\Query\GetInvoiceDueReminderSettingsHandler($invoiceDueReminderSettingsRepository));
 
 $commandBus->register(\App\Application\Settings\Command\UpdateInvoiceSettings::class, new UpdateInvoiceSettingsHandler($invoiceSettingsRepository));
+\App\Infrastructure\Pdf\TaxNote::useRepository($invoiceSettingsRepository); // Befreiungshinweis auf Dokumenten (Migration 133)
 $commandBus->register(\App\Application\Numbering\Command\UpdateDocumentNumberingSettings::class, new \App\Application\Numbering\Command\UpdateDocumentNumberingSettingsHandler($documentNumberingSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdatePricingSettings::class, new UpdatePricingSettingsHandler($pricingSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdatePriceRounding::class, new \App\Application\Settings\Command\UpdatePriceRoundingHandler($pricingSettingsRepository));
@@ -2157,6 +2158,7 @@ $router->get('/einstellungen/email-vorlagen/{key}', $auth->guard(Permission::Adm
 $router->post('/einstellungen/email-vorlagen/{key}', $auth->guard(Permission::Administration, [$emailTemplateSettingsController, 'update']));
 $router->post('/einstellungen/email-vorlagen/{key}/zuruecksetzen', $auth->guard(Permission::Administration, [$emailTemplateSettingsController, 'reset']));
 
+$router->get('/einstellungen', $auth->guard(Permission::Administration, [new \App\Infrastructure\Http\Controllers\SettingsOverviewController(), 'index']));
 $router->get('/einstellungen/leitungen', $auth->guard(Permission::Administration, [$cableSettingsController, 'edit']));
 // Betriebsurlaub (Migration 130)
 $router->get('/einstellungen/betriebsurlaub', $auth->guard(Permission::Administration, [$companyHolidayController, 'index']));

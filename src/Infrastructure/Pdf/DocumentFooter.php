@@ -79,8 +79,13 @@ final class DocumentFooter
         $company = $this->companySettings->get();
         $invoiceSettings = $this->invoiceSettings->get();
 
+        $companyName = $company->name;
+        $legalForm = trim((string) $invoiceSettings->legalForm);
+        if ($companyName !== null && $legalForm !== '' && mb_stripos($companyName, $legalForm) === false) {
+            $companyName .= ' ' . $legalForm; // Rechtsform anhängen, falls nicht schon im Namen
+        }
         $address = array_values(array_filter([
-            $company->name,
+            $companyName,
             $company->street,
             trim(($company->postalCode ?? '') . ' ' . ($company->city ?? '')),
         ], static fn (?string $v) => $v !== null && trim($v) !== ''));
@@ -95,11 +100,20 @@ final class DocumentFooter
         if ($this->filled($company->website)) {
             $contact[] = 'Web: ' . trim($company->website);
         }
+        // Firmen-/Steuerangaben (Migration 133): Geschäftsführung,
+        // Handelsregister, Steuernummer, USt-IdNr. in eigener Spalte.
+        $legal = [];
+        if ($this->filled($invoiceSettings->managingDirectors)) {
+            $legal[] = 'GF: ' . trim($invoiceSettings->managingDirectors);
+        }
+        if ($invoiceSettings->registerLine() !== null) {
+            $legal[] = $invoiceSettings->registerLine();
+        }
         if ($this->filled($invoiceSettings->taxNumber)) {
-            $contact[] = 'Steuernummer: ' . trim($invoiceSettings->taxNumber);
+            $legal[] = 'Steuernummer: ' . trim($invoiceSettings->taxNumber);
         }
         if ($this->filled($invoiceSettings->vatId)) {
-            $contact[] = 'USt-IdNr.: ' . trim($invoiceSettings->vatId);
+            $legal[] = 'USt-IdNr.: ' . trim($invoiceSettings->vatId);
         }
 
         $bankAccount ??= $this->bankAccounts->findDefault();
@@ -125,7 +139,7 @@ final class DocumentFooter
         // vollständig Platz finden und nichts in den Seitenrand läuft.
         return array_values(array_map(
             static fn (array $lines) => array_slice($lines, 0, 5),
-            array_filter([$address, $contact, $bank], static fn (array $lines) => $lines !== []),
+            array_filter([$address, $contact, $legal, $bank], static fn (array $lines) => $lines !== []),
         ));
     }
 

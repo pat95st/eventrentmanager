@@ -184,7 +184,7 @@ final class XRechnungGenerator
         $this->append($dom, $taxCategory, $cbc, 'cbc:ID', $taxCategoryId);
         $this->append($dom, $taxCategory, $cbc, 'cbc:Percent', $taxPercent); // BT-119
         if ($isSmallBusiness) {
-            $this->append($dom, $taxCategory, $cbc, 'cbc:TaxExemptionReason', 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.'); // BT-121
+            $this->append($dom, $taxCategory, $cbc, 'cbc:TaxExemptionReason', \App\Infrastructure\Pdf\TaxNote::smallBusiness()); // BT-121
         }
         $taxCategoryScheme = $this->appendEl($dom, $taxCategory, $cac, 'cac:TaxScheme');
         $this->append($dom, $taxCategoryScheme, $cbc, 'cbc:ID', 'VAT');
@@ -349,7 +349,7 @@ final class XRechnungGenerator
         $this->append($dom, $taxCategory, $cbc, 'cbc:ID', $taxCategoryId);
         $this->append($dom, $taxCategory, $cbc, 'cbc:Percent', $taxPercent);
         if ($correction->isSmallBusiness) {
-            $this->append($dom, $taxCategory, $cbc, 'cbc:TaxExemptionReason', 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.'); // BT-121
+            $this->append($dom, $taxCategory, $cbc, 'cbc:TaxExemptionReason', \App\Infrastructure\Pdf\TaxNote::smallBusiness()); // BT-121
         }
         $taxScheme = $this->appendEl($dom, $taxCategory, $cac, 'cac:TaxScheme');
         $this->append($dom, $taxScheme, $cbc, 'cbc:ID', 'VAT');

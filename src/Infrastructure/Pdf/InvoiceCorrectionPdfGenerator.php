@@ -168,7 +168,7 @@ final class InvoiceCorrectionPdfGenerator
             $y -= 15;
         }
         if ($correction->isSmallBusiness) {
-            $writer->text(self::MARGIN, $y, 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.', 8.5);
+            $writer->text(self::MARGIN, $y, \App\Infrastructure\Pdf\TaxNote::smallBusiness(), 8.5);
             $y -= 13;
         }
 

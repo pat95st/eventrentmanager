@@ -36,6 +36,12 @@ final class MariadbInvoiceSettingsRepository implements InvoiceSettingsRepositor
             bankName: $row['bank_name'],
             iban: $row['iban'],
             bic: $row['bic'],
+            taxOffice: $row['tax_office'] ?? null,
+            legalForm: $row['legal_form'] ?? null,
+            registerCourt: $row['register_court'] ?? null,
+            registerNumber: $row['register_number'] ?? null,
+            managingDirectors: $row['managing_directors'] ?? null,
+            smallBusinessNote: $row['small_business_note'] ?? null,
         );
     }
 
@@ -45,7 +51,10 @@ final class MariadbInvoiceSettingsRepository implements InvoiceSettingsRepositor
             'UPDATE invoice_settings SET
                 is_small_business = :is_small_business, vat_rate_percent = :vat_rate_percent,
                 tax_number = :tax_number, vat_id = :vat_id,
-                payment_term_days = :payment_term_days, bank_name = :bank_name, iban = :iban, bic = :bic
+                payment_term_days = :payment_term_days, bank_name = :bank_name, iban = :iban, bic = :bic,
+                tax_office = :tax_office, legal_form = :legal_form, register_court = :register_court,
+                register_number = :register_number, managing_directors = :managing_directors,
+                small_business_note = :small_business_note
              WHERE id = 1'
         );
 
@@ -58,6 +67,12 @@ final class MariadbInvoiceSettingsRepository implements InvoiceSettingsRepositor
             'bank_name' => $settings->bankName,
             'iban' => $settings->iban,
             'bic' => $settings->bic,
+            'tax_office' => $settings->taxOffice,
+            'legal_form' => $settings->legalForm,
+            'register_court' => $settings->registerCourt,
+            'register_number' => $settings->registerNumber,
+            'managing_directors' => $settings->managingDirectors,
+            'small_business_note' => $settings->smallBusinessNote,
         ]);
     }
 }

@@ -525,6 +525,7 @@ $canDocuments = $canRentals;
             <a href="/berichte/umsatzprognose" class="block px-3 py-2 text-sm <?= $activeNav === 'revenue-forecast' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"><?= e(t('nav.revenue_forecast')) ?></a>
             <a href="/benutzer" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.user_management')) ?></a>
             <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+            <a href="/einstellungen" class="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Alle Einstellungen</a>
             <?php foreach (\App\Infrastructure\Http\SettingsSections::groups() as $navSettingsGroupMobileIcon): ?>
               <a href="<?= e($navSettingsGroupMobileIcon['pages'][0]['href']) ?>" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e($navSettingsGroupMobileIcon['label']) ?></a>
             <?php endforeach; ?>
@@ -580,6 +581,7 @@ $canDocuments = $canRentals;
               <a href="/benutzer" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.user_management')) ?></a>
 
               <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+              <a href="/einstellungen" class="block px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Alle Einstellungen</a>
               <?php foreach (\App\Infrastructure\Http\SettingsSections::groups() as $navSettingsGroup): ?>
                 <a href="<?= e($navSettingsGroup['pages'][0]['href']) ?>" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e($navSettingsGroup['label']) ?></a>
               <?php endforeach; ?>

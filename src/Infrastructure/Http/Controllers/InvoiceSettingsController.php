@@ -41,6 +41,12 @@ final class InvoiceSettingsController
             vatRatePercent: $request->input('vat_rate_percent', '') ?? '',
             taxNumber: $request->input('tax_number'),
             vatId: $request->input('vat_id'),
+            taxOffice: $request->input('tax_office') ?? '',
+            legalForm: $request->input('legal_form') ?? '',
+            registerCourt: $request->input('register_court') ?? '',
+            registerNumber: $request->input('register_number') ?? '',
+            managingDirectors: $request->input('managing_directors') ?? '',
+            smallBusinessNote: $request->input('small_business_note') ?? '',
         );
 
         try {

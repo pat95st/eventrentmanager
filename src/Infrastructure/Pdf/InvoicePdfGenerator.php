@@ -214,7 +214,7 @@ final class InvoicePdfGenerator
         if ($isSmallBusiness) {
             $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtbetrag:', $this->formatAmount($totals->grossTotal), 10, true);
             $y -= 16;
-            $writer->text(self::MARGIN, $y, 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.', 8.5);
+            $writer->text(self::MARGIN, $y, \App\Infrastructure\Pdf\TaxNote::smallBusiness($invoiceSettings), 8.5);
             $y -= 24;
         } else {
             $this->drawSummaryLine($writer, $pageWidth, $y, 'Nettosumme:', $this->formatAmount($totals->netTotal));

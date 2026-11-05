@@ -38,10 +38,21 @@ final class UpdateInvoiceSettingsHandler implements CommandHandlerInterface
             $errors['paymentTermDays'] = 'Bitte ein Zahlungsziel von mindestens 1 Tag angeben.';
         }
 
+        // Regelbesteuerung: auf Rechnungen ist die Steuernummer oder die
+        // USt-IdNr. Pflicht (§ 14 Abs. 4 Nr. 2 UStG).
+        if (!$command->isSmallBusiness && $this->nullIfEmpty($command->taxNumber) === null && $this->nullIfEmpty($command->vatId) === null) {
+            $errors['taxNumber'] = 'Ohne Kleinunternehmerregelung muss auf Rechnungen die Steuernummer oder die USt-IdNr. stehen – bitte mindestens eines davon angeben.';
+        }
+        $note = $command->smallBusinessNote === null ? $current->smallBusinessNote : $this->nullIfEmpty($command->smallBusinessNote);
+        if ($note !== null && mb_strlen($note) > 500) {
+            $errors['smallBusinessNote'] = 'Der Hinweistext darf höchstens 500 Zeichen lang sein.';
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
 
+        $keep = fn (?string $new, ?string $old) => $new === null ? $old : $this->nullIfEmpty($new);
         $this->settingsRepository->save(new InvoiceSettings(
             isSmallBusiness: $command->isSmallBusiness,
             vatRatePercent: number_format((float) $vatRateValue, 2, '.', ''),
@@ -51,6 +62,12 @@ final class UpdateInvoiceSettingsHandler implements CommandHandlerInterface
             bankName: $command->bankName === null ? $current->bankName : $this->nullIfEmpty($command->bankName),
             iban: $command->iban === null ? $current->iban : $this->nullIfEmpty($command->iban),
             bic: $command->bic === null ? $current->bic : $this->nullIfEmpty($command->bic),
+            taxOffice: $keep($command->taxOffice, $current->taxOffice),
+            legalForm: $keep($command->legalForm, $current->legalForm),
+            registerCourt: $keep($command->registerCourt, $current->registerCourt),
+            registerNumber: $keep($command->registerNumber, $current->registerNumber),
+            managingDirectors: $keep($command->managingDirectors, $current->managingDirectors),
+            smallBusinessNote: $note,
         ));
 
         return null;

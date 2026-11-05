@@ -143,7 +143,7 @@ final class OrderConfirmationPdfGenerator
             $this->drawSummaryLine($writer, $pageWidth, $y, 'Gesamtsumme:', $this->formatAmount($totals->grossTotal), 10, true);
             $y -= 16;
             if ($detail->isSmallBusiness === true) {
-                $writer->text(self::MARGIN, $y, 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.', 8.5);
+                $writer->text(self::MARGIN, $y, \App\Infrastructure\Pdf\TaxNote::smallBusiness(), 8.5);
                 $y -= 14;
             }
             $y -= 14;

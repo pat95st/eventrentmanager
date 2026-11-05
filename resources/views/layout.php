@@ -196,8 +196,8 @@ $canDocuments = $canRentals;
   details[data-dropdown] > [data-dropdown-menu] { z-index: 60 !important; }
   .nav-flyout { width: max-content; min-width: 11rem; max-width: 22rem; }
   .nav-flyout > a { padding-left: 0.875rem; padding-right: 0.875rem; white-space: nowrap; }
-  body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu], body.has-bg-image [data-live-search-results] { background-color: rgb(255 255 255 / 0.97) !important; }
-  html.dark body.has-bg-image .nav-flyout, html.dark body.has-bg-image [data-dropdown-menu], html.dark body.has-bg-image [data-live-search-results] { background-color: rgb(15 23 42 / 0.97) !important; }
+  body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu], body.has-bg-image [data-live-search-results] { background-color: rgb(255 255 255) !important; }
+  html.dark body.has-bg-image .nav-flyout, html.dark body.has-bg-image [data-dropdown-menu], html.dark body.has-bg-image [data-live-search-results] { background-color: rgb(15 23 42) !important; box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(71 85 105 / 0.6); }
   /* Mobiles Menü im (sticky) Header: eigene Scrollfläche, sonst ist alles
      unterhalb des Bildschirmrands auf dem Handy nicht erreichbar. Die
      genaue Höhe setzt das Hamburger-Skript beim Öffnen. */
@@ -1181,8 +1181,15 @@ $canDocuments = $canRentals;
         // Versatz einmal messen und herausrechnen.
         menu.style.top = '0px';
         menu.style.left = '0px';
-        menu.style.bottom = '';
+        // Explizit "auto": bei nach oben öffnenden Menüs (Klasse bottom-full,
+        // z. B. letzte Tabellenzeilen) würde sonst bottom:100% zusammen mit
+        // top unter position:fixed die Höhe auf 0 zusammendrücken — die
+        // Einträge lagen dann ohne Hintergrund über der Tabelle (Bugreport
+        // "Menü bei den Benutzern sieht komisch aus").
+        menu.style.bottom = 'auto';
         menu.style.right = 'auto';
+        menu.style.marginTop = '0px';
+        menu.style.marginBottom = '0px';
         var origin = menu.getBoundingClientRect();
         var originX = origin.left;
         var originY = origin.top;
@@ -1217,6 +1224,8 @@ $canDocuments = $canRentals;
           return;
         }
         menu.style.position = '';
+        menu.style.marginTop = '';
+        menu.style.marginBottom = '';
         menu.style.maxHeight = '';
         menu.style.overflowY = '';
         menu.style.overscrollBehavior = '';

@@ -17,12 +17,12 @@ use function App\Infrastructure\Http\e;
         <div class="overflow-x-auto">
         <table class="w-full min-w-[640px] table-fixed text-left text-sm">
             <colgroup>
-                <col style="width: 20%">
+                <col style="width: 18%">
                 <col style="width: 22%">
-                <col style="width: 24%">
-                <col style="width: 10%">
-                <col style="width: 12%">
-                <col style="width: 12%">
+                <col style="width: 20%">
+                <col style="width: 18%">
+                <col style="width: 13%">
+                <col style="width: 9%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>

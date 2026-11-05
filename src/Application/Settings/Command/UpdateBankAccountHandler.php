@@ -38,6 +38,7 @@ final class UpdateBankAccountHandler implements CommandHandlerInterface
         $account->bankName = $bankName;
         $account->iban = $iban;
         $account->bic = $bic;
+        $account->ledgerEnabled = $command->ledgerEnabled;
         $account->updatedAt = new DateTimeImmutable();
         // Die Standard-Markierung kann nur gesetzt, nicht per Abwählen
         // entfernt werden — es muss immer ein Standardkonto geben; gewechselt

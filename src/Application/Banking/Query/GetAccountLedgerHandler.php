@@ -77,7 +77,7 @@ final class GetAccountLedgerHandler implements QueryHandlerInterface
 
         return new AccountLedger(
             account: $account,
-            accounts: $this->accounts->findAll(),
+            accounts: array_values(array_filter($this->accounts->findAll(), static fn ($a) => $a->ledgerEnabled)),
             period: $period,
             openingCents: $opening,
             openingDate: $openingDate,

@@ -45,7 +45,10 @@ final class AccountController
 
     public function index(Request $request): void
     {
-        $account = $this->accounts->findDefault() ?? ($this->accounts->findAll()[0] ?? null);
+        // Nur Konten mit eingeschalteter Kontoführung (Einstellungen › Bankverbindungen, Migration 132).
+        $enabled = array_values(array_filter($this->accounts->findAll(), static fn ($a) => $a->ledgerEnabled));
+        $default = array_values(array_filter($enabled, static fn ($a) => $a->isDefault));
+        $account = $default[0] ?? $enabled[0] ?? null;
         if ($account === null) {
             echo View::page('accounts/empty', [], activeNav: 'accounts', title: 'Kontoführung');
 
@@ -57,6 +60,13 @@ final class AccountController
     public function show(Request $request): void
     {
         $period = AccountPeriod::fromQuery($request->query('zeitraum'), $request->query('datum'));
+        $selected = $this->accounts->findById($request->param('id'));
+        if ($selected !== null && !$selected->ledgerEnabled) {
+            Flash::error('Für das Konto „' . $selected->label . '“ ist die Kontoführung nicht eingeschaltet (Einstellungen › Bankverbindungen).');
+            Response::redirect('/konten');
+
+            return;
+        }
         try {
             $ledger = $this->queries->ask(new GetAccountLedger($request->param('id'), $period));
         } catch (NotFoundException $e) {

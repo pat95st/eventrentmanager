@@ -54,7 +54,7 @@ final class BankAccountSettingsController
         $old = $this->oldFromRequest($request);
 
         try {
-            $this->commands->dispatch(new CreateBankAccount($old['label'], $old['account_holder'], $old['bank_name'], $old['iban'], $old['bic'], $old['is_default'] === '1'));
+            $this->commands->dispatch(new CreateBankAccount($old['label'], $old['account_holder'], $old['bank_name'], $old['iban'], $old['bic'], $old['is_default'] === '1', $old['ledger_enabled'] === '1'));
             Flash::success(t('settings.bank_accounts.flash.created'));
             Response::redirect('/einstellungen/bankverbindungen');
         } catch (ValidationException $e) {
@@ -68,7 +68,7 @@ final class BankAccountSettingsController
         $old = $this->oldFromRequest($request);
 
         try {
-            $this->commands->dispatch(new UpdateBankAccount($id, $old['label'], $old['account_holder'], $old['bank_name'], $old['iban'], $old['bic'], $old['is_default'] === '1'));
+            $this->commands->dispatch(new UpdateBankAccount($id, $old['label'], $old['account_holder'], $old['bank_name'], $old['iban'], $old['bic'], $old['is_default'] === '1', $old['ledger_enabled'] === '1'));
             Flash::success(t('settings.bank_accounts.flash.updated'));
             Response::redirect('/einstellungen/bankverbindungen');
         } catch (ValidationException $e) {
@@ -100,6 +100,7 @@ final class BankAccountSettingsController
             'iban' => $request->input('iban', '') ?? '',
             'bic' => $request->input('bic', '') ?? '',
             'is_default' => $request->input('is_default') === '1' ? '1' : '0',
+            'ledger_enabled' => $request->input('ledger_enabled') === '1' ? '1' : '0',
         ];
     }
 

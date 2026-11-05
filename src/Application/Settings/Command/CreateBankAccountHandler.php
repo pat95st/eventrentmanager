@@ -43,6 +43,7 @@ final class CreateBankAccountHandler implements CommandHandlerInterface
             isDefault: $isDefault,
             createdAt: $now,
             updatedAt: $now,
+            ledgerEnabled: $command->ledgerEnabled,
         );
         $this->bankAccounts->save($account);
         if ($isDefault) {

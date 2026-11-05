@@ -8,6 +8,7 @@ use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
 $val = fn (string $key, ?string $fallback) => array_key_exists($key, $old) ? (string) $old[$key] : ($fallback ?? '');
+$ledgerChecked = array_key_exists('ledger_enabled', $old) ? $old['ledger_enabled'] === '1' : ($editing?->ledgerEnabled ?? false);
 $isDefaultChecked = array_key_exists('is_default', $old) ? $old['is_default'] === '1' : ($editing?->isDefault ?? $accounts === []);
 $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset($errors[$errorKey]) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700') . ' px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500';
 ?>
@@ -32,12 +33,18 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
                                 <?php if ($account->isDefault): ?>
                                     <span class="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950/40 dark:text-brand-400"><?= e(t('settings.bank_accounts.default_badge')) ?></span>
                                 <?php endif; ?>
+                                <?php if ($account->ledgerEnabled): ?>
+                                    <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">Kontoführung</span>
+                                <?php endif; ?>
                             </p>
                             <p class="font-mono text-xs text-slate-500 dark:text-slate-400">
                                 <?= e($account->formattedIban()) ?><?= $account->bic !== null ? ' · ' . e($account->bic) : '' ?><?= $account->bankName !== null ? ' · ' . e($account->bankName) : '' ?>
                             </p>
                         </div>
                         <span class="flex items-center gap-3">
+                            <?php if ($account->ledgerEnabled): ?>
+                                <a href="/konten/<?= e($account->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Konto öffnen</a>
+                            <?php endif; ?>
                             <a href="/einstellungen/bankverbindungen/<?= e($account->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
                             <form method="post" action="/einstellungen/bankverbindungen/<?= e($account->id) ?>/loeschen" data-confirm="<?= e(t('settings.bank_accounts.confirm_delete')) ?>" data-confirm-style="danger">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
@@ -79,6 +86,15 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
                 <span>
                     <?= e(t('settings.bank_accounts.form.is_default')) ?>
                     <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e(t($editing?->isDefault ? 'settings.bank_accounts.form.is_default_locked' : 'settings.bank_accounts.form.is_default_hint')) ?></span>
+                </span>
+            </label>
+
+            <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" name="ledger_enabled" value="1" <?= $ledgerChecked ? 'checked' : '' ?>
+                       class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+                <span>
+                    Kontoführung für dieses Konto
+                    <span class="block text-xs text-slate-400 dark:text-slate-500">Anfangsbestand, Buchungen, Saldoverlauf unter Dokumente › Kontoführung; Umsätze aus dem Zahlungsabgleich können auf dieses Konto übernommen werden. Beim Ausschalten bleiben erfasste Buchungen erhalten.</span>
                 </span>
             </label>
 

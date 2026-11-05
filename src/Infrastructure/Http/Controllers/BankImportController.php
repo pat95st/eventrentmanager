@@ -76,7 +76,7 @@ final class BankImportController
             'format' => $result->format,
             'rows' => $enrichedRows,
             'openInvoiceNumbers' => $openInvoiceNumbers,
-            'bankAccounts' => $this->bankAccounts?->findAll() ?? [],
+            'bankAccounts' => array_values(array_filter($this->bankAccounts?->findAll() ?? [], static fn ($a) => $a->ledgerEnabled)),
             'defaultBankAccountId' => $this->bankAccounts?->findDefault()?->id,
         ], activeNav: 'bank_import', title: t('bank_import.title'));
     }

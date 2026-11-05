@@ -24,6 +24,8 @@ final class BankAccount
         public bool $isDefault,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Kontoführung für dieses Konto eingeschaltet (Migration 132)
+        public bool $ledgerEnabled = false,
     ) {
     }
 

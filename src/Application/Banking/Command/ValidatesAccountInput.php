@@ -13,8 +13,11 @@ trait ValidatesAccountInput
     /** @param array<string, string> $errors */
     private function requireAccount(BankAccountRepositoryInterface $accounts, string $id, array &$errors): void
     {
-        if ($id === '' || $accounts->findById($id) === null) {
+        $account = $id !== '' ? $accounts->findById($id) : null;
+        if ($account === null) {
             $errors['bankAccountId'] = 'Bitte ein gültiges Konto auswählen.';
+        } elseif (!$account->ledgerEnabled) {
+            $errors['bankAccountId'] = 'Für dieses Konto ist die Kontoführung nicht eingeschaltet (Einstellungen › Bankverbindungen).';
         }
     }
 

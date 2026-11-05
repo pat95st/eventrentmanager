@@ -107,7 +107,7 @@ final class ConfirmBankImportHandler implements CommandHandlerInterface
     private function bookToLedger(ConfirmBankImport $command, array $rowsByIndex, array $invoiceIdByRow): array
     {
         if ($this->ledger === null || $command->ledgerAccountId === null || $command->ledgerAccountId === ''
-            || ($this->bankAccounts !== null && $this->bankAccounts->findById($command->ledgerAccountId) === null)) {
+            || ($this->bankAccounts !== null && !($this->bankAccounts->findById($command->ledgerAccountId)?->ledgerEnabled ?? false))) {
             return [0, 0];
         }
         $wanted = array_flip(array_map('intval', $command->ledgerRows));

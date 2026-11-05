@@ -42,10 +42,11 @@ final class MariadbBankAccountRepository implements BankAccountRepositoryInterfa
     public function save(BankAccount $account): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO bank_accounts (id, label, account_holder, bank_name, iban, bic, is_default, created_at, updated_at)
-             VALUES (:id, :label, :account_holder, :bank_name, :iban, :bic, :is_default, :created_at, :updated_at)
+            'INSERT INTO bank_accounts (id, label, account_holder, bank_name, iban, bic, is_default, ledger_enabled, created_at, updated_at)
+             VALUES (:id, :label, :account_holder, :bank_name, :iban, :bic, :is_default, :ledger_enabled, :created_at, :updated_at)
              ON DUPLICATE KEY UPDATE label = VALUES(label), account_holder = VALUES(account_holder), bank_name = VALUES(bank_name),
-                 iban = VALUES(iban), bic = VALUES(bic), is_default = VALUES(is_default), updated_at = VALUES(updated_at)'
+                 iban = VALUES(iban), bic = VALUES(bic), is_default = VALUES(is_default),
+                 ledger_enabled = VALUES(ledger_enabled), updated_at = VALUES(updated_at)'
         );
         $stmt->execute([
             'id' => $account->id,
@@ -55,6 +56,7 @@ final class MariadbBankAccountRepository implements BankAccountRepositoryInterfa
             'iban' => $account->iban,
             'bic' => $account->bic,
             'is_default' => $account->isDefault ? 1 : 0,
+            'ledger_enabled' => $account->ledgerEnabled ? 1 : 0,
             'created_at' => $account->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $account->updatedAt->format('Y-m-d H:i:s'),
         ]);
@@ -85,6 +87,7 @@ final class MariadbBankAccountRepository implements BankAccountRepositoryInterfa
             isDefault: (bool) $row['is_default'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            ledgerEnabled: (bool) ($row['ledger_enabled'] ?? false),
         );
     }
 }

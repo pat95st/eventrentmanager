@@ -15,6 +15,7 @@ final class CreateBankAccount implements CommandInterface
         public readonly string $iban,
         public readonly ?string $bic,
         public readonly bool $isDefault,
+        public readonly bool $ledgerEnabled = false, // Kontoführung (Migration 132)
     ) {
     }
 }

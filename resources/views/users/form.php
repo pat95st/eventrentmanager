@@ -11,6 +11,11 @@ $val = fn (string $field, mixed $fallback = null) => array_key_exists($field, $o
 $selectedPermissions = $val('permissions', array_map(static fn ($p) => $p->value, $user->permissions ?? []));
 $isActive = $val('is_active', $user->isActive ?? true);
 $mustSetupTwoFactor = $val('must_setup_two_factor', $user->mustSetupTwoFactor ?? false);
+/** @var \App\Domain\Technician\TechnicianProfile|null $technicianProfile */
+$technicianProfile ??= null;
+$techConfirm = $val('technician_requires_confirmation', $technicianProfile?->requiresConfirmation ?? true);
+$techPhone = (string) $val('technician_phone', $technicianProfile?->phone ?? '');
+$techTelegram = (string) $val('technician_telegram', $technicianProfile?->telegramChatId ?? '');
 ?>
 
 <div class="mb-6">
@@ -114,8 +119,38 @@ $mustSetupTwoFactor = $val('must_setup_two_factor', $user->mustSetupTwoFactor ??
             <?php endforeach; ?>
         </div>
         <?php if (isset($errors['permissions'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['permissions']) ?></p><?php endif; ?>
-        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">"Administration" schließt automatisch alle übrigen Rechte ein.</p>
+        <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">"Administration" schließt automatisch alle übrigen Rechte ein. "Techniker" sieht nur Veranstaltungen, für die er angefragt oder eingeplant ist – ohne Abrechnungsdaten.</p>
     </div>
+
+    <!-- Techniker (Migration 134): nur sichtbar, wenn das Recht angehakt ist -->
+    <fieldset id="technician-fields" class="space-y-3 rounded-md border border-slate-200 p-4 dark:border-slate-700" <?= in_array('techniker', $selectedPermissions, true) ? '' : 'hidden' ?>>
+        <legend class="px-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Techniker</legend>
+        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" name="technician_requires_confirmation" value="1" class="mt-0.5" <?= $techConfirm ? 'checked' : '' ?>>
+            <span>Muss Einsätzen erst zustimmen
+                <span class="block text-xs text-slate-400 dark:text-slate-500">Angehakt: wird angefragt und sagt über seinen Login zu oder ab (mit Erinnerungen). Nicht angehakt: kann direkt verplant werden. In beiden Fällen gibt es eine E-Mail mit Termineinladung.</span>
+            </span>
+        </label>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+                <label for="technician_phone" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Mobilnummer (WhatsApp/Signal)</label>
+                <input type="tel" id="technician_phone" name="technician_phone" value="<?= e($techPhone) ?>" placeholder="+491701234567" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
+            </div>
+            <div>
+                <label for="technician_telegram" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Telegram-Chat-ID</label>
+                <input type="text" id="technician_telegram" name="technician_telegram" value="<?= e($techTelegram) ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
+            </div>
+        </div>
+        <p class="text-xs text-slate-400 dark:text-slate-500">Messenger-Nachrichten gehen nur über Dienste, die unter Einstellungen › Nachrichtendienste eingerichtet sind.</p>
+    </fieldset>
+    <script>
+        (function () {
+            var box = document.querySelector('input[name="permissions[]"][value="techniker"]');
+            var fields = document.getElementById('technician-fields');
+            if (!box || !fields) { return; }
+            box.addEventListener('change', function () { fields.hidden = !box.checked; });
+        })();
+    </script>
 
     <?php if ($user !== null): ?>
         <div>

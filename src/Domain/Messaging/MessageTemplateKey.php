@@ -34,6 +34,10 @@ enum MessageTemplateKey: string
     case InvoiceSent = 'invoice_sent';
     case InvoiceDueReminder = 'invoice_due_reminder';
     case DunningNotice = 'dunning_notice';
+    // Techniker-Einsatzplanung (Migration 134)
+    case TechnicianRequest = 'technician_request';
+    case TechnicianReminder = 'technician_reminder';
+    case TechnicianAssigned = 'technician_assigned';
 
     public function label(): string
     {
@@ -44,6 +48,9 @@ enum MessageTemplateKey: string
             self::InvoiceSent => 'Rechnung versendet',
             self::InvoiceDueReminder => 'Erinnerung: Rechnung fällig',
             self::DunningNotice => 'Mahnung',
+            self::TechnicianRequest => 'Techniker: Anfrage',
+            self::TechnicianReminder => 'Techniker: Erinnerung an offene Anfrage',
+            self::TechnicianAssigned => 'Techniker: Einplanung',
         };
     }
 
@@ -56,6 +63,9 @@ enum MessageTemplateKey: string
             self::InvoiceSent => 'Wird zusätzlich zur E-Mail verschickt, wenn eine Rechnung per PDF-Mail an den Kunden versendet wird (siehe InvoiceController::emailPdf/SendInvoiceSentViaMessaging).',
             self::InvoiceDueReminder => 'Wird automatisch verschickt, wenn die Fälligkeit einer versendeten, noch offenen Rechnung bevorsteht (siehe Einstellungen -> Rechnungs-Erinnerungen, bin/send-invoice-due-reminders.php). Rein Messenger-basiert, es gibt dafür keine E-Mail-Erinnerung.',
             self::DunningNotice => 'Wird zusätzlich zur E-Mail verschickt, wenn für eine überfällige Rechnung eine Mahnung erstellt wird (manuell oder automatisch, siehe Mahnwesen-Einstellungen, bin/send-dunning-notices.php).',
+            self::TechnicianRequest => 'Wird zusätzlich zur E-Mail an einen Techniker verschickt, wenn er für eine Veranstaltung angefragt wird und seine Mobilnummer bzw. Telegram-Chat-ID hinterlegt ist.',
+            self::TechnicianReminder => 'Wird zusätzlich zur E-Mail verschickt, wenn ein angefragter Techniker noch nicht geantwortet hat (bin/send-technician-reminders.php).',
+            self::TechnicianAssigned => 'Wird zusätzlich zur E-Mail an einen direkt verplanbaren Techniker verschickt, wenn er einer Veranstaltung zugeteilt wird.',
         };
     }
 
@@ -115,6 +125,15 @@ enum MessageTemplateKey: string
                 'dunning_level_name' => 'Name der Mahnstufe',
                 'total_due' => 'Offener Gesamtbetrag (Rechnung + Mahngebühr), formatiert mit Euro-Zeichen',
             ],
+            self::TechnicianRequest, self::TechnicianReminder, self::TechnicianAssigned => [
+                'technician_name' => 'Vorname bzw. Name des Technikers',
+                'event_name' => 'Name der Veranstaltung',
+                'date_range' => 'Zeitraum der Veranstaltung (TT.MM.JJJJ – TT.MM.JJJJ)',
+                'schedule_line' => 'Zeile "Abholung/Rückgabe: ..." inkl. Zeilenumbruch, oder leer',
+                'location_line' => 'Zeile "Ort: ..." inkl. Zeilenumbruch, oder leer',
+                'trades' => 'Gewerke, die der Techniker übernehmen soll (oder "–")',
+                'link' => 'Link zur Veranstaltung in der App',
+            ],
         };
     }
 
@@ -128,6 +147,9 @@ enum MessageTemplateKey: string
             self::InvoiceSent => "Guten Tag {{customer_name}},\n\nwir haben Ihnen die Rechnung {{invoice_number}} über {{total_gross}} per E-Mail zugesendet. Fälligkeitsdatum: {{due_date}}.\n\nMit freundlichen Grüßen",
             self::InvoiceDueReminder => "Guten Tag {{customer_name}},\n\nwir möchten Sie daran erinnern, dass die Rechnung {{invoice_number}} über {{total_gross}} am {{due_date}} fällig wird.\n\nMit freundlichen Grüßen",
             self::DunningNotice => "Guten Tag {{customer_name}},\n\nwir haben Ihnen eine {{dunning_level_name}} zu unserer Rechnung {{invoice_number}} per E-Mail zugesendet. Offener Gesamtbetrag: {{total_due}}.\n\nMit freundlichen Grüßen",
+            self::TechnicianRequest => "Hallo {{technician_name}},\n\nwir möchten dich für folgende Veranstaltung anfragen:\n{{event_name}}\nZeitraum: {{date_range}}\n{{schedule_line}}{{location_line}}Gewerke: {{trades}}\n\nBitte sag über deinen Login zu oder ab: {{link}}",
+            self::TechnicianReminder => "Hallo {{technician_name}},\n\nzu {{event_name}} ({{date_range}}) fehlt noch deine Rückmeldung. Bitte sag über deinen Login zu oder ab: {{link}}",
+            self::TechnicianAssigned => "Hallo {{technician_name}},\n\ndu bist für folgende Veranstaltung eingeplant:\n{{event_name}}\nZeitraum: {{date_range}}\n{{schedule_line}}{{location_line}}Gewerke: {{trades}}\n\nDetails: {{link}}",
         };
     }
 
@@ -148,6 +170,7 @@ enum MessageTemplateKey: string
             self::InvoiceSent => ['customer_name', 'invoice_number', 'total_gross', 'due_date'],
             self::InvoiceDueReminder => ['customer_name', 'invoice_number', 'total_gross', 'due_date'],
             self::DunningNotice => ['customer_name', 'invoice_number', 'dunning_level_name', 'total_due'],
+            self::TechnicianRequest, self::TechnicianReminder, self::TechnicianAssigned => ['technician_name', 'event_name', 'date_range', 'link'],
         };
     }
 }

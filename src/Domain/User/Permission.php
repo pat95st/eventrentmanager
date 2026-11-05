@@ -26,6 +26,10 @@ enum Permission: string
     // Nur Elektroprüfungen erfassen (Nutzerwunsch); der Benutzer wird dabei
     // automatisch als Prüfer eingetragen. Artikelverwaltung darf das auch.
     case Elektropruefung = 'elektropruefung';
+    // Techniker (Migration 134): sieht nur Veranstaltungen, für die er
+    // angefragt oder eingeplant ist (ohne Abrechnungsdaten), kann dort
+    // Ausgabe/Rückgabe machen und RMA-Vorgänge anlegen.
+    case Techniker = 'techniker';
 
     public function label(): string
     {
@@ -36,12 +40,13 @@ enum Permission: string
             self::AusgabeRuecknahme => 'Ausgabe und Rücknahme',
             self::Minutenprogramme => 'Minutenprogramme',
             self::Elektropruefung => 'Elektroprüfung',
+            self::Techniker => 'Techniker',
         };
     }
 
     /** @return Permission[] Alle Rechte in fester Anzeigereihenfolge. */
     public static function all(): array
     {
-        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme, self::Elektropruefung];
+        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme, self::Elektropruefung, self::Techniker];
     }
 }

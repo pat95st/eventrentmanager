@@ -232,7 +232,8 @@ final class CalDavController
     {
         $user = $this->authGuard->authenticate();
 
-        if ($request->param('userId') !== $user->id) {
+        // Nur-Techniker (Migration 134) sehen keine Kalender mit allen Veranstaltungen.
+        if ($request->param('userId') !== $user->id || \App\Domain\Technician\TechnicianAccess::isRestricted($user)) {
             Response::raw('Zugriff verweigert.', 403, 'text/plain; charset=utf-8');
         }
 

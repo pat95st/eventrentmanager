@@ -130,6 +130,8 @@ $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
 // Eigener Menüpunkt "Elektroprüfung" für Benutzer mit diesem Recht, aber ohne
 // Artikelverwaltung (sonst steht er im Menü "Artikel").
 $canInspections = $currentUser !== null && !$canArticles && $currentUser->has(Permission::Elektropruefung);
+// Nur-Techniker (Migration 134): eigener Menüpunkt „Meine Veranstaltungen“.
+$canTechnicianRentals = !$canRentals && \App\Domain\Technician\TechnicianAccess::isRestricted($currentUser);
 // "Kontakte" ist sichtbar, sobald mindestens einer der beiden Kindpunkte
 // (Kunden ODER Lieferanten) berechtigt ist; "Einkauf"/"Dokumente" teilen
 // sich jeweils ein einziges Recht mit allen ihren Kindpunkten (siehe oben).
@@ -427,6 +429,13 @@ $canDocuments = $canRentals;
         ><?= e(t('nav.sales')) ?></a>
         <?php endif; ?>
 
+        <?php if ($canTechnicianRentals): ?>
+        <a
+          href="/veranstaltungen"
+          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'rentals' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+        >Meine Veranstaltungen</a>
+        <?php endif; ?>
+
         <?php if ($canInspections): ?>
         <a
           href="/elektropruefung"
@@ -514,8 +523,10 @@ $canDocuments = $canRentals;
           <div class="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
           <a href="/profil/sicherheit" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
           <a href="/profil/sitzungen" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
+          <?php if (!\App\Domain\Technician\TechnicianAccess::isRestricted($currentUser)): ?>
           <a href="/profil/caldav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.caldav')) ?></a>
           <a href="/profil/carddav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.carddav')) ?></a>
+          <?php endif; ?>
           <a href="/profil/passwort" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.change_password')) ?></a>
           <a href="/profil/darstellung" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
           <a href="/profil/dashboard" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.dashboard_settings')) ?></a>
@@ -569,8 +580,10 @@ $canDocuments = $canRentals;
             <div class="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
             <a href="/profil/sicherheit" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
             <a href="/profil/sitzungen" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
+            <?php if (!\App\Domain\Technician\TechnicianAccess::isRestricted($currentUser)): ?>
             <a href="/profil/caldav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.caldav')) ?></a>
             <a href="/profil/carddav" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.carddav')) ?></a>
+            <?php endif; ?>
             <a href="/profil/passwort" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.change_password')) ?></a>
             <a href="/profil/darstellung" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.display')) ?></a>
             <a href="/profil/dashboard" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.dashboard_settings')) ?></a>
@@ -685,6 +698,13 @@ $canDocuments = $canRentals;
         href="/verkaeufe"
         class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
       ><?= e(t('nav.sales')) ?></a>
+      <?php endif; ?>
+
+      <?php if ($canTechnicianRentals): ?>
+      <a
+        href="/veranstaltungen"
+        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'rentals' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+      >Meine Veranstaltungen</a>
       <?php endif; ?>
 
       <?php if ($canInspections): ?>

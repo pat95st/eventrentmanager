@@ -25,6 +25,10 @@ enum EmailTemplateKey: string
     case RentalPickupReminder = 'rental_pickup_reminder';
     case RentalReturnReminder = 'rental_return_reminder';
     case RentalCustomerChecklist = 'rental_customer_checklist';
+    // Techniker-Einsatzplanung (Migration 134)
+    case TechnicianRequest = 'technician_request';
+    case TechnicianReminder = 'technician_reminder';
+    case TechnicianAssigned = 'technician_assigned';
 
     public function label(): string
     {
@@ -40,6 +44,9 @@ enum EmailTemplateKey: string
             self::RentalPickupReminder => 'Erinnerung: Abholung',
             self::RentalReturnReminder => 'Erinnerung: Rückgabe',
             self::RentalCustomerChecklist => 'Kunden-Checkliste (Vollständigkeitsprüfung)',
+            self::TechnicianRequest => 'Techniker: Anfrage für eine Veranstaltung',
+            self::TechnicianReminder => 'Techniker: Erinnerung an offene Anfrage',
+            self::TechnicianAssigned => 'Techniker: Einplanung für eine Veranstaltung',
         };
     }
 
@@ -57,6 +64,9 @@ enum EmailTemplateKey: string
             self::RentalPickupReminder => 'Wird automatisch verschickt, wenn der Abholtermin einer Vermietung innerhalb des eingestellten Vorlaufs bevorsteht (siehe Einstellungen -> Erinnerungen).',
             self::RentalReturnReminder => 'Wird automatisch verschickt, wenn der Rückgabetermin einer Vermietung innerhalb des eingestellten Vorlaufs bevorsteht (siehe Einstellungen -> Erinnerungen).',
             self::RentalCustomerChecklist => 'Enthält den Link zur Kunden-Checkliste (Vollständigkeitsprüfung vor dem Abbau) — manuell über die Veranstaltungs-Detailseite verschickt oder automatisch vor dem Rückgabetermin (siehe Einstellungen -> Erinnerungen).',
+            self::TechnicianRequest => 'Wird an einen Techniker verschickt, der einer Veranstaltung erst zustimmen muss, sobald er angefragt wird. Enthält eine Termineinladung (.ics).',
+            self::TechnicianReminder => 'Wird erneut verschickt, wenn ein angefragter Techniker nicht zu- oder abgesagt hat (Zeitpunkte unter Einstellungen › Techniker & Gewerke). Enthält eine Termineinladung (.ics).',
+            self::TechnicianAssigned => 'Wird an einen direkt verplanbaren Techniker verschickt, sobald er einer Veranstaltung zugeteilt wird. Enthält eine Termineinladung (.ics).',
         };
     }
 
@@ -137,6 +147,16 @@ enum EmailTemplateKey: string
                 'return_at' => 'Rückgabetermin, formatiert (TT.MM.JJJJ, HH:MM Uhr), oder leer, falls kein Termin hinterlegt ist',
                 'link' => 'Der Link zur Kunden-Checkliste',
             ],
+            self::TechnicianRequest, self::TechnicianReminder, self::TechnicianAssigned => [
+                'technician_name' => 'Vorname bzw. Name des Technikers',
+                'event_name' => 'Name der Veranstaltung',
+                'date_range' => 'Zeitraum der Veranstaltung (TT.MM.JJJJ – TT.MM.JJJJ)',
+                'schedule_line' => 'Zeile "Abholung/Rückgabe: ..." inkl. Zeilenumbruch, oder leer',
+                'location_line' => 'Zeile "Ort: ..." inkl. Zeilenumbruch, oder leer',
+                'trades' => 'Gewerke, die der Techniker übernehmen soll (oder "–")',
+                'note_line' => 'Hinweis zur Anfrage inkl. Zeilenumbruch, oder leer',
+                'link' => 'Link zur Veranstaltung in der App (Login erforderlich)',
+            ],
         };
     }
 
@@ -154,6 +174,9 @@ enum EmailTemplateKey: string
             self::RentalPickupReminder => 'Erinnerung: Abholung für {{event_name}}',
             self::RentalReturnReminder => 'Erinnerung: Rückgabe für {{event_name}}',
             self::RentalCustomerChecklist => 'Vollständigkeits-Checkliste für {{event_name}}',
+            self::TechnicianRequest => 'Anfrage: {{event_name}} ({{date_range}})',
+            self::TechnicianReminder => 'Erinnerung – bitte zu- oder absagen: {{event_name}} ({{date_range}})',
+            self::TechnicianAssigned => 'Einplanung: {{event_name}} ({{date_range}})',
         };
     }
 
@@ -171,6 +194,9 @@ enum EmailTemplateKey: string
             self::RentalPickupReminder => "<p>Guten Tag {{customer_name}},</p>\n<p>wir möchten Sie an die bevorstehende Abholung für folgende Veranstaltung erinnern:</p>\n<p>Veranstaltung: {{event_name}}<br>Abholtermin: {{pickup_at}}<br>{{warehouse_line}}</p>\n<p>Mit freundlichen Grüßen</p>",
             self::RentalReturnReminder => "<p>Guten Tag {{customer_name}},</p>\n<p>wir möchten Sie an die bevorstehende Rückgabe für folgende Veranstaltung erinnern:</p>\n<p>Veranstaltung: {{event_name}}<br>Rückgabetermin: {{return_at}}<br>{{warehouse_line}}</p>\n<p>Mit freundlichen Grüßen</p>",
             self::RentalCustomerChecklist => "<p>Guten Tag {{customer_name}},</p>\n<p>bitte prüfen Sie vor dem Abbau über folgenden Link, ob alle für Ihre Veranstaltung ausgegebenen Artikel vollständig vorhanden sind:</p>\n<p><a href=\"{{link}}\">{{link}}</a></p>\n<p>Veranstaltung: {{event_name}}<br>Rückgabetermin: {{return_at}}</p>\n<p>Mit freundlichen Grüßen</p>",
+            self::TechnicianRequest => "<p>Hallo {{technician_name}},</p>\n<p>wir möchten dich für folgende Veranstaltung anfragen:</p>\n<p>Veranstaltung: {{event_name}}<br>Zeitraum: {{date_range}}<br>{{schedule_line}}{{location_line}}Gewerke: {{trades}}</p>\n{{note_line}}\n<p>Bitte sag uns über deinen Login zu oder ab:<br><a href=\"{{link}}\">{{link}}</a></p>\n<p>Die Termineinladung findest du im Anhang.</p>\n<p>Viele Grüße<br>{{company_name}}</p>",
+            self::TechnicianReminder => "<p>Hallo {{technician_name}},</p>\n<p>zu folgender Veranstaltung haben wir noch keine Rückmeldung von dir:</p>\n<p>Veranstaltung: {{event_name}}<br>Zeitraum: {{date_range}}<br>{{schedule_line}}{{location_line}}Gewerke: {{trades}}</p>\n{{note_line}}\n<p>Bitte sag uns über deinen Login zu oder ab:<br><a href=\"{{link}}\">{{link}}</a></p>\n<p>Viele Grüße<br>{{company_name}}</p>",
+            self::TechnicianAssigned => "<p>Hallo {{technician_name}},</p>\n<p>du bist für folgende Veranstaltung eingeplant:</p>\n<p>Veranstaltung: {{event_name}}<br>Zeitraum: {{date_range}}<br>{{schedule_line}}{{location_line}}Gewerke: {{trades}}</p>\n{{note_line}}\n<p>Alle Details findest du in der App:<br><a href=\"{{link}}\">{{link}}</a></p>\n<p>Die Termineinladung findest du im Anhang.</p>\n<p>Viele Grüße<br>{{company_name}}</p>",
         };
     }
 }

@@ -97,7 +97,33 @@ final class RentalController
         private readonly ?\App\Domain\Venue\VenuePowerConnectionRepositoryInterface $venuePowerConnections = null,
         // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
         private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
+        // Techniker (Migration 134): Zugriff nur auf zugeordnete Veranstaltungen.
+        private readonly ?\App\Domain\Technician\RentalTechnicianRepositoryInterface $rentalTechnicians = null,
     ) {
+    }
+
+    /**
+     * Für Benutzer, die nur das Recht "Techniker" haben (Migration 134): Zugriff
+     * nur auf Veranstaltungen, für die sie angefragt oder eingeplant sind.
+     * Gibt false zurück (und hat bereits mit 404 geantwortet), wenn nicht.
+     */
+    private function technicianMayAccess(string $rentalId): bool
+    {
+        if (!\App\Domain\Technician\TechnicianAccess::isRestricted(CurrentUser::get())) {
+            return true;
+        }
+        $assignment = $this->rentalTechnicians?->findByRentalAndUser($rentalId, CurrentUser::get()->id);
+        if (\App\Domain\Technician\TechnicianAccess::canSeeRental($assignment)) {
+            return true;
+        }
+        Response::notFound('Die Veranstaltung wurde nicht gefunden.');
+
+        return false;
+    }
+
+    private function isRestrictedTechnician(): bool
+    {
+        return \App\Domain\Technician\TechnicianAccess::isRestricted(CurrentUser::get());
     }
 
     /** Anschlüsse des Veranstaltungsorts mit Schmelzsicherungen (Hinweis: Ersatz vom Veranstaltungsort anfragen). */
@@ -216,6 +242,17 @@ final class RentalController
 
     public function index(Request $request): void
     {
+        // Techniker sehen nur ihre angefragten/eingeplanten Veranstaltungen (Migration 134).
+        if ($this->isRestrictedTechnician()) {
+            $past = $request->query('vergangene') === '1';
+            echo View::page('technicians/rentals', [
+                'rows' => $this->queries->ask(new \App\Application\Technician\Query\ListTechnicianRentals(CurrentUser::get()->id, $past)),
+                'showPast' => $past,
+            ], activeNav: 'rentals', title: t('rentals.title'));
+
+            return;
+        }
+
         $search = $request->query('q');
         $customerId = $this->nullIfEmpty($request->query('kunde'));
         $page = Pagination::page($request);
@@ -281,11 +318,29 @@ final class RentalController
     public function show(Request $request): void
     {
         $id = $request->param('id');
+        if (!$this->technicianMayAccess($id)) {
+            return;
+        }
 
         try {
             $detail = $this->queries->ask(new GetRental($id));
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        // Eigene, auf Technik reduzierte Ansicht ohne Abrechnungsdaten (Migration 134).
+        if ($this->isRestrictedTechnician()) {
+            echo View::page('technicians/rental-show', [
+                'detail' => $detail,
+                'assignment' => $this->rentalTechnicians?->findByRentalAndUser($id, CurrentUser::get()->id),
+                'team' => $this->queries->ask(new \App\Application\Technician\Query\GetRentalTechnicians($id)),
+                'venue' => $detail->rental->venueId !== null ? $this->venues->findById($detail->rental->venueId) : null,
+                'warehouses' => $this->queries->ask(new ListWarehouses())->items,
+                'spareFuseHints' => $this->spareFuseHints($detail->items),
+                'venueFuseConnections' => $this->venueFuseConnections($detail->rental->venueId),
+            ], activeNav: 'rentals', title: $detail->rental->eventName);
 
             return;
         }
@@ -399,6 +454,8 @@ final class RentalController
             'spareFuseHints' => $this->spareFuseHints($detail->items),
             'venueFuseConnections' => $this->venueFuseConnections($detail->rental->venueId),
             // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)
+            // Techniker & Gewerke (Migration 134)
+            'technicianTeam' => $this->rentalTechnicians !== null ? $this->queries->ask(new \App\Application\Technician\Query\GetRentalTechnicians($id)) : null,
             'rentalHolidays' => $this->schedule?->holidaysDuring($detail->rental->startDate, $detail->rental->endDate) ?? [],
             'blockingConflicts' => $this->schedule?->blockingConflicts($detail->rental) ?? [],
         ], activeNav: 'rentals', title: t('rentals.page_title.detail', ['event' => $detail->rental->eventName]));
@@ -931,6 +988,9 @@ final class RentalController
     /** Ausgabe-Checkliste: tatsächlich ausgegebenes Material anhand der Inventarnummer erfassen. */
     public function checklist(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $id = $request->param('id');
 
         try {
@@ -969,6 +1029,9 @@ final class RentalController
     /** Vermietbedingungen-Unterschrift (iPad) auf der Ausgabe-Checkliste. */
     public function signTerms(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $rentalId = $request->param('id');
         $signatureDataUrl = $request->input('signature_data_url', '') ?? '';
 
@@ -989,6 +1052,9 @@ final class RentalController
     /** Ausweisprüfung (einmalig je Kunde) auf der Ausgabe-Checkliste. */
     public function confirmIdChecked(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $rentalId = $request->param('id');
         $customerId = $request->input('customer_id', '') ?? '';
 
@@ -1006,6 +1072,9 @@ final class RentalController
 
     public function issueItem(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $rentalId = $request->param('id');
         $inventoryNumberId = $request->input('inventory_number_id', '') ?? '';
         // Barcode-/Handscanner-Workflow: statt der Dropdown-Auswahl kann die
@@ -1059,6 +1128,9 @@ final class RentalController
     /** Bestätigt im Zubehör-Modal die Vollständigkeitsprüfung für einen Posten. */
     public function confirmAccessories(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $rentalId = $request->param('id');
         $rentalItemId = $request->input('rental_item_id', '') ?? '';
 
@@ -1077,6 +1149,9 @@ final class RentalController
     /** Bestätigt im Vor-Ausgabe-Check-Modal die Prüfung für einen Posten (z. B. "Default Show bei Digitalpult geladen"). */
     public function confirmPreIssueChecks(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $rentalId = $request->param('id');
         $rentalItemId = $request->input('rental_item_id', '') ?? '';
 
@@ -1095,6 +1170,9 @@ final class RentalController
     /** Rückgabe-Checkliste: bereits ausgegebenes Material anhand der Inventarnummer als zurückgegeben erfassen. */
     public function returnChecklist(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $id = $request->param('id');
 
         try {
@@ -1113,6 +1191,9 @@ final class RentalController
 
     public function returnItem(Request $request): void
     {
+        if (!$this->technicianMayAccess($request->param('id'))) {
+            return;
+        }
         $rentalId = $request->param('id');
         $issuedItemId = $request->input('issued_item_id', '') ?? '';
         // Barcode-/Handscanner-Workflow: statt der Dropdown-Auswahl kann die

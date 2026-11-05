@@ -569,6 +569,11 @@ $messagingSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMe
 $messageTemplateRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMessageTemplateRepository($pdo);
 $messagingTemplateRenderer = new \App\Application\Messaging\MessagingTemplateRenderer($messageTemplateRepository);
 $messageSender = new \App\Infrastructure\Messaging\HttpMessageSender($messagingSettingsRepository);
+// Techniker & Gewerke (Migration 134)
+$tradeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTradeRepository($pdo);
+$technicianProfileRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTechnicianProfileRepository($pdo);
+$rentalTechnicianRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalTechnicianRepository($pdo);
+$technicianSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTechnicianSettingsRepository($pdo);
 $documentStorageTargetRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageTargetRepository($pdo);
 $documentStorageAssignmentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageAssignmentRepository($pdo);
 $documentStorageUploadLogRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageUploadLogRepository($pdo);
@@ -640,6 +645,24 @@ $commandBus->register(\App\Application\Article\Command\CreateArticle::class, new
 $commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
 // Leitungen (Migration 125)
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
+// Techniker & Gewerke (Migration 134)
+$technicianNotifier = new \App\Application\Technician\TechnicianNotifier(
+    $rentalTechnicianRepository, $rentalRepository, $userRepository, $technicianProfileRepository, $tradeRepository,
+    $mailer, $emailTemplateRenderer, $smtpSettingsRepository, $companySettingsRepository, $integrationBaseSettingsRepository,
+    $messagingSettingsRepository, $messagingTemplateRenderer, $messageSender,
+);
+$commandBus->register(\App\Application\Technician\Command\SaveTrade::class, new \App\Application\Technician\Command\SaveTradeHandler($tradeRepository));
+$commandBus->register(\App\Application\Technician\Command\DeleteTrade::class, new \App\Application\Technician\Command\DeleteTradeHandler($tradeRepository));
+$commandBus->register(\App\Application\Technician\Command\SaveTechnicianSettings::class, new \App\Application\Technician\Command\SaveTechnicianSettingsHandler($technicianSettingsRepository));
+$commandBus->register(\App\Application\Technician\Command\SaveTechnicianProfile::class, new \App\Application\Technician\Command\SaveTechnicianProfileHandler($technicianProfileRepository));
+$commandBus->register(\App\Application\Technician\Command\SetRentalTrades::class, new \App\Application\Technician\Command\SetRentalTradesHandler($tradeRepository));
+$commandBus->register(\App\Application\Technician\Command\AssignTechnician::class, new \App\Application\Technician\Command\AssignTechnicianHandler($rentalTechnicianRepository, $rentalRepository, $userRepository, $technicianProfileRepository, $tradeRepository, $technicianNotifier));
+$commandBus->register(\App\Application\Technician\Command\UpdateRentalTechnician::class, new \App\Application\Technician\Command\UpdateRentalTechnicianHandler($rentalTechnicianRepository, $tradeRepository));
+$commandBus->register(\App\Application\Technician\Command\RemoveRentalTechnician::class, new \App\Application\Technician\Command\RemoveRentalTechnicianHandler($rentalTechnicianRepository));
+$commandBus->register(\App\Application\Technician\Command\RespondToTechnicianRequest::class, new \App\Application\Technician\Command\RespondToTechnicianRequestHandler($rentalTechnicianRepository, $rentalRepository));
+$commandBus->register(\App\Application\Technician\Command\NotifyTechnician::class, new \App\Application\Technician\Command\NotifyTechnicianHandler($technicianNotifier));
+$queryBus->register(\App\Application\Technician\Query\GetRentalTechnicians::class, new \App\Application\Technician\Query\GetRentalTechniciansHandler($rentalTechnicianRepository, $tradeRepository, $userRepository, $technicianProfileRepository));
+$queryBus->register(\App\Application\Technician\Query\ListTechnicianRentals::class, new \App\Application\Technician\Query\ListTechnicianRentalsHandler($rentalTechnicianRepository, $rentalRepository, $tradeRepository));
 // Kontoführung (Migration 131)
 $commandBus->register(\App\Application\Banking\Command\SaveOpeningBalance::class, new \App\Application\Banking\Command\SaveOpeningBalanceHandler($accountLedgerRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\Banking\Command\AddAccountTransaction::class, new \App\Application\Banking\Command\AddAccountTransactionHandler($accountLedgerRepository, $bankAccountRepository));
@@ -1481,7 +1504,7 @@ $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
@@ -1518,7 +1541,9 @@ $passkeyController = new PasskeyController($commandBus, $queryBus, $recordUserSe
 $calDavSigningCertificateProvider = new \App\Infrastructure\Http\CalDav\CalDavSigningCertificateProvider($calDavSigningSettingsRepository, $fileStorage, $companySettingsRepository);
 $mobileConfigBuilder = new \App\Infrastructure\Http\CalDav\MobileConfigBuilder($calDavSigningCertificateProvider);
 $profileController = new ProfileController($commandBus, $queryBus, $mobileConfigBuilder);
-$userController = new UserController($commandBus, $queryBus);
+$userController = new UserController($commandBus, $queryBus, $technicianProfileRepository);
+$rentalTechnicianController = new \App\Infrastructure\Http\Controllers\RentalTechnicianController($commandBus, $queryBus, $rentalTechnicianRepository);
+$technicianSettingsController = new \App\Infrastructure\Http\Controllers\TechnicianSettingsController($commandBus, $tradeRepository, $technicianSettingsRepository);
 $smtpSettingsController = new SmtpSettingsController($commandBus, $queryBus);
 $priceTierSettingsController = new PriceTierSettingsController($commandBus, $queryBus);
 $companySettingsController = new CompanySettingsController($commandBus, $queryBus, $fileStorage);
@@ -1932,10 +1957,10 @@ $router->post('/lagerorte/{id}/loeschen', $auth->guard(Permission::AusgabeRueckn
 // platziert, damit "suche" nicht als {id} interpretiert wird.
 $router->get('/veranstaltungen/suche', $auth->guard(null, [$rentalController, 'search']));
 $router->get('/veranstaltungen/{id}/logistik', $auth->guard(null, [$rentalController, 'logistics']));
-$router->get('/veranstaltungen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'index']));
+$router->get('/veranstaltungen', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'index']));
 $router->get('/veranstaltungen/neu', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'create']));
 $router->post('/veranstaltungen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'store']));
-$router->get('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'show']));
+$router->get('/veranstaltungen/{id}', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'show']));
 $router->get('/veranstaltungen/{id}/packliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'exportPackingListPdf']));
 $router->post('/veranstaltungen/{id}/packliste/email', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'emailPackingListPdf']));
 $router->post('/veranstaltungen/{id}/rechnung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'createInvoice']));
@@ -1951,16 +1976,25 @@ $router->post('/veranstaltungsposten/{id}/loeschen', $auth->guard(Permission::Au
 $router->post('/veranstaltungssets/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'removeSetBooking']));
 $router->post('/veranstaltungsbundles/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'removeBundle']));
 
-$router->get('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'checklist']));
-$router->post('/veranstaltungen/{id}/ausgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'issueItem']));
+$router->get('/veranstaltungen/{id}/ausgabe', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'checklist']));
+$router->post('/veranstaltungen/{id}/ausgabe', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'issueItem']));
 $router->post('/ausgaben/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'unissueItem']));
-$router->post('/veranstaltungen/{id}/zubehoer-pruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmAccessories']));
-$router->post('/veranstaltungen/{id}/vor-ausgabe-pruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmPreIssueChecks']));
-$router->post('/veranstaltungen/{id}/vermietbedingungen-unterschrift', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'signTerms']));
-$router->post('/veranstaltungen/{id}/ausweispruefung', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'confirmIdChecked']));
+$router->post('/veranstaltungen/{id}/zubehoer-pruefung', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'confirmAccessories']));
+$router->post('/veranstaltungen/{id}/vor-ausgabe-pruefung', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'confirmPreIssueChecks']));
+$router->post('/veranstaltungen/{id}/vermietbedingungen-unterschrift', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'signTerms']));
+$router->post('/veranstaltungen/{id}/ausweispruefung', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'confirmIdChecked']));
 
-$router->get('/veranstaltungen/{id}/rueckgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'returnChecklist']));
-$router->post('/veranstaltungen/{id}/rueckgabe', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'returnItem']));
+$router->get('/veranstaltungen/{id}/rueckgabe', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'returnChecklist']));
+// Techniker & Gewerke (Migration 134)
+$router->post('/veranstaltungen/{id}/gewerke', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'setTrades']));
+$router->post('/veranstaltungen/{id}/techniker', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'assign']));
+$router->post('/veranstaltungs-techniker/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'update']));
+$router->post('/veranstaltungs-techniker/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'remove']));
+$router->post('/veranstaltungs-techniker/{id}/benachrichtigen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'notify']));
+$router->post('/veranstaltungs-techniker/{id}/antwort', $auth->guard(Permission::Techniker, [$rentalTechnicianController, 'respond']));
+$router->get('/veranstaltungen/{id}/rma', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalTechnicianController, 'rmaForm']));
+$router->post('/veranstaltungen/{id}/rma', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalTechnicianController, 'storeRma']));
+$router->post('/veranstaltungen/{id}/rueckgabe', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'returnItem']));
 
 // Beladungsliste: Zuordnung ausgegebener Posten zu Fahrzeugen inkl.
 // Anhänger-Zugfahrzeug-Zuordnung und Überladungs-Berechnung (siehe
@@ -2160,6 +2194,11 @@ $router->post('/einstellungen/email-vorlagen/{key}/zuruecksetzen', $auth->guard(
 
 $router->get('/einstellungen', $auth->guard(Permission::Administration, [new \App\Infrastructure\Http\Controllers\SettingsOverviewController(), 'index']));
 $router->get('/einstellungen/leitungen', $auth->guard(Permission::Administration, [$cableSettingsController, 'edit']));
+$router->get('/einstellungen/techniker', $auth->guard(Permission::Administration, [$technicianSettingsController, 'index']));
+$router->post('/einstellungen/techniker/gewerke', $auth->guard(Permission::Administration, [$technicianSettingsController, 'storeTrade']));
+$router->post('/einstellungen/techniker/gewerke/{id}', $auth->guard(Permission::Administration, [$technicianSettingsController, 'updateTrade']));
+$router->post('/einstellungen/techniker/gewerke/{id}/loeschen', $auth->guard(Permission::Administration, [$technicianSettingsController, 'deleteTrade']));
+$router->post('/einstellungen/techniker/erinnerungen', $auth->guard(Permission::Administration, [$technicianSettingsController, 'saveSettings']));
 // Betriebsurlaub (Migration 130)
 $router->get('/einstellungen/betriebsurlaub', $auth->guard(Permission::Administration, [$companyHolidayController, 'index']));
 $router->post('/einstellungen/betriebsurlaub', $auth->guard(Permission::Administration, [$companyHolidayController, 'store']));

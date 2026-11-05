@@ -38,6 +38,8 @@ final class UserController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        // Techniker-Profil (Migration 134)
+        private readonly ?\App\Domain\Technician\TechnicianProfileRepositoryInterface $technicianProfiles = null,
     ) {
     }
 
@@ -92,6 +94,7 @@ final class UserController
         try {
             /** @var array{id: string, inviteEmailSent: bool|null} $result */
             $result = $this->commands->dispatch($command);
+            $this->saveTechnicianProfile($request, $result['id']);
 
             if ($result['inviteEmailSent'] === false) {
                 Flash::error('Benutzer wurde angelegt, aber die Einladungs-E-Mail konnte nicht versendet werden. Bitte den Zugang manuell nachreichen (z. B. über "Passwort" in der Benutzerliste).');
@@ -137,6 +140,7 @@ final class UserController
 
         try {
             $this->commands->dispatch($command);
+            $this->saveTechnicianProfile($request, $id);
             Flash::success('Benutzer wurde aktualisiert.');
             Response::redirect('/benutzer');
         } catch (ValidationException $e) {
@@ -409,6 +413,7 @@ final class UserController
             'old' => $old,
             'editingId' => $editingId,
             'allPermissions' => Permission::all(),
+            'technicianProfile' => $user !== null ? $this->technicianProfiles?->find($user->id) : null,
         ], activeNav: 'users', title: $user !== null ? 'Benutzer bearbeiten' : 'Neuer Benutzer');
     }
 
@@ -422,6 +427,31 @@ final class UserController
             'permissions' => $request->post['permissions'] ?? [],
             'is_active' => $request->input('is_active') !== null,
             'must_setup_two_factor' => $request->input('must_setup_two_factor') !== null,
+            'technician_requires_confirmation' => $request->input('technician_requires_confirmation') !== null,
+            'technician_phone' => $request->input('technician_phone', ''),
+            'technician_telegram' => $request->input('technician_telegram', ''),
         ];
+    }
+
+    /**
+     * Techniker-Einstellungen speichern (Migration 134) – nur, wenn der
+     * Benutzer das Recht "Techniker" hat. Eine ungültige Mobilnummer wird
+     * gemeldet, ohne das Speichern des Benutzers rückgängig zu machen.
+     */
+    private function saveTechnicianProfile(Request $request, string $userId): void
+    {
+        if ($this->technicianProfiles === null || !in_array(Permission::Techniker->value, (array) ($request->post['permissions'] ?? []), true)) {
+            return;
+        }
+        try {
+            $this->commands->dispatch(new \App\Application\Technician\Command\SaveTechnicianProfile(
+                $userId,
+                $request->input('technician_requires_confirmation') !== null,
+                $request->input('technician_phone'),
+                $request->input('technician_telegram'),
+            ));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        }
     }
 }

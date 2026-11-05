@@ -180,6 +180,22 @@ final class AuthGuard
                 return;
             }
 
+            // Nur-Techniker (Migration 134): Seiten ohne eigenes Recht (Suchen,
+            // Dashboard, Statistiken …) würden fremde Veranstaltungen, Kunden
+            // oder Zahlen zeigen – erlaubt sind nur Profil/Sitzung; die
+            // Startseite führt zu den eigenen Veranstaltungen.
+            if ($permission === null && \App\Domain\Technician\TechnicianAccess::isRestricted($user) && !self::technicianMayUse($request->path)) {
+                if ($request->path === '/') {
+                    Response::redirect('/veranstaltungen');
+
+                    return;
+                }
+                http_response_code(403);
+                echo View::page('errors/403', [], activeNav: '', title: 'Kein Zugriff');
+
+                return;
+            }
+
             $allowed = $permission === null || array_filter(is_array($permission) ? $permission : [$permission], static fn (Permission $p) => $user->has($p)) !== [];
             if (!$allowed) {
                 http_response_code(403);
@@ -190,6 +206,21 @@ final class AuthGuard
 
             $handler($request);
         };
+    }
+
+    /** Ohne eigenes Recht geschützte Pfade, die Nur-Techniker nutzen dürfen. */
+    private static function technicianMayUse(string $path): bool
+    {
+        if (str_starts_with($path, '/profil/caldav') || str_starts_with($path, '/profil/carddav')) {
+            return false; // Kalender-/Adressbuch-Abos zeigen alle Veranstaltungen bzw. Kontakte
+        }
+        foreach (['/profil', '/passkeys', '/sitzung/', '/benutzer/impersonation/'] as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function isPublicPath(string $path): bool

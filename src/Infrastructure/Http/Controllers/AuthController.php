@@ -156,6 +156,21 @@ final class AuthController
         // zugehörige user_sessions-Zeile eindeutig entfernen und die
         // Sitzung taucht nicht länger unter "Aktive Sitzungen" auf.
         Session::ensureStarted();
+
+        // Abmelden während einer Impersonation (Nutzerwunsch): nicht komplett
+        // abmelden, sondern zur eigenen Sitzung des Administrators zurück.
+        if (Session::isImpersonating()) {
+            $impersonationId = Session::impersonationId();
+            Session::stopImpersonation();
+            if ($impersonationId !== null) {
+                $this->commands->dispatch(new \App\Application\Auth\Command\StopImpersonation($impersonationId));
+            }
+            \App\Infrastructure\Http\Flash::success('Abmeldung als ausgegebener Benutzer – zurück zu Ihrem eigenen Konto.');
+            Response::redirect('/benutzer');
+
+            return;
+        }
+
         $sessionId = session_id();
 
         Session::logout();

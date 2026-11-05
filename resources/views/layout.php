@@ -532,7 +532,7 @@ $canDocuments = $canRentals;
           <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
           <form method="post" action="/logout">
             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-            <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800"><?= e(t('nav.logout')) ?></button>
+            <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800"><?= \App\Infrastructure\Http\Auth\Session::isImpersonating() ? 'Abmelden (zurück zu Ihrem Konto)' : e(t('nav.logout')) ?></button>
           </form>
         </div>
       </details>
@@ -587,7 +587,7 @@ $canDocuments = $canRentals;
             <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
             <form method="post" action="/logout">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-              <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800"><?= e(t('nav.logout')) ?></button>
+              <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800"><?= \App\Infrastructure\Http\Auth\Session::isImpersonating() ? 'Abmelden (zurück zu Ihrem Konto)' : e(t('nav.logout')) ?></button>
             </form>
           </div>
         </div>

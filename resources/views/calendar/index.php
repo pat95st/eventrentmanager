@@ -2,42 +2,23 @@
 /** @var \DateTimeImmutable[][] $weeks */
 /** @var array<string, \App\Application\Rental\Query\CalendarRentalEntry[]> $entriesByDay */
 /** @var \DateTimeImmutable $currentMonth */
-/** @var string $prevMonth */
-/** @var string $nextMonth */
+/** @var string $view */
+/** @var string $label */
 
 use function App\Infrastructure\Http\e;
 
 $weekdayLabels = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
-// Eigene deutsche Monatsnamen statt der intl-Erweiterung, damit die Seite
-// ohne zusätzliche PHP-Extensions auskommt (siehe README: nur Kernmodule).
-$germanMonths = [
-    1 => 'Januar', 2 => 'Februar', 3 => 'März', 4 => 'April', 5 => 'Mai', 6 => 'Juni',
-    7 => 'Juli', 8 => 'August', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Dezember',
-];
-$monthLabel = $germanMonths[(int) $currentMonth->format('n')] . ' ' . $currentMonth->format('Y');
-
 $today = (new DateTimeImmutable('today'))->format('Y-m-d');
 $maxVisiblePerDay = 3;
 ?>
 
-<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-    <div>
-        <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Kalender</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Welches Material ist wann unterwegs? Klicke auf eine Veranstaltung für Details.</p>
-    </div>
-    <div class="flex items-center gap-2">
-        <a href="/kalender?monat=<?= e($prevMonth) ?>" aria-label="Vorheriger Monat"
-           class="rounded-md border border-slate-300 p-2 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 010 1.06L8.06 11l4.73 4.71a.75.75 0 11-1.06 1.06l-5.25-5.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0z" clip-rule="evenodd"/></svg>
-        </a>
-        <span class="min-w-[9rem] text-center text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e($monthLabel) ?></span>
-        <a href="/kalender?monat=<?= e($nextMonth) ?>" aria-label="Nächster Monat"
-           class="rounded-md border border-slate-300 p-2 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L11.94 9 7.21 4.29a.75.75 0 111.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clip-rule="evenodd"/></svg>
-        </a>
-    </div>
-</div>
+<?php include __DIR__ . '/_nav.php'; ?>
+<style>
+    .cal-chip { background: color-mix(in srgb, var(--c) 12%, transparent); color: var(--c); box-shadow: inset 3px 0 0 var(--c); }
+    .cal-chip:hover { background: color-mix(in srgb, var(--c) 22%, transparent); }
+    .dark .cal-chip { background: color-mix(in srgb, var(--c) 25%, transparent); color: color-mix(in srgb, var(--c) 45%, white); }
+</style>
 
 <!--
     Bewusst als echtes <table>-Element statt als CSS-Grid umgesetzt: eine
@@ -73,15 +54,16 @@ $maxVisiblePerDay = 3;
                     ?>
                     <td class="h-28 w-[14.28%] align-top border border-slate-200 p-2 dark:border-slate-800 <?= $isWeekend ? 'bg-slate-50/60 dark:bg-slate-950/40' : 'bg-white dark:bg-slate-900' ?> <?= $inCurrentMonth ? '' : 'opacity-50' ?>">
                         <div class="mb-1 flex items-center justify-start">
-                            <span class="flex h-6 w-6 items-center justify-center rounded-full text-xs <?= $isToday ? 'bg-brand-600 font-semibold text-white' : 'text-slate-500 dark:text-slate-400' ?>">
+                            <a href="/kalender?ansicht=woche&amp;datum=<?= e($key) ?>" title="Woche anzeigen" class="flex h-6 w-6 items-center justify-center rounded-full text-xs <?= $isToday ? 'bg-brand-600 font-semibold text-white' : 'text-slate-500 dark:text-slate-400' ?>">
                                 <?= (int) $day->format('j') ?>
-                            </span>
+                            </a>
                         </div>
                         <div class="space-y-1">
                             <?php foreach ($visibleEntries as $entry): ?>
                                 <a
                                     href="/veranstaltungen/<?= e($entry->rental->id) ?>"
-                                    class="block truncate rounded bg-brand-50 px-1.5 py-1 text-xs font-medium text-brand-800 ring-1 ring-inset ring-brand-200 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-300 dark:ring-brand-800"
+                                    class="cal-chip block truncate rounded px-1.5 py-1 text-xs font-medium"
+                                    style="--c: <?= e(\App\Infrastructure\Http\Controllers\CalendarController::colorFor($entry->rental->id)) ?>"
                                     title="<?= e($entry->rental->eventName . ' — ' . $entry->customer->displayName() . ($entry->materialLabels !== [] ? ' — ' . implode(', ', $entry->materialLabels) : '')) ?>"
                                 >
                                     <?= e($entry->rental->eventName) ?>

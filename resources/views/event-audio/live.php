@@ -108,9 +108,16 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     .tile .k { position: absolute; top: 10px; right: 10px; font-size: .65rem; color: var(--muted); }
     .tile.jingle { border-left: 4px solid var(--accent); }
     .tile.audio { border-left: 4px solid var(--info); }
-    .tile.armed { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-    .tile.armed .d, .tile.armed .k { color: var(--accent-ink); }
-    .tile.armed::after { content: "Nochmal tippen zum Abspielen"; font-size: .72rem; font-weight: 700; margin-top: auto; }
+    .modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: end center; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(3,6,15,.6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; transition: opacity .15s; }
+    .modal.show { opacity: 1; }
+    @media (min-width: 640px) { .modal { place-items: center; } }
+    .modal-box { width: 100%; max-width: 420px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.5); transform: translateY(12px); transition: transform .15s; }
+    .modal.show .modal-box { transform: none; }
+    .modal-box .q { margin: 0; font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+    .modal-box .what { margin: 8px 0 4px; font-size: 1.25rem; font-weight: 700; line-height: 1.25; }
+    .modal-box .sub { margin: 0; font-size: .85rem; color: var(--muted); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; padding: 14px; font-size: 1rem; }
 
     .prog { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
     .prog:first-of-type { border-top: 0; }
@@ -214,7 +221,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                         <div class="prog">
                             <time><?= e($p['startAt']->format('H:i')) ?></time>
                             <div class="n"><b><?= e($p['name']) ?></b><span>♪ <?= e($p['jingleTitle']) ?></span></div>
-                            <button type="button" class="btn" data-play="<?= e($p['jingleId']) ?>" data-title="<?= e($p['jingleTitle']) ?>" data-confirm-tap>▶</button>
+                            <button type="button" class="btn" data-play="<?= e($p['jingleId']) ?>" data-title="<?= e($p['jingleTitle']) ?>" data-kind="jingle" data-sub="Vor „<?= e($p['name']) ?>“ (<?= e($p['startAt']->format('H:i')) ?> Uhr)" aria-label="Jingle für <?= e($p['name']) ?> abspielen">▶</button>
                         </div>
                     <?php endforeach; ?>
                 </section>
@@ -227,7 +234,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 <?php else: ?>
                     <div class="tiles">
                         <?php foreach ($jingles as $f): ?>
-                            <button type="button" class="tile jingle" data-play="<?= e($f->id) ?>" data-title="<?= e($f->title) ?>" data-confirm-tap>
+                            <button type="button" class="tile jingle" data-play="<?= e($f->id) ?>" data-title="<?= e($f->title) ?>" data-kind="jingle" data-sub="<?= e($f->description ?? '') ?>">
                                 <span class="k">♪</span>
                                 <span class="t"><?= e($f->title) ?></span>
                                 <?php if ($f->description !== null): ?><span class="d"><?= e($f->description) ?></span><?php endif; ?>
@@ -242,7 +249,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                     <h2 id="h-audio">Weitere Audio-Dateien <span class="count"><?= count($audioFiles) ?></span></h2>
                     <div class="tiles">
                         <?php foreach ($audioFiles as $f): ?>
-                            <button type="button" class="tile audio" data-play="<?= e($f->id) ?>" data-title="<?= e($f->title) ?>" data-confirm-tap>
+                            <button type="button" class="tile audio" data-play="<?= e($f->id) ?>" data-title="<?= e($f->title) ?>" data-kind="audio" data-sub="<?= e($f->description ?? '') ?>">
                                 <span class="k">◉</span>
                                 <span class="t"><?= e($f->title) ?></span>
                                 <?php if ($f->description !== null): ?><span class="d"><?= e($f->description) ?></span><?php endif; ?>
@@ -264,6 +271,17 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
 </main>
 
 <div class="stopbar"><button type="button" id="stop-btn">■ STOPP</button></div>
+<div class="modal" id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-what" hidden>
+    <div class="modal-box">
+        <p class="q" id="confirm-kind">Jingle abspielen?</p>
+        <p class="what" id="confirm-what"></p>
+        <p class="sub" id="confirm-sub"></p>
+        <div class="modal-actions">
+            <button type="button" class="btn" id="confirm-no">Abbrechen</button>
+            <button type="button" class="btn primary" id="confirm-yes">▶ Abspielen</button>
+        </div>
+    </div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -350,22 +368,35 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         toast(s.warning || okMsg, !!s.warning);
     }
 
-    // ---------- Jingles / Audio (zweimal tippen gegen versehentliches Auslösen)
-    var armed = null, armTimer = null;
-    function disarm() { if (armed) { armed.classList.remove('armed'); if (armed.dataset.label) { armed.textContent = armed.dataset.label; delete armed.dataset.label; } } armed = null; clearTimeout(armTimer); }
+    // ---------- Jingles / Audio: Rückfrage vor dem Abspielen
+    var confirmBox = $('confirm'), pending = null, lastFocus = null;
+    function openConfirm(b) {
+        pending = b;
+        lastFocus = document.activeElement;
+        $('confirm-kind').textContent = (b.dataset.kind === 'audio' ? 'Audio-Datei' : 'Jingle') + ' abspielen?';
+        $('confirm-what').textContent = b.dataset.title;
+        $('confirm-sub').textContent = b.dataset.sub || '';
+        confirmBox.hidden = false;
+        requestAnimationFrame(function () { confirmBox.classList.add('show'); });
+        $('confirm-yes').focus();
+    }
+    function closeConfirm() {
+        confirmBox.classList.remove('show');
+        setTimeout(function () { confirmBox.hidden = true; }, 150);
+        pending = null;
+        if (lastFocus && lastFocus.focus) { lastFocus.focus(); }
+    }
     document.addEventListener('click', function (e) {
         var b = e.target.closest('[data-play]');
-        if (!b) { if (armed) { disarm(); } return; }
-        if (armed !== b) {
-            disarm();
-            armed = b;
-            b.classList.add('armed');
-            if (!b.classList.contains('tile')) { b.dataset.label = b.textContent; b.textContent = 'Abspielen?'; }
-            armTimer = setTimeout(disarm, 3500);
-            if (navigator.vibrate) { navigator.vibrate(15); }
-            return;
-        }
-        disarm();
+        if (b) { openConfirm(b); }
+    });
+    $('confirm-no').addEventListener('click', closeConfirm);
+    confirmBox.addEventListener('click', function (e) { if (e.target === confirmBox) { closeConfirm(); } });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !confirmBox.hidden) { closeConfirm(); } });
+    $('confirm-yes').addEventListener('click', function () {
+        var b = pending;
+        if (!b) { return; }
+        closeConfirm();
         post('/abspielen', { kind: 'audio', audio_file_id: b.dataset.play })
             .then(function (s) { afterRequest(s, '„' + b.dataset.title + '“ wird gespielt.'); })
             .catch(function (err) { toast(err.message, true); });

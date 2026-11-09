@@ -32,6 +32,15 @@ final class Router
         '/passkeys/login/complete',
     ];
 
+    /**
+     * Pfad-Präfixe ohne CSRF-Prüfung: Schnittstelle des Abspielgeräts
+     * (Migration 135) – authentifiziert per Bearer-Token statt Session,
+     * ein CSRF-Angriff über den Browser ist dort nicht möglich.
+     */
+    private const CSRF_EXEMPT_PREFIXES = [
+        '/api/player/',
+    ];
+
     public function get(string $path, callable $handler): void
     {
         $this->add('GET', $path, $handler);
@@ -96,6 +105,7 @@ final class Router
         // oben sowie Csrf.php für Token-Erzeugung/-Vergleich.
         if (in_array($request->method, self::CSRF_PROTECTED_METHODS, true)
             && !in_array($request->path, self::CSRF_EXEMPT_PATHS, true)
+            && !$this->hasExemptPrefix($request->path)
         ) {
             $this->enforceCsrf($request);
         }
@@ -153,6 +163,17 @@ final class Router
 
         Flash::error($message);
         Response::redirect($_SERVER['HTTP_REFERER'] ?? '/');
+    }
+
+    private function hasExemptPrefix(string $path): bool
+    {
+        foreach (self::CSRF_EXEMPT_PREFIXES as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Unterscheidet fetch()-/AJAX-Aufrufe von klassischen Formular-Posts, siehe enforceCsrf(). */

@@ -23,6 +23,8 @@ use App\Application\MinuteProgram\Query\ListMinuteProgramsForRental;
 use App\Application\MinuteProgram\Query\ListMinuteProgramTemplates;
 use App\Application\Query\QueryBus;
 use App\Application\Rental\Query\GetRental;
+use App\Domain\EventAudio\AudioFileKind;
+use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\MinuteProgram\MinuteProgramShareLinkRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -45,7 +47,14 @@ final class MinuteProgramController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
         private readonly MinuteProgramShareLinkRepositoryInterface $shareLinks,
+        private readonly ?RentalAudioFileRepositoryInterface $audioFiles = null,
     ) {
+    }
+
+    /** @return \App\Domain\EventAudio\RentalAudioFile[] Jingles der Veranstaltung (Migration 135). */
+    private function jinglesFor(string $rentalId): array
+    {
+        return $this->audioFiles?->findByRental($rentalId, AudioFileKind::Jingle) ?? [];
     }
 
     public function create(Request $request): void
@@ -68,6 +77,7 @@ final class MinuteProgramController
             'templates' => $templates,
             'errors' => [],
             'old' => [],
+            'jingles' => $this->jinglesFor($rentalId),
         ], activeNav: 'rentals', title: t('minute_programs.new'));
     }
 
@@ -94,6 +104,7 @@ final class MinuteProgramController
                     jingleBefore: $request->input('jingle_before', '0') === '1',
                     handheldMicCount: (int) ($request->input('handheld_mic_count', '0') ?? '0'),
                     headsetMicCount: (int) ($request->input('headset_mic_count', '0') ?? '0'),
+                    jingleAudioFileId: $request->input('jingle_audio_file_id'),
                 ));
             }
 
@@ -126,6 +137,7 @@ final class MinuteProgramController
             'detail' => $detail,
             'rental' => $rental,
             'shareLinks' => $links,
+            'jingles' => $this->jinglesFor($rental->id),
         ], activeNav: 'rentals', title: $detail->program->name);
     }
 
@@ -148,6 +160,7 @@ final class MinuteProgramController
             'templates' => [],
             'errors' => [],
             'old' => [],
+            'jingles' => $this->jinglesFor($rental->id),
         ], activeNav: 'rentals', title: t('minute_programs.edit'));
     }
 
@@ -164,6 +177,7 @@ final class MinuteProgramController
                 jingleBefore: $request->input('jingle_before', '0') === '1',
                 handheldMicCount: (int) ($request->input('handheld_mic_count', '0') ?? '0'),
                 headsetMicCount: (int) ($request->input('headset_mic_count', '0') ?? '0'),
+                jingleAudioFileId: $request->input('jingle_audio_file_id'),
             ));
             Flash::success(t('minute_programs.flash.updated'));
         } catch (ValidationException $e) {

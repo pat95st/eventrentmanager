@@ -60,6 +60,7 @@ final class CreateMinuteProgramHandler implements CommandHandlerInterface
             currentDelayMinutes: 0,
             createdAt: $now,
             updatedAt: $now,
+            jingleAudioFileId: $command->jingleBefore && $command->jingleAudioFileId !== null && $command->jingleAudioFileId !== '' ? $command->jingleAudioFileId : null,
         );
 
         $this->programs->save($program);

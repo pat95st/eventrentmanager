@@ -16,6 +16,7 @@ final class UpdateMinuteProgram implements CommandInterface
         public readonly bool $jingleBefore,
         public readonly int $handheldMicCount,
         public readonly int $headsetMicCount,
+        public readonly ?string $jingleAudioFileId = null,
     ) {
     }
 }

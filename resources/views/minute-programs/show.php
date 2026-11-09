@@ -19,6 +19,10 @@ $program = $detail->program;
             <?php if ($program->room !== null): ?> · <?= e($program->room) ?><?php endif; ?>
             · <?= e($program->startAt->format('d.m.Y H:i')) ?>
         </p>
+        <?php if ($program->jingleBefore): ?>
+            <?php $jingleTitle = null; foreach (($jingles ?? []) as $j) { if ($j->id === $program->jingleAudioFileId) { $jingleTitle = $j->title; } } ?>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">🎵 Jingle vorher: <?= $jingleTitle !== null ? e($jingleTitle) : 'ja (noch keine Datei gewählt)' ?></p>
+        <?php endif; ?>
     </div>
     <div class="flex flex-wrap gap-2">
         <a href="/minutenprogramme/<?= e($program->id) ?>/vollbild" target="_blank"

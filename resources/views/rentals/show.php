@@ -253,6 +253,17 @@ $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issue
     <?php endif; ?>
 </div>
 
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div>
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Audio &amp; Durchsagen</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Jingles, Audio-Dateien, Veranstalter-Zugänge und Durchsagen über das Abspielgerät am Mischpult.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/audio" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Verwalten</a>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/live" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Live-Oberfläche</a>
+    </div>
+</div>
+
 <?php if ($noticeDocuments !== []): ?>
 <div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Hinweisdokumente</h2>

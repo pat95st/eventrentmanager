@@ -65,6 +65,28 @@ $action = $isEditing ? '/minutenprogramme/' . e($program->id) : '/veranstaltunge
                class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
         <label for="jingle_before" class="text-sm text-slate-700 dark:text-slate-300"><?= e(t('minute_programs.form.jingle_before')) ?></label>
     </div>
+    <?php $jingles = $jingles ?? []; ?>
+    <div id="jingle-select-wrap" <?= ($program?->jingleBefore ?? false) ? '' : 'hidden' ?>>
+        <label for="jingle_audio_file_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Jingle</label>
+        <?php if ($jingles === []): ?>
+            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Für diese Veranstaltung sind noch keine Jingles hinterlegt. Du kannst sie in der Veranstaltung unter „Audio &amp; Durchsagen“ hochladen.</p>
+        <?php else: ?>
+            <select id="jingle_audio_file_id" name="jingle_audio_file_id"
+                    class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                <option value="">– Jingle wählen –</option>
+                <?php foreach ($jingles as $jingle): ?>
+                    <option value="<?= e($jingle->id) ?>" <?= ($program?->jingleAudioFileId ?? (count($jingles) === 1 ? $jingle->id : null)) === $jingle->id ? 'selected' : '' ?>><?= e($jingle->title) ?></option>
+                <?php endforeach; ?>
+            </select>
+        <?php endif; ?>
+    </div>
+    <script>
+        (function () {
+            var box = document.getElementById('jingle_before');
+            var wrap = document.getElementById('jingle-select-wrap');
+            if (box && wrap) { box.addEventListener('change', function () { wrap.hidden = !box.checked; }); }
+        })();
+    </script>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>

@@ -20,15 +20,16 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
         $stmt = $this->pdo->prepare(
             'INSERT INTO minute_programs (
                 id, rental_id, name, room, start_at, jingle_before, handheld_mic_count,
-                headset_mic_count, current_delay_minutes, created_at, updated_at
+                headset_mic_count, current_delay_minutes, created_at, updated_at, jingle_audio_file_id
              ) VALUES (
                 :id, :rental_id, :name, :room, :start_at, :jingle_before, :handheld_mic_count,
-                :headset_mic_count, :current_delay_minutes, :created_at, :updated_at
+                :headset_mic_count, :current_delay_minutes, :created_at, :updated_at, :jingle_audio_file_id
              )
              ON DUPLICATE KEY UPDATE
                 name = :name2, room = :room2, start_at = :start_at2, jingle_before = :jingle_before2,
                 handheld_mic_count = :handheld_mic_count2, headset_mic_count = :headset_mic_count2,
-                current_delay_minutes = :current_delay_minutes2, updated_at = :updated_at2'
+                current_delay_minutes = :current_delay_minutes2, updated_at = :updated_at2,
+                jingle_audio_file_id = :jingle_audio_file_id2'
         );
 
         $stmt->execute([
@@ -51,6 +52,8 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             'headset_mic_count2' => $program->headsetMicCount,
             'current_delay_minutes2' => $program->currentDelayMinutes,
             'updated_at2' => $program->updatedAt->format('Y-m-d H:i:s'),
+            'jingle_audio_file_id' => $program->jingleAudioFileId,
+            'jingle_audio_file_id2' => $program->jingleAudioFileId,
         ]);
     }
 
@@ -91,6 +94,7 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             currentDelayMinutes: (int) $row['current_delay_minutes'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            jingleAudioFileId: isset($row['jingle_audio_file_id']) && $row['jingle_audio_file_id'] !== null ? (string) $row['jingle_audio_file_id'] : null,
         );
     }
 }

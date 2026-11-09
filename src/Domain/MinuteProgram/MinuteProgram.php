@@ -30,6 +30,9 @@ final class MinuteProgram
         public int $currentDelayMinutes,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Migration 135: welcher hinterlegte Jingle der Veranstaltung vor
+        // diesem Programm gespielt wird (App\Domain\EventAudio\RentalAudioFile).
+        public ?string $jingleAudioFileId = null,
     ) {
     }
 

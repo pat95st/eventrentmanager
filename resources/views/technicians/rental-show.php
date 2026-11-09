@@ -54,6 +54,7 @@ $card = 'mb-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-
         <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Ausgabe (<?= $totalIssued ?>/<?= $totalPlanned ?>)</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/rueckgabe" class="rounded-md border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-400 dark:hover:bg-brand-950/40">Rückgabe (<?= $totalReturned ?>/<?= $totalIssued ?>)</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/rma" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Defekt melden (RMA)</a>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/live" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Audio &amp; Durchsagen</a>
     <?php endif; ?>
     <?php if ($assignment !== null && $assignment->status === RentalTechnicianStatus::Confirmed): $respondAssignment = $assignment; $respondBack = 'detail'; require __DIR__ . '/_respond.php'; endif; ?>
 </div>

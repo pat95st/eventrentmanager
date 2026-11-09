@@ -47,6 +47,7 @@ final class UpdateMinuteProgramHandler implements CommandHandlerInterface
         $program->room = $command->room !== null && trim($command->room) !== '' ? trim($command->room) : null;
         $program->startAt = $startAt;
         $program->jingleBefore = $command->jingleBefore;
+        $program->jingleAudioFileId = $command->jingleBefore && $command->jingleAudioFileId !== null && $command->jingleAudioFileId !== '' ? $command->jingleAudioFileId : null;
         $program->handheldMicCount = max(0, $command->handheldMicCount);
         $program->headsetMicCount = max(0, $command->headsetMicCount);
         $program->updatedAt = new DateTimeImmutable();

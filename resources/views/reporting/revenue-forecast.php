@@ -78,30 +78,30 @@ function moneyFmt(float $value): string
         <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
             <tr>
                 <th class="px-4 py-2 text-left"><?= e(t('reporting.revenue_forecast.table.year')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.offers')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.order_confirmations')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.invoices')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.table.total')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.offers')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.order_confirmations')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.invoices')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.revenue_forecast.table.total')) ?></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <?php foreach ($forecast->years as $forecastYear): ?>
                 <tr>
                     <td class="px-4 py-2 text-slate-700 dark:text-slate-300"><?= $forecastYear->year ?></td>
-                    <td class="px-4 py-2 text-right text-amber-700 dark:text-amber-400"><?= moneyFmt($forecastYear->offerAmount) ?> €</td>
-                    <td class="px-4 py-2 text-right text-blue-700 dark:text-blue-400"><?= moneyFmt($forecastYear->orderConfirmationAmount) ?> €</td>
-                    <td class="px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt($forecastYear->invoiceAmount) ?> €</td>
-                    <td class="px-4 py-2 text-right font-medium text-slate-800 dark:text-slate-100"><?= moneyFmt($forecastYear->total()) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right text-amber-700 dark:text-amber-400"><?= moneyFmt($forecastYear->offerAmount) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right text-blue-700 dark:text-blue-400"><?= moneyFmt($forecastYear->orderConfirmationAmount) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt($forecastYear->invoiceAmount) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right font-medium text-slate-800 dark:text-slate-100"><?= moneyFmt($forecastYear->total()) ?> €</td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
         <tfoot class="border-t border-slate-200 bg-slate-50 font-semibold dark:border-slate-800 dark:bg-slate-800/50">
             <tr>
                 <td class="px-4 py-2 text-slate-800 dark:text-slate-100"><?= e(t('reporting.revenue_forecast.table.grand_total')) ?></td>
-                <td class="px-4 py-2 text-right text-amber-700 dark:text-amber-400"><?= moneyFmt(array_sum(array_map(fn ($y) => $y->offerAmount, $forecast->years))) ?> €</td>
-                <td class="px-4 py-2 text-right text-blue-700 dark:text-blue-400"><?= moneyFmt(array_sum(array_map(fn ($y) => $y->orderConfirmationAmount, $forecast->years))) ?> €</td>
-                <td class="px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt(array_sum(array_map(fn ($y) => $y->invoiceAmount, $forecast->years))) ?> €</td>
-                <td class="px-4 py-2 text-right text-slate-800 dark:text-slate-100"><?= moneyFmt($forecast->grandTotal()) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right text-amber-700 dark:text-amber-400"><?= moneyFmt(array_sum(array_map(fn ($y) => $y->offerAmount, $forecast->years))) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right text-blue-700 dark:text-blue-400"><?= moneyFmt(array_sum(array_map(fn ($y) => $y->orderConfirmationAmount, $forecast->years))) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt(array_sum(array_map(fn ($y) => $y->invoiceAmount, $forecast->years))) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right text-slate-800 dark:text-slate-100"><?= moneyFmt($forecast->grandTotal()) ?> €</td>
             </tr>
         </tfoot>
     </table>

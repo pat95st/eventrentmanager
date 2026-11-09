@@ -41,7 +41,7 @@ use function App\Infrastructure\Http\e;
         <button type="submit" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             Filtern
         </button>
-        <a href="/cases" class="ml-2 text-sm text-slate-500 hover:underline dark:text-slate-400">Zurücksetzen</a>
+        <a href="/cases" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">Zurücksetzen</a>
     </div>
 </form>
 

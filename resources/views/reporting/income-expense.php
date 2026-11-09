@@ -55,6 +55,16 @@ function moneyFmt(float $value): string
     </div>
 </div>
 
+<style>
+    /* Mobil: Monat + Balken in einer Zeile, Beträge und Saldo darunter. */
+    @media (max-width: 639px) {
+        .ie-row { flex-wrap: wrap; row-gap: .25rem; }
+        .ie-row > .flex-1 { flex-basis: calc(100% - 5rem - .75rem); }
+        .ie-amounts { width: auto; flex: 1 1 auto; text-align: left; padding-left: calc(5rem + .75rem); }
+        .ie-saldo { width: auto; }
+    }
+</style>
+
 <!-- Monatsübersicht mit einfacher Balkendarstellung (kein Chart-Framework, reines CSS) -->
 <div class="mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('reporting.income_expense.by_month')) ?></h2>
@@ -66,8 +76,8 @@ function moneyFmt(float $value): string
 
     <div class="space-y-3">
         <?php foreach ($overview->months as $month): ?>
-            <div class="flex items-center gap-3">
-                <span class="w-20 shrink-0 text-xs text-slate-500 dark:text-slate-400"><?= e($monthNames[$month->month]) ?></span>
+            <div class="ie-row flex items-center gap-3">
+                <span class="ie-month w-20 shrink-0 text-xs text-slate-500 dark:text-slate-400"><?= e($monthNames[$month->month]) ?></span>
                 <div class="flex-1 space-y-1">
                     <div class="flex h-3 w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
                         <div class="h-full bg-emerald-500" style="width: <?= min(100, round($month->income / $maxValue * 100, 1)) ?>%"></div>
@@ -76,10 +86,10 @@ function moneyFmt(float $value): string
                         <div class="h-full bg-red-400" style="width: <?= min(100, round($month->expense / $maxValue * 100, 1)) ?>%"></div>
                     </div>
                 </div>
-                <span class="w-44 shrink-0 text-right text-xs tabular-nums text-slate-600 dark:text-slate-400">
+                <span class="ie-amounts w-44 shrink-0 text-right text-xs tabular-nums text-slate-600 dark:text-slate-400">
                     <?= moneyFmt($month->income) ?> € / <?= moneyFmt($month->expense) ?> €
                 </span>
-                <span class="w-28 shrink-0 text-right text-xs font-medium tabular-nums <?= $month->saldo() >= 0 ? 'text-slate-700 dark:text-slate-300' : 'text-red-600 dark:text-red-400' ?>">
+                <span class="ie-saldo w-28 shrink-0 text-right text-xs font-medium tabular-nums <?= $month->saldo() >= 0 ? 'text-slate-700 dark:text-slate-300' : 'text-red-600 dark:text-red-400' ?>">
                     <?= moneyFmt($month->saldo()) ?> €
                 </span>
             </div>
@@ -93,27 +103,27 @@ function moneyFmt(float $value): string
         <thead class="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
             <tr>
                 <th class="px-4 py-2 text-left"><?= e(t('reporting.income_expense.table.month')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.income_expense.income')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.income_expense.expense')) ?></th>
-                <th class="px-4 py-2 text-right"><?= e(t('reporting.income_expense.table.saldo')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.income_expense.income')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.income_expense.expense')) ?></th>
+                <th class="whitespace-nowrap px-4 py-2 text-right"><?= e(t('reporting.income_expense.table.saldo')) ?></th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <?php foreach ($overview->months as $month): ?>
                 <tr>
                     <td class="px-4 py-2 text-slate-700 dark:text-slate-300"><?= e($monthNames[$month->month]) ?></td>
-                    <td class="px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt($month->income) ?> €</td>
-                    <td class="px-4 py-2 text-right text-red-700 dark:text-red-400"><?= moneyFmt($month->expense) ?> €</td>
-                    <td class="px-4 py-2 text-right font-medium <?= $month->saldo() >= 0 ? 'text-slate-800 dark:text-slate-100' : 'text-red-700 dark:text-red-400' ?>"><?= moneyFmt($month->saldo()) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt($month->income) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right text-red-700 dark:text-red-400"><?= moneyFmt($month->expense) ?> €</td>
+                    <td class="whitespace-nowrap px-4 py-2 text-right font-medium <?= $month->saldo() >= 0 ? 'text-slate-800 dark:text-slate-100' : 'text-red-700 dark:text-red-400' ?>"><?= moneyFmt($month->saldo()) ?> €</td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
         <tfoot class="border-t border-slate-200 bg-slate-50 font-semibold dark:border-slate-800 dark:bg-slate-800/50">
             <tr>
                 <td class="px-4 py-2 text-slate-800 dark:text-slate-100"><?= e(t('reporting.income_expense.table.year_total')) ?></td>
-                <td class="px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt($overview->totalIncome()) ?> €</td>
-                <td class="px-4 py-2 text-right text-red-700 dark:text-red-400"><?= moneyFmt($overview->totalExpense()) ?> €</td>
-                <td class="px-4 py-2 text-right <?= $overview->totalSaldo() >= 0 ? 'text-slate-800 dark:text-slate-100' : 'text-red-700 dark:text-red-400' ?>"><?= moneyFmt($overview->totalSaldo()) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right text-emerald-700 dark:text-emerald-400"><?= moneyFmt($overview->totalIncome()) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right text-red-700 dark:text-red-400"><?= moneyFmt($overview->totalExpense()) ?> €</td>
+                <td class="whitespace-nowrap px-4 py-2 text-right <?= $overview->totalSaldo() >= 0 ? 'text-slate-800 dark:text-slate-100' : 'text-red-700 dark:text-red-400' ?>"><?= moneyFmt($overview->totalSaldo()) ?> €</td>
             </tr>
         </tfoot>
     </table>

@@ -194,6 +194,7 @@ $canDocuments = $canRentals;
      Hintergrundbild nahezu deckend, damit der Inhalt darunter nicht durchscheint. */
   /* Geöffnete Dropdowns immer über Karten/Filterleisten (z-20 fehlt im kompilierten CSS). */
   details[data-dropdown] > [data-dropdown-menu] { z-index: 60 !important; }
+  [data-dropdown-menu] { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .nav-flyout { width: max-content; min-width: 11rem; max-width: 22rem; }
   .nav-flyout > a { padding-left: 0.875rem; padding-right: 0.875rem; white-space: nowrap; }
   body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu], body.has-bg-image [data-live-search-results] { background-color: rgb(255 255 255) !important; }
@@ -1151,6 +1152,7 @@ $canDocuments = $canRentals;
         // Hinweis, die trotzdem zu nah am tatsächlichen Fensterrand liegen.
         var serverHintUpward = menu.classList.contains('bottom-full');
         var summaryRect = summary.getBoundingClientRect();
+        details._summaryTop = summaryRect.top;
         var menuRect = menu.getBoundingClientRect();
         var spaceBelow = window.innerHeight - summaryRect.bottom;
         var openUpward = serverHintUpward || (spaceBelow < menuRect.height && summaryRect.top > spaceBelow);
@@ -1312,8 +1314,22 @@ $canDocuments = $canRentals;
       // robuster als laufend neu zu positionieren: das Dropdown wird
       // stattdessen einfach geschlossen (capture:true, da der Scroll des
       // .overflow-x-auto-Wrappers selbst nicht bis zum document bubbelt).
-      document.addEventListener('scroll', function () {
+      // Ausnahmen (Bug "Einstellungsmenü verschwindet beim Scrollen"):
+      // Scrollen INNERHALB eines langen Menüs (z. B. das mobile
+      // Einstellungsmenü mit max-height + Scrollbalken) schließt nichts, und
+      // Menüs, deren Auslöser sich beim Scrollen nicht bewegt (sticky
+      // Kopfzeile), bleiben ebenfalls offen.
+      document.addEventListener('scroll', function (event) {
+        var target = event.target;
         document.querySelectorAll('details[data-dropdown][open]').forEach(function (details) {
+          var menu = details.querySelector('[data-dropdown-menu]');
+          if (menu && target instanceof Node && menu.contains(target)) {
+            return;
+          }
+          var summary = details.querySelector('summary');
+          if (summary && typeof details._summaryTop === 'number' && Math.abs(summary.getBoundingClientRect().top - details._summaryTop) < 2) {
+            return;
+          }
           details.removeAttribute('open');
           resetDropdownMenuPosition(details);
         });

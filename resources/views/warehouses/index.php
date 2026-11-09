@@ -21,7 +21,7 @@ use function App\Infrastructure\Http\t;
 </div>
 
 <form method="get" action="/lagerorte" id="warehouses-filter-form" class="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-    <div class="flex-1">
+    <div class="flex-1" style="flex: 1 1 14rem; min-width: 0;">
         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('common.search')) ?></label>
         <input type="text" name="q" value="<?= e($search) ?>" placeholder="<?= e(t('warehouses.filter.search_placeholder')) ?>"
                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">

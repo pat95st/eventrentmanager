@@ -3,13 +3,15 @@
 
 use function App\Infrastructure\Http\e;
 ?>
-<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+<div class="mb-4 flex flex-wrap items-end justify-between gap-3">
     <div>
         <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Einstellungen</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">Alle Einstellungen nach Themen. Tippe zum Suchen, z. B. „USt“, „Logo“ oder „Mahnung“.</p>
     </div>
+</div>
+<div class="mb-6">
     <input type="search" id="settings-search" placeholder="Einstellung suchen…" autocomplete="off"
-           class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700" style="max-width:20rem">
+           class="w-full rounded-md border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
 </div>
 
 <style>

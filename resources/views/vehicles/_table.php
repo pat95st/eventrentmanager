@@ -35,14 +35,14 @@ if (!function_exists('formatVehicleDimension')) {
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Fahrzeuge gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px] table-fixed text-left text-sm">
+        <table class="w-full table-fixed text-left text-sm" style="min-width: 800px">
             <colgroup>
-                <col style="width: 22%">
-                <col style="width: 12%">
-                <col style="width: 14%">
-                <col style="width: 14%">
                 <col style="width: 20%">
+                <col style="width: 15%">
+                <col style="width: 13%">
+                <col style="width: 11%">
                 <col style="width: 18%">
+                <col style="width: 13%">
                 <col style="width: 10%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -63,7 +63,7 @@ if (!function_exists('formatVehicleDimension')) {
                             <?= e($vehicle->name) ?>
                         </td>
                         <td class="break-words px-4 py-3">
-                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $vehicle->category === VehicleCategory::Auto ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800' : 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600' ?>">
+                            <span style="white-space: nowrap; max-width: 100%;" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $vehicle->category === VehicleCategory::Auto ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800' : 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600' ?>">
                                 <?= e($vehicle->category->label()) ?>
                             </span>
                         </td>

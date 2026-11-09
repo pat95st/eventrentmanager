@@ -34,7 +34,7 @@ use function App\Infrastructure\Http\e;
             <input name="suche" value="<?= e($filter) ?>" placeholder="Nummer oder Artikel" aria-label="Prüfungen filtern"
                    class="rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700" style="width:14rem">
             <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Filtern</button>
-            <?php if ($filter !== ''): ?><a href="/elektropruefung" class="text-sm text-slate-500 hover:underline dark:text-slate-400">Zurücksetzen</a><?php endif; ?>
+            <?php if ($filter !== ''): ?><a href="/elektropruefung" class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">Zurücksetzen</a><?php endif; ?>
         </form>
     </div>
 

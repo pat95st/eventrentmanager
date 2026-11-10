@@ -30,7 +30,7 @@
 // nächsten Seitenaufruf einen neuen Cache an und räumt in activate() den
 // alten auf, statt auf die (im Hintergrund laufende, also nicht sofort
 // sichtbare) Stale-while-revalidate-Aktualisierung zu warten.
-var CACHE_VERSION = 'static-v3';
+var CACHE_VERSION = 'static-v4';
 
 // Firmenlogo/Hintergrund/Favicon mit Versionsparameter (?v=…, ändert sich bei
 // jedem Upload, siehe CompanyBranding::versioned()). Eigener Cache, der beim

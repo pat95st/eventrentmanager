@@ -150,7 +150,7 @@ $canDocuments = $canRentals;
   von externen Servern). Erzeugt aus resources/css/app.css per Tailwind-CLI,
   siehe package.json ("npm run build:css") und README.
 -->
-<link rel="stylesheet" href="/assets/css/app.css">
+<link rel="stylesheet" href="/assets/css/app.css?v=<?= (string) (@filemtime(dirname(__DIR__, 2) . '/public/assets/css/app.css') ?: 1) ?>">
 <?= class_exists(\App\Infrastructure\Http\UiFonts::class) ? \App\Infrastructure\Http\UiFonts::styles() : '' /* Schriftarten der Oberfläche */ ?>
 <style>
   /* Modals (Nutzerwunsch): abgedunkelter Hintergrund, mehr Innenabstand,

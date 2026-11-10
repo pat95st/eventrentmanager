@@ -14,7 +14,7 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Link ungültig - Materialverleih Verwaltung</title>
-<link rel="stylesheet" href="/assets/css/app.css">
+<link rel="stylesheet" href="/assets/css/app.css?v=<?= (string) (@filemtime(dirname(__DIR__, 3) . '/public/assets/css/app.css') ?: 1) ?>">
 <?= class_exists(\App\Infrastructure\Http\UiFonts::class) ? \App\Infrastructure\Http\UiFonts::styles() : '' /* Schriftarten der Oberfläche */ ?>
 <?php require __DIR__ . '/../_pwa_head.php'; ?>
 <script>

@@ -180,3 +180,11 @@ html.dark body.has-bg-image textarea {
 .z-30 { z-index: 30; }
 .z-40 { z-index: 40; }
 .z-50 { z-index: 50; }
+
+/* Checkboxen, Radios und Regler in der Markenfarbe (wie die Buttons) */
+input[type=checkbox],
+input[type=radio],
+input[type=range],
+progress {
+  accent-color: rgb(var(--color-brand-600));
+}

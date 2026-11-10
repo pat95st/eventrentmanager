@@ -1355,6 +1355,7 @@ $canDocuments = $canRentals;
        und App\Infrastructure\Http\renderArticlePickerModal() — global
        geladen aus demselben Grund wie live-search.js direkt darüber. -->
   <script src="/assets/js/article-picker.js" defer></script>
+  <script src="/assets/js/dry-hire.js" defer></script>
   <!-- Set-Auswahl in Angebot/AB/Rechnung (Migration 113), siehe public/assets/js/set-picker.js -->
   <script src="/assets/js/set-picker.js" defer></script>
 </body>

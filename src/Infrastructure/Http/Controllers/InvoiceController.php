@@ -135,6 +135,7 @@ final class InvoiceController
 
         try {
             $invoiceId = $this->commands->dispatch($command);
+            $this->saveDryHireFlag((string) $invoiceId, $request);
             Flash::success(t('invoices.flash.created'));
             Response::redirect('/rechnungen/' . $invoiceId);
         } catch (ValidationException $e) {
@@ -223,6 +224,7 @@ final class InvoiceController
 
         try {
             $this->commands->dispatch($command);
+            $this->saveDryHireFlag($id, $request);
             Flash::success(t('invoices.flash.updated'));
             Response::redirect('/rechnungen/' . $id);
         } catch (ValidationException $e) {
@@ -697,4 +699,13 @@ final class InvoiceController
     {
         return $value === null || $value === '' ? null : $value;
     }
+
+    /** Dry-Hire-Kennzeichen des Dokuments (Migration 141) – nur wenn die Checkbox im Formular war. */
+    private function saveDryHireFlag(string $documentId, Request $request): void
+    {
+        if ($request->input('dry_hire_section') === '1') {
+            $this->commands->dispatch(new \App\Application\DryHire\Command\SetDocumentDryHire('invoice', $documentId, $request->input('dry_hire') === '1'));
+        }
+    }
+
 }

@@ -71,6 +71,7 @@ final class SettingsSections
                 'desc' => 'Preisregeln, Zahlungsarten, Mahnwesen und Erinnerungen',
                 'pages' => [
                     $page('settings-preisstaffelung', '/einstellungen/preisstaffelung', t('nav.price_tiers'), 'Faktor je Einsatztag und Preisrundung'),
+                    $page('settings-dry-hire', '/einstellungen/dry-hire-staffel', 'Dry-Hire-Staffel', 'Staffel „ab Tag X“ für Dry-Hire-Kunden (Miete ohne Personal)'),
                     $page('settings-preise', '/einstellungen/preise', t('nav.pricing_settings'), 'Zubehörpauschale'),
                     $page('settings-ueberziehung', '/einstellungen/ueberziehung', t('nav.overage_settings'), 'Pauschale bei verspäteter Rückgabe'),
                     $page('settings-gutscheine', '/einstellungen/gutscheine', t('nav.voucher_settings'), 'Gültigkeit von Gutscheinen'),

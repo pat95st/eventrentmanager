@@ -57,6 +57,8 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         // Sets (Migration 113): gebuchte Sets zum Festpreis (inkl. Upgrades).
         private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
         private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
+        // Dry-Hire (Migration 141): Dry-Hire-Kunden bekommen Dry-Hire-Preise
+        private readonly ?\App\Domain\DryHire\DryHireRepositoryInterface $dryHire = null,
     ) {
     }
 
@@ -134,6 +136,33 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
 
             return $pricesByDay[$deploymentDays] ?? $article->dailyRentalPrice;
         };
+
+        // Dry-Hire (Migration 141): Dry-Hire-Kunde → Dry-Hire-Tagesmietsatz ×
+        // Dry-Hire-Staffel über die tatsächlichen Einsatztage. Artikel ohne
+        // Dry-Hire-Preis behalten den normalen Preis (das Rechnungsformular
+        // zeigt dafür eine Warnung).
+        $dryHireActive = $this->dryHire !== null && $rental->customerId !== null
+            && $this->dryHire->isCustomerDryHire((string) $rental->customerId);
+        if ($dryHireActive) {
+            $dryPrices = $this->dryHire->articlePrices();
+            $dryTiers = $this->dryHire->tiers();
+            $dryDays = max($rental->maxDeploymentDays(), 1);
+            $normalPriceFor = $priceFor;
+            $priceFor = function ($article) use ($normalPriceFor, $dryPrices, $dryTiers, $dryDays, $pricingSettings): string {
+                if (!$article->isBillable || !isset($dryPrices[$article->id])) {
+                    return $normalPriceFor($article);
+                }
+
+                return \App\Domain\DryHire\DryHirePriceCalculator::price(
+                    (string) $dryPrices[$article->id],
+                    $dryDays,
+                    $dryTiers,
+                    $pricingSettings->priceRoundingStep,
+                    $pricingSettings->priceRoundingDirection,
+                );
+            };
+            $this->dryHire->setDocumentFlag(\App\Domain\DryHire\DryHireRepositoryInterface::DOC_INVOICE, $invoice->id, true);
+        }
 
         $items = [];
 

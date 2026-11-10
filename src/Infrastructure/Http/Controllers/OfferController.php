@@ -131,6 +131,7 @@ final class OfferController
 
         try {
             $offerId = $this->commands->dispatch($command);
+            $this->saveDryHireFlag((string) $offerId, $request);
             Flash::success(t('offers.flash.created'));
             Response::redirect('/angebote/' . $offerId);
         } catch (ValidationException $e) {
@@ -224,6 +225,7 @@ final class OfferController
 
         try {
             $this->commands->dispatch($command);
+            $this->saveDryHireFlag($id, $request);
             Flash::success(t('offers.flash.updated'));
             Response::redirect('/angebote/' . $id);
         } catch (ValidationException $e) {
@@ -731,4 +733,13 @@ final class OfferController
     {
         return $value === null || $value === '' ? null : $value;
     }
+
+    /** Dry-Hire-Kennzeichen des Dokuments (Migration 141) – nur wenn die Checkbox im Formular war. */
+    private function saveDryHireFlag(string $documentId, Request $request): void
+    {
+        if ($request->input('dry_hire_section') === '1') {
+            $this->commands->dispatch(new \App\Application\DryHire\Command\SetDocumentDryHire('offer', $documentId, $request->input('dry_hire') === '1'));
+        }
+    }
+
 }

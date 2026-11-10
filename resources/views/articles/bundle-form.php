@@ -64,6 +64,14 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
             <?php endif; ?>
         </div>
         <div>
+            <label for="dry_hire_daily_price" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Dry-Hire-Tagesmietsatz <span class="font-normal text-slate-400">(optional)</span></label>
+            <input type="hidden" name="dry_hire_section" value="1">
+            <input type="number" step="0.01" min="0" id="dry_hire_daily_price" name="dry_hire_daily_price" placeholder="z. B. 69.00"
+                   value="<?= e((string) ($old['dry_hire_daily_price'] ?? \App\Infrastructure\Http\DryHireLookup::articlePrice($article?->id ?? ($old['duplicate_of'] ?? null)) ?? '')) ?>"
+                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Preis je Tag für Dry-Hire-Kunden; Staffel unter <a href="/einstellungen/dry-hire-staffel" class="underline">Dry-Hire-Staffel</a>. Leer = normaler Preis (mit Hinweis im Dokument).</p>
+        </div>
+        <div>
             <span class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('articles.form.weight')) ?></span>
             <p class="mt-2 text-sm text-slate-700 dark:text-slate-300">
                 <?= $article?->weightValue !== null ? e($article->weightValue . ' ' . $article->weightUnit) : '–' ?>

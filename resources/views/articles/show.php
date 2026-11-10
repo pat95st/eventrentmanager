@@ -218,6 +218,11 @@ $availabilityStatusMeta = [
                         <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.daily_rental_price')) ?></dt>
                         <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $article->dailyRentalPrice !== null ? e($article->dailyRentalPrice) . ' €' : '–' ?></dd>
                     </div>
+                    <?php $dryHirePrice = \App\Infrastructure\Http\DryHireLookup::articlePrice($article->id); ?>
+                    <div>
+                        <dt class="text-xs text-slate-400 dark:text-slate-500">Dry-Hire-Tagesmietsatz</dt>
+                        <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $dryHirePrice !== null ? e($dryHirePrice) . ' €' : '–' ?></dd>
+                    </div>
                 <?php endif; ?>
             </dl>
             <?php if ($article->description !== null): ?>

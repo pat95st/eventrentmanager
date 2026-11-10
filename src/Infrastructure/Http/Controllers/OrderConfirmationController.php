@@ -116,6 +116,7 @@ final class OrderConfirmationController
 
         try {
             $id = $this->commands->dispatch($command);
+            $this->saveDryHireFlag((string) $id, $request);
             Flash::success(t('order_confirmations.flash.created'));
             Response::redirect('/auftragsbestaetigungen/' . $id);
         } catch (ValidationException $e) {
@@ -202,6 +203,7 @@ final class OrderConfirmationController
 
         try {
             $this->commands->dispatch($command);
+            $this->saveDryHireFlag($id, $request);
             Flash::success(t('order_confirmations.flash.updated'));
             Response::redirect('/auftragsbestaetigungen/' . $id);
         } catch (ValidationException $e) {
@@ -520,4 +522,13 @@ final class OrderConfirmationController
     {
         return $value === null || $value === '' ? null : $value;
     }
+
+    /** Dry-Hire-Kennzeichen des Dokuments (Migration 141) – nur wenn die Checkbox im Formular war. */
+    private function saveDryHireFlag(string $documentId, Request $request): void
+    {
+        if ($request->input('dry_hire_section') === '1') {
+            $this->commands->dispatch(new \App\Application\DryHire\Command\SetDocumentDryHire('order_confirmation', $documentId, $request->input('dry_hire') === '1'));
+        }
+    }
+
 }

@@ -466,6 +466,7 @@ final class ArticleController
 
         try {
             $articleId = $this->commands->dispatch($command);
+            $this->saveDryHirePrice((string) $articleId, $request);
             $duplicateOf = $this->nullIfEmpty($request->input('duplicate_of'));
             if ($duplicateOf !== null) {
                 $this->copyArticleExtras($duplicateOf, (string) $articleId);
@@ -659,6 +660,7 @@ final class ArticleController
 
         try {
             $this->commands->dispatch($command);
+            $this->saveDryHirePrice($id, $request);
             Flash::success(t('articles.flash.updated'));
             Response::redirect('/artikel/' . $id);
         } catch (ValidationException $e) {
@@ -666,6 +668,19 @@ final class ArticleController
             $this->renderForm($detail->article, $e->errors(), $this->oldFromCommand($command), $id);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
+        }
+    }
+
+    /** Dry-Hire-Tagesmietsatz (Migration 141) – nur wenn das Feld im Formular war. */
+    private function saveDryHirePrice(string $articleId, Request $request): void
+    {
+        if ($request->input('dry_hire_section') !== '1') {
+            return;
+        }
+        try {
+            $this->commands->dispatch(new \App\Application\DryHire\Command\SetArticleDryHirePrice($articleId, $request->input('dry_hire_daily_price')));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
         }
     }
 

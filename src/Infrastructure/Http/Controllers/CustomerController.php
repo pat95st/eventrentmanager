@@ -194,6 +194,7 @@ final class CustomerController
 
         try {
             $id = $this->commands->dispatch($command);
+            $this->saveDryHire((string) $id, $request);
 
             // AJAX-Fall: das "+ Neuer Kunde"-Modal auf den Rechnungs-/
             // Angebots-/Auftragsbestätigungs-Formularen legt den Kunden per
@@ -262,6 +263,7 @@ final class CustomerController
 
         try {
             $this->commands->dispatch($command);
+            $this->saveDryHire($id, $request);
             Flash::success(t('customers.flash.updated'));
             Response::redirect('/kunden');
         } catch (ValidationException $e) {
@@ -467,4 +469,13 @@ final class CustomerController
 
         return trim($command->firstName . ' ' . $command->lastName);
     }
+
+    /** Dry-Hire-Kennzeichen (Migration 141) – nur wenn das Feld im Formular war. */
+    private function saveDryHire(string $customerId, Request $request): void
+    {
+        if ($request->input('dry_hire_section') === '1') {
+            $this->commands->dispatch(new \App\Application\DryHire\Command\SetCustomerDryHire($customerId, $request->input('is_dry_hire') === '1'));
+        }
+    }
+
 }

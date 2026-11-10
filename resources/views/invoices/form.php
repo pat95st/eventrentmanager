@@ -197,6 +197,7 @@ foreach ($laborArticles as $laborArticle) {
                     + <?= e(t('customers.quick_create.title')) ?>
                 </button>
             </div>
+            <?php $dryHire = \App\Infrastructure\Http\DryHireLookup::formData('invoice', $invoice?->id, ($selectedCustomer ?? '') !== '' ? (string) $selectedCustomer : null); include __DIR__ . '/../_dry_hire_toggle.php'; ?>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.customer_hint')) ?></p>
         </div>
 
@@ -989,6 +990,23 @@ foreach ($laborArticles as $laborArticle) {
     // erst zum Zeitpunkt der (textuell späteren) Zuweisung befüllt.
     var invoiceForm = document.getElementById('invoice-form');
 
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!window.DryHire || !window.DRY_HIRE_DATA) { return; }
+        window.DryHire.init({
+            data: window.DRY_HIRE_DATA,
+            container: container,
+            rowSelector: '.invoice-item-row',
+            priceSelector: '.invoice-item-price',
+            suggest: suggestPrice,
+            onChange: typeof updateTotals === 'function' ? updateTotals : null,
+            checkbox: document.querySelector('[data-dry-hire-checkbox]'),
+            wrap: document.querySelector('[data-dry-hire-wrap]'),
+            badge: document.querySelector('[data-dry-hire-badge]'),
+            summary: document.querySelector('[data-dry-hire-summary]'),
+            customerInput: document.querySelector('input[name="customer_id"][data-live-search-value]'),
+        });
+    });
+
     var container = document.getElementById('invoice-rows');
     var template = document.getElementById('invoice-item-row-template');
     var addButton = document.getElementById('invoice-item-add');
@@ -996,6 +1014,12 @@ foreach ($laborArticles as $laborArticle) {
     var endInput = document.getElementById('end_date');
     var nextSortOrder = 0;
 
+    // Dry-Hire-Staffel gilt für die volle Mietdauer (nicht auf 7 Tage begrenzt)
+    function dryHireDays() {
+        if (!startInput.value || !endInput.value) { return 1; }
+        var diff = Math.round((new Date(endInput.value) - new Date(startInput.value)) / 86400000) + 1;
+        return isNaN(diff) || diff < 1 ? 1 : diff;
+    }
     function dayCount() {
         if (!startInput.value || !endInput.value) {
             return 1;
@@ -1029,6 +1053,11 @@ foreach ($laborArticles as $laborArticle) {
 
     function suggestPrice(articleId) {
         var article = ARTICLES[articleId];
+        // Dry-Hire (Migration 141): eigener Tagesmietsatz + Dry-Hire-Staffel; ohne Dry-Hire-Preis normaler Preis (mit Warnung)
+        if (article && window.DryHire && window.DryHire.active() && window.DryHire.price(articleId) !== null) {
+            var dryPrice = parseFloat(window.DryHire.price(articleId)) * window.DryHire.factor(dryHireDays());
+            return isNaN(dryPrice) ? null : roundPrice(dryPrice).toFixed(2);
+        }
         if (!article || article.price === null) {
             return null;
         }

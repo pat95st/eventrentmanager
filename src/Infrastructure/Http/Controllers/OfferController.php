@@ -734,7 +734,7 @@ final class OfferController
         return $value === null || $value === '' ? null : $value;
     }
 
-    /** Dry-Hire-Kennzeichen des Dokuments (Migration 141) – nur wenn die Checkbox im Formular war. */
+    /** Dry-Hire-Kennzeichen des Dokuments (Migration 142) – nur wenn die Checkbox im Formular war. */
     private function saveDryHireFlag(string $documentId, Request $request): void
     {
         if ($request->input('dry_hire_section') === '1') {

@@ -1,5 +1,5 @@
 /**
- * Dry-Hire-Preise in den Dokumentformularen (Angebot, AB, Rechnung) – Migration 141.
+ * Dry-Hire-Preise in den Dokumentformularen (Angebot, AB, Rechnung) – Migration 142.
  *
  * Die Formulare rufen DryHire.init({...}) auf und fragen in ihrer
  * Preisvorschlag-Funktion DryHire.active()/price()/factor() ab. Dieses Modul

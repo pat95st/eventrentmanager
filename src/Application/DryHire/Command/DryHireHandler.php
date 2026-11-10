@@ -10,7 +10,7 @@ use App\Domain\DryHire\DryHireRepositoryInterface;
 use App\Domain\DryHire\DryHireTier;
 use App\Domain\Exception\ValidationException;
 
-/** Dry-Hire-Preise, -Kunden, -Staffel und Dokument-Kennzeichen (Migration 141). */
+/** Dry-Hire-Preise, -Kunden, -Staffel und Dokument-Kennzeichen (Migration 142). */
 final class DryHireHandler implements CommandHandlerInterface
 {
     public const MAX_TIERS = 20;

@@ -470,7 +470,7 @@ final class CustomerController
         return trim($command->firstName . ' ' . $command->lastName);
     }
 
-    /** Dry-Hire-Kennzeichen (Migration 141) – nur wenn das Feld im Formular war. */
+    /** Dry-Hire-Kennzeichen (Migration 142) – nur wenn das Feld im Formular war. */
     private function saveDryHire(string $customerId, Request $request): void
     {
         if ($request->input('dry_hire_section') === '1') {

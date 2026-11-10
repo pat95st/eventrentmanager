@@ -57,7 +57,7 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         // Sets (Migration 113): gebuchte Sets zum Festpreis (inkl. Upgrades).
         private readonly ?\App\Domain\Rental\RentalSetBookingRepositoryInterface $setBookings = null,
         private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
-        // Dry-Hire (Migration 141): Dry-Hire-Kunden bekommen Dry-Hire-Preise
+        // Dry-Hire (Migration 142): Dry-Hire-Kunden bekommen Dry-Hire-Preise
         private readonly ?\App\Domain\DryHire\DryHireRepositoryInterface $dryHire = null,
     ) {
     }
@@ -137,7 +137,7 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
             return $pricesByDay[$deploymentDays] ?? $article->dailyRentalPrice;
         };
 
-        // Dry-Hire (Migration 141): Dry-Hire-Kunde → Dry-Hire-Tagesmietsatz ×
+        // Dry-Hire (Migration 142): Dry-Hire-Kunde → Dry-Hire-Tagesmietsatz ×
         // Dry-Hire-Staffel über die tatsächlichen Einsatztage. Artikel ohne
         // Dry-Hire-Preis behalten den normalen Preis (das Rechnungsformular
         // zeigt dafür eine Warnung).

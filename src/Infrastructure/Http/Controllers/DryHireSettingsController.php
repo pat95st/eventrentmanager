@@ -13,7 +13,7 @@ use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
-/** Einstellungen › Preise & Zahlung › Dry-Hire-Staffel (Migration 141). */
+/** Einstellungen › Preise & Zahlung › Dry-Hire-Staffel (Migration 142). */
 final class DryHireSettingsController
 {
     public function __construct(

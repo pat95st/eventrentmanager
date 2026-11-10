@@ -6,7 +6,7 @@ namespace App\Application\DryHire\Command;
 
 use App\Application\Command\CommandInterface;
 
-/** Dry-Hire (Migration 141). */
+/** Dry-Hire (Migration 142). */
 final class SetDocumentDryHire implements CommandInterface
 {
     public function __construct(

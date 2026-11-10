@@ -671,7 +671,7 @@ final class ArticleController
         }
     }
 
-    /** Dry-Hire-Tagesmietsatz (Migration 141) – nur wenn das Feld im Formular war. */
+    /** Dry-Hire-Tagesmietsatz (Migration 142) – nur wenn das Feld im Formular war. */
     private function saveDryHirePrice(string $articleId, Request $request): void
     {
         if ($request->input('dry_hire_section') !== '1') {

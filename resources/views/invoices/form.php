@@ -1053,7 +1053,7 @@ foreach ($laborArticles as $laborArticle) {
 
     function suggestPrice(articleId) {
         var article = ARTICLES[articleId];
-        // Dry-Hire (Migration 141): eigener Tagesmietsatz + Dry-Hire-Staffel; ohne Dry-Hire-Preis normaler Preis (mit Warnung)
+        // Dry-Hire (Migration 142): eigener Tagesmietsatz + Dry-Hire-Staffel; ohne Dry-Hire-Preis normaler Preis (mit Warnung)
         if (article && window.DryHire && window.DryHire.active() && window.DryHire.price(articleId) !== null) {
             var dryPrice = parseFloat(window.DryHire.price(articleId)) * window.DryHire.factor(dryHireDays());
             return isNaN(dryPrice) ? null : roundPrice(dryPrice).toFixed(2);

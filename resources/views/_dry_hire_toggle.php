@@ -1,6 +1,6 @@
 <?php
 /**
- * Checkbox „Dry-Hire-Preise berechnen“ für Angebot/AB/Rechnung (Migration 141).
+ * Checkbox „Dry-Hire-Preise berechnen“ für Angebot/AB/Rechnung (Migration 142).
  * Erwartet $dryHire (Ergebnis von DryHireLookup::formData()).
  *
  * @var array{tiers: list<array{from: int, pct: float}>, customers: list<string>, prices: array<string, string>, checked: bool, available: bool} $dryHire

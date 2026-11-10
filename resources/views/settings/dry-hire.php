@@ -1,6 +1,6 @@
 <?php
 /**
- * Einstellungen › Dry-Hire-Staffel (Migration 141).
+ * Einstellungen › Dry-Hire-Staffel (Migration 142).
  *
  * @var list<array{0: string, 1: string}> $tiers [ab Tag, Prozent]
  * @var ?string $error

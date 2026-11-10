@@ -684,6 +684,12 @@ $organizerLoginHandler = new \App\Application\EventAudio\Command\OrganizerLoginH
 foreach (['CreateOrganizerLogin', 'UpdateOrganizerLogin', 'DeleteOrganizerLogin', 'AuthenticateOrganizer'] as $eaCommand) {
     $commandBus->register('App\\Application\\EventAudio\\Command\\' . $eaCommand, $organizerLoginHandler);
 }
+// Kopplung per 6-stelligem Code (Migration 141)
+$audioPairingCodeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbAudioPairingCodeRepository($pdo);
+$audioPairingHandler = new \App\Application\EventAudio\Command\AudioPairingHandler($audioPairingCodeRepository, $audioPlayerRepository, $rentalAudioSettingsRepository);
+foreach (['CreateAudioPairingCode', 'PairAudioPlayer'] as $eaCommand) {
+    $commandBus->register('App\\Application\\EventAudio\\Command\\' . $eaCommand, $audioPairingHandler);
+}
 $playbackHandler = new \App\Application\EventAudio\Command\PlaybackHandler($playbackRequestRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioSettingsRepository, $fileStorage);
 foreach (['RequestPlayback', 'CancelPlayback', 'ReportPlaybackStatus', 'ReplayPlayback'] as $eaCommand) {
     $commandBus->register('App\\Application\\EventAudio\\Command\\' . $eaCommand, $playbackHandler);
@@ -884,7 +890,7 @@ $commandBus->register(\App\Application\Auth\Command\StopImpersonation::class, ne
 $commandBus->register(\App\Application\Settings\Command\UpdateSmtpSettings::class, new UpdateSmtpSettingsHandler($smtpSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\SendTestMail::class, new SendTestMailHandler($mailer));
 $commandBus->register(\App\Application\Settings\Command\UpdatePriceTiers::class, new UpdatePriceTiersHandler($priceTierRepository));
-// Dry-Hire (Migration 141)
+// Dry-Hire (Migration 142)
 $dryHireHandler = new \App\Application\DryHire\Command\DryHireHandler($dryHireRepository);
 foreach (['SetArticleDryHirePrice', 'SetCustomerDryHire', 'SaveDryHireTiers', 'SetDocumentDryHire'] as $dhCommand) {
     $commandBus->register('App\\Application\\DryHire\\Command\\' . $dhCommand, $dryHireHandler);
@@ -1542,7 +1548,7 @@ $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSetti
 
 $rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository);
-$eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
+$eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $audioPairingCodeRepository);
 $eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $fileStorage, new \App\Infrastructure\Integration\Translation\ConfiguredTranslator($audioSettingsRepository, $aiAdImageSettingsRepository));
 $audioSettingsController = new \App\Infrastructure\Http\Controllers\AudioSettingsController($commandBus, $audioSettingsRepository, $audioPlayerRepository, $fileStorage, $aiAdImageSettingsRepository);
 $audioPlayerApiController = new \App\Infrastructure\Http\Controllers\AudioPlayerApiController($commandBus, $audioPlayerRepository, $audioSettingsRepository, $rentalAudioSettingsRepository, $rentalAudioFileRepository, $playbackRequestRepository, $rentalRepository, $fileStorage, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
@@ -2037,6 +2043,7 @@ $router->get('/veranstaltungen/{id}/audio/dateien/{fileId}', $auth->guard($eaMan
 $router->post('/veranstaltungen/{id}/audio/dateien/{fileId}', $auth->guard($eaManage, [$eventAudioController, 'updateFile']));
 $router->post('/veranstaltungen/{id}/audio/dateien/{fileId}/loeschen', $auth->guard($eaManage, [$eventAudioController, 'deleteFile']));
 $router->post('/veranstaltungen/{id}/audio/einstellungen', $auth->guard($eaManage, [$eventAudioController, 'saveSettings']));
+$router->post('/veranstaltungen/{id}/audio/kopplungscode', $auth->guard($eaManage, [$eventAudioController, 'createPairingCode']));
 $router->post('/veranstaltungen/{id}/audio/zugaenge', $auth->guard($eaManage, [$eventAudioController, 'createLogin']));
 $router->post('/veranstaltungen/{id}/audio/zugaenge/{loginId}', $auth->guard($eaManage, [$eventAudioController, 'updateLogin']));
 $router->post('/veranstaltungen/{id}/audio/zugaenge/{loginId}/loeschen', $auth->guard($eaManage, [$eventAudioController, 'deleteLogin']));
@@ -2082,6 +2089,7 @@ $router->post('/einstellungen/veranstaltungs-audio/geraete/{id}', $auth->guard(P
 $router->post('/einstellungen/veranstaltungs-audio/geraete/{id}/token', $auth->guard(Permission::Administration, [$audioSettingsController, 'regenerateToken']));
 $router->post('/einstellungen/veranstaltungs-audio/geraete/{id}/loeschen', $auth->guard(Permission::Administration, [$audioSettingsController, 'deletePlayer']));
 // Abspielgerät (Raspberry Pi): Bearer-Token, kein Session-/CSRF-Schutz (siehe Router::CSRF_EXEMPT_PREFIXES)
+$router->post('/api/player/v1/pair', [$audioPlayerApiController, 'pair']);
 $router->get('/api/player/v1/state', [$audioPlayerApiController, 'state']);
 $router->post('/api/player/v1/requests/{id}/status', [$audioPlayerApiController, 'reportStatus']);
 $router->get('/api/player/v1/requests/{id}/recording', [$audioPlayerApiController, 'recording']);

@@ -8,7 +8,7 @@ use App\Domain\DryHire\DryHireRepositoryInterface;
 use App\Domain\DryHire\DryHireRepositoryInterface as Repo;
 
 /**
- * Zugriff der Views auf Dry-Hire-Daten (Migration 141), analog zu
+ * Zugriff der Views auf Dry-Hire-Daten (Migration 142), analog zu
  * CompanyBranding/UiFonts – wird in bootstrap.php gesetzt. Ohne Repository
  * (z. B. Tests) liefert alles „kein Dry-Hire“.
  */

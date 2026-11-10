@@ -8,7 +8,7 @@ use App\Domain\Settings\PriceRoundingDirection;
 use App\Domain\Settings\PriceRoundingStep;
 
 /**
- * Dry-Hire-Staffel (Migration 141): Mietpreis für N Tage = Summe der
+ * Dry-Hire-Staffel (Migration 142): Mietpreis für N Tage = Summe der
  * Tagesanteile; Tag d kostet den Prozentsatz der höchsten Stufe mit
  * fromDay <= d. Beispiel 1:100, 2:50, 8:25 → 3 Tage = 100+50+50 = 200 %.
  * Gilt für beliebig lange Mietdauer (anders als die normale Staffel).

@@ -16,6 +16,7 @@
  * @var array<string, mixed> $initialStatus
  * @var string $csrfToken
  * @var bool $canSchedule
+ * @var ?string $customLogoUrl eigenes Veranstaltungs-Logo (nur Veranstalter)
  * @var int $maxUploadMb
  * @var array{0: string, 1: string} $rentalWindow
  */
@@ -25,7 +26,7 @@ use App\Infrastructure\Http\CompanyBranding;
 
 use function App\Infrastructure\Http\e;
 
-$logo = CompanyBranding::darkLogoUrl() ?? CompanyBranding::logoUrl();
+$logo = ($customLogoUrl ?? null) ?? CompanyBranding::darkLogoUrl() ?? CompanyBranding::logoUrl();
 $canSchedule ??= false;
 $defaultPlayAt = (new DateTimeImmutable('+10 minutes'))->format('Y-m-d\TH:i');
 $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d') !== $rental->startDate->format('Y-m-d') ? ' – ' . $rental->endDate->format('d.m.Y') : '');
@@ -55,7 +56,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
 
     header.top { position: sticky; top: 0; z-index: 20; background: rgba(11,16,32,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
     .top-inner { display: flex; align-items: center; gap: 12px; padding-top: 10px; padding-bottom: 10px; }
-    .top-inner img { max-height: 32px; max-width: 110px; object-fit: contain; }
+    .top-inner img { max-height: 40px; max-width: 140px; object-fit: contain; }
     .event { min-width: 0; flex: 1; }
     .event h1 { margin: 0; font-size: 1rem; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .event p { margin: 2px 0 0; font-size: .75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -254,6 +254,33 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
         <?php endif; ?>
     </section>
 
+    <!-- Logo für Veranstalter -->
+    <section id="logo" class="<?= $card ?>">
+        <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Logo für Veranstalter</h2>
+        <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">
+            Eigenes Logo (z. B. des Veranstalters) für die Live-Oberfläche. Es erscheint nur bei den Veranstalter-Zugängen; Techniker und Admins sehen immer das Firmenlogo.
+            Ohne eigenes Logo wird überall das Firmenlogo angezeigt. PNG, JPEG, WebP oder GIF bis 2 MB – am besten mit transparentem Hintergrund und hell auf dunkel lesbar.
+        </p>
+        <div class="flex flex-wrap items-center gap-4">
+            <?php if ($rentalSettings->logoFilename !== null): ?>
+                <div class="flex h-16 items-center rounded-md px-4" style="background:#0b1020; min-width: 8rem">
+                    <img src="<?= e($base) ?>/logo?v=<?= e(substr(md5($rentalSettings->logoFilename), 0, 10)) ?>" alt="Logo der Veranstaltung" style="max-height: 40px; max-width: 160px; object-fit: contain">
+                </div>
+            <?php endif; ?>
+            <form method="post" action="<?= e($base) ?>/logo" enctype="multipart/form-data" class="flex flex-wrap items-center gap-2">
+                <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                <input type="file" name="logo" required accept="image/png,image/jpeg,image/webp,image/gif" class="text-sm text-slate-600 dark:text-slate-300">
+                <button type="submit" class="<?= $btn ?>"><?= $rentalSettings->logoFilename !== null ? 'Ersetzen' : 'Hochladen' ?></button>
+            </form>
+            <?php if ($rentalSettings->logoFilename !== null): ?>
+                <form method="post" action="<?= e($base) ?>/logo/loeschen" data-confirm="Logo entfernen? Veranstalter sehen dann wieder das Firmenlogo.">
+                    <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
+                </form>
+            <?php endif; ?>
+        </div>
+    </section>
+
     <!-- Zugänge -->
     <section id="zugaenge" class="<?= $card ?>">
         <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Veranstalter-Zugänge</h2>

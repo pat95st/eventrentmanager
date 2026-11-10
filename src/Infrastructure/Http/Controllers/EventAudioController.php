@@ -7,6 +7,8 @@ namespace App\Infrastructure\Http\Controllers;
 use App\Application\Command\CommandBus;
 use App\Application\EventAudio\Command\CancelScheduledPlayback;
 use App\Application\EventAudio\Command\CreateOrganizerLogin;
+use App\Application\EventAudio\Command\DeleteRentalAudioLogo;
+use App\Application\EventAudio\Command\UploadRentalAudioLogo;
 use App\Application\EventAudio\Command\SchedulePlayback;
 use App\Application\EventAudio\Command\ReplayPlayback;
 use App\Application\EventAudio\Command\RequestPlayback;
@@ -264,6 +266,40 @@ final class EventAudioController
                 $this->commands->dispatch(new ReplayPlayback($request->param('requestId'), $rentalId, 'user', $byId, $byName));
             }
         }, 'Wird erneut eingespielt.', $rentalId, $scheduleId !== null ? 'planung' : 'auftraege');
+    }
+
+    public function uploadLogo(Request $request): void
+    {
+        $rentalId = $this->requireRental($request);
+        $this->run(fn () => $this->commands->dispatch(new UploadRentalAudioLogo($rentalId, $request->file('logo') ?? ['error' => UPLOAD_ERR_NO_FILE])), 'Das Logo wurde gespeichert.', $rentalId, 'logo');
+    }
+
+    public function deleteLogo(Request $request): void
+    {
+        $rentalId = $this->requireRental($request);
+        $this->run(fn () => $this->commands->dispatch(new DeleteRentalAudioLogo($rentalId)), 'Das Logo wurde entfernt – Veranstalter sehen wieder das Firmenlogo.', $rentalId, 'logo');
+    }
+
+    /** Vorschau des Veranstaltungs-Logos. */
+    public function logo(Request $request): void
+    {
+        $settings = $this->rentalSettings->get($request->param('id'));
+        if ($settings->logoFilename === null) {
+            Response::notFound('Kein Logo hinterlegt.');
+
+            return;
+        }
+        Response::cachedFile($this->storage->absolutePath(RentalAudioFile::storageDirectory($settings->rentalId), $settings->logoFilename), $settings->logoFilename, self::logoMime($settings->logoFilename), $request->query('v') !== null);
+    }
+
+    public static function logoMime(string $filename): string
+    {
+        return match (strtolower(pathinfo($filename, PATHINFO_EXTENSION))) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            default => 'image/jpeg',
+        };
     }
 
     public function cancelSchedule(Request $request): void

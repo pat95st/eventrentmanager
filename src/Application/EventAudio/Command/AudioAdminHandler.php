@@ -11,6 +11,7 @@ use App\Domain\EventAudio\AudioPlayer;
 use App\Domain\EventAudio\AudioPlayerRepositoryInterface;
 use App\Domain\EventAudio\AudioSettings;
 use App\Domain\EventAudio\AudioSettingsRepositoryInterface;
+use App\Domain\EventAudio\RentalAudioFile;
 use App\Domain\EventAudio\RentalAudioSettings;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
@@ -44,6 +45,8 @@ final class AudioAdminHandler implements CommandHandlerInterface
             $command instanceof UploadGong => $this->uploadGong($command),
             $command instanceof ResetGong => $this->resetGong(),
             $command instanceof SaveRentalAudioSettings => $this->saveRental($command),
+            $command instanceof UploadRentalAudioLogo => $this->uploadLogo($command),
+            $command instanceof DeleteRentalAudioLogo => $this->deleteLogo($command),
             default => throw new \LogicException('Unbekannter Befehl ' . $command::class),
         };
     }
@@ -161,7 +164,51 @@ final class AudioAdminHandler implements CommandHandlerInterface
         if ($playerId !== null && $this->players->findById($playerId) === null) {
             throw new ValidationException(['player' => 'Abspielgerät nicht gefunden.']);
         }
-        $this->rentalSettings->save(new RentalAudioSettings($command->rentalId, $playerId, $command->gongByDefault));
+        $settings = clone $this->rentalSettings->get($command->rentalId); // Logo u. a. bleiben erhalten
+        $settings->playerId = $playerId;
+        $settings->gongByDefault = $command->gongByDefault;
+        $this->rentalSettings->save($settings);
+
+        return null;
+    }
+
+    private const LOGO_MIME_EXTENSIONS = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+    private const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+    /** Eigenes Logo der Veranstaltung (Migration 137); bewusst ohne SVG (kein Skript im Veranstalter-Bereich). */
+    private function uploadLogo(UploadRentalAudioLogo $command): null
+    {
+        $file = $command->uploadedFile;
+        if ((int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || ($file['tmp_name'] ?? '') === '') {
+            throw new ValidationException(['logo' => 'Bitte ein Logo auswählen.']);
+        }
+        if ((int) ($file['size'] ?? 0) > self::LOGO_MAX_BYTES) {
+            throw new ValidationException(['logo' => 'Das Logo darf höchstens 2 MB groß sein.']);
+        }
+        $info = @getimagesize((string) $file['tmp_name']);
+        $ext = $info !== false ? (self::LOGO_MIME_EXTENSIONS[$info['mime']] ?? null) : null;
+        if ($ext === null) {
+            throw new ValidationException(['logo' => 'Nur PNG-, JPEG-, WebP- oder GIF-Bilder sind erlaubt.']);
+        }
+        $settings = clone $this->rentalSettings->get($command->rentalId);
+        $stored = $this->storage->storeLocalFile((string) $file['tmp_name'], RentalAudioFile::storageDirectory($command->rentalId), 'logo-' . Uuid::v4(), 'logo.' . $ext);
+        if ($settings->logoFilename !== null) {
+            $this->storage->delete(RentalAudioFile::storageDirectory($command->rentalId), $settings->logoFilename);
+        }
+        $settings->logoFilename = $stored['storedFilename'];
+        $this->rentalSettings->save($settings);
+
+        return null;
+    }
+
+    private function deleteLogo(DeleteRentalAudioLogo $command): null
+    {
+        $settings = clone $this->rentalSettings->get($command->rentalId);
+        if ($settings->logoFilename !== null) {
+            $this->storage->delete(RentalAudioFile::storageDirectory($command->rentalId), $settings->logoFilename);
+            $settings->logoFilename = null;
+            $this->rentalSettings->save($settings);
+        }
 
         return null;
     }

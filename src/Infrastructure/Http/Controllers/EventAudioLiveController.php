@@ -32,6 +32,8 @@ use App\Domain\Rental\Rental;
 use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Technician\RentalTechnicianRepositoryInterface;
 use App\Domain\Technician\TechnicianAccess;
+use App\Domain\EventAudio\RentalAudioFile;
+use App\Infrastructure\FileStorage\LocalFileStorage;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Auth\Session;
 use App\Infrastructure\Http\Csrf;
@@ -73,6 +75,7 @@ final class EventAudioLiveController
         private readonly ?MinuteProgramRepositoryInterface $minutePrograms = null,
         private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
         private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
+        private readonly ?LocalFileStorage $storage = null,
     ) {
     }
 
@@ -185,6 +188,21 @@ final class EventAudioLiveController
         }
     }
 
+    /** Logo der Veranstaltung – nur für angemeldete Veranstalter dieser Veranstaltung. */
+    public function organizerLogo(Request $request): void
+    {
+        if ($this->requireOrganizer($request, json: false) === null) {
+            return;
+        }
+        $settings = $this->rentalSettings->get($request->param('id'));
+        if ($settings->logoFilename === null || $this->storage === null) {
+            Response::notFound('Kein Logo hinterlegt.');
+
+            return;
+        }
+        Response::cachedFile($this->storage->absolutePath(RentalAudioFile::storageDirectory($settings->rentalId), $settings->logoFilename), $settings->logoFilename, EventAudioController::logoMime($settings->logoFilename), $request->query('v') !== null);
+    }
+
     // ---------------------------------------------------------------- Seite / Aktionen (Benutzer)
 
     public function userPage(Request $request): void
@@ -283,6 +301,10 @@ final class EventAudioLiveController
             'hasPlayer' => $rentalSettings->playerId !== null,
             'ttsLanguage' => $settings->ttsLanguage,
             'canSchedule' => $canSchedule && $this->schedules !== null,
+            // Eigenes Veranstaltungs-Logo nur für Veranstalter; Techniker/Admins sehen immer das Firmenlogo.
+            'customLogoUrl' => $organizer && $rentalSettings->logoFilename !== null
+                ? $basePath . '/logo?v=' . substr(md5($rentalSettings->logoFilename), 0, 10)
+                : null,
             'maxUploadMb' => $settings->maxUploadMb,
             'rentalWindow' => [$rental->startDate->modify('-1 day')->format('Y-m-d') . 'T00:00', $rental->endDate->modify('+1 day')->format('Y-m-d') . 'T23:59'],
             'initialStatus' => $this->statusPayload($rentalId),

@@ -11,6 +11,8 @@ final class RentalAudioSettings
         public readonly string $rentalId,
         public ?string $playerId = null,
         public bool $gongByDefault = true,
+        // Migration 137: eigenes Logo für Veranstalter in der Live-Oberfläche
+        public ?string $logoFilename = null,
     ) {
     }
 }

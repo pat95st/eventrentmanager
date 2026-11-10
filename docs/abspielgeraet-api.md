@@ -1,11 +1,13 @@
 # Abspielgerät-Schnittstelle (Raspberry Pi am Mischpult)
 
-Stand: Migration 135 „Veranstaltungs-Audio“. Diese Beschreibung ist die Vorlage für die Pi-Software. Die Pi-Software wird separat entwickelt.
+Stand: Migration 135 „Veranstaltungs-Audio“, Kopplung per Code seit Migration 141. Diese Beschreibung ist die Vorlage für die Pi-Software. Die Pi-Software wird separat entwickelt.
 
 ## Ablauf
 
-1. In der Verwaltung unter **Einstellungen › Veranstaltungs-Audio** ein Abspielgerät anlegen. Der Geräte-Token (`mvp_…`) wird **nur einmal** angezeigt und muss auf dem Pi hinterlegt werden.
-2. In der Veranstaltung unter **Audio & Durchsagen** das Gerät zuordnen.
+1. Gerät anlegen und der Veranstaltung zuordnen – zwei Wege:
+   - **Per Code (empfohlen, Migration 141):** In der Veranstaltung unter **Audio & Durchsagen › Abspielgerät per Code koppeln** einen 6-stelligen Code erzeugen. Am Pi die Adresse der Verwaltung und den Code eingeben. Der Pi ruft `POST /api/player/v1/pair` auf, erhält seinen Geräte-Token und ist sofort der Veranstaltung zugeordnet.
+   - **Manuell:** Unter **Einstellungen › Veranstaltungs-Audio** ein Abspielgerät anlegen. Der Geräte-Token (`mvp_…`) wird **nur einmal** angezeigt und muss auf dem Pi hinterlegt werden.
+2. Bei manueller Anlage: In der Veranstaltung unter **Audio & Durchsagen** das Gerät zuordnen.
 3. Der Pi fragt alle `poll_interval_seconds` (derzeit 2 s) `GET /api/player/v1/state` ab:
    - Jede Abfrage zählt als Lebenszeichen. Nach 45 s ohne Abfrage gilt das Gerät als offline.
    - Die Antwort enthält die aktive Veranstaltung, alle Audio-Dateien (Manifest), den Gong, die Sprachausgabe-Einstellungen und die Warteschlange.
@@ -28,6 +30,37 @@ Jede Anfrage sendet den Header `Authorization: Bearer <Geräte-Token>`. Bei ung�
 Es gibt weder CSRF-Schutz noch Cookies. Alle Pfade sind relativ zur Basis-URL der Verwaltung, z. B. `https://verleih.example.de`.
 
 ## Endpunkte
+
+### `POST /api/player/v1/pair` (Migration 141)
+
+Koppelt ein Gerät per 6-stelligem Code an eine Veranstaltung. Der Endpunkt braucht **keinen** Bearer-Token.
+
+```json
+{ "code": "123456", "name": "Pi Mischpult", "version": "1.0.0" }
+```
+
+- `code`: Pflicht. Leerzeichen und Bindestriche werden ignoriert (`123 456`).
+- `name`: optional, Gerätename in der Verwaltung (Standard „AutoEventPlay“).
+- Sendet das Gerät zusätzlich `Authorization: Bearer <vorhandener Token>` mit und ist dieser gültig, wird das **vorhandene** Gerät der neuen Veranstaltung zugeordnet. Es behält seinen Token, die Antwort enthält dann `"token": null`.
+- Sonst legt der Server ein neues Gerät an und liefert den Token **einmalig** in `token`.
+
+Antwort bei Erfolg:
+
+```json
+{
+  "ok": true,
+  "token": "mvp_…",
+  "player": { "id": "…", "name": "Pi Mischpult" },
+  "rental": { "id": "…", "name": "Stadtfest", "location": "Marktplatz", "start_date": "2026-11-09", "end_date": "2026-11-10" },
+  "poll_interval_seconds": 2
+}
+```
+
+Fehler:
+- `422` mit `{"error": "Der Code ist ungültig oder abgelaufen."}`.
+- `429`, wenn von derselben IP innerhalb von 15 Minuten 10 Fehlversuche kamen.
+
+Ein Code ist 15 Minuten und nur einmal gültig. Ein neu erzeugter Code macht den vorherigen Code derselben Veranstaltung ungültig.
 
 ### `GET /api/player/v1/state?version=<pi-software-version>&playing=<was-gerade-läuft>`
 

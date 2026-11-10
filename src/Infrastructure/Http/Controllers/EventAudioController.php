@@ -6,6 +6,7 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
 use App\Application\EventAudio\Command\CancelScheduledPlayback;
+use App\Application\EventAudio\Command\CreateAudioPairingCode;
 use App\Application\EventAudio\Command\CreateOrganizerLogin;
 use App\Application\EventAudio\Command\DeleteRentalAudioLogo;
 use App\Application\EventAudio\Command\UploadRentalAudioLogo;
@@ -22,6 +23,7 @@ use App\Application\EventAudio\Command\UpdateOrganizerLogin;
 use App\Application\EventAudio\Command\UpdateRentalAudioFile;
 use App\Application\EventAudio\Command\UploadRentalAudioFile;
 use App\Domain\EventAudio\AudioFileKind;
+use App\Domain\EventAudio\AudioPairingCodeRepositoryInterface;
 use App\Domain\EventAudio\AudioPlayerRepositoryInterface;
 use App\Domain\EventAudio\AudioSettingsRepositoryInterface;
 use App\Domain\EventAudio\OrganizerLoginRepositoryInterface;
@@ -61,6 +63,7 @@ final class EventAudioController
         private readonly LocalFileStorage $storage,
         private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
         private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
+        private readonly ?AudioPairingCodeRepositoryInterface $pairingCodes = null,
     ) {
     }
 
@@ -80,6 +83,7 @@ final class EventAudioController
 
         echo View::page('event-audio/manage', [
             'schedules' => $this->schedules?->findForRental($rental->id, 10),
+            'pairingCode' => $this->pairingCodes?->findActiveForRental($rental->id, new \DateTimeImmutable()),
             'rental' => $rental,
             'jingles' => $this->files->findByRental($rental->id, AudioFileKind::Jingle),
             'audioFiles' => $this->files->findByRental($rental->id, AudioFileKind::Audio),
@@ -172,6 +176,19 @@ final class EventAudioController
             $request->input('gong_by_default') === '1',
             $request->inputArray('tts_language'),
         )), 'Die Audio-Einstellungen wurden gespeichert.', $rentalId, 'geraet');
+    }
+
+    /** Neuen 6-stelligen Kopplungs-Code für ein Abspielgerät erzeugen (Migration 141). */
+    public function createPairingCode(Request $request): void
+    {
+        $rentalId = $this->requireRental($request);
+        $byName = CurrentUser::get()?->displayName() ?? 'Benutzer';
+        $this->run(
+            fn () => $this->commands->dispatch(new CreateAudioPairingCode($rentalId, $byName)),
+            'Der Kopplungs-Code wurde erzeugt. Gib ihn jetzt am Abspielgerät ein.',
+            $rentalId,
+            'geraet',
+        );
     }
 
     public function createLogin(Request $request): void

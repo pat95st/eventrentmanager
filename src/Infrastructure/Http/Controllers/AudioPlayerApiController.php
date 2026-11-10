@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
+use App\Application\EventAudio\Command\PairAudioPlayer;
 use App\Application\EventAudio\Command\ReportPlaybackStatus;
 use App\Application\EventAudio\ScheduledPlaybackDispatcher;
 use App\Domain\EventAudio\AudioPlayer;
@@ -35,6 +36,7 @@ use DateTimeImmutable;
  * Veranstaltungs-Audio). Das Gerät fragt GET /api/player/v1/state alle paar
  * Sekunden ab (zugleich Lebenszeichen), lädt neue/geänderte Dateien herunter,
  * spielt wartende Aufträge der Reihe nach ab und meldet den Status zurück.
+ * Kopplung per 6-stelligem Code (Migration 141): POST /api/player/v1/pair.
  * Ausführliche Beschreibung: docs/abspielgeraet-api.md (auch im Projekt als claude/abspielgeraet-api.md).
  */
 final class AudioPlayerApiController
@@ -54,6 +56,46 @@ final class AudioPlayerApiController
         private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
         private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
     ) {
+    }
+
+    /**
+     * Gerät per 6-stelligem Kopplungs-Code an eine Veranstaltung koppeln
+     * (Migration 141). Ohne Bearer-Token erreichbar; ein mitgesendeter gültiger
+     * Token hängt das vorhandene Gerät um, statt ein neues anzulegen.
+     */
+    public function pair(Request $request): void
+    {
+        $body = $this->jsonBody();
+        $existing = $this->bearerToken();
+        try {
+            /** @var array{player: AudioPlayer, token: ?string, rental_id: string} $result */
+            $result = $this->commands->dispatch(new PairAudioPlayer(
+                (string) ($body['code'] ?? $request->input('code', '')),
+                $this->limit(isset($body['name']) ? (string) $body['name'] : $request->input('name'), 120),
+                $existing !== '' ? $existing : null,
+                $this->clientIp(),
+                $this->limit(isset($body['version']) ? (string) $body['version'] : $request->input('version'), 60),
+            ));
+        } catch (ValidationException $e) {
+            $message = implode(' ', $e->errors());
+            Response::json(['error' => $message], str_contains($message, 'Fehlversuche') ? 429 : 422);
+
+            return;
+        }
+        $rental = $this->rentals->findById($result['rental_id']);
+        Response::json([
+            'ok' => true,
+            'token' => $result['token'],
+            'player' => ['id' => $result['player']->id, 'name' => $result['player']->name],
+            'rental' => $rental === null ? null : [
+                'id' => $rental->id,
+                'name' => $rental->eventName,
+                'location' => $rental->eventLocation,
+                'start_date' => $rental->startDate->format('Y-m-d'),
+                'end_date' => $rental->endDate->format('Y-m-d'),
+            ],
+            'poll_interval_seconds' => self::POLL_INTERVAL_SECONDS,
+        ]);
     }
 
     public function state(Request $request): void
@@ -237,7 +279,7 @@ final class AudioPlayerApiController
         return $this->rentalSettings->get($rentalId)->playerId === $player->id;
     }
 
-    private function authenticate(): AudioPlayer
+    private function bearerToken(): string
     {
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
         if ($header === '' && function_exists('getallheaders')) {
@@ -247,7 +289,13 @@ final class AudioPlayerApiController
                 }
             }
         }
-        $token = preg_match('/^\s*Bearer\s+(\S+)\s*$/i', (string) $header, $m) === 1 ? $m[1] : '';
+
+        return preg_match('/^\s*Bearer\s+(\S+)\s*$/i', (string) $header, $m) === 1 ? $m[1] : '';
+    }
+
+    private function authenticate(): AudioPlayer
+    {
+        $token = $this->bearerToken();
         $player = $token !== '' ? $this->players->findByTokenHash(hash('sha256', $token)) : null;
         if ($player === null || !$player->enabled) {
             header('WWW-Authenticate: Bearer');

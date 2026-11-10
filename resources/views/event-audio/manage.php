@@ -13,6 +13,7 @@
  * @var \App\Domain\EventAudio\PlaybackRequest[] $recent
  * @var ?array{username: string, password: string} $newCredentials
  * @var ?\App\Domain\EventAudio\ScheduledPlayback[] $schedules
+ * @var ?\App\Domain\EventAudio\AudioPairingCode $pairingCode
  */
 
 use App\Domain\EventAudio\AudioFileKind;
@@ -278,8 +279,28 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             <button type="submit" class="<?= $btn ?>">Speichern</button>
         </form>
         <?php if ($players === []): ?>
-            <p class="mt-3 text-xs text-amber-700 dark:text-amber-400">Es ist noch kein Abspielgerät angelegt.</p>
+            <p class="mt-3 text-xs text-amber-700 dark:text-amber-400">Es ist noch kein Abspielgerät angelegt. Du kannst eines direkt per Code koppeln (siehe unten).</p>
         <?php endif; ?>
+
+        <div class="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+            <h3 class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Abspielgerät per Code koppeln</h3>
+            <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                Erzeuge einen Code und gib ihn am Abspielgerät (AutoEventPlay › Instanz) zusammen mit der Adresse dieser Verwaltung ein.
+                Das Gerät wird dann automatisch angelegt bzw. – falls es schon gekoppelt war – dieser Veranstaltung zugeordnet.
+                Der Code ist <?= \App\Domain\EventAudio\AudioPairingCode::VALID_MINUTES ?> Minuten und nur einmal gültig.
+            </p>
+            <?php $pairingCode ??= null; ?>
+            <?php if ($pairingCode !== null): ?>
+                <div class="mb-3 flex flex-wrap items-center gap-4">
+                    <span class="rounded-md border border-slate-300 px-4 py-2 font-mono text-2xl font-semibold tracking-widest text-slate-800 dark:border-slate-700 dark:text-slate-100" data-pairing-code><?= e($pairingCode->formatted()) ?></span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">gültig bis <?= e($pairingCode->expiresAt->format('H:i')) ?> Uhr · erzeugt von <?= e($pairingCode->createdByName) ?></span>
+                </div>
+            <?php endif; ?>
+            <form method="post" action="<?= e($base) ?>/kopplungscode">
+                <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                <button type="submit" class="<?= $btn ?>"><?= $pairingCode !== null ? 'Neuen Code erzeugen' : 'Kopplungs-Code erzeugen' ?></button>
+            </form>
+        </div>
     </section>
 
     <!-- Logo für Veranstalter -->

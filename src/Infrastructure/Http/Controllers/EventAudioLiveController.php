@@ -399,6 +399,7 @@ final class EventAudioLiveController
                 'status' => $s->status->value,
                 'statusLabel' => $s->status->label(),
                 'by' => $s->createdByName,
+                'recurrence' => $s->recurrenceLabel(),
                 'replayable' => $s->status === ScheduledPlaybackStatus::Triggered || $s->status === ScheduledPlaybackStatus::Missed,
             ], $this->schedules?->findForRental($rentalId, 5) ?? []),
         ];
@@ -445,6 +446,12 @@ final class EventAudioLiveController
     private function schedule(Request $request, string $rentalId, string $byType, ?string $byId, string $byName): void
     {
         $upload = $request->file('file');
+        [$repeatInterval, $repeatUntil, $repeatMax] = EventAudioController::recurrenceFromRequest($request);
+        if ($request->input('repeat') === '1' && $repeatInterval === null) {
+            Response::json(['ok' => false, 'error' => 'Bitte ein Intervall für die Wiederholung angeben.'], 422);
+
+            return;
+        }
         try {
             $ids = $this->commands->dispatch(new SchedulePlayback(
                 $rentalId,
@@ -456,6 +463,9 @@ final class EventAudioLiveController
                 $byType,
                 $byId,
                 $byName,
+                $repeatInterval,
+                $repeatUntil,
+                $repeatMax,
             ));
         } catch (ValidationException $e) {
             Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);

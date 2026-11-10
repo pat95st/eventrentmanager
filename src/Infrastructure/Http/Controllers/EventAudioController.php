@@ -235,6 +235,13 @@ final class EventAudioController
         $rentalId = $this->requireRental($request);
         $user = CurrentUser::get();
         $upload = $request->file('file');
+        [$repeatInterval, $repeatUntil, $repeatMax] = self::recurrenceFromRequest($request);
+        if ($request->input('repeat') === '1' && $repeatInterval === null) {
+            Flash::error('Bitte ein Intervall für die Wiederholung angeben.');
+            $this->back($rentalId, 'planung');
+
+            return;
+        }
         $this->run(fn () => $this->commands->dispatch(new SchedulePlayback(
             $rentalId,
             $request->input('audio_file_id'),
@@ -245,6 +252,9 @@ final class EventAudioController
             'user',
             $user?->id,
             $user?->displayName() ?? 'Benutzer',
+            $repeatInterval,
+            $repeatUntil,
+            $repeatMax,
         )), 'Der Einspieler wurde eingeplant.', $rentalId, 'planung');
     }
 
@@ -293,6 +303,29 @@ final class EventAudioController
             return;
         }
         Response::cachedFile($this->storage->absolutePath(RentalAudioFile::storageDirectory($settings->rentalId), $settings->logoFilename), $settings->logoFilename, self::logoMime($settings->logoFilename), $request->query('v') !== null);
+    }
+
+    /**
+     * Wiederholungs-Felder des Planungsformulars (Migration 139):
+     * repeat=1, repeat_every + repeat_unit (min|h), repeat_end (none|until|count),
+     * repeat_until, repeat_max.
+     *
+     * @return array{0: ?int, 1: ?string, 2: ?int}
+     */
+    public static function recurrenceFromRequest(Request $request): array
+    {
+        if ($request->input('repeat') !== '1') {
+            return [null, null, null];
+        }
+        $every = max(0, (int) $request->input('repeat_every', '0'));
+        $interval = $request->input('repeat_unit') === 'h' ? $every * 60 : $every;
+        $end = (string) $request->input('repeat_end', 'none');
+
+        return [
+            $interval > 0 ? $interval : null,
+            $end === 'until' ? $request->input('repeat_until') : null,
+            $end === 'count' ? max(0, (int) $request->input('repeat_max', '0')) : null,
+        ];
     }
 
     public static function logoMime(string $filename): string

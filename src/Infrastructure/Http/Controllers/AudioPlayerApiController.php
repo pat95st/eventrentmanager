@@ -125,7 +125,16 @@ final class AudioPlayerApiController
             }
             foreach ($this->schedules?->findForRental($rental->id, 0) ?? [] as $s) {
                 if ($s->status === ScheduledPlaybackStatus::Pending) {
-                    $payload['scheduled'][] = ['id' => $s->id, 'file_id' => $s->audioFileId, 'play_at' => $s->playAt->format(DATE_ATOM), 'note' => $s->note];
+                    $payload['scheduled'][] = [
+                        'id' => $s->id,
+                        'file_id' => $s->audioFileId,
+                        'play_at' => $s->playAt->format(DATE_ATOM),
+                        'note' => $s->note,
+                        'repeat_interval_minutes' => $s->repeatIntervalMinutes,
+                        'repeat_until' => $s->repeatUntil?->format(DATE_ATOM),
+                        'repeat_max' => $s->repeatMax,
+                        'repeat_count' => $s->repeatCount,
+                    ];
                 }
             }
             $payload['queue'] = array_map(fn (PlaybackRequest $r): array => $this->queueItem($r, $base), $this->requests->queuedForRental($rental->id));

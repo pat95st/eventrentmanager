@@ -337,6 +337,28 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                             </div>
                             <label class="field">Notiz (optional)<input type="text" name="note" maxlength="255" placeholder="z. B. Einlass"></label>
                         </div>
+                        <div style="margin-top: 12px">
+                            <label class="toggle"><input type="checkbox" name="repeat" value="1" id="sched-repeat"><span class="sw"></span>Wiederholen (Zyklus)</label>
+                        </div>
+                        <div id="sched-repeat-box" hidden>
+                            <div class="grid2">
+                                <div class="field">Alle
+                                    <div class="time-row">
+                                        <input type="number" name="repeat_every" value="10" min="1" max="1440" inputmode="numeric" style="max-width: 6rem">
+                                        <select name="repeat_unit" style="flex:1"><option value="min">Minuten</option><option value="h">Stunden</option></select>
+                                    </div>
+                                </div>
+                                <label class="field">Ende
+                                    <select name="repeat_end" id="sched-repeat-end">
+                                        <option value="none">mit Ende der Veranstaltung</option>
+                                        <option value="until">zu einem Zeitpunkt</option>
+                                        <option value="count">nach Anzahl Wiedergaben</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <label class="field" id="sched-repeat-until" hidden>Wiederholen bis<input type="datetime-local" name="repeat_until" min="<?= e($rentalWindow[0]) ?>" max="<?= e($rentalWindow[1]) ?>"></label>
+                            <label class="field" id="sched-repeat-max" hidden>Anzahl Wiedergaben (inkl. der ersten)<input type="number" name="repeat_max" value="5" min="1" max="1000" inputmode="numeric"></label>
+                        </div>
                         <label class="field">Jingle / Audio-Datei
                             <select name="audio_file_id" id="sched-file">
                                 <option value="">– bitte wählen –</option>
@@ -448,7 +470,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
 
         var sched = status.schedules || [];
         $('sched').innerHTML = sched.map(function (s) {
-            return '<li><span class="when">' + esc(s.time) + (s.today ? '' : '<small>' + esc(s.date) + '</small>') + '</span><span class="lb"><b>' + esc(s.title) + '</b><span>' + (s.note ? esc(s.note) + ' · ' : '') + esc(s.by) + '</span></span>'
+            return '<li><span class="when">' + esc(s.time) + (s.today ? '' : '<small>' + esc(s.date) + '</small>') + '</span><span class="lb"><b>' + esc(s.title) + '</b><span>' + (s.recurrence ? '↻ ' + esc(s.recurrence) + ' · ' : '') + (s.note ? esc(s.note) + ' · ' : '') + esc(s.by) + '</span></span>'
                 + (s.status === 'pending' && CAN_SCHEDULE ? '<button type="button" class="x" data-unschedule="' + esc(s.id) + '" data-label="' + esc(s.time + ' – ' + s.title) + '">Abbrechen</button>' : '')
                 + (s.replayable ? '<button type="button" class="x replay" data-replay="/planung/' + esc(s.id) + '/erneut" data-label="' + esc(s.title) + '">Erneut</button>' : '')
                 + '<span class="pill ' + esc(s.status) + '">' + esc(s.statusLabel) + '</span></li>';
@@ -547,6 +569,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 schedForm.reset();
                 timesBox.querySelectorAll('.time-row').forEach(function (r, i) { if (i > 0) { r.remove(); } });
                 timesBox.querySelector('.time-rm').hidden = true;
+                if (repeatToggle) { repeatToggle.dispatchEvent(new Event('change')); }
             }).catch(function (err) { toast(err.message, true); }).then(function () { btn.disabled = false; btn.textContent = 'Einplanen'; });
         });
     }
@@ -559,6 +582,20 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
             post(b.dataset.replay).then(function (s) { afterRequest(s, '„' + b.dataset.label + '“ wird erneut gespielt.'); }).catch(function (err) { toast(err.message, true); });
         });
     });
+
+    // ---------- Wiederholung (Zyklus)
+    var repeatToggle = $('sched-repeat');
+    if (repeatToggle) {
+        var syncRepeat = function () {
+            $('sched-repeat-box').hidden = !repeatToggle.checked;
+            var end = $('sched-repeat-end').value;
+            $('sched-repeat-until').hidden = end !== 'until';
+            $('sched-repeat-max').hidden = end !== 'count';
+        };
+        repeatToggle.addEventListener('change', syncRepeat);
+        $('sched-repeat-end').addEventListener('change', syncRepeat);
+        syncRepeat();
+    }
 
     // ---------- Mehrere Zeitpunkte
     var timesBox = $('sched-times');

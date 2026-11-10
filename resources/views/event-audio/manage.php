@@ -161,13 +161,13 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             <div class="mb-4 overflow-x-auto">
                 <table class="w-full text-left text-sm" style="min-width: 560px">
                     <thead class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <tr><th class="py-2 pr-3">Zeitpunkt</th><th class="py-2 pr-3">Einspieler</th><th class="py-2 pr-3">Geplant von</th><th class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
+                        <tr><th class="py-2 pr-3">(Nächster) Zeitpunkt</th><th class="py-2 pr-3">Einspieler</th><th class="py-2 pr-3">Geplant von</th><th class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($schedules as $s): ?>
                             <tr>
                                 <td class="whitespace-nowrap py-2 pr-3 font-medium text-slate-900 dark:text-slate-100"><?= e($s->playAt->format('d.m.Y H:i')) ?></td>
-                                <td class="py-2 pr-3 text-slate-700 dark:text-slate-300"><?= e($fileTitles[$s->audioFileId] ?? 'Audio-Datei') ?><?php if ($s->note !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400"><?= e($s->note) ?></div><?php endif; ?></td>
+                                <td class="py-2 pr-3 text-slate-700 dark:text-slate-300"><?= e($fileTitles[$s->audioFileId] ?? 'Audio-Datei') ?><?php if ($s->recurrenceLabel() !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400">↻ <?= e($s->recurrenceLabel()) ?></div><?php endif; ?><?php if ($s->note !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400"><?= e($s->note) ?></div><?php endif; ?></td>
                                 <td class="py-2 pr-3 text-slate-500 dark:text-slate-400"><?= e($s->createdByName) ?></td>
                                 <td class="py-2 pr-3"><span class="ea-pill" style="<?= e($s->status->badgeStyle()) ?>"><?= e($s->status->label()) ?></span></td>
                                 <td class="py-2 text-right">
@@ -213,6 +213,26 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                 </label>
                 <label class="<?= $label ?>">oder Datei hochladen<input type="file" name="file" accept="<?= e(AudioFormat::acceptAttribute()) ?>" class="mt-2 block w-full text-sm text-slate-600 dark:text-slate-300"></label>
                 <label class="<?= $label ?>">Notiz <span class="font-normal text-slate-400">(optional)</span><input type="text" name="note" maxlength="255" placeholder="z. B. Einlass" class="mt-1 <?= $input ?>"></label>
+            </div>
+            <div class="mt-3" data-repeat>
+                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="repeat" value="1" data-repeat-toggle class="h-4 w-4 rounded border-slate-300"> Wiederholen (Zyklus)</label>
+                <div class="mt-2 flex flex-wrap items-end gap-3" data-repeat-box hidden>
+                    <label class="<?= $label ?>">Alle
+                        <span class="mt-1 flex gap-2">
+                            <input type="number" name="repeat_every" value="10" min="1" max="1440" class="<?= $input ?>" style="width: 6rem">
+                            <select name="repeat_unit" class="<?= $input ?>" style="width: 8rem"><option value="min">Minuten</option><option value="h">Stunden</option></select>
+                        </span>
+                    </label>
+                    <label class="<?= $label ?>">Ende
+                        <select name="repeat_end" data-repeat-end class="mt-1 <?= $input ?>" style="min-width: 14rem">
+                            <option value="none">mit Ende der Veranstaltung</option>
+                            <option value="until">zu einem Zeitpunkt</option>
+                            <option value="count">nach Anzahl Wiedergaben</option>
+                        </select>
+                    </label>
+                    <label class="<?= $label ?>" data-repeat-until hidden>Wiederholen bis<input type="datetime-local" name="repeat_until" min="<?= e($rental->startDate->modify('-1 day')->format('Y-m-d')) ?>T00:00" max="<?= e($rental->endDate->modify('+1 day')->format('Y-m-d')) ?>T23:59" class="mt-1 <?= $input ?>"></label>
+                    <label class="<?= $label ?>" data-repeat-max hidden>Anzahl Wiedergaben<input type="number" name="repeat_max" value="5" min="1" max="1000" class="mt-1 <?= $input ?>" style="width: 8rem"></label>
+                </div>
             </div>
             <button type="submit" class="<?= $primary ?> mt-3">Einplanen</button>
         </form>
@@ -403,6 +423,16 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
     </section>
 </div>
 <script>
+    // Wiederholung (Zyklus) ein-/ausblenden
+    document.querySelectorAll('[data-repeat]').forEach(function (wrap) {
+        var toggle = wrap.querySelector('[data-repeat-toggle]'), end = wrap.querySelector('[data-repeat-end]');
+        function sync() {
+            wrap.querySelector('[data-repeat-box]').hidden = !toggle.checked;
+            wrap.querySelector('[data-repeat-until]').hidden = end.value !== 'until';
+            wrap.querySelector('[data-repeat-max]').hidden = end.value !== 'count';
+        }
+        toggle.addEventListener('change', sync); end.addEventListener('change', sync); sync();
+    });
     // Mehrere Zeitpunkte für einen geplanten Einspieler
     document.querySelectorAll('[data-time-add]').forEach(function (add) {
         var box = add.parentElement.querySelector('[data-times]');

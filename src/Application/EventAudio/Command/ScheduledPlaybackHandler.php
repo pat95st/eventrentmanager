@@ -77,6 +77,36 @@ final class ScheduledPlaybackHandler implements CommandHandlerInterface
         }
         ksort($times);
 
+        // Wiederholung (Migration 139)
+        $interval = $command->repeatIntervalMinutes !== null && $command->repeatIntervalMinutes > 0 ? $command->repeatIntervalMinutes : null;
+        $repeatUntil = null;
+        $repeatMax = null;
+        if ($interval !== null) {
+            if ($interval > 24 * 60) {
+                throw new ValidationException(['repeat' => 'Das Intervall darf höchstens 24 Stunden betragen.']);
+            }
+            if ($command->repeatUntil !== null && trim($command->repeatUntil) !== '') {
+                $repeatUntil = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', trim($command->repeatUntil)) ?: DateTimeImmutable::createFromFormat('!Y-m-d H:i', trim($command->repeatUntil));
+                if ($repeatUntil === false) {
+                    throw new ValidationException(['repeat_until' => 'Bitte ein gültiges Ende für die Wiederholung angeben.']);
+                }
+                if ($repeatUntil <= reset($times)) {
+                    throw new ValidationException(['repeat_until' => 'Das Ende der Wiederholung muss nach dem (ersten) Startzeitpunkt liegen.']);
+                }
+            }
+            if ($command->repeatMax !== null && $command->repeatMax > 0) {
+                if ($command->repeatMax > 1000) {
+                    throw new ValidationException(['repeat_max' => 'Höchstens 1000 Wiedergaben.']);
+                }
+                $repeatMax = $command->repeatMax;
+            }
+            // Ohne Angabe läuft die Serie längstens bis zum Ende des Veranstaltungszeitraums.
+            $windowEnd = $rental?->endDate->modify('+1 day')->setTime(23, 59, 59);
+            if ($windowEnd !== null && ($repeatUntil === null || $repeatUntil > $windowEnd)) {
+                $repeatUntil = $windowEnd;
+            }
+        }
+
         $hasUpload = is_array($command->uploadedFile) && (int) ($command->uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
         if ($hasUpload) {
             $audioFileId = (string) $this->fileHandler->handle(new UploadRentalAudioFile(
@@ -110,6 +140,9 @@ final class ScheduledPlaybackHandler implements CommandHandlerInterface
                 createdById: $command->createdById,
                 createdByName: mb_substr($command->createdByName, 0, 160),
                 createdAt: $now,
+                repeatIntervalMinutes: $interval,
+                repeatUntil: $repeatUntil,
+                repeatMax: $repeatMax,
             ));
             $ids[] = $id;
         }

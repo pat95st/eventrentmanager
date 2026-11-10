@@ -25,4 +25,11 @@ interface ScheduledPlaybackRepositoryInterface
     public function claim(string $id, ScheduledPlaybackStatus $status, DateTimeImmutable $at): bool;
 
     public function attachRequest(string $id, string $playbackRequestId): void;
+
+    /**
+     * Serie weiterschalten (Migration 139): atomar nur, wenn der Eintrag noch
+     * pending ist und play_at noch $expectedPlayAt entspricht. $next = null
+     * beendet die Serie (Status triggered). true = dieser Aufruf hat gewonnen.
+     */
+    public function advance(string $id, DateTimeImmutable $expectedPlayAt, ?DateTimeImmutable $next, int $repeatCount, ?string $playbackRequestId, DateTimeImmutable $at): bool;
 }

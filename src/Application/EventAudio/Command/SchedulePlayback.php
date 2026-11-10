@@ -23,6 +23,10 @@ final class SchedulePlayback implements CommandInterface
         public readonly string $createdByType,
         public readonly ?string $createdById,
         public readonly string $createdByName,
+        // Migration 139: Wiederholung – Intervall in Minuten, optional Ende oder max. Anzahl
+        public readonly ?int $repeatIntervalMinutes = null,
+        public readonly ?string $repeatUntil = null,
+        public readonly ?int $repeatMax = null,
     ) {
     }
 }

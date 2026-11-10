@@ -57,7 +57,8 @@ Beide Parameter sind optional:
       "jingle_before": true, "jingle_file_id": "<id>" }
   ],
   "scheduled": [
-    { "id": "…", "file_id": "<id>", "play_at": "2026-11-09T19:00:00+01:00", "note": "Einlass" }
+    { "id": "…", "file_id": "<id>", "play_at": "2026-11-09T19:00:00+01:00", "note": "Einlass",
+      "repeat_interval_minutes": 10, "repeat_until": "2026-11-09T22:00:00+01:00", "repeat_max": null, "repeat_count": 3 }
   ],
   "queue": [
     { "id": "…", "kind": "tts", "label": "Die Siegerehrung…", "file_id": null, "file_url": null,
@@ -73,6 +74,7 @@ Hinweise zu den Feldern:
 - `rental` ist `null`, wenn das Gerät gerade keiner laufenden Veranstaltung zugeordnet ist. `files`, `minute_programs` und `queue` sind dann leer.
 - `queue[].language` (Migration 138) ist die Sprache der Durchsage als BCP-47-Code, z. B. `en-GB`. Sie ist immer gesetzt: feste Sprache der Veranstaltung, sonst die in der Live-Oberfläche gewählte, sonst `tts.language`. Passt `tts.voice` nicht zur Sprache, soll der Pi eine passende Stimme für `language` wählen. `rental.tts_language` zeigt nur zur Information, ob die Veranstaltung eine feste Sprache hat.
 - `tts.voice` ist ein freier, gerätespezifischer Name, z. B. eine Piper-Stimme. Er kann `null` sein. `tts.rate` liegt zwischen 0,5 und 2,0.
+- Zyklische Einspieler (Migration 139) erscheinen in `scheduled` als ein Eintrag mit `repeat_*`. `play_at` ist dabei immer der nächste Termin. Ausgelöst wird jede Wiederholung wie gewohnt als normaler Auftrag in `queue`.
 - `scheduled` listet nur die noch nicht ausgelösten Einspieler, sortiert nach Zeit. Ist eine Startzeit länger als die Verfallszeit vorbei, ohne dass das Gerät `state` abgefragt hat, markiert der Server den Einspieler als „verpasst“. Er wird dann nicht nachgespielt.
 - `minute_programs[].start_at` enthält bereits die live gepflegte Verzögerung. Die Liste ist informativ, z. B. für eine Anzeige oder optionales automatisches Abspielen. Die Live-Oberfläche erzeugt für „Jingle zum Programmpunkt“ normale `jingle`-Aufträge.
 

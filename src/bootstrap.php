@@ -683,7 +683,7 @@ foreach (['CreateOrganizerLogin', 'UpdateOrganizerLogin', 'DeleteOrganizerLogin'
     $commandBus->register('App\\Application\\EventAudio\\Command\\' . $eaCommand, $organizerLoginHandler);
 }
 $playbackHandler = new \App\Application\EventAudio\Command\PlaybackHandler($playbackRequestRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioSettingsRepository, $fileStorage);
-foreach (['RequestPlayback', 'CancelPlayback', 'ReportPlaybackStatus'] as $eaCommand) {
+foreach (['RequestPlayback', 'CancelPlayback', 'ReportPlaybackStatus', 'ReplayPlayback'] as $eaCommand) {
     $commandBus->register('App\\Application\\EventAudio\\Command\\' . $eaCommand, $playbackHandler);
 }
 // Geplante Einspieler (Migration 136)
@@ -2034,6 +2034,10 @@ $router->post('/veranstaltungen/{id}/audio/zugaenge/{loginId}', $auth->guard($ea
 $router->post('/veranstaltungen/{id}/audio/zugaenge/{loginId}/loeschen', $auth->guard($eaManage, [$eventAudioController, 'deleteLogin']));
 $router->post('/veranstaltungen/{id}/audio/planung', $auth->guard($eaManage, [$eventAudioController, 'schedule']));
 $router->post('/veranstaltungen/{id}/audio/planung/{scheduleId}/loeschen', $auth->guard($eaManage, [$eventAudioController, 'cancelSchedule']));
+$router->post('/veranstaltungen/{id}/audio/erneut/{requestId}', $auth->guard($eaManage, [$eventAudioController, 'replay']));
+$router->post('/veranstaltungen/{id}/audio/planung/{scheduleId}/erneut', $auth->guard($eaManage, [$eventAudioController, 'replay']));
+$router->post('/veranstaltungen/{id}/live/erneut/{requestId}', $auth->guard($eaLive, [$eventAudioLiveController, 'userReplay']));
+$router->post('/veranstaltungen/{id}/live/planung/{scheduleId}/erneut', $auth->guard($eaLive, [$eventAudioLiveController, 'userReplay']));
 $router->post('/veranstaltungen/{id}/live/planen', $auth->guard($eaLive, [$eventAudioLiveController, 'userSchedule']));
 $router->post('/veranstaltungen/{id}/live/planung/{scheduleId}/loeschen', $auth->guard($eaLive, [$eventAudioLiveController, 'userCancelSchedule']));
 $router->get('/veranstaltungen/{id}/live', $auth->guard($eaLive, [$eventAudioLiveController, 'userPage']));
@@ -2049,6 +2053,8 @@ $router->get('/live/{id}/status', [$eventAudioLiveController, 'organizerStatus']
 $router->post('/live/{id}/abspielen', [$eventAudioLiveController, 'organizerPlay']);
 $router->post('/live/{id}/abbrechen/{requestId}', [$eventAudioLiveController, 'organizerCancel']);
 $router->post('/live/{id}/planen', [$eventAudioLiveController, 'organizerSchedule']);
+$router->post('/live/{id}/erneut/{requestId}', [$eventAudioLiveController, 'organizerReplay']);
+$router->post('/live/{id}/planung/{scheduleId}/erneut', [$eventAudioLiveController, 'organizerReplay']);
 $router->post('/live/{id}/planung/{scheduleId}/loeschen', [$eventAudioLiveController, 'organizerCancelSchedule']);
 $router->get('/einstellungen/veranstaltungs-audio', $auth->guard(Permission::Administration, [$audioSettingsController, 'index']));
 $router->post('/einstellungen/veranstaltungs-audio', $auth->guard(Permission::Administration, [$audioSettingsController, 'saveSettings']));

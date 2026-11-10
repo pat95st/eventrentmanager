@@ -45,8 +45,59 @@ final class PlaybackHandler implements CommandHandlerInterface
             $command instanceof RequestPlayback => $this->request($command),
             $command instanceof CancelPlayback => $this->cancel($command),
             $command instanceof ReportPlaybackStatus => $this->report($command),
+            $command instanceof ReplayPlayback => $this->replay($command),
             default => throw new \LogicException('Unbekannter Befehl ' . $command::class),
         };
+    }
+
+    /**
+     * Erneut einspielen: legt einen neuen Auftrag mit demselben Inhalt an
+     * (Datei bzw. Text bzw. dieselbe Aufnahme, Gong wie beim Original).
+     */
+    private function replay(ReplayPlayback $command): string
+    {
+        $original = $this->requests->findById($command->requestId);
+        if ($original === null || $original->rentalId !== $command->rentalId) {
+            throw new NotFoundException('Der Auftrag wurde nicht gefunden.');
+        }
+        if ($original->kind === PlaybackKind::Stop) {
+            throw new ValidationException(['kind' => 'Ein Stopp kann nicht erneut eingespielt werden.']);
+        }
+        if ($original->status->isOpen()) {
+            throw new ValidationException(['status' => 'Dieser Auftrag wartet noch bzw. läuft gerade.']);
+        }
+        if ($original->audioFileId !== null) {
+            return $this->request(new RequestPlayback($command->rentalId, 'audio', $original->audioFileId, null, null, false, $command->requestedByType, $command->requestedById, $command->requestedByName));
+        }
+        if ($original->kind === PlaybackKind::Tts) {
+            return $this->request(new RequestPlayback($command->rentalId, 'tts', null, $original->text, null, $original->withGong, $command->requestedByType, $command->requestedById, $command->requestedByName));
+        }
+        if ($original->kind === PlaybackKind::Recording && $original->recordingStoredFilename !== null) {
+            $id = Uuid::v4();
+            $this->requests->save(new PlaybackRequest(
+                id: $id,
+                rentalId: $command->rentalId,
+                kind: PlaybackKind::Recording,
+                audioFileId: null,
+                text: null,
+                recordingStoredFilename: $original->recordingStoredFilename, // dieselbe Aufnahme wiederverwenden
+                recordingMimeType: $original->recordingMimeType,
+                withGong: $original->withGong,
+                status: PlaybackStatus::Queued,
+                requestedByType: $command->requestedByType,
+                requestedById: $command->requestedById,
+                requestedByName: $command->requestedByName,
+                playerId: $this->rentalSettings->get($command->rentalId)->playerId,
+                error: null,
+                createdAt: new DateTimeImmutable(),
+                startedAt: null,
+                finishedAt: null,
+                label: $original->label ?? 'Mikrofon-Aufnahme',
+            ));
+
+            return $id;
+        }
+        throw new ValidationException(['kind' => 'Dieser Auftrag kann nicht erneut eingespielt werden (Datei nicht mehr vorhanden).']);
     }
 
     private function request(RequestPlayback $command): string

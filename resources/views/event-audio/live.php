@@ -120,6 +120,12 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     .field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
     .grid2 { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
     @media (min-width: 520px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+    .time-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+    .time-row input { flex: 1; min-width: 0; margin-top: 0 !important; }
+    .time-rm { flex: none; width: 40px; height: 44px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; color: var(--muted); }
+    .sync { display: block; font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .sync.stale { color: #fca5a5; }
+    .x.replay { color: var(--accent); }
     .or { text-align: center; font-size: .72rem; color: var(--muted); margin: 10px 0 -2px; letter-spacing: .1em; text-transform: uppercase; }
     .sched { list-style: none; margin: 0 0 4px; padding: 0; }
     .sched li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: .85rem; }
@@ -198,7 +204,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
 
 <main class="wrap">
     <div class="status" id="status" aria-live="polite">
-        <span class="led" id="led"></span><span id="status-text">Verbinde …</span><span class="np" id="now-playing"></span>
+        <span class="led" id="led"></span><span><span id="status-text">Verbinde …</span><span class="sync" id="sync" hidden></span></span><span class="np" id="now-playing"></span>
     </div>
     <?php if (!$hasPlayer): ?>
         <div class="warnbox">Dieser Veranstaltung ist noch kein Abspielgerät zugeordnet. Aufträge werden gesammelt, aber erst gespielt, wenn ein Gerät zugeordnet und verbunden ist.</div>
@@ -292,7 +298,12 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 <?php if ($canSchedule): ?>
                     <form id="sched-form" style="margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px;">
                         <div class="grid2">
-                            <label class="field">Zeitpunkt<input type="datetime-local" name="play_at" required value="<?= e($defaultPlayAt) ?>" min="<?= e($rentalWindow[0]) ?>" max="<?= e($rentalWindow[1]) ?>"></label>
+                            <div class="field">Zeitpunkt(e)
+                                <div id="sched-times">
+                                    <div class="time-row"><input type="datetime-local" name="play_at[]" required value="<?= e($defaultPlayAt) ?>" min="<?= e($rentalWindow[0]) ?>" max="<?= e($rentalWindow[1]) ?>"><button type="button" class="time-rm" aria-label="Zeitpunkt entfernen" hidden>✕</button></div>
+                                </div>
+                                <button type="button" class="x" id="sched-add-time" style="margin-top:8px">+ weiterer Zeitpunkt</button>
+                            </div>
                             <label class="field">Notiz (optional)<input type="text" name="note" maxlength="255" placeholder="z. B. Einlass"></label>
                         </div>
                         <label class="field">Jingle / Audio-Datei
@@ -380,12 +391,24 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         else if (p.online) {
             txt.textContent = p.name + ' verbunden';
             np.innerHTML = p.nowPlaying ? '<span class="eq"><i></i><i></i><i></i></span>' + esc(p.nowPlaying) : '';
-        } else { txt.textContent = p.name + ' offline' + (p.lastSeen ? ' (zuletzt ' + p.lastSeen + ')' : ''); np.textContent = ''; }
+        } else { txt.textContent = p.name + ' offline' + (p.lastSeen && !status.detailed ? ' (zuletzt ' + p.lastSeen + ')' : ''); np.textContent = ''; }
+
+        // Letzter Sync des Abspielgeräts – nur für Admins/Techniker
+        var sync = $('sync');
+        if (status.detailed && p) {
+            sync.hidden = false;
+            if (p.lastSync) {
+                var ago = p.lastSyncAgo, agoText = ago < 60 ? 'vor ' + ago + ' s' : (ago < 3600 ? 'vor ' + Math.floor(ago / 60) + ' min' : 'am ' + p.lastSyncDate);
+                sync.textContent = 'Letzter Sync: ' + p.lastSync + ' (' + agoText + ')';
+                sync.classList.toggle('stale', ago > 45);
+            } else { sync.textContent = 'Noch kein Sync – Gerät hat sich nie verbunden'; sync.classList.add('stale'); }
+        } else { sync.hidden = true; }
 
         var list = $('log');
         list.innerHTML = (status.requests || []).map(function (r) {
             return '<li><span class="tm">' + esc(r.time) + '</span><span class="lb"><b>' + esc(r.label) + '</b><span>' + esc(r.kindLabel) + (r.gong ? ' · mit Gong' : '') + ' · ' + esc(r.by) + (r.error ? ' · ' + esc(r.error) : '') + '</span></span>'
                 + (r.status === 'queued' ? '<button type="button" class="x" data-cancel="' + esc(r.id) + '">Abbrechen</button>' : '')
+                + (r.replayable ? '<button type="button" class="x replay" data-replay="/erneut/' + esc(r.id) + '" data-label="' + esc(r.label) + '">Erneut</button>' : '')
                 + '<span class="pill ' + esc(r.status) + '">' + esc(r.statusLabel) + '</span></li>';
         }).join('');
         $('log-empty').hidden = (status.requests || []).length > 0;
@@ -394,6 +417,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         $('sched').innerHTML = sched.map(function (s) {
             return '<li><span class="when">' + esc(s.time) + (s.today ? '' : '<small>' + esc(s.date) + '</small>') + '</span><span class="lb"><b>' + esc(s.title) + '</b><span>' + (s.note ? esc(s.note) + ' · ' : '') + esc(s.by) + '</span></span>'
                 + (s.status === 'pending' && CAN_SCHEDULE ? '<button type="button" class="x" data-unschedule="' + esc(s.id) + '" data-label="' + esc(s.time + ' – ' + s.title) + '">Abbrechen</button>' : '')
+                + (s.replayable ? '<button type="button" class="x replay" data-replay="/planung/' + esc(s.id) + '/erneut" data-label="' + esc(s.title) + '">Erneut</button>' : '')
                 + '<span class="pill ' + esc(s.status) + '">' + esc(s.statusLabel) + '</span></li>';
         }).join('');
         $('sched-empty').hidden = sched.length > 0;
@@ -482,10 +506,38 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
             var btn = $('sched-send');
             btn.disabled = true; btn.textContent = $('sched-upload').files.length ? 'Wird hochgeladen …' : 'Wird geplant …';
             post('/planen', new FormData(schedForm)).then(function (s) {
-                render(s); toast('Einspieler geplant.');
+                render(s); toast(s.count > 1 ? s.count + ' Zeitpunkte eingeplant.' : 'Einspieler eingeplant.');
                 schedForm.reset();
+                timesBox.querySelectorAll('.time-row').forEach(function (r, i) { if (i > 0) { r.remove(); } });
+                timesBox.querySelector('.time-rm').hidden = true;
             }).catch(function (err) { toast(err.message, true); }).then(function () { btn.disabled = false; btn.textContent = 'Einplanen'; });
         });
+    }
+
+    // ---------- Erneut einspielen (Verlauf und geplante Einspieler)
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-replay]');
+        if (!b) { return; }
+        askConfirm('Erneut einspielen?', b.dataset.label, '', '▶ Erneut abspielen', function () {
+            post(b.dataset.replay).then(function (s) { afterRequest(s, '„' + b.dataset.label + '“ wird erneut gespielt.'); }).catch(function (err) { toast(err.message, true); });
+        });
+    });
+
+    // ---------- Mehrere Zeitpunkte
+    var timesBox = $('sched-times');
+    if (timesBox) {
+        var syncTimes = function () {
+            var rows = timesBox.querySelectorAll('.time-row');
+            rows.forEach(function (r) { r.querySelector('.time-rm').hidden = rows.length < 2; });
+        };
+        $('sched-add-time').addEventListener('click', function () {
+            var rows = timesBox.querySelectorAll('.time-row');
+            var last = rows[rows.length - 1], clone = last.cloneNode(true), input = clone.querySelector('input');
+            var v = last.querySelector('input').value;
+            if (v) { var d = new Date(v); d.setHours(d.getHours() + 1); var p2 = function (n) { return ('0' + n).slice(-2); }; input.value = d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + 'T' + p2(d.getHours()) + ':' + p2(d.getMinutes()); }
+            timesBox.appendChild(clone); syncTimes(); input.focus();
+        });
+        timesBox.addEventListener('click', function (e) { var rm = e.target.closest('.time-rm'); if (rm) { rm.closest('.time-row').remove(); syncTimes(); } });
     }
 
     // ---------- Stopp

@@ -171,6 +171,12 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                                 <td class="py-2 pr-3 text-slate-500 dark:text-slate-400"><?= e($s->createdByName) ?></td>
                                 <td class="py-2 pr-3"><span class="ea-pill" style="<?= e($s->status->badgeStyle()) ?>"><?= e($s->status->label()) ?></span></td>
                                 <td class="py-2 text-right">
+                                    <?php if ($s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Triggered || $s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Missed): ?>
+                                        <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/erneut" data-confirm="„<?= e($fileTitles[$s->audioFileId] ?? 'Audio-Datei') ?>“ jetzt erneut einspielen?">
+                                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                                            <button type="submit" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">Erneut einspielen</button>
+                                        </form>
+                                    <?php endif; ?>
                                     <?php if ($s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Pending): ?>
                                         <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/loeschen" data-confirm="Geplanten Einspieler um <?= e($s->playAt->format('H:i')) ?> Uhr abbrechen?">
                                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
@@ -188,7 +194,16 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
             <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Neuer Einspieler</h3>
             <div class="ea-grid2" style="grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));">
-                <label class="<?= $label ?>">Zeitpunkt<input type="datetime-local" name="play_at" required value="<?= e($defaultPlayAt->format('Y-m-d\TH:i')) ?>" min="<?= e($rental->startDate->modify('-1 day')->format('Y-m-d')) ?>T00:00" max="<?= e($rental->endDate->modify('+1 day')->format('Y-m-d')) ?>T23:59" class="mt-1 <?= $input ?>"></label>
+                <div>
+                    <span class="<?= $label ?>">Zeitpunkt(e)</span>
+                    <div data-times class="space-y-2">
+                        <div class="flex items-center gap-2" data-time-row>
+                            <input type="datetime-local" name="play_at[]" required value="<?= e($defaultPlayAt->format('Y-m-d\TH:i')) ?>" min="<?= e($rental->startDate->modify('-1 day')->format('Y-m-d')) ?>T00:00" max="<?= e($rental->endDate->modify('+1 day')->format('Y-m-d')) ?>T23:59" class="mt-1 <?= $input ?>">
+                            <button type="button" data-time-remove class="mt-1 text-sm text-slate-400 hover:text-red-600" aria-label="Zeitpunkt entfernen" hidden>✕</button>
+                        </div>
+                    </div>
+                    <button type="button" data-time-add class="mt-2 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">+ weiterer Zeitpunkt</button>
+                </div>
                 <label class="<?= $label ?>">Jingle / Audio-Datei
                     <select name="audio_file_id" class="mt-1 <?= $input ?>">
                         <option value="">– eigene Datei hochladen –</option>
@@ -311,7 +326,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
     </section>
 
     <!-- Protokoll -->
-    <section class="<?= $card ?>">
+    <section id="auftraege" class="<?= $card ?>">
         <h2 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Letzte Aufträge</h2>
         <?php if ($recent === []): ?>
             <p class="text-sm text-slate-500 dark:text-slate-400">Noch nichts abgespielt.</p>
@@ -319,7 +334,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm" style="min-width: 560px">
                     <thead class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <tr><th class="py-2 pr-3">Zeit</th><th class="py-2 pr-3">Art</th><th class="py-2 pr-3">Inhalt</th><th class="py-2 pr-3">Von</th><th class="py-2">Status</th></tr>
+                        <tr><th class="py-2 pr-3">Zeit</th><th class="py-2 pr-3">Art</th><th class="py-2 pr-3">Inhalt</th><th class="py-2 pr-3">Von</th><th class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($recent as $r): ?>
@@ -328,7 +343,15 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                                 <td class="whitespace-nowrap py-2 pr-3 text-slate-700 dark:text-slate-300"><?= e($r->kind->label()) ?><?= $r->withGong ? ' + Gong' : '' ?></td>
                                 <td class="py-2 pr-3 text-slate-700 dark:text-slate-300"><?= e($r->text ?? $r->label ?? '') ?></td>
                                 <td class="py-2 pr-3 text-slate-500 dark:text-slate-400"><?= e($r->requestedByName) ?></td>
-                                <td class="py-2"><span class="ea-pill" style="<?= e($r->status->badgeStyle()) ?>" title="<?= e($r->error ?? '') ?>"><?= e($r->status->label()) ?></span></td>
+                                <td class="py-2 pr-3"><span class="ea-pill" style="<?= e($r->status->badgeStyle()) ?>" title="<?= e($r->error ?? '') ?>"><?= e($r->status->label()) ?></span></td>
+                                <td class="whitespace-nowrap py-2 text-right">
+                                    <?php if (!$r->status->isOpen() && $r->kind !== \App\Domain\EventAudio\PlaybackKind::Stop): ?>
+                                        <form method="post" action="<?= e($base) ?>/erneut/<?= e($r->id) ?>" data-confirm="„<?= e($r->text ?? $r->label ?? $r->kind->label()) ?>“ erneut einspielen?">
+                                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                                            <button type="submit" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">Erneut einspielen</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -338,6 +361,30 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
     </section>
 </div>
 <script>
+    // Mehrere Zeitpunkte für einen geplanten Einspieler
+    document.querySelectorAll('[data-time-add]').forEach(function (add) {
+        var box = add.parentElement.querySelector('[data-times]');
+        function sync() {
+            var rows = box.querySelectorAll('[data-time-row]');
+            rows.forEach(function (r) { r.querySelector('[data-time-remove]').hidden = rows.length < 2; });
+        }
+        add.addEventListener('click', function () {
+            var rows = box.querySelectorAll('[data-time-row]');
+            var last = rows[rows.length - 1];
+            var clone = last.cloneNode(true);
+            var input = clone.querySelector('input');
+            // Vorschlag: eine Stunde nach dem letzten Zeitpunkt
+            var v = last.querySelector('input').value;
+            if (v) { var d = new Date(v); d.setHours(d.getHours() + 1); var p = function (n) { return ('0' + n).slice(-2); }; input.value = d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+            box.appendChild(clone);
+            sync();
+            input.focus();
+        });
+        box.addEventListener('click', function (e) {
+            var rm = e.target.closest('[data-time-remove]');
+            if (rm) { rm.closest('[data-time-row]').remove(); sync(); }
+        });
+    });
     document.querySelectorAll('[data-copy-target]').forEach(function (b) {
         b.addEventListener('click', function () {
             var el = document.getElementById(b.dataset.copyTarget);

@@ -8,6 +8,9 @@ use App\Application\Command\CommandBus;
 use App\Application\EventAudio\Command\CancelScheduledPlayback;
 use App\Application\EventAudio\Command\CreateOrganizerLogin;
 use App\Application\EventAudio\Command\SchedulePlayback;
+use App\Application\EventAudio\Command\ReplayPlayback;
+use App\Application\EventAudio\Command\RequestPlayback;
+use App\Domain\EventAudio\ScheduledPlaybackStatus;
 use App\Application\EventAudio\ScheduledPlaybackDispatcher;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Application\EventAudio\Command\DeleteOrganizerLogin;
@@ -232,12 +235,35 @@ final class EventAudioController
             $request->input('audio_file_id'),
             $upload !== null && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE ? $upload : null,
             (string) $request->input('title', ''),
-            (string) $request->input('play_at', ''),
+            $request->inputArray('play_at') !== [] ? $request->inputArray('play_at') : [(string) $request->input('play_at', '')],
             $request->input('note'),
             'user',
             $user?->id,
             $user?->displayName() ?? 'Benutzer',
-        )), 'Der Einspieler wurde geplant.', $rentalId, 'planung');
+        )), 'Der Einspieler wurde eingeplant.', $rentalId, 'planung');
+    }
+
+    /** Erneut einspielen aus „Letzte Aufträge“ bzw. aus der Planung (ausgelöst/verpasst). */
+    public function replay(Request $request): void
+    {
+        $rentalId = $this->requireRental($request);
+        $user = CurrentUser::get();
+        $byId = $user?->id;
+        $byName = $user?->displayName() ?? 'Benutzer';
+        $scheduleId = $request->routeParams['scheduleId'] ?? null;
+        $this->run(function () use ($request, $rentalId, $byId, $byName, $scheduleId): void {
+            if ($scheduleId !== null) {
+                $schedule = $this->schedules?->findById((string) $scheduleId);
+                if ($schedule === null || $schedule->rentalId !== $rentalId || $schedule->status === ScheduledPlaybackStatus::Pending) {
+                    throw new NotFoundException('Der Einspieler wurde nicht gefunden oder ist noch geplant.');
+                }
+                $this->commands->dispatch($schedule->playbackRequestId !== null && $this->requests->findById($schedule->playbackRequestId) !== null
+                    ? new ReplayPlayback($schedule->playbackRequestId, $rentalId, 'user', $byId, $byName)
+                    : new RequestPlayback($rentalId, 'audio', $schedule->audioFileId, null, null, false, 'user', $byId, $byName));
+            } else {
+                $this->commands->dispatch(new ReplayPlayback($request->param('requestId'), $rentalId, 'user', $byId, $byName));
+            }
+        }, 'Wird erneut eingespielt.', $rentalId, $scheduleId !== null ? 'planung' : 'auftraege');
     }
 
     public function cancelSchedule(Request $request): void

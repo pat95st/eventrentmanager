@@ -40,25 +40,42 @@ final class ScheduledPlaybackHandler implements CommandHandlerInterface
         };
     }
 
-    private function schedule(SchedulePlayback $command): string
+    public const MAX_TIMES = 50;
+
+    /** @return list<string> IDs der angelegten Einträge (einer je Zeitpunkt) */
+    private function schedule(SchedulePlayback $command): array
     {
-        $playAt = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', trim($command->playAt))
-            ?: DateTimeImmutable::createFromFormat('!Y-m-d H:i', trim($command->playAt));
-        if ($playAt === false) {
-            throw new ValidationException(['play_at' => 'Bitte Datum und Uhrzeit für den Einspieler angeben.']);
-        }
         $now = new DateTimeImmutable();
-        if ($playAt < $now->modify('-1 minute')) {
-            throw new ValidationException(['play_at' => 'Der Zeitpunkt liegt in der Vergangenheit.']);
-        }
         $rental = $this->rentals?->findById($command->rentalId);
-        if ($rental !== null) {
-            $windowStart = $rental->startDate->modify('-1 day')->setTime(0, 0);
-            $windowEnd = $rental->endDate->modify('+1 day')->setTime(23, 59, 59);
-            if ($playAt < $windowStart || $playAt > $windowEnd) {
-                throw new ValidationException(['play_at' => 'Der Zeitpunkt muss zwischen ' . $windowStart->format('d.m.Y') . ' und ' . $windowEnd->format('d.m.Y') . ' liegen (Zeitraum der Veranstaltung).']);
+        $times = [];
+        foreach ($command->playAts as $raw) {
+            $raw = trim((string) $raw);
+            if ($raw === '') {
+                continue;
             }
+            $playAt = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i', $raw) ?: DateTimeImmutable::createFromFormat('!Y-m-d H:i', $raw);
+            if ($playAt === false) {
+                throw new ValidationException(['play_at' => '„' . $raw . '“ ist kein gültiger Zeitpunkt.']);
+            }
+            if ($playAt < $now->modify('-1 minute')) {
+                throw new ValidationException(['play_at' => 'Der Zeitpunkt ' . $playAt->format('d.m.Y H:i') . ' liegt in der Vergangenheit.']);
+            }
+            if ($rental !== null) {
+                $windowStart = $rental->startDate->modify('-1 day')->setTime(0, 0);
+                $windowEnd = $rental->endDate->modify('+1 day')->setTime(23, 59, 59);
+                if ($playAt < $windowStart || $playAt > $windowEnd) {
+                    throw new ValidationException(['play_at' => 'Der Zeitpunkt ' . $playAt->format('d.m.Y H:i') . ' muss zwischen ' . $windowStart->format('d.m.Y') . ' und ' . $windowEnd->format('d.m.Y') . ' liegen (Zeitraum der Veranstaltung).']);
+                }
+            }
+            $times[$playAt->format('Y-m-d H:i')] = $playAt; // doppelte Zeitpunkte zusammenfassen
         }
+        if ($times === []) {
+            throw new ValidationException(['play_at' => 'Bitte mindestens einen Zeitpunkt für den Einspieler angeben.']);
+        }
+        if (count($times) > self::MAX_TIMES) {
+            throw new ValidationException(['play_at' => 'Höchstens ' . self::MAX_TIMES . ' Zeitpunkte auf einmal.']);
+        }
+        ksort($times);
 
         $hasUpload = is_array($command->uploadedFile) && (int) ($command->uploadedFile['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
         if ($hasUpload) {
@@ -78,22 +95,26 @@ final class ScheduledPlaybackHandler implements CommandHandlerInterface
         }
 
         $note = trim((string) $command->note);
-        $id = Uuid::v4();
-        $this->schedules->save(new ScheduledPlayback(
-            id: $id,
-            rentalId: $command->rentalId,
-            audioFileId: $audioFileId,
-            playAt: $playAt,
-            note: $note !== '' ? mb_substr($note, 0, 255) : null,
-            status: ScheduledPlaybackStatus::Pending,
-            playbackRequestId: null,
-            createdByType: $command->createdByType === 'organizer' ? 'organizer' : 'user',
-            createdById: $command->createdById,
-            createdByName: mb_substr($command->createdByName, 0, 160),
-            createdAt: $now,
-        ));
+        $ids = [];
+        foreach ($times as $playAt) {
+            $id = Uuid::v4();
+            $this->schedules->save(new ScheduledPlayback(
+                id: $id,
+                rentalId: $command->rentalId,
+                audioFileId: $audioFileId,
+                playAt: $playAt,
+                note: $note !== '' ? mb_substr($note, 0, 255) : null,
+                status: ScheduledPlaybackStatus::Pending,
+                playbackRequestId: null,
+                createdByType: $command->createdByType === 'organizer' ? 'organizer' : 'user',
+                createdById: $command->createdById,
+                createdByName: mb_substr($command->createdByName, 0, 160),
+                createdAt: $now,
+            ));
+            $ids[] = $id;
+        }
 
-        return $id;
+        return $ids;
     }
 
     private function cancel(CancelScheduledPlayback $command): null

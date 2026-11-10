@@ -8,6 +8,7 @@ use App\Application\Command\CommandBus;
 use App\Application\EventAudio\Command\AuthenticateOrganizer;
 use App\Application\EventAudio\Command\CancelPlayback;
 use App\Application\EventAudio\Command\CancelScheduledPlayback;
+use App\Application\EventAudio\Command\ReplayPlayback;
 use App\Application\EventAudio\Command\RequestPlayback;
 use App\Application\EventAudio\Command\SchedulePlayback;
 use App\Application\EventAudio\ScheduledPlaybackDispatcher;
@@ -22,6 +23,8 @@ use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
 use App\Domain\EventAudio\ScheduledPlayback;
 use App\Domain\EventAudio\ScheduledPlaybackRepositoryInterface;
+use App\Domain\EventAudio\ScheduledPlaybackStatus;
+use App\Domain\EventAudio\PlaybackKind;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
@@ -53,6 +56,9 @@ use DateTimeImmutable;
 final class EventAudioLiveController
 {
     private const SESSION_ORGANIZER = 'event_audio_organizer';
+
+    /** Benutzer (Admins/Techniker) sehen zusätzlich Details wie den letzten Sync des Abspielgeräts. */
+    private bool $detailed = false;
 
     public function __construct(
         private readonly CommandBus $commands,
@@ -171,6 +177,14 @@ final class EventAudioLiveController
         $this->cancelSchedule($request, $request->param('id'));
     }
 
+    public function organizerReplay(Request $request): void
+    {
+        $login = $this->requireOrganizer($request, json: true);
+        if ($login !== null) {
+            $this->replay($request, $request->param('id'), 'organizer', $login->id, $login->label . ' (Veranstalter)');
+        }
+    }
+
     // ---------------------------------------------------------------- Seite / Aktionen (Benutzer)
 
     public function userPage(Request $request): void
@@ -217,10 +231,19 @@ final class EventAudioLiveController
         }
     }
 
+    public function userReplay(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $user = CurrentUser::get();
+            $this->replay($request, $request->param('id'), 'user', $user?->id, $user?->displayName() ?? 'Benutzer');
+        }
+    }
+
     // ---------------------------------------------------------------- gemeinsam
 
     private function renderPage(string $rentalId, string $basePath, string $actorName, bool $organizer, bool $canSchedule = false): void
     {
+        $this->detailed = !$organizer;
         $rental = $this->rentals->findById($rentalId);
         if ($rental === null) {
             Response::notFound('Die Veranstaltung wurde nicht gefunden.');
@@ -292,7 +315,12 @@ final class EventAudioLiveController
                 'online' => $player->isOnline($now),
                 'nowPlaying' => $player->isOnline($now) ? $player->nowPlaying : null,
                 'lastSeen' => $player->lastSeenAt?->format('d.m.Y H:i:s'),
+                // Nur für Benutzer (Admins/Techniker): letzter Sync des Abspielgeräts
+                'lastSync' => $this->detailed ? $player->lastSeenAt?->format('H:i:s') : null,
+                'lastSyncDate' => $this->detailed ? $player->lastSeenAt?->format('d.m.Y') : null,
+                'lastSyncAgo' => $this->detailed && $player->lastSeenAt !== null ? max(0, $now->getTimestamp() - $player->lastSeenAt->getTimestamp()) : null,
             ],
+            'detailed' => $this->detailed,
             'requests' => array_map(static fn (PlaybackRequest $r): array => [
                 'id' => $r->id,
                 'kind' => $r->kind->value,
@@ -305,6 +333,7 @@ final class EventAudioLiveController
                 'by' => $r->requestedByName,
                 'time' => $r->createdAt->format('H:i:s'),
                 'error' => $r->error,
+                'replayable' => !$r->status->isOpen() && $r->kind !== PlaybackKind::Stop,
             ], $this->requests->recentForRental($rentalId, 15)),
             'schedules' => array_map(static fn (ScheduledPlayback $s): array => [
                 'id' => $s->id,
@@ -316,6 +345,7 @@ final class EventAudioLiveController
                 'status' => $s->status->value,
                 'statusLabel' => $s->status->label(),
                 'by' => $s->createdByName,
+                'replayable' => $s->status === ScheduledPlaybackStatus::Triggered || $s->status === ScheduledPlaybackStatus::Missed,
             ], $this->schedules?->findForRental($rentalId, 5) ?? []),
         ];
     }
@@ -361,12 +391,12 @@ final class EventAudioLiveController
     {
         $upload = $request->file('file');
         try {
-            $this->commands->dispatch(new SchedulePlayback(
+            $ids = $this->commands->dispatch(new SchedulePlayback(
                 $rentalId,
                 $request->input('audio_file_id'),
                 $upload !== null && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE ? $upload : null,
                 (string) $request->input('title', ''),
-                (string) $request->input('play_at', ''),
+                $request->inputArray('play_at') !== [] ? $request->inputArray('play_at') : [(string) $request->input('play_at', '')],
                 $request->input('note'),
                 $byType,
                 $byId,
@@ -377,13 +407,46 @@ final class EventAudioLiveController
 
             return;
         }
-        Response::json(['ok' => true] + $this->statusPayload($rentalId));
+        Response::json(['ok' => true, 'count' => is_array($ids) ? count($ids) : 1] + $this->statusPayload($rentalId));
     }
 
     private function cancelSchedule(Request $request, string $rentalId): void
     {
         try {
             $this->commands->dispatch(new CancelScheduledPlayback($request->param('scheduleId'), $rentalId));
+        } catch (NotFoundException $e) {
+            Response::json(['ok' => false, 'error' => $e->getMessage()], 404);
+
+            return;
+        }
+        Response::json(['ok' => true] + $this->statusPayload($rentalId));
+    }
+
+    /**
+     * Erneut einspielen – Route .../erneut/{requestId} (Verlauf) oder
+     * .../planung/{scheduleId}/erneut (geplanter Einspieler; ausgelöste
+     * wiederholen ihren Auftrag, verpasste spielen die Datei jetzt).
+     */
+    private function replay(Request $request, string $rentalId, string $byType, ?string $byId, string $byName): void
+    {
+        try {
+            $scheduleId = $request->routeParams['scheduleId'] ?? null;
+            if ($scheduleId !== null) {
+                $schedule = $this->schedules?->findById((string) $scheduleId);
+                if ($schedule === null || $schedule->rentalId !== $rentalId || $schedule->status === ScheduledPlaybackStatus::Pending) {
+                    throw new NotFoundException('Der Einspieler wurde nicht gefunden oder ist noch geplant.');
+                }
+                $command = $schedule->playbackRequestId !== null && $this->requests->findById($schedule->playbackRequestId) !== null
+                    ? new ReplayPlayback($schedule->playbackRequestId, $rentalId, $byType, $byId, $byName)
+                    : new RequestPlayback($rentalId, 'audio', $schedule->audioFileId, null, null, false, $byType, $byId, $byName);
+            } else {
+                $command = new ReplayPlayback($request->param('requestId'), $rentalId, $byType, $byId, $byName);
+            }
+            $this->commands->dispatch($command);
+        } catch (ValidationException $e) {
+            Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);
+
+            return;
         } catch (NotFoundException $e) {
             Response::json(['ok' => false, 'error' => $e->getMessage()], 404);
 
@@ -411,6 +474,7 @@ final class EventAudioLiveController
 
     private function requireOrganizer(Request $request, bool $json): ?OrganizerLogin
     {
+        $this->detailed = false;
         $login = $this->currentOrganizer();
         if ($login !== null && $login->rentalId === $request->param('id')) {
             return $login;
@@ -433,6 +497,8 @@ final class EventAudioLiveController
             && (!TechnicianAccess::isRestricted($user)
                 || TechnicianAccess::canSeeRental($this->rentalTechnicians?->findByRentalAndUser($rental->id, $user->id)));
         if ($allowed) {
+            $this->detailed = true;
+
             return true;
         }
         if ($json) {

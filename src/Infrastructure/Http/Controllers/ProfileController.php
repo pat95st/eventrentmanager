@@ -6,6 +6,7 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Auth\Command\RevokeOtherSessions;
 use App\Application\Auth\Command\RevokeSession;
+use App\Application\Auth\TrustedDeviceService;
 use App\Application\Auth\Query\ListPasskeysForUser;
 use App\Application\Auth\Query\ListSessionsForUser;
 use App\Application\AddressBook\Command\CreateCardDavCredential;
@@ -57,6 +58,7 @@ final class ProfileController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
         private readonly MobileConfigBuilder $mobileConfigBuilder,
+        private readonly TrustedDeviceService $trustedDevices,
     ) {
     }
 
@@ -109,6 +111,7 @@ final class ProfileController
             'provisioningUri' => Totp::provisioningUri($pendingSecret, $user->email),
             'errors' => [],
             'passkeys' => $this->queries->ask(new ListPasskeysForUser($user->id)),
+            'trustedDevices' => $this->trustedDevices->listForUser($user->id),
         ], activeNav: 'profile', title: t('profile.security.title'));
     }
 
@@ -133,6 +136,8 @@ final class ProfileController
                 'provisioningUri' => Totp::provisioningUri($secret, $user->email),
                 'errors' => $e->errors(),
                 'passkeys' => $this->queries->ask(new ListPasskeysForUser($user->id)),
+                'trustedDevices' => $this->trustedDevices->listForUser($user->id),
+            'trustedDevices' => $this->trustedDevices->listForUser($user->id),
             ], activeNav: 'profile', title: t('profile.security.title'));
 
             return;
@@ -158,6 +163,17 @@ final class ProfileController
         $this->commands->dispatch(new DisableTwoFactor($user->id));
 
         Flash::success(t('profile.security.flash.disabled'));
+        Response::redirect('/profil/sicherheit');
+    }
+
+    /** Entzieht allen Geräten das Vertrauen ("Dem Gerät für die nächsten 10 Tage vertrauen", Migration 143). */
+    public function revokeTrustedDevices(Request $request): void
+    {
+        $user = CurrentUser::get();
+        $this->trustedDevices->revokeAllForUser($user->id);
+        \App\Infrastructure\Http\Auth\TrustedDeviceCookie::clear();
+
+        Flash::success(t('profile.security.trusted_devices.flash.revoked'));
         Response::redirect('/profil/sicherheit');
     }
 

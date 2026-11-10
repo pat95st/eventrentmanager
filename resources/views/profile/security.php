@@ -4,6 +4,7 @@
 /** @var string $provisioningUri */
 /** @var array<string, string> $errors */
 /** @var \App\Domain\Auth\WebauthnCredential[] $passkeys */
+/** @var \App\Domain\Auth\TrustedDevice[] $trustedDevices */
 
 use App\Domain\User\TwoFactorMethod;
 use function App\Infrastructure\Http\e;
@@ -26,6 +27,36 @@ use function App\Infrastructure\Http\t;
           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                 <?= e(t('profile.security.disable_button')) ?>
+            </button>
+        </form>
+    <?php endif; ?>
+</div>
+
+<!-- "Dem Gerät für die nächsten 10 Tage vertrauen" (Haken beim Login, Migration 143) -->
+<div class="mt-6 max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('profile.security.trusted_devices.title')) ?></h2>
+    <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.security.trusted_devices.hint')) ?></p>
+
+    <?php if (($trustedDevices ?? []) === []): ?>
+        <p class="text-sm text-slate-400 dark:text-slate-500"><?= e(t('profile.security.trusted_devices.empty')) ?></p>
+    <?php else: ?>
+        <ul class="mb-4 divide-y divide-slate-100 text-sm dark:divide-slate-800">
+            <?php foreach ($trustedDevices as $device): ?>
+                <li class="py-2">
+                    <span class="font-medium text-slate-800 dark:text-slate-200"><?= e($device->deviceLabel()) ?></span>
+                    <span class="block text-xs text-slate-500 dark:text-slate-400">
+                        <?= e(t('profile.security.trusted_devices.valid_until', [
+                            'created' => $device->createdAt->format('d.m.Y H:i'),
+                            'until' => $device->expiresAt->format('d.m.Y H:i'),
+                        ])) ?>
+                    </span>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <form method="post" action="/profil/sicherheit/vertraute-geraete/widerrufen" data-confirm="<?= e(t('profile.security.trusted_devices.confirm_revoke')) ?>" data-confirm-style="danger">
+            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+            <button type="submit" class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+                <?= e(t('profile.security.trusted_devices.revoke_all')) ?>
             </button>
         </form>
     <?php endif; ?>

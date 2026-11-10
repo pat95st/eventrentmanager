@@ -693,6 +693,24 @@ Dieses Passwort **muss** nach dem ersten Login geändert werden — die
 Anwendung erzwingt dies automatisch, bevor irgendeine andere Seite
 aufgerufen werden kann.
 
+**„Dem Gerät für die nächsten 10 Tage vertrauen“** (Migration
+`143_trusted_devices.sql`): Ist der Haken beim Login (oder auf der
+2FA-Seite) gesetzt, entfällt nach erfolgreicher Bestätigung des zweiten
+Faktors auf diesem Browser 10 Tage lang die Code-Abfrage. Das Passwort
+bleibt immer Pflicht. Ohne eingerichteten zweiten Faktor bewirkt der Haken
+nichts.
+
+- Der Browser erhält ein HttpOnly-Cookie (`mv_trusted_device`, SameSite=Lax,
+  Secure bei HTTPS). In der Datenbank liegt davon nur ein SHA-256-Hash.
+- Das Vertrauen gilt nur für den Benutzer, für den es ausgestellt wurde.
+  Meldet sich am selben Gerät jemand anderes an, wird für ihn weiterhin der
+  zweite Faktor abgefragt.
+- Unter **Profil › Sicherheit** stehen alle vertrauten Geräte mit
+  Ablaufdatum. Dort lässt sich allen Geräten das Vertrauen entziehen.
+- Automatisch entzogen wird das Vertrauen, wenn das Passwort (selbst, durch
+  einen Administrator oder über den Setup-Link) oder der zweite Faktor
+  geändert wird, und wenn ein Administrator „Alle Sitzungen beenden“ nutzt.
+
 ## Progressive Web App (PWA)
 
 Die Anwendung ist als installierbare PWA nutzbar (z. B. für den Einsatz auf

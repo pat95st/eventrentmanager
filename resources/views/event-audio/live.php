@@ -16,6 +16,9 @@
  * @var array<string, mixed> $initialStatus
  * @var string $csrfToken
  * @var bool $canSchedule
+ * @var bool $canUpload
+ * @var ?string $rentalLanguage feste Sprache der Veranstaltung (null = wählbar)
+ * @var array<string, string> $languages
  * @var ?string $customLogoUrl eigenes Veranstaltungs-Logo (nur Veranstalter)
  * @var int $maxUploadMb
  * @var array{0: string, 1: string} $rentalWindow
@@ -28,6 +31,9 @@ use function App\Infrastructure\Http\e;
 
 $logo = ($customLogoUrl ?? null) ?? CompanyBranding::darkLogoUrl() ?? CompanyBranding::logoUrl();
 $canSchedule ??= false;
+$canUpload ??= false;
+$rentalLanguage ??= null;
+$languages ??= [];
 $defaultPlayAt = (new DateTimeImmutable('+10 minutes'))->format('Y-m-d\TH:i');
 $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d') !== $rental->startDate->format('Y-m-d') ? ' – ' . $rental->endDate->format('d.m.Y') : '');
 ?>
@@ -225,6 +231,16 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                     <div class="row">
                         <span class="hint"><span id="tts-count">0</span>/1000</span>
                         <span class="spacer"></span>
+                        <?php if ($rentalLanguage === null): ?>
+                            <select id="tts-lang" class="btn" aria-label="Sprache der Durchsage" style="padding: 9px 10px">
+                                <?php foreach ($languages as $code => $name): ?>
+                                    <option value="<?= e($code) ?>" <?= $code === $ttsLanguage ? 'selected' : '' ?>><?= e($name) ?></option>
+                                <?php endforeach; ?>
+                                <?php if (!isset($languages[$ttsLanguage])): ?><option value="<?= e($ttsLanguage) ?>" selected><?= e($ttsLanguage) ?></option><?php endif; ?>
+                            </select>
+                        <?php else: ?>
+                            <span class="hint">Sprache: <?= e($languages[$rentalLanguage] ?? $rentalLanguage) ?></span>
+                        <?php endif; ?>
                         <button type="button" class="btn" id="tts-preview">Vorhören</button>
                     </div>
                 </div>
@@ -289,6 +305,20 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                     </div>
                 </section>
             <?php endif; ?>
+
+            <?php if ($canUpload): ?>
+                <section class="card" aria-labelledby="h-upload">
+                    <h2 id="h-upload">Eigene Sounddatei hochladen</h2>
+                    <form id="upload-form">
+                        <label class="field">Datei (WAV, FLAC, AAC, MP3 · max. <?= (int) $maxUploadMb ?> MB)<input type="file" name="file" required accept="<?= e(AudioFormat::acceptAttribute()) ?>"></label>
+                        <div class="grid2">
+                            <label class="field">Titel (optional)<input type="text" name="title" maxlength="160" placeholder="sonst Dateiname"></label>
+                            <label class="field">Kurze Beschreibung (optional)<input type="text" name="description" maxlength="500"></label>
+                        </div>
+                        <div class="row"><span class="hint">Erscheint danach bei „Weitere Audio-Dateien“.</span><span class="spacer"></span><button type="submit" class="btn primary" id="upload-send">Hochladen</button></div>
+                    </form>
+                </section>
+            <?php endif; ?>
         </div>
 
         <div>
@@ -314,8 +344,10 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                                 <?php if ($audioFiles !== []): ?><optgroup label="Weitere Audio-Dateien"><?php foreach ($audioFiles as $f): ?><option value="<?= e($f->id) ?>"><?= e($f->title) ?></option><?php endforeach; ?></optgroup><?php endif; ?>
                             </select>
                         </label>
-                        <p class="or">oder eigene Datei</p>
-                        <label class="field">Audio-Datei hochladen (WAV, FLAC, AAC, MP3 · max. <?= (int) $maxUploadMb ?> MB)<input type="file" name="file" id="sched-upload" accept="<?= e(AudioFormat::acceptAttribute()) ?>"></label>
+                        <?php if ($canUpload): ?>
+                            <p class="or">oder eigene Datei</p>
+                            <label class="field">Audio-Datei hochladen (WAV, FLAC, AAC, MP3 · max. <?= (int) $maxUploadMb ?> MB)<input type="file" name="file" id="sched-upload" accept="<?= e(AudioFormat::acceptAttribute()) ?>"></label>
+                        <?php endif; ?>
                         <div class="row"><span class="spacer"></span><button type="submit" class="btn primary big" id="sched-send">Einplanen</button></div>
                     </form>
                 <?php endif; ?>
@@ -350,7 +382,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     var BASE = <?= json_encode($basePath, JSON_THROW_ON_ERROR) ?>;
     var CSRF = <?= json_encode($csrfToken, JSON_THROW_ON_ERROR) ?>;
     var CAN_SCHEDULE = <?= $canSchedule ? 'true' : 'false' ?>;
-    var TTS_LANG = <?= json_encode($ttsLanguage, JSON_THROW_ON_ERROR) ?>;
+    var TTS_LANG = <?= json_encode($rentalLanguage ?? $ttsLanguage, JSON_THROW_ON_ERROR) ?>;
     var MAX_REC_MS = 120000;
     var $ = function (id) { return document.getElementById(id); };
 
@@ -499,13 +531,17 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     });
     var schedForm = $('sched-form');
     if (schedForm) {
-        $('sched-upload').addEventListener('change', function () { if (this.files.length) { $('sched-file').value = ''; } });
-        $('sched-file').addEventListener('change', function () { if (this.value) { $('sched-upload').value = ''; } });
+        var schedUpload = $('sched-upload');
+        if (schedUpload) {
+            schedUpload.addEventListener('change', function () { if (this.files.length) { $('sched-file').value = ''; } });
+            $('sched-file').addEventListener('change', function () { if (this.value) { schedUpload.value = ''; } });
+        }
         schedForm.addEventListener('submit', function (e) {
             e.preventDefault();
-            if (!$('sched-file').value && !$('sched-upload').files.length) { toast('Bitte einen Jingle bzw. eine Audio-Datei wählen oder eine Datei hochladen.', true); return; }
+            var hasFile = schedUpload && schedUpload.files.length;
+            if (!$('sched-file').value && !hasFile) { toast(schedUpload ? 'Bitte einen Jingle bzw. eine Audio-Datei wählen oder eine Datei hochladen.' : 'Bitte einen Jingle bzw. eine Audio-Datei wählen.', true); return; }
             var btn = $('sched-send');
-            btn.disabled = true; btn.textContent = $('sched-upload').files.length ? 'Wird hochgeladen …' : 'Wird geplant …';
+            btn.disabled = true; btn.textContent = hasFile ? 'Wird hochgeladen …' : 'Wird geplant …';
             post('/planen', new FormData(schedForm)).then(function (s) {
                 render(s); toast(s.count > 1 ? s.count + ' Zeitpunkte eingeplant.' : 'Einspieler eingeplant.');
                 schedForm.reset();
@@ -541,6 +577,20 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         timesBox.addEventListener('click', function (e) { var rm = e.target.closest('.time-rm'); if (rm) { rm.closest('.time-row').remove(); syncTimes(); } });
     }
 
+    // ---------- Eigene Sounddatei hochladen
+    var uploadForm = $('upload-form');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var btn = $('upload-send');
+            btn.disabled = true; btn.textContent = 'Wird hochgeladen …';
+            post('/hochladen', new FormData(uploadForm)).then(function () {
+                toast('Datei hochgeladen.');
+                setTimeout(function () { location.reload(); }, 600);
+            }).catch(function (err) { toast(err.message, true); btn.disabled = false; btn.textContent = 'Hochladen'; });
+        });
+    }
+
     // ---------- Stopp
     $('stop-btn').addEventListener('click', function () {
         if (window.speechSynthesis) { speechSynthesis.cancel(); }
@@ -560,12 +610,14 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     });
 
     var ttsText = $('tts-text');
+    // zuletzt gewählte Sprache merken (pro Browser)
+    try { var savedLang = localStorage.getItem('ttsLang'); if (savedLang && $('tts-lang') && $('tts-lang').querySelector('option[value="' + savedLang + '"]')) { $('tts-lang').value = savedLang; } } catch (e3) {}
     ttsText.addEventListener('input', function () { $('tts-count').textContent = ttsText.value.length; updateSend(); });
     $('tts-preview').addEventListener('click', function () {
         if (!window.speechSynthesis) { toast('Dein Browser kann nicht vorlesen – auf der Veranstaltung spricht das Abspielgerät.', true); return; }
         speechSynthesis.cancel();
         var u = new SpeechSynthesisUtterance(ttsText.value.trim() || 'Bitte zuerst einen Text eingeben.');
-        u.lang = TTS_LANG;
+        u.lang = $('tts-lang') ? $('tts-lang').value : TTS_LANG;
         speechSynthesis.speak(u);
     });
 
@@ -625,6 +677,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         fd.append('with_gong', gong);
         if (mode === 'text') {
             fd.append('kind', 'tts'); fd.append('text', ttsText.value.trim());
+            if ($('tts-lang')) { fd.append('language', $('tts-lang').value); try { localStorage.setItem('ttsLang', $('tts-lang').value); } catch (e2) {} }
         } else {
             if (!recBlob) { return; }
             var ext = recBlob.type.indexOf('mp4') >= 0 ? 'm4a' : (recBlob.type.indexOf('ogg') >= 0 ? 'ogg' : 'webm');

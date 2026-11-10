@@ -21,9 +21,9 @@ final class MariadbPlaybackRequestRepository implements PlaybackRequestRepositor
     {
         $fmt = static fn (?DateTimeImmutable $d): ?string => $d?->format('Y-m-d H:i:s');
         $this->pdo->prepare(
-            'INSERT INTO rental_playback_requests (id, rental_id, kind, audio_file_id, label, text, recording_stored_filename, recording_mime_type, with_gong,
+            'INSERT INTO rental_playback_requests (id, rental_id, kind, audio_file_id, label, text, language, recording_stored_filename, recording_mime_type, with_gong,
                 status, requested_by_type, requested_by_id, requested_by_name, player_id, error, created_at, started_at, finished_at)
-             VALUES (:id, :rental, :kind, :file, :label, :text, :rec, :recmime, :gong, :status, :rtype, :rid, :rname, :player, :error, :created, :started, :finished)
+             VALUES (:id, :rental, :kind, :file, :label, :text, :lang, :rec, :recmime, :gong, :status, :rtype, :rid, :rname, :player, :error, :created, :started, :finished)
              ON DUPLICATE KEY UPDATE status = VALUES(status), player_id = VALUES(player_id), error = VALUES(error),
                 started_at = VALUES(started_at), finished_at = VALUES(finished_at)'
         )->execute([
@@ -32,6 +32,7 @@ final class MariadbPlaybackRequestRepository implements PlaybackRequestRepositor
             'kind' => $request->kind->value,
             'file' => $request->audioFileId,
             'label' => $request->label !== null ? mb_substr($request->label, 0, 160) : null,
+            'lang' => $request->language,
             'text' => $request->text,
             'rec' => $request->recordingStoredFilename,
             'recmime' => $request->recordingMimeType,
@@ -107,6 +108,7 @@ final class MariadbPlaybackRequestRepository implements PlaybackRequestRepositor
             startedAt: $d($row['started_at']),
             finishedAt: $d($row['finished_at']),
             label: $row['label'],
+            language: $row['language'] ?? null,
         );
     }
 }

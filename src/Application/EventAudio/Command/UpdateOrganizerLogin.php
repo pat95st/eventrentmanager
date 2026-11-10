@@ -17,6 +17,7 @@ final class UpdateOrganizerLogin implements CommandInterface
         public readonly bool $enabled,
         public readonly bool $resetPassword,
         public readonly bool $canSchedule = false,
+        public readonly bool $canUpload = false,
     ) {
     }
 }

@@ -45,11 +45,11 @@ final class MariadbOrganizerLoginRepository implements OrganizerLoginRepositoryI
     {
         $fmt = static fn (?DateTimeImmutable $d): ?string => $d?->format('Y-m-d H:i:s');
         $this->pdo->prepare(
-            'INSERT INTO rental_organizer_logins (id, rental_id, label, username, password_hash, valid_from, valid_until, enabled, failed_attempts, locked_until, last_login_at, created_at, can_schedule)
-             VALUES (:id, :rental, :label, :username, :hash, :from, :until, :enabled, :failed, :locked, :last, :created, :schedule)
+            'INSERT INTO rental_organizer_logins (id, rental_id, label, username, password_hash, valid_from, valid_until, enabled, failed_attempts, locked_until, last_login_at, created_at, can_schedule, can_upload)
+             VALUES (:id, :rental, :label, :username, :hash, :from, :until, :enabled, :failed, :locked, :last, :created, :schedule, :upload)
              ON DUPLICATE KEY UPDATE label = VALUES(label), username = VALUES(username), password_hash = VALUES(password_hash),
                 valid_from = VALUES(valid_from), valid_until = VALUES(valid_until), enabled = VALUES(enabled),
-                failed_attempts = VALUES(failed_attempts), locked_until = VALUES(locked_until), last_login_at = VALUES(last_login_at), can_schedule = VALUES(can_schedule)'
+                failed_attempts = VALUES(failed_attempts), locked_until = VALUES(locked_until), last_login_at = VALUES(last_login_at), can_schedule = VALUES(can_schedule), can_upload = VALUES(can_upload)'
         )->execute([
             'id' => $login->id,
             'rental' => $login->rentalId,
@@ -64,6 +64,7 @@ final class MariadbOrganizerLoginRepository implements OrganizerLoginRepositoryI
             'last' => $fmt($login->lastLoginAt),
             'created' => $login->createdAt->format('Y-m-d H:i:s'),
             'schedule' => $login->canSchedule ? 1 : 0,
+            'upload' => $login->canUpload ? 1 : 0,
         ]);
     }
 
@@ -90,6 +91,7 @@ final class MariadbOrganizerLoginRepository implements OrganizerLoginRepositoryI
             lastLoginAt: $d($row['last_login_at']),
             createdAt: new DateTimeImmutable($row['created_at']),
             canSchedule: (bool) ($row['can_schedule'] ?? false),
+            canUpload: (bool) ($row['can_upload'] ?? false),
         );
     }
 }

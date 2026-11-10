@@ -170,6 +170,7 @@ final class EventAudioController
             $rentalId,
             $request->input('player_id'),
             $request->input('gong_by_default') === '1',
+            $request->input('tts_language'),
         )), 'Die Audio-Einstellungen wurden gespeichert.', $rentalId, 'geraet');
     }
 
@@ -185,6 +186,7 @@ final class EventAudioController
                 $request->input('valid_from'),
                 $request->input('valid_until'),
                 $request->input('can_schedule') === '1',
+                $request->input('can_upload') === '1',
             ));
             $this->rememberCredentials($rentalId, $result['username'], $result['password']);
             Flash::success('Der Veranstalter-Zugang wurde angelegt.');
@@ -207,6 +209,7 @@ final class EventAudioController
                 $request->input('enabled') === '1',
                 $request->input('reset_password') === '1',
                 $request->input('can_schedule') === '1',
+                $request->input('can_upload') === '1',
             ));
             if (is_string($newPassword)) {
                 $login = $this->logins->findById($request->param('loginId'));

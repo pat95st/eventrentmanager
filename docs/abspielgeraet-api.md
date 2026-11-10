@@ -44,7 +44,8 @@ Beide Parameter sind optional:
   "gong": { "url": "/api/player/v1/gong", "version": "gong-1a2b3c4d.mp3", "mime": "audio/mpeg" },
   "rental": {
     "id": "…", "name": "Stadtfest", "location": "Marktplatz",
-    "start_date": "2026-11-09", "end_date": "2026-11-10", "gong_by_default": true
+    "start_date": "2026-11-09", "end_date": "2026-11-10", "gong_by_default": true,
+    "tts_language": null
   },
   "files": [
     { "id": "…", "kind": "jingle", "title": "Opener", "description": "Vor Programmstart",
@@ -60,7 +61,7 @@ Beide Parameter sind optional:
   ],
   "queue": [
     { "id": "…", "kind": "tts", "label": "Die Siegerehrung…", "file_id": null, "file_url": null,
-      "text": "Die Siegerehrung beginnt in fünf Minuten.", "recording_url": null, "recording_mime": null,
+      "text": "Die Siegerehrung beginnt in fünf Minuten.", "language": "de-DE", "recording_url": null, "recording_mime": null,
       "with_gong": true, "requested_by": "Veranstalter", "created_at": "…",
       "status_url": "/api/player/v1/requests/<id>/status" }
   ]
@@ -70,6 +71,7 @@ Beide Parameter sind optional:
 Hinweise zu den Feldern:
 - `gong` ist `null`, wenn kein eigener Gong hinterlegt ist. Dann spielt der Pi seinen **eingebauten** Gong.
 - `rental` ist `null`, wenn das Gerät gerade keiner laufenden Veranstaltung zugeordnet ist. `files`, `minute_programs` und `queue` sind dann leer.
+- `queue[].language` (Migration 138) ist die Sprache der Durchsage als BCP-47-Code, z. B. `en-GB`. Sie ist immer gesetzt: feste Sprache der Veranstaltung, sonst die in der Live-Oberfläche gewählte, sonst `tts.language`. Passt `tts.voice` nicht zur Sprache, soll der Pi eine passende Stimme für `language` wählen. `rental.tts_language` zeigt nur zur Information, ob die Veranstaltung eine feste Sprache hat.
 - `tts.voice` ist ein freier, gerätespezifischer Name, z. B. eine Piper-Stimme. Er kann `null` sein. `tts.rate` liegt zwischen 0,5 und 2,0.
 - `scheduled` listet nur die noch nicht ausgelösten Einspieler, sortiert nach Zeit. Ist eine Startzeit länger als die Verfallszeit vorbei, ohne dass das Gerät `state` abgefragt hat, markiert der Server den Einspieler als „verpasst“. Er wird dann nicht nachgespielt.
 - `minute_programs[].start_at` enthält bereits die live gepflegte Verzögerung. Die Liste ist informativ, z. B. für eine Anzeige oder optionales automatisches Abspielen. Die Live-Oberfläche erzeugt für „Jingle zum Programmpunkt“ normale `jingle`-Aufträge.
@@ -80,7 +82,7 @@ Hinweise zu den Feldern:
 |-------------|-------------------------------------------|------------------------------------------------------------------|
 | `jingle`    | `file_id`/`file_url`                      | Datei abspielen (aus dem lokalen Cache)                          |
 | `audio`     | `file_id`/`file_url`                      | Datei abspielen                                                  |
-| `tts`       | `text`                                    | ggf. Gong → Text per Sprachausgabe (`tts.*`) sprechen            |
+| `tts`       | `text`, `language`                        | ggf. Gong → Text per Sprachausgabe in `language` sprechen (Stimme/Tempo aus `tts.*`) |
 | `recording` | `recording_url`, `recording_mime`         | ggf. Gong → Aufnahme abspielen                                   |
 | `stop`      | –                                         | laufende Wiedergabe sofort beenden, dann `done` melden           |
 

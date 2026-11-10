@@ -11,6 +11,8 @@ use App\Application\EventAudio\Command\CancelScheduledPlayback;
 use App\Application\EventAudio\Command\ReplayPlayback;
 use App\Application\EventAudio\Command\RequestPlayback;
 use App\Application\EventAudio\Command\SchedulePlayback;
+use App\Application\EventAudio\Command\UploadRentalAudioFile;
+use App\Domain\EventAudio\TtsLanguage;
 use App\Application\EventAudio\ScheduledPlaybackDispatcher;
 use App\Domain\EventAudio\AudioFileKind;
 use App\Domain\EventAudio\AudioPlayerRepositoryInterface;
@@ -127,7 +129,7 @@ final class EventAudioLiveController
         if ($login === null) {
             return;
         }
-        $this->renderPage($request->param('id'), '/live/' . $login->rentalId, $login->label, organizer: true, canSchedule: $login->canSchedule);
+        $this->renderPage($request->param('id'), '/live/' . $login->rentalId, $login->label, organizer: true, canSchedule: $login->canSchedule, canUpload: $login->canUpload);
     }
 
     public function organizerStatus(Request $request): void
@@ -163,7 +165,26 @@ final class EventAudioLiveController
 
             return;
         }
+        if (!$login->canUpload && $this->hasUpload($request)) {
+            Response::json(['ok' => false, 'error' => 'Dein Zugang darf keine eigenen Sounddateien hochladen. Bitte eine vorhandene Datei wählen.'], 403);
+
+            return;
+        }
         $this->schedule($request, $request->param('id'), 'organizer', $login->id, $login->label . ' (Veranstalter)');
+    }
+
+    public function organizerUpload(Request $request): void
+    {
+        $login = $this->requireOrganizer($request, json: true);
+        if ($login === null) {
+            return;
+        }
+        if (!$login->canUpload) {
+            Response::json(['ok' => false, 'error' => 'Dein Zugang darf keine eigenen Sounddateien hochladen.'], 403);
+
+            return;
+        }
+        $this->upload($request, $request->param('id'), $login->label . ' (Veranstalter)');
     }
 
     public function organizerCancelSchedule(Request $request): void
@@ -208,7 +229,7 @@ final class EventAudioLiveController
     public function userPage(Request $request): void
     {
         if ($this->requireUserAccess($request, json: false)) {
-            $this->renderPage($request->param('id'), '/veranstaltungen/' . $request->param('id') . '/live', CurrentUser::get()?->displayName() ?? '', organizer: false, canSchedule: true);
+            $this->renderPage($request->param('id'), '/veranstaltungen/' . $request->param('id') . '/live', CurrentUser::get()?->displayName() ?? '', organizer: false, canSchedule: true, canUpload: true);
         }
     }
 
@@ -242,6 +263,13 @@ final class EventAudioLiveController
         }
     }
 
+    public function userUpload(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $this->upload($request, $request->param('id'), CurrentUser::get()?->displayName() ?? 'Benutzer');
+        }
+    }
+
     public function userCancelSchedule(Request $request): void
     {
         if ($this->requireUserAccess($request, json: true)) {
@@ -259,7 +287,7 @@ final class EventAudioLiveController
 
     // ---------------------------------------------------------------- gemeinsam
 
-    private function renderPage(string $rentalId, string $basePath, string $actorName, bool $organizer, bool $canSchedule = false): void
+    private function renderPage(string $rentalId, string $basePath, string $actorName, bool $organizer, bool $canSchedule = false, bool $canUpload = false): void
     {
         $this->detailed = !$organizer;
         $rental = $this->rentals->findById($rentalId);
@@ -301,6 +329,10 @@ final class EventAudioLiveController
             'hasPlayer' => $rentalSettings->playerId !== null,
             'ttsLanguage' => $settings->ttsLanguage,
             'canSchedule' => $canSchedule && $this->schedules !== null,
+            'canUpload' => $canUpload,
+            // Sprache: fest je Veranstaltung, sonst in der Oberfläche wählbar (Vorauswahl = Standard)
+            'rentalLanguage' => $rentalSettings->ttsLanguage,
+            'languages' => TtsLanguage::OPTIONS,
             // Eigenes Veranstaltungs-Logo nur für Veranstalter; Techniker/Admins sehen immer das Firmenlogo.
             'customLogoUrl' => $organizer && $rentalSettings->logoFilename !== null
                 ? $basePath . '/logo?v=' . substr(md5($rentalSettings->logoFilename), 0, 10)
@@ -385,6 +417,7 @@ final class EventAudioLiveController
                 $byType,
                 $byId,
                 $byName,
+                $request->input('language'),
             ));
         } catch (ValidationException $e) {
             Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);
@@ -430,6 +463,32 @@ final class EventAudioLiveController
             return;
         }
         Response::json(['ok' => true, 'count' => is_array($ids) ? count($ids) : 1] + $this->statusPayload($rentalId));
+    }
+
+    private function hasUpload(Request $request): bool
+    {
+        $upload = $request->file('file');
+
+        return $upload !== null && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
+    }
+
+    /** Eigene Sounddatei hochladen (landet bei „Weitere Audio-Dateien“ der Veranstaltung). */
+    private function upload(Request $request, string $rentalId, string $byName): void
+    {
+        try {
+            $this->commands->dispatch(new UploadRentalAudioFile(
+                $rentalId,
+                'audio',
+                (string) $request->input('title', ''),
+                trim((string) $request->input('description', '')) !== '' ? (string) $request->input('description') : 'Hochgeladen von ' . $byName,
+                $request->file('file') ?? ['error' => UPLOAD_ERR_NO_FILE],
+            ));
+        } catch (ValidationException $e) {
+            Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);
+
+            return;
+        }
+        Response::json(['ok' => true, 'reload' => true]);
     }
 
     private function cancelSchedule(Request $request, string $rentalId): void

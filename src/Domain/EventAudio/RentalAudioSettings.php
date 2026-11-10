@@ -13,6 +13,8 @@ final class RentalAudioSettings
         public bool $gongByDefault = true,
         // Migration 137: eigenes Logo für Veranstalter in der Live-Oberfläche
         public ?string $logoFilename = null,
+        // Migration 138: feste Sprache für Durchsagen; null = in der Live-Oberfläche wählbar
+        public ?string $ttsLanguage = null,
     ) {
     }
 }

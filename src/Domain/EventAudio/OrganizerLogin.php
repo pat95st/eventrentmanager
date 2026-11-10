@@ -31,6 +31,8 @@ final class OrganizerLogin
         public readonly DateTimeImmutable $createdAt,
         // Migration 136: darf Einspieler zeitlich planen (inkl. eigener Audio-Uploads)
         public bool $canSchedule = false,
+        // Migration 138: darf eigene Sounddateien hochladen
+        public bool $canUpload = false,
     ) {
     }
 

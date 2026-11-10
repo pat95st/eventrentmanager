@@ -18,6 +18,7 @@ final class RequestPlayback implements CommandInterface
         public readonly string $requestedByType,
         public readonly ?string $requestedById,
         public readonly string $requestedByName,
+        public readonly ?string $language = null,
     ) {
     }
 }

@@ -22,20 +22,21 @@ final class MariadbRentalAudioSettingsRepository implements RentalAudioSettingsR
         $row = $stmt->fetch();
 
         return $row
-            ? new RentalAudioSettings($rentalId, $row['player_id'], (bool) $row['gong_by_default'], $row['logo_filename'] ?? null)
+            ? new RentalAudioSettings($rentalId, $row['player_id'], (bool) $row['gong_by_default'], $row['logo_filename'] ?? null, $row['tts_language'] ?? null)
             : new RentalAudioSettings($rentalId);
     }
 
     public function save(RentalAudioSettings $settings): void
     {
         $this->pdo->prepare(
-            'INSERT INTO rental_audio_settings (rental_id, player_id, gong_by_default, logo_filename, updated_at) VALUES (:id, :player, :gong, :logo, NOW())
-             ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), gong_by_default = VALUES(gong_by_default), logo_filename = VALUES(logo_filename), updated_at = NOW()'
+            'INSERT INTO rental_audio_settings (rental_id, player_id, gong_by_default, logo_filename, tts_language, updated_at) VALUES (:id, :player, :gong, :logo, :lang, NOW())
+             ON DUPLICATE KEY UPDATE player_id = VALUES(player_id), gong_by_default = VALUES(gong_by_default), logo_filename = VALUES(logo_filename), tts_language = VALUES(tts_language), updated_at = NOW()'
         )->execute([
             'id' => $settings->rentalId,
             'player' => $settings->playerId,
             'gong' => $settings->gongByDefault ? 1 : 0,
             'logo' => $settings->logoFilename,
+            'lang' => $settings->ttsLanguage,
         ]);
     }
 

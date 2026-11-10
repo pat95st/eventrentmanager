@@ -243,6 +243,15 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                     <?php endforeach; ?>
                 </select>
             </div>
+            <div style="min-width: 14rem">
+                <label class="<?= $label ?>" for="ea-lang">Sprache der Durchsagen</label>
+                <select id="ea-lang" name="tts_language" class="mt-1 <?= $input ?>">
+                    <option value="">– in der Live-Oberfläche wählen –</option>
+                    <?php foreach (\App\Domain\EventAudio\TtsLanguage::OPTIONS as $code => $name): ?>
+                        <option value="<?= e($code) ?>" <?= $code === $rentalSettings->ttsLanguage ? 'selected' : '' ?>><?= e($name) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <label class="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
                 <input type="checkbox" name="gong_by_default" value="1" <?= $rentalSettings->gongByDefault ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300">
                 Gong vor Durchsagen standardmäßig an
@@ -310,6 +319,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                         <span class="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100"><?= e($login->username) ?></span>
                         <span class="ea-pill" style="<?= $status === 'aktiv' ? 'background:#d1fae5;color:#065f46' : 'background:#e2e8f0;color:#475569' ?>"><?= e($status) ?></span>
                         <?php if ($login->canSchedule): ?><span class="ea-pill" style="background:#dbeafe;color:#1e40af">plant Einspieler</span><?php endif; ?>
+                        <?php if ($login->canUpload): ?><span class="ea-pill" style="background:#ede9fe;color:#5b21b6">lädt Dateien hoch</span><?php endif; ?>
                         <?php if ($login->lastLoginAt !== null): ?>
                             <span class="text-xs text-slate-400">zuletzt angemeldet <?= e($login->lastLoginAt->format('d.m.Y H:i')) ?></span>
                         <?php endif; ?>
@@ -322,6 +332,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                     <div class="mt-3 flex flex-wrap items-center gap-3">
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="enabled" value="1" <?= $login->enabled ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300"> aktiv</label>
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="can_schedule" value="1" <?= $login->canSchedule ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300"> darf Einspieler planen</label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="can_upload" value="1" <?= $login->canUpload ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300"> darf Sounddateien hochladen</label>
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="reset_password" value="1" class="h-4 w-4 rounded border-slate-300"> neues Passwort erzeugen</label>
                         <button type="submit" class="<?= $btn ?>">Speichern</button>
                         <button type="submit" form="ea-del-<?= e($login->id) ?>" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
@@ -346,7 +357,11 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             </div>
             <label class="mt-3 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
                 <input type="checkbox" name="can_schedule" value="1" class="mt-0.5 h-4 w-4 rounded border-slate-300">
-                <span>Darf Einspieler zeitlich planen <span class="block text-xs text-slate-500 dark:text-slate-400">inkl. Hochladen eigener Audio-Dateien über die Live-Oberfläche</span></span>
+                <span>Darf Einspieler zeitlich planen <span class="block text-xs text-slate-500 dark:text-slate-400">vorhandene Jingles und Audio-Dateien zu festen Zeiten abspielen</span></span>
+            </label>
+            <label class="mt-2 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" name="can_upload" value="1" class="mt-0.5 h-4 w-4 rounded border-slate-300">
+                <span>Darf eigene Sounddateien hochladen <span class="block text-xs text-slate-500 dark:text-slate-400">in der Live-Oberfläche (WAV, FLAC, AAC, MP3); Techniker und Admins dürfen das immer</span></span>
             </label>
             <button type="submit" class="<?= $primary ?> mt-3">Zugang anlegen</button>
         </form>

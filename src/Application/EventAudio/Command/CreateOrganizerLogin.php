@@ -16,6 +16,7 @@ final class CreateOrganizerLogin implements CommandInterface
         public readonly ?string $validFrom,
         public readonly ?string $validUntil,
         public readonly bool $canSchedule = false,
+        public readonly bool $canUpload = false,
     ) {
     }
 }

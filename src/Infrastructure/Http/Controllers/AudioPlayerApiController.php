@@ -101,6 +101,7 @@ final class AudioPlayerApiController
                 'start_date' => $rental->startDate->format('Y-m-d'),
                 'end_date' => $rental->endDate->format('Y-m-d'),
                 'gong_by_default' => $this->rentalSettings->get($rental->id)->gongByDefault,
+                'tts_language' => $this->rentalSettings->get($rental->id)->ttsLanguage,
             ];
             $payload['files'] = array_map(static fn (RentalAudioFile $f): array => [
                 'id' => $f->id,
@@ -212,6 +213,7 @@ final class AudioPlayerApiController
             'file_id' => $r->audioFileId,
             'file_url' => $r->audioFileId !== null ? $base . '/files/' . $r->audioFileId : null,
             'text' => $r->text,
+            'language' => $r->text !== null ? ($r->language ?? $this->settings->get()->ttsLanguage) : null,
             'recording_url' => $r->recordingStoredFilename !== null ? $base . '/requests/' . $r->id . '/recording' : null,
             'recording_mime' => $r->recordingMimeType,
             'with_gong' => $r->withGong,

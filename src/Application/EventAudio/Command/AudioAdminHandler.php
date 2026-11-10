@@ -14,6 +14,7 @@ use App\Domain\EventAudio\AudioSettingsRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioFile;
 use App\Domain\EventAudio\RentalAudioSettings;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
+use App\Domain\EventAudio\TtsLanguage;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Infrastructure\FileStorage\LocalFileStorage;
@@ -167,6 +168,11 @@ final class AudioAdminHandler implements CommandHandlerInterface
         $settings = clone $this->rentalSettings->get($command->rentalId); // Logo u. a. bleiben erhalten
         $settings->playerId = $playerId;
         $settings->gongByDefault = $command->gongByDefault;
+        $language = $command->ttsLanguage !== null && trim($command->ttsLanguage) !== '' ? trim($command->ttsLanguage) : null;
+        if ($language !== null && !TtsLanguage::isValid($language)) {
+            throw new ValidationException(['tts_language' => 'Ungültige Sprache.']);
+        }
+        $settings->ttsLanguage = $language;
         $this->rentalSettings->save($settings);
 
         return null;

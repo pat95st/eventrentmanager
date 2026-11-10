@@ -15,6 +15,7 @@ use App\Domain\EventAudio\PlaybackRequestRepositoryInterface;
 use App\Domain\EventAudio\PlaybackStatus;
 use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
+use App\Domain\EventAudio\TtsLanguage;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Infrastructure\FileStorage\LocalFileStorage;
@@ -70,7 +71,7 @@ final class PlaybackHandler implements CommandHandlerInterface
             return $this->request(new RequestPlayback($command->rentalId, 'audio', $original->audioFileId, null, null, false, $command->requestedByType, $command->requestedById, $command->requestedByName));
         }
         if ($original->kind === PlaybackKind::Tts) {
-            return $this->request(new RequestPlayback($command->rentalId, 'tts', null, $original->text, null, $original->withGong, $command->requestedByType, $command->requestedById, $command->requestedByName));
+            return $this->request(new RequestPlayback($command->rentalId, 'tts', null, $original->text, null, $original->withGong, $command->requestedByType, $command->requestedById, $command->requestedByName, $original->language));
         }
         if ($original->kind === PlaybackKind::Recording && $original->recordingStoredFilename !== null) {
             $id = Uuid::v4();
@@ -109,6 +110,7 @@ final class PlaybackHandler implements CommandHandlerInterface
         $label = null;
         $recordingFile = null;
         $recordingMime = null;
+        $language = null;
 
         switch ($kind) {
             case PlaybackKind::Jingle:
@@ -130,6 +132,15 @@ final class PlaybackHandler implements CommandHandlerInterface
                     throw new ValidationException(['text' => 'Die Durchsage darf höchstens ' . self::MAX_TEXT_LENGTH . ' Zeichen lang sein.']);
                 }
                 $label = mb_strimwidth($text, 0, 60, '…');
+                // Feste Sprache der Veranstaltung hat Vorrang, sonst die in der Live-Oberfläche gewählte
+                // (leer = Standardsprache aus den Einstellungen, die das Abspielgerät kennt).
+                $language = $this->rentalSettings->get($command->rentalId)->ttsLanguage;
+                if ($language === null && $command->language !== null && trim($command->language) !== '') {
+                    if (!TtsLanguage::isValid(trim($command->language))) {
+                        throw new ValidationException(['language' => 'Ungültige Sprache.']);
+                    }
+                    $language = trim($command->language);
+                }
                 break;
             case PlaybackKind::Recording:
                 $upload = $command->recordingFile;
@@ -184,6 +195,7 @@ final class PlaybackHandler implements CommandHandlerInterface
             startedAt: null,
             finishedAt: null,
             label: $label,
+            language: $language,
         ));
 
         return $id;

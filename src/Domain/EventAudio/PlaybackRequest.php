@@ -33,6 +33,7 @@ final class PlaybackRequest
         public ?DateTimeImmutable $startedAt,
         public ?DateTimeImmutable $finishedAt,
         public readonly ?string $label = null, // Anzeigename (z. B. Jingle-Titel) zum Zeitpunkt des Auftrags
+        public readonly ?string $language = null, // Migration 138: Sprache der getippten Durchsage
     ) {
     }
 

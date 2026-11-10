@@ -105,6 +105,26 @@ final class AudioAdminHandler implements CommandHandlerInterface
         $settings->ttsRate = max(0.5, min(2.0, round($command->ttsRate, 2)));
         $settings->maxUploadMb = max(1, min(500, $command->maxUploadMb));
         $settings->queueExpiryMinutes = max(1, min(240, $command->queueExpiryMinutes));
+        if ($command->translatorProvider !== null) {
+            if (!in_array($command->translatorProvider, ['none', 'openai', 'deepl'], true)) {
+                throw new ValidationException(['translator_provider' => 'Unbekannter Übersetzer.']);
+            }
+            $settings->translatorProvider = $command->translatorProvider;
+        }
+        if ($command->removeDeeplApiKey) {
+            $settings->deeplApiKey = null;
+        } elseif ($command->deeplApiKey !== null && trim($command->deeplApiKey) !== '') {
+            $settings->deeplApiKey = mb_substr(trim($command->deeplApiKey), 0, 255);
+        }
+        if ($command->openaiTranslationModel !== null && trim($command->openaiTranslationModel) !== '') {
+            if (preg_match('/^[A-Za-z0-9._:-]{2,60}$/', trim($command->openaiTranslationModel)) !== 1) {
+                throw new ValidationException(['openai_translation_model' => 'Ungültiger Modellname.']);
+            }
+            $settings->openaiTranslationModel = trim($command->openaiTranslationModel);
+        }
+        if ($settings->translatorProvider === 'deepl' && ($settings->deeplApiKey === null || $settings->deeplApiKey === '')) {
+            throw new ValidationException(['deepl_api_key' => 'Für DeepL bitte einen API-Schlüssel hinterlegen.']);
+        }
         $this->settings->save($settings);
 
         return null;
@@ -168,11 +188,21 @@ final class AudioAdminHandler implements CommandHandlerInterface
         $settings = clone $this->rentalSettings->get($command->rentalId); // Logo u. a. bleiben erhalten
         $settings->playerId = $playerId;
         $settings->gongByDefault = $command->gongByDefault;
-        $language = $command->ttsLanguage !== null && trim($command->ttsLanguage) !== '' ? trim($command->ttsLanguage) : null;
-        if ($language !== null && !TtsLanguage::isValid($language)) {
-            throw new ValidationException(['tts_language' => 'Ungültige Sprache.']);
+        $languages = [];
+        foreach ($command->ttsLanguages as $code) {
+            $code = trim((string) $code);
+            if ($code === '') {
+                continue;
+            }
+            if (!TtsLanguage::isValid($code)) {
+                throw new ValidationException(['tts_language' => 'Ungültige Sprache „' . $code . '“.']);
+            }
+            $languages[$code] = $code;
         }
-        $settings->ttsLanguage = $language;
+        if (count($languages) > 6) {
+            throw new ValidationException(['tts_language' => 'Höchstens 6 Sprachen je Veranstaltung.']);
+        }
+        $settings->ttsLanguages = array_values($languages);
         $this->rentalSettings->save($settings);
 
         return null;

@@ -22,7 +22,7 @@ final class MariadbRentalAudioSettingsRepository implements RentalAudioSettingsR
         $row = $stmt->fetch();
 
         return $row
-            ? new RentalAudioSettings($rentalId, $row['player_id'], (bool) $row['gong_by_default'], $row['logo_filename'] ?? null, $row['tts_language'] ?? null)
+            ? new RentalAudioSettings($rentalId, $row['player_id'], (bool) $row['gong_by_default'], $row['logo_filename'] ?? null, array_values(array_filter(array_map('trim', explode(',', (string) ($row['tts_language'] ?? ''))))))
             : new RentalAudioSettings($rentalId);
     }
 
@@ -36,7 +36,7 @@ final class MariadbRentalAudioSettingsRepository implements RentalAudioSettingsR
             'player' => $settings->playerId,
             'gong' => $settings->gongByDefault ? 1 : 0,
             'logo' => $settings->logoFilename,
-            'lang' => $settings->ttsLanguage,
+            'lang' => $settings->ttsLanguages !== [] ? implode(',', $settings->ttsLanguages) : null,
         ]);
     }
 

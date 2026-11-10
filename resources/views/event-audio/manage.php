@@ -263,15 +263,14 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div style="min-width: 14rem">
-                <label class="<?= $label ?>" for="ea-lang">Sprache der Durchsagen</label>
-                <select id="ea-lang" name="tts_language" class="mt-1 <?= $input ?>">
-                    <option value="">– in der Live-Oberfläche wählen –</option>
+            <fieldset class="w-full">
+                <legend class="<?= $label ?>">Sprache(n) der Durchsagen <span class="font-normal text-slate-400">– keine gewählt: Auswahl in der Live-Oberfläche; mehrere: jede Durchsage wird nacheinander in allen Sprachen gesprochen (max. 6)</span></legend>
+                <div class="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                     <?php foreach (\App\Domain\EventAudio\TtsLanguage::OPTIONS as $code => $name): ?>
-                        <option value="<?= e($code) ?>" <?= $code === $rentalSettings->ttsLanguage ? 'selected' : '' ?>><?= e($name) ?></option>
+                        <label class="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="tts_language[]" value="<?= e($code) ?>" <?= in_array($code, $rentalSettings->ttsLanguages, true) ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300"> <?= e($name) ?></label>
                     <?php endforeach; ?>
-                </select>
-            </div>
+                </div>
+            </fieldset>
             <label class="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
                 <input type="checkbox" name="gong_by_default" value="1" <?= $rentalSettings->gongByDefault ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300">
                 Gong vor Durchsagen standardmäßig an

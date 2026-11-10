@@ -13,8 +13,10 @@ final class RentalAudioSettings
         public bool $gongByDefault = true,
         // Migration 137: eigenes Logo für Veranstalter in der Live-Oberfläche
         public ?string $logoFilename = null,
-        // Migration 138: feste Sprache für Durchsagen; null = in der Live-Oberfläche wählbar
-        public ?string $ttsLanguage = null,
+        // Migration 138/140: feste Sprache(n) für Durchsagen (BCP-47); leer = in der Live-Oberfläche wählbar.
+        // Bei mehreren Sprachen wird jede Durchsage nacheinander in allen Sprachen gesprochen.
+        /** @var list<string> */
+        public array $ttsLanguages = [],
     ) {
     }
 }

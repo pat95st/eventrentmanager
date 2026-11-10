@@ -45,7 +45,7 @@ Beide Parameter sind optional:
   "rental": {
     "id": "…", "name": "Stadtfest", "location": "Marktplatz",
     "start_date": "2026-11-09", "end_date": "2026-11-10", "gong_by_default": true,
-    "tts_language": null
+    "tts_languages": ["de-DE", "en-GB"]
   },
   "files": [
     { "id": "…", "kind": "jingle", "title": "Opener", "description": "Vor Programmstart",
@@ -72,7 +72,7 @@ Beide Parameter sind optional:
 Hinweise zu den Feldern:
 - `gong` ist `null`, wenn kein eigener Gong hinterlegt ist. Dann spielt der Pi seinen **eingebauten** Gong.
 - `rental` ist `null`, wenn das Gerät gerade keiner laufenden Veranstaltung zugeordnet ist. `files`, `minute_programs` und `queue` sind dann leer.
-- `queue[].language` (Migration 138) ist die Sprache der Durchsage als BCP-47-Code, z. B. `en-GB`. Sie ist immer gesetzt: feste Sprache der Veranstaltung, sonst die in der Live-Oberfläche gewählte, sonst `tts.language`. Passt `tts.voice` nicht zur Sprache, soll der Pi eine passende Stimme für `language` wählen. `rental.tts_language` zeigt nur zur Information, ob die Veranstaltung eine feste Sprache hat.
+- `queue[].language` (Migration 138) ist die Sprache der Durchsage als BCP-47-Code, z. B. `en-GB`. Sie ist immer gesetzt: feste Sprache der Veranstaltung, sonst die in der Live-Oberfläche gewählte, sonst `tts.language`. Passt `tts.voice` nicht zur Sprache, soll der Pi eine passende Stimme für `language` wählen. `rental.tts_languages` (Migration 140) listet nur zur Information die festen Sprachen der Veranstaltung. Bei mehreren Sprachen kommen mehrsprachige Durchsagen als einzelne `tts`-Aufträge direkt hintereinander, einer je Sprache. Nur der erste hat `with_gong`; der Pi spielt sie einfach der Reihe nach.
 - `tts.voice` ist ein freier, gerätespezifischer Name, z. B. eine Piper-Stimme. Er kann `null` sein. `tts.rate` liegt zwischen 0,5 und 2,0.
 - Zyklische Einspieler (Migration 139) erscheinen in `scheduled` als ein Eintrag mit `repeat_*`. `play_at` ist dabei immer der nächste Termin. Ausgelöst wird jede Wiederholung wie gewohnt als normaler Auftrag in `queue`.
 - `scheduled` listet nur die noch nicht ausgelösten Einspieler, sortiert nach Zeit. Ist eine Startzeit länger als die Verfallszeit vorbei, ohne dass das Gerät `state` abgefragt hat, markiert der Server den Einspieler als „verpasst“. Er wird dann nicht nachgespielt.

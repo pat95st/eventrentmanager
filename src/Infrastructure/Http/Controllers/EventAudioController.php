@@ -170,7 +170,7 @@ final class EventAudioController
             $rentalId,
             $request->input('player_id'),
             $request->input('gong_by_default') === '1',
-            $request->input('tts_language'),
+            $request->inputArray('tts_language'),
         )), 'Die Audio-Einstellungen wurden gespeichert.', $rentalId, 'geraet');
     }
 

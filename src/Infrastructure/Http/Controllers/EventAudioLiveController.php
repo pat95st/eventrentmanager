@@ -13,6 +13,8 @@ use App\Application\EventAudio\Command\RequestPlayback;
 use App\Application\EventAudio\Command\SchedulePlayback;
 use App\Application\EventAudio\Command\UploadRentalAudioFile;
 use App\Domain\EventAudio\TtsLanguage;
+use App\Application\EventAudio\Translation\TextTranslatorInterface;
+use App\Application\EventAudio\Translation\TranslationException;
 use App\Application\EventAudio\ScheduledPlaybackDispatcher;
 use App\Domain\EventAudio\AudioFileKind;
 use App\Domain\EventAudio\AudioPlayerRepositoryInterface;
@@ -78,6 +80,7 @@ final class EventAudioLiveController
         private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
         private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
         private readonly ?LocalFileStorage $storage = null,
+        private readonly ?TextTranslatorInterface $translator = null,
     ) {
     }
 
@@ -201,6 +204,13 @@ final class EventAudioLiveController
         $this->cancelSchedule($request, $request->param('id'));
     }
 
+    public function organizerTranslate(Request $request): void
+    {
+        if ($this->requireOrganizer($request, json: true) !== null) {
+            $this->translate($request);
+        }
+    }
+
     public function organizerReplay(Request $request): void
     {
         $login = $this->requireOrganizer($request, json: true);
@@ -277,6 +287,13 @@ final class EventAudioLiveController
         }
     }
 
+    public function userTranslate(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $this->translate($request);
+        }
+    }
+
     public function userReplay(Request $request): void
     {
         if ($this->requireUserAccess($request, json: true)) {
@@ -331,7 +348,9 @@ final class EventAudioLiveController
             'canSchedule' => $canSchedule && $this->schedules !== null,
             'canUpload' => $canUpload,
             // Sprache: fest je Veranstaltung, sonst in der Oberfläche wählbar (Vorauswahl = Standard)
-            'rentalLanguage' => $rentalSettings->ttsLanguage,
+            'rentalLanguages' => $rentalSettings->ttsLanguages,
+            'translatorAvailable' => $this->translator?->isAvailable() ?? false,
+            'translatorLabel' => $this->translator?->providerLabel() ?? '',
             'languages' => TtsLanguage::OPTIONS,
             // Eigenes Veranstaltungs-Logo nur für Veranstalter; Techniker/Admins sehen immer das Firmenlogo.
             'customLogoUrl' => $organizer && $rentalSettings->logoFilename !== null
@@ -378,7 +397,7 @@ final class EventAudioLiveController
             'requests' => array_map(static fn (PlaybackRequest $r): array => [
                 'id' => $r->id,
                 'kind' => $r->kind->value,
-                'kindLabel' => $r->kind->label(),
+                'kindLabel' => $r->kind->label() . ($r->language !== null ? ' · ' . TtsLanguage::short($r->language) : ''),
                 'label' => $r->label ?? $r->kind->label(),
                 'gong' => $r->withGong,
                 'status' => $r->status->value,
@@ -407,6 +426,13 @@ final class EventAudioLiveController
 
     private function play(Request $request, string $rentalId, string $byType, ?string $byId, string $byName): void
     {
+        // Mehrsprachige Durchsage: texts[<Sprache>] → ein Auftrag je Sprache, Gong nur vor dem ersten.
+        $texts = $request->input('kind') === 'tts' ? $request->inputArray('texts') : [];
+        if ($texts !== []) {
+            $this->playMultilingual($texts, $request->input('with_gong') === '1', $rentalId, $byType, $byId, $byName);
+
+            return;
+        }
         try {
             $id = $this->commands->dispatch(new RequestPlayback(
                 $rentalId,
@@ -429,6 +455,40 @@ final class EventAudioLiveController
             ? 'Dieser Veranstaltung ist noch kein Abspielgerät zugeordnet – der Auftrag wartet, bis eines zugeordnet ist.'
             : null;
         Response::json(['ok' => true, 'id' => $id, 'warning' => $warning] + $this->statusPayload($rentalId));
+    }
+
+    /** @param array<string, mixed> $texts */
+    private function playMultilingual(array $texts, bool $withGong, string $rentalId, string $byType, ?string $byId, string $byName): void
+    {
+        $fixed = $this->rentalSettings->get($rentalId)->ttsLanguages;
+        $order = $fixed !== [] ? $fixed : array_keys($texts);
+        $queue = [];
+        foreach ($order as $lang) {
+            $text = trim((string) ($texts[$lang] ?? ''));
+            if ($text !== '') {
+                $queue[$lang] = $text;
+            }
+        }
+        if ($queue === []) {
+            Response::json(['ok' => false, 'error' => 'Bitte mindestens in einer Sprache einen Text eingeben.'], 422);
+
+            return;
+        }
+        $first = true;
+        try {
+            foreach ($queue as $lang => $text) {
+                $this->commands->dispatch(new RequestPlayback($rentalId, 'tts', null, $text, null, $withGong && $first, $byType, $byId, $byName, (string) $lang));
+                $first = false;
+            }
+        } catch (ValidationException $e) {
+            Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);
+
+            return;
+        }
+        $warning = $this->rentalSettings->get($rentalId)->playerId === null
+            ? 'Dieser Veranstaltung ist noch kein Abspielgerät zugeordnet – der Auftrag wartet, bis eines zugeordnet ist.'
+            : null;
+        Response::json(['ok' => true, 'count' => count($queue), 'warning' => $warning] + $this->statusPayload($rentalId));
     }
 
     private function cancel(Request $request, string $rentalId): void
@@ -473,6 +533,31 @@ final class EventAudioLiveController
             return;
         }
         Response::json(['ok' => true, 'count' => is_array($ids) ? count($ids) : 1] + $this->statusPayload($rentalId));
+    }
+
+    /** Text in eine andere Sprache übersetzen (Migration 140). */
+    private function translate(Request $request): void
+    {
+        $source = (string) $request->input('source', '');
+        $target = (string) $request->input('target', '');
+        if (!TtsLanguage::isValid($source) || !TtsLanguage::isValid($target)) {
+            Response::json(['ok' => false, 'error' => 'Ungültige Sprache.'], 422);
+
+            return;
+        }
+        if ($this->translator === null || !$this->translator->isAvailable()) {
+            Response::json(['ok' => false, 'error' => 'Es ist kein Übersetzer eingerichtet.'], 422);
+
+            return;
+        }
+        try {
+            $text = $this->translator->translate((string) $request->input('text', ''), $source, $target);
+        } catch (TranslationException $e) {
+            Response::json(['ok' => false, 'error' => $e->getMessage()], 422);
+
+            return;
+        }
+        Response::json(['ok' => true, 'text' => $text, 'target' => $target]);
     }
 
     private function hasUpload(Request $request): bool

@@ -134,12 +134,17 @@ final class PlaybackHandler implements CommandHandlerInterface
                 $label = mb_strimwidth($text, 0, 60, '…');
                 // Feste Sprache der Veranstaltung hat Vorrang, sonst die in der Live-Oberfläche gewählte
                 // (leer = Standardsprache aus den Einstellungen, die das Abspielgerät kennt).
-                $language = $this->rentalSettings->get($command->rentalId)->ttsLanguage;
-                if ($language === null && $command->language !== null && trim($command->language) !== '') {
-                    if (!TtsLanguage::isValid(trim($command->language))) {
-                        throw new ValidationException(['language' => 'Ungültige Sprache.']);
-                    }
-                    $language = trim($command->language);
+                // Sprache(n) der Veranstaltung haben Vorrang: gewählte Sprache muss
+                // dazugehören, sonst gilt die erste. Ohne feste Sprachen ist die Wahl frei.
+                $fixed = $this->rentalSettings->get($command->rentalId)->ttsLanguages;
+                $wanted = $command->language !== null && trim($command->language) !== '' ? trim($command->language) : null;
+                if ($wanted !== null && !TtsLanguage::isValid($wanted)) {
+                    throw new ValidationException(['language' => 'Ungültige Sprache.']);
+                }
+                if ($fixed !== []) {
+                    $language = $wanted !== null && in_array($wanted, $fixed, true) ? $wanted : $fixed[0];
+                } else {
+                    $language = $wanted;
                 }
                 break;
             case PlaybackKind::Recording:

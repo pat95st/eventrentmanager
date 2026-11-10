@@ -19,6 +19,10 @@ final class AudioSettings
         // abholt, verfallen — sonst würde ein später eingeschalteter Pi
         // alte Durchsagen nachholen.
         public int $queueExpiryMinutes = 10,
+        // Migration 140: Übersetzer für mehrsprachige Durchsagen
+        public string $translatorProvider = 'none', // none | openai | deepl
+        public ?string $deeplApiKey = null,
+        public string $openaiTranslationModel = 'gpt-4o-mini',
     ) {
     }
 

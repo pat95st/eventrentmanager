@@ -12,7 +12,8 @@ final class SaveRentalAudioSettings implements CommandInterface
         public readonly string $rentalId,
         public readonly ?string $playerId,
         public readonly bool $gongByDefault,
-        public readonly ?string $ttsLanguage = null,
+        /** @var list<string> */
+        public readonly array $ttsLanguages = [],
     ) {
     }
 }

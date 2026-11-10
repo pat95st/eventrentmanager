@@ -6,6 +6,7 @@
  * @var \App\Domain\EventAudio\AudioPlayer[] $players
  * @var ?array{player: string, token: string} $newToken
  * @var string $apiBaseUrl
+ * @var bool $openaiConfigured
  */
 
 use App\Domain\EventAudio\AudioFormat;
@@ -113,9 +114,31 @@ $now = new DateTimeImmutable();
             <label class="<?= $label ?>">Stimme <span class="font-normal text-slate-400">(optional, gerätespezifisch)</span><input type="text" name="tts_voice" value="<?= e($settings->ttsVoice ?? '') ?>" maxlength="100" placeholder="z. B. de_DE-thorsten-high" class="mt-1 w-full <?= $input ?>"></label>
             <label class="<?= $label ?>">Tempo (0,5–2,0)<input type="number" name="tts_rate" value="<?= e(number_format($settings->ttsRate, 2, '.', '')) ?>" min="0.5" max="2" step="0.05" class="mt-1 w-full <?= $input ?>"></label>
             <label class="<?= $label ?>">Max. Dateigröße (MB)<input type="number" name="max_upload_mb" value="<?= (int) $settings->maxUploadMb ?>" min="1" max="500" class="mt-1 w-full <?= $input ?>"></label>
+            <label class="<?= $label ?>">Übersetzer für mehrsprachige Durchsagen
+                <select name="translator_provider" class="mt-1 w-full <?= $input ?>">
+                    <option value="none" <?= $settings->translatorProvider === 'none' ? 'selected' : '' ?>>kein Übersetzer</option>
+                    <option value="openai" <?= $settings->translatorProvider === 'openai' ? 'selected' : '' ?>>OpenAI<?= $openaiConfigured ?? false ? '' : ' (Schlüssel fehlt)' ?></option>
+                    <option value="deepl" <?= $settings->translatorProvider === 'deepl' ? 'selected' : '' ?>>DeepL</option>
+                </select>
+            </label>
+            <label class="<?= $label ?>">DeepL-API-Schlüssel <span class="font-normal text-slate-400"><?= $settings->deeplApiKey !== null ? '(hinterlegt: …' . e(substr($settings->deeplApiKey, -4)) . ' – leer lassen = behalten)' : '(Free-Schlüssel endet auf :fx)' ?></span>
+                <input type="password" name="deepl_api_key" autocomplete="off" class="mt-1 w-full <?= $input ?>">
+            </label>
+            <label class="<?= $label ?>">OpenAI-Modell (Übersetzung)<input type="text" name="openai_translation_model" value="<?= e($settings->openaiTranslationModel) ?>" maxlength="60" class="mt-1 w-full <?= $input ?>"></label>
             <label class="<?= $label ?>">Aufträge verfallen nach (Min.)<input type="number" name="queue_expiry_minutes" value="<?= (int) $settings->queueExpiryMinutes ?>" min="1" max="240" class="mt-1 w-full <?= $input ?>"></label>
             <div style="align-self:end"><button type="submit" class="<?= $btn ?>">Speichern</button></div>
         </form>
+        <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">Übersetzer: OpenAI nutzt den API-Schlüssel aus <a href="/einstellungen/ki-werbebilder" class="underline">KI-Werbebilder</a><?= ($openaiConfigured ?? false) ? ' (hinterlegt)' : ' (noch nicht hinterlegt)' ?>. Übersetzt wird nur auf Knopfdruck in der Live-Oberfläche; der Text geht dafür an den gewählten Dienst.</p>
+        <?php if ($settings->deeplApiKey !== null): ?>
+            <form method="post" action="/einstellungen/veranstaltungs-audio" class="mt-2" data-confirm="DeepL-Schlüssel entfernen?">
+                <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                <input type="hidden" name="tts_language" value="<?= e($settings->ttsLanguage) ?>"><input type="hidden" name="tts_voice" value="<?= e($settings->ttsVoice ?? '') ?>">
+                <input type="hidden" name="tts_rate" value="<?= e(number_format($settings->ttsRate, 2, '.', '')) ?>"><input type="hidden" name="max_upload_mb" value="<?= (int) $settings->maxUploadMb ?>">
+                <input type="hidden" name="queue_expiry_minutes" value="<?= (int) $settings->queueExpiryMinutes ?>"><input type="hidden" name="translator_provider" value="<?= $settings->translatorProvider === 'deepl' ? 'none' : e($settings->translatorProvider) ?>">
+                <input type="hidden" name="remove_deepl_api_key" value="1">
+                <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">DeepL-Schlüssel entfernen</button>
+            </form>
+        <?php endif; ?>
         <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">Hinweis: Für größere Dateien müssen auch <code>upload_max_filesize</code> und <code>post_max_size</code> in der PHP-Konfiguration passen.</p>
     </section>
 </div>

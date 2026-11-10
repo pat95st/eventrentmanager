@@ -17,7 +17,8 @@
  * @var string $csrfToken
  * @var bool $canSchedule
  * @var bool $canUpload
- * @var ?string $rentalLanguage feste Sprache der Veranstaltung (null = wählbar)
+ * @var list<string> $rentalLanguages feste Sprache(n) der Veranstaltung (leer = wählbar)
+ * @var bool $translatorAvailable
  * @var array<string, string> $languages
  * @var ?string $customLogoUrl eigenes Veranstaltungs-Logo (nur Veranstalter)
  * @var int $maxUploadMb
@@ -32,7 +33,8 @@ use function App\Infrastructure\Http\e;
 $logo = ($customLogoUrl ?? null) ?? CompanyBranding::darkLogoUrl() ?? CompanyBranding::logoUrl();
 $canSchedule ??= false;
 $canUpload ??= false;
-$rentalLanguage ??= null;
+$rentalLanguages ??= [];
+$translatorAvailable ??= false;
 $languages ??= [];
 $defaultPlayAt = (new DateTimeImmutable('+10 minutes'))->format('Y-m-d\TH:i');
 $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d') !== $rental->startDate->format('Y-m-d') ? ' – ' . $rental->endDate->format('d.m.Y') : '');
@@ -127,6 +129,11 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     .field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
     .grid2 { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
     @media (min-width: 520px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+    .tts-block { margin-bottom: 10px; }
+    .tts-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: .8rem; }
+    .tts-lang-label { font-weight: 700; letter-spacing: .06em; color: var(--accent); }
+    .tts-lang-select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: .85rem; }
+    .tts-block textarea { min-height: 90px; }
     .time-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
     .time-row input { flex: 1; min-width: 0; margin-top: 0 !important; }
     .time-rm { flex: none; width: 40px; height: 44px; border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; color: var(--muted); }
@@ -227,20 +234,24 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 </div>
 
                 <div id="mode-text">
-                    <textarea id="tts-text" maxlength="1000" placeholder="Text der Durchsage, z. B. „Die Siegerehrung beginnt in fünf Minuten auf der Hauptbühne.“"></textarea>
+                    <div id="tts-blocks"></div>
+                    <template id="tts-block-tpl">
+                        <div class="tts-block">
+                            <div class="tts-head">
+                                <span class="tts-lang-label"></span>
+                                <select class="tts-lang-select" aria-label="Sprache der Durchsage"></select>
+                                <span class="spacer"></span>
+                                <button type="button" class="x tts-translate" hidden>aus <span class="tts-src"></span> übersetzen</button>
+                                <button type="button" class="x tts-remove" hidden aria-label="Sprache entfernen">✕</button>
+                            </div>
+                            <textarea class="tts-text" maxlength="1000"></textarea>
+                        </div>
+                    </template>
                     <div class="row">
-                        <span class="hint"><span id="tts-count">0</span>/1000</span>
+                        <span class="hint" id="tts-hint"></span>
                         <span class="spacer"></span>
-                        <?php if ($rentalLanguage === null): ?>
-                            <select id="tts-lang" class="btn" aria-label="Sprache der Durchsage" style="padding: 9px 10px">
-                                <?php foreach ($languages as $code => $name): ?>
-                                    <option value="<?= e($code) ?>" <?= $code === $ttsLanguage ? 'selected' : '' ?>><?= e($name) ?></option>
-                                <?php endforeach; ?>
-                                <?php if (!isset($languages[$ttsLanguage])): ?><option value="<?= e($ttsLanguage) ?>" selected><?= e($ttsLanguage) ?></option><?php endif; ?>
-                            </select>
-                        <?php else: ?>
-                            <span class="hint">Sprache: <?= e($languages[$rentalLanguage] ?? $rentalLanguage) ?></span>
-                        <?php endif; ?>
+                        <button type="button" class="x" id="tts-add-lang" hidden>+ weitere Sprache</button>
+                        <button type="button" class="btn" id="tts-translate-all" hidden>Alle übersetzen</button>
                         <button type="button" class="btn" id="tts-preview">Vorhören</button>
                     </div>
                 </div>
@@ -404,7 +415,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     var BASE = <?= json_encode($basePath, JSON_THROW_ON_ERROR) ?>;
     var CSRF = <?= json_encode($csrfToken, JSON_THROW_ON_ERROR) ?>;
     var CAN_SCHEDULE = <?= $canSchedule ? 'true' : 'false' ?>;
-    var TTS_LANG = <?= json_encode($rentalLanguage ?? $ttsLanguage, JSON_THROW_ON_ERROR) ?>;
+    var TTS_LANG = <?= json_encode($rentalLanguages[0] ?? $ttsLanguage, JSON_THROW_ON_ERROR) ?>;
     var MAX_REC_MS = 120000;
     var $ = function (id) { return document.getElementById(id); };
 
@@ -646,16 +657,87 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         });
     });
 
-    var ttsText = $('tts-text');
-    // zuletzt gewählte Sprache merken (pro Browser)
-    try { var savedLang = localStorage.getItem('ttsLang'); if (savedLang && $('tts-lang') && $('tts-lang').querySelector('option[value="' + savedLang + '"]')) { $('tts-lang').value = savedLang; } } catch (e3) {}
-    ttsText.addEventListener('input', function () { $('tts-count').textContent = ttsText.value.length; updateSend(); });
+    // ---------- Durchsage: Text in einer oder mehreren Sprachen
+    var FIXED_LANGS = <?= json_encode(array_values($rentalLanguages), JSON_THROW_ON_ERROR) ?>;
+    var LANGS = <?= json_encode($languages, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) ?>;
+    var CAN_TRANSLATE = <?= $translatorAvailable ? 'true' : 'false' ?>;
+    var blocksBox = $('tts-blocks'), blockTpl = $('tts-block-tpl');
+    function shortCode(c) { return (c === 'en-GB' || c === 'en-US') ? c.toUpperCase() : c.slice(0, 2).toUpperCase(); }
+    function blocks() { return Array.prototype.slice.call(blocksBox.querySelectorAll('.tts-block')); }
+    function blockLang(b) { return b.dataset.fixed ? b.dataset.lang : b.querySelector('.tts-lang-select').value; }
+    function addBlock(lang, fixed) {
+        var b = blockTpl.content.firstElementChild.cloneNode(true);
+        var sel = b.querySelector('.tts-lang-select');
+        if (fixed) {
+            b.dataset.fixed = '1'; b.dataset.lang = lang;
+            b.querySelector('.tts-lang-label').textContent = (LANGS[lang] || lang).toUpperCase();
+            sel.remove();
+        } else {
+            b.querySelector('.tts-lang-label').remove();
+            Object.keys(LANGS).forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = LANGS[c]; sel.appendChild(o); });
+            if (!LANGS[lang]) { var o2 = document.createElement('option'); o2.value = lang; o2.textContent = lang; sel.appendChild(o2); }
+            sel.value = lang;
+            sel.addEventListener('change', syncBlocks);
+        }
+        b.querySelector('.tts-text').placeholder = blocks().length === 0 ? 'Text der Durchsage, z. B. „Die Siegerehrung beginnt in fünf Minuten auf der Hauptbühne.“' : 'Text in dieser Sprache – selbst schreiben oder übersetzen lassen';
+        b.querySelector('.tts-text').addEventListener('input', updateSend);
+        b.querySelector('.tts-remove').addEventListener('click', function () { b.remove(); syncBlocks(); });
+        b.querySelector('.tts-translate').addEventListener('click', function () { translateInto(b); });
+        blocksBox.appendChild(b);
+        syncBlocks();
+        return b;
+    }
+    function syncBlocks() {
+        var list = blocks(), first = list[0];
+        list.forEach(function (b, i) {
+            b.querySelector('.tts-remove').hidden = !!b.dataset.fixed || i === 0;
+            var tr = b.querySelector('.tts-translate');
+            tr.hidden = !CAN_TRANSLATE || i === 0;
+            if (first) { b.querySelector('.tts-src').textContent = shortCode(blockLang(first)); }
+        });
+        $('tts-add-lang').hidden = FIXED_LANGS.length > 0 || list.length >= 6;
+        $('tts-translate-all').hidden = !CAN_TRANSLATE || list.length < 2;
+        $('tts-hint').textContent = list.length > 1 ? 'Wird nacheinander in ' + list.length + ' Sprachen gesprochen.' : (FIXED_LANGS.length === 1 ? 'Sprache: ' + (LANGS[FIXED_LANGS[0]] || FIXED_LANGS[0]) : '');
+        updateSend();
+    }
+    function translateInto(b) {
+        var first = blocks()[0];
+        var text = first.querySelector('.tts-text').value.trim();
+        if (!text) { toast('Bitte zuerst den Text in der ersten Sprache eingeben.', true); return Promise.resolve(); }
+        var ta = b.querySelector('.tts-text'), old = ta.placeholder;
+        ta.placeholder = 'Wird übersetzt …'; ta.disabled = true;
+        return post('/uebersetzen', { text: text, source: blockLang(first), target: blockLang(b) })
+            .then(function (r) { ta.value = r.text; updateSend(); })
+            .catch(function (err) { toast(err.message, true); })
+            .then(function () { ta.disabled = false; ta.placeholder = old; });
+    }
+    $('tts-translate-all').addEventListener('click', function () {
+        var rest = blocks().slice(1), btn = this;
+        btn.disabled = true; btn.textContent = 'Übersetze …';
+        rest.reduce(function (p, b) { return p.then(function () { return translateInto(b); }); }, Promise.resolve())
+            .then(function () { btn.disabled = false; btn.textContent = 'Alle übersetzen'; });
+    });
+    $('tts-add-lang').addEventListener('click', function () {
+        var used = blocks().map(blockLang);
+        var next = Object.keys(LANGS).filter(function (c) { return used.indexOf(c) < 0; })[0] || 'en-GB';
+        addBlock(next, false).querySelector('.tts-text').focus();
+    });
+    if (FIXED_LANGS.length) {
+        FIXED_LANGS.forEach(function (l) { addBlock(l, true); });
+    } else {
+        var startLang = TTS_LANG;
+        try { var savedLang = localStorage.getItem('ttsLang'); if (savedLang && LANGS[savedLang]) { startLang = savedLang; } } catch (e3) {}
+        addBlock(startLang, false);
+    }
+    function ttsEntries() {
+        return blocks().map(function (b) { return { lang: blockLang(b), text: b.querySelector('.tts-text').value.trim() }; });
+    }
     $('tts-preview').addEventListener('click', function () {
         if (!window.speechSynthesis) { toast('Dein Browser kann nicht vorlesen – auf der Veranstaltung spricht das Abspielgerät.', true); return; }
         speechSynthesis.cancel();
-        var u = new SpeechSynthesisUtterance(ttsText.value.trim() || 'Bitte zuerst einen Text eingeben.');
-        u.lang = $('tts-lang') ? $('tts-lang').value : TTS_LANG;
-        speechSynthesis.speak(u);
+        var items = ttsEntries().filter(function (x) { return x.text; });
+        if (!items.length) { items = [{ lang: TTS_LANG, text: 'Bitte zuerst einen Text eingeben.' }]; }
+        items.forEach(function (x) { var u = new SpeechSynthesisUtterance(x.text); u.lang = x.lang; speechSynthesis.speak(u); });
     });
 
     // ---------- Durchsage: Mikrofon
@@ -704,7 +786,8 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
 
     // ---------- Durchsage senden
     function updateSend() {
-        $('ann-send').disabled = mode === 'text' ? ttsText.value.trim() === '' : !recBlob;
+        if (!$('ann-send')) { return; }
+        $('ann-send').disabled = mode === 'text' ? !ttsEntries().some(function (x) { return x.text; }) : !recBlob;
     }
     updateSend();
     $('ann-send').addEventListener('click', function () {
@@ -713,8 +796,14 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         var fd = new FormData();
         fd.append('with_gong', gong);
         if (mode === 'text') {
-            fd.append('kind', 'tts'); fd.append('text', ttsText.value.trim());
-            if ($('tts-lang')) { fd.append('language', $('tts-lang').value); try { localStorage.setItem('ttsLang', $('tts-lang').value); } catch (e2) {} }
+            fd.append('kind', 'tts');
+            var entries = ttsEntries();
+            if (entries.length === 1) {
+                fd.append('text', entries[0].text); fd.append('language', entries[0].lang);
+            } else {
+                entries.forEach(function (x) { if (x.text) { fd.append('texts[' + x.lang + ']', x.text); } });
+            }
+            if (!FIXED_LANGS.length) { try { localStorage.setItem('ttsLang', entries[0].lang); } catch (e2) {} }
         } else {
             if (!recBlob) { return; }
             var ext = recBlob.type.indexOf('mp4') >= 0 ? 'm4a' : (recBlob.type.indexOf('ogg') >= 0 ? 'ogg' : 'webm');
@@ -722,8 +811,8 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         }
         btn.disabled = true; btn.textContent = 'Wird gesendet …';
         post('/abspielen', fd).then(function (s) {
-            afterRequest(s, 'Durchsage wird abgespielt.');
-            if (mode === 'text') { ttsText.value = ''; $('tts-count').textContent = '0'; }
+            afterRequest(s, s.count > 1 ? 'Durchsage wird in ' + s.count + ' Sprachen abgespielt.' : 'Durchsage wird abgespielt.');
+            if (mode === 'text') { blocks().forEach(function (b) { b.querySelector('.tts-text').value = ''; }); }
             else { recBlob = null; $('rec-audio').hidden = true; $('rec-timer').textContent = '0:00'; $('rec-btn').textContent = 'AUFNEHMEN'; $('rec-hint').textContent = 'Tippen zum Starten, nochmal tippen zum Beenden (max. 2 Minuten).'; }
         }).catch(function (err) { toast(err.message, true); }).then(function () {
             btn.textContent = 'Durchsage abspielen'; updateSend();

@@ -38,6 +38,7 @@ final class AudioSettingsController
         private readonly AudioSettingsRepositoryInterface $settings,
         private readonly AudioPlayerRepositoryInterface $players,
         private readonly LocalFileStorage $storage,
+        private readonly ?\App\Domain\Settings\AiAdImageSettingsRepositoryInterface $aiSettings = null,
     ) {
     }
 
@@ -52,6 +53,7 @@ final class AudioSettingsController
             'settings' => $this->settings->get(),
             'players' => $this->players->findAll(),
             'newToken' => is_array($newToken) ? $newToken : null,
+            'openaiConfigured' => $this->aiSettings?->get()->isConfigured() ?? false,
             'apiBaseUrl' => $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/api/player/v1',
         ], activeNav: 'settings-veranstaltungs-audio', title: 'Veranstaltungs-Audio');
     }
@@ -64,6 +66,10 @@ final class AudioSettingsController
             (float) str_replace(',', '.', $request->input('tts_rate', '1') ?? '1'),
             (int) ($request->input('max_upload_mb', '50') ?? 50),
             (int) ($request->input('queue_expiry_minutes', '10') ?? 10),
+            $request->input('translator_provider', 'none'),
+            $request->input('deepl_api_key'),
+            $request->input('openai_translation_model'),
+            $request->input('remove_deepl_api_key') === '1',
         )), 'Die Einstellungen wurden gespeichert.');
     }
 

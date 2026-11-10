@@ -7,7 +7,10 @@ namespace App\Infrastructure\Http\Controllers;
 use App\Application\Command\CommandBus;
 use App\Application\EventAudio\Command\AuthenticateOrganizer;
 use App\Application\EventAudio\Command\CancelPlayback;
+use App\Application\EventAudio\Command\CancelScheduledPlayback;
 use App\Application\EventAudio\Command\RequestPlayback;
+use App\Application\EventAudio\Command\SchedulePlayback;
+use App\Application\EventAudio\ScheduledPlaybackDispatcher;
 use App\Domain\EventAudio\AudioFileKind;
 use App\Domain\EventAudio\AudioPlayerRepositoryInterface;
 use App\Domain\EventAudio\AudioSettingsRepositoryInterface;
@@ -17,6 +20,8 @@ use App\Domain\EventAudio\PlaybackRequest;
 use App\Domain\EventAudio\PlaybackRequestRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
+use App\Domain\EventAudio\ScheduledPlayback;
+use App\Domain\EventAudio\ScheduledPlaybackRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
@@ -60,6 +65,8 @@ final class EventAudioLiveController
         private readonly PlaybackRequestRepositoryInterface $requests,
         private readonly ?RentalTechnicianRepositoryInterface $rentalTechnicians = null,
         private readonly ?MinuteProgramRepositoryInterface $minutePrograms = null,
+        private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
+        private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
     ) {
     }
 
@@ -111,7 +118,7 @@ final class EventAudioLiveController
         if ($login === null) {
             return;
         }
-        $this->renderPage($request->param('id'), '/live/' . $login->rentalId, $login->label, organizer: true);
+        $this->renderPage($request->param('id'), '/live/' . $login->rentalId, $login->label, organizer: true, canSchedule: $login->canSchedule);
     }
 
     public function organizerStatus(Request $request): void
@@ -136,12 +143,40 @@ final class EventAudioLiveController
         }
     }
 
+    public function organizerSchedule(Request $request): void
+    {
+        $login = $this->requireOrganizer($request, json: true);
+        if ($login === null) {
+            return;
+        }
+        if (!$login->canSchedule) {
+            Response::json(['ok' => false, 'error' => 'Dein Zugang darf keine Einspieler planen.'], 403);
+
+            return;
+        }
+        $this->schedule($request, $request->param('id'), 'organizer', $login->id, $login->label . ' (Veranstalter)');
+    }
+
+    public function organizerCancelSchedule(Request $request): void
+    {
+        $login = $this->requireOrganizer($request, json: true);
+        if ($login === null) {
+            return;
+        }
+        if (!$login->canSchedule) {
+            Response::json(['ok' => false, 'error' => 'Dein Zugang darf keine Einspieler planen.'], 403);
+
+            return;
+        }
+        $this->cancelSchedule($request, $request->param('id'));
+    }
+
     // ---------------------------------------------------------------- Seite / Aktionen (Benutzer)
 
     public function userPage(Request $request): void
     {
         if ($this->requireUserAccess($request, json: false)) {
-            $this->renderPage($request->param('id'), '/veranstaltungen/' . $request->param('id') . '/live', CurrentUser::get()?->displayName() ?? '', organizer: false);
+            $this->renderPage($request->param('id'), '/veranstaltungen/' . $request->param('id') . '/live', CurrentUser::get()?->displayName() ?? '', organizer: false, canSchedule: true);
         }
     }
 
@@ -167,9 +202,24 @@ final class EventAudioLiveController
         }
     }
 
+    public function userSchedule(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $user = CurrentUser::get();
+            $this->schedule($request, $request->param('id'), 'user', $user?->id, $user?->displayName() ?? 'Benutzer');
+        }
+    }
+
+    public function userCancelSchedule(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $this->cancelSchedule($request, $request->param('id'));
+        }
+    }
+
     // ---------------------------------------------------------------- gemeinsam
 
-    private function renderPage(string $rentalId, string $basePath, string $actorName, bool $organizer): void
+    private function renderPage(string $rentalId, string $basePath, string $actorName, bool $organizer, bool $canSchedule = false): void
     {
         $rental = $this->rentals->findById($rentalId);
         if ($rental === null) {
@@ -209,6 +259,9 @@ final class EventAudioLiveController
             'gongByDefault' => $rentalSettings->gongByDefault,
             'hasPlayer' => $rentalSettings->playerId !== null,
             'ttsLanguage' => $settings->ttsLanguage,
+            'canSchedule' => $canSchedule && $this->schedules !== null,
+            'maxUploadMb' => $settings->maxUploadMb,
+            'rentalWindow' => [$rental->startDate->modify('-1 day')->format('Y-m-d') . 'T00:00', $rental->endDate->modify('+1 day')->format('Y-m-d') . 'T23:59'],
             'initialStatus' => $this->statusPayload($rentalId),
             'csrfToken' => Csrf::token(),
         ]);
@@ -225,7 +278,13 @@ final class EventAudioLiveController
         $rentalSettings = $this->rentalSettings->get($rentalId);
         $player = $rentalSettings->playerId !== null ? $this->players->findById($rentalSettings->playerId) : null;
         $now = new DateTimeImmutable();
-        $this->requests->expireQueuedBefore($rentalId, $now->modify('-' . max(1, $this->settings->get()->queueExpiryMinutes) . ' minutes'));
+        $expiry = max(1, $this->settings->get()->queueExpiryMinutes);
+        $this->dispatcher?->dispatchDue($rentalId, $now, $expiry);
+        $this->requests->expireQueuedBefore($rentalId, $now->modify('-' . $expiry . ' minutes'));
+        $fileTitles = [];
+        foreach ($this->files->findByRental($rentalId) as $file) {
+            $fileTitles[$file->id] = $file->title;
+        }
 
         return [
             'player' => $player === null ? null : [
@@ -247,6 +306,17 @@ final class EventAudioLiveController
                 'time' => $r->createdAt->format('H:i:s'),
                 'error' => $r->error,
             ], $this->requests->recentForRental($rentalId, 15)),
+            'schedules' => array_map(static fn (ScheduledPlayback $s): array => [
+                'id' => $s->id,
+                'title' => $fileTitles[$s->audioFileId] ?? 'Audio-Datei',
+                'note' => $s->note,
+                'date' => $s->playAt->format('d.m.'),
+                'time' => $s->playAt->format('H:i'),
+                'today' => $s->playAt->format('Y-m-d') === $now->format('Y-m-d'),
+                'status' => $s->status->value,
+                'statusLabel' => $s->status->label(),
+                'by' => $s->createdByName,
+            ], $this->schedules?->findForRental($rentalId, 5) ?? []),
         ];
     }
 
@@ -279,6 +349,41 @@ final class EventAudioLiveController
     {
         try {
             $this->commands->dispatch(new CancelPlayback($request->param('requestId'), $rentalId));
+        } catch (NotFoundException $e) {
+            Response::json(['ok' => false, 'error' => $e->getMessage()], 404);
+
+            return;
+        }
+        Response::json(['ok' => true] + $this->statusPayload($rentalId));
+    }
+
+    private function schedule(Request $request, string $rentalId, string $byType, ?string $byId, string $byName): void
+    {
+        $upload = $request->file('file');
+        try {
+            $this->commands->dispatch(new SchedulePlayback(
+                $rentalId,
+                $request->input('audio_file_id'),
+                $upload !== null && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE ? $upload : null,
+                (string) $request->input('title', ''),
+                (string) $request->input('play_at', ''),
+                $request->input('note'),
+                $byType,
+                $byId,
+                $byName,
+            ));
+        } catch (ValidationException $e) {
+            Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);
+
+            return;
+        }
+        Response::json(['ok' => true] + $this->statusPayload($rentalId));
+    }
+
+    private function cancelSchedule(Request $request, string $rentalId): void
+    {
+        try {
+            $this->commands->dispatch(new CancelScheduledPlayback($request->param('scheduleId'), $rentalId));
         } catch (NotFoundException $e) {
             Response::json(['ok' => false, 'error' => $e->getMessage()], 404);
 

@@ -16,7 +16,8 @@ Stand: Migration 135 „Veranstaltungs-Audio“. Diese Beschreibung ist die Vorl
 5. Die Aufträge aus `queue` arbeitet der Pi **der Reihe nach** ab (älteste zuerst):
    - Zu Beginn meldet er `playing`, danach `done` bzw. `failed`.
    - Ein Auftrag `stop` beendet sofort die laufende Wiedergabe.
-6. Aufträge, die länger als „Aufträge verfallen nach (Min.)“ (Standard 10) nicht abgeholt wurden, bricht der Server selbst ab. So wird nichts Veraltetes nachgespielt, wenn das Gerät wieder online kommt.
+6. **Geplante Einspieler** (Migration 136): Erreicht ein geplanter Einspieler seine Startzeit, legt der Server bei der nächsten Abfrage von `state` automatisch einen normalen Auftrag (`jingle`/`audio`) in `queue` an. Der Pi muss dafür nichts Besonderes tun. Zur Information, etwa für eine Anzeige, liefert `state` die kommenden Einspieler zusätzlich in `scheduled`.
+7. Aufträge, die länger als „Aufträge verfallen nach (Min.)“ (Standard 10) nicht abgeholt wurden, bricht der Server selbst ab. So wird nichts Veraltetes nachgespielt, wenn das Gerät wieder online kommt.
 
 Die **aktive Veranstaltung** eines Geräts ist die zugeordnete Veranstaltung, die heute läuft. Als Fenster gilt der Zeitraum vom Vortag des Beginns bis zum Tag nach dem Ende. Bei Überschneidung zählt die früher beginnende Veranstaltung.
 
@@ -54,6 +55,9 @@ Beide Parameter sind optional:
     { "id": "…", "name": "Siegerehrung", "start_at": "2026-11-09T18:35:00+01:00",
       "jingle_before": true, "jingle_file_id": "<id>" }
   ],
+  "scheduled": [
+    { "id": "…", "file_id": "<id>", "play_at": "2026-11-09T19:00:00+01:00", "note": "Einlass" }
+  ],
   "queue": [
     { "id": "…", "kind": "tts", "label": "Die Siegerehrung…", "file_id": null, "file_url": null,
       "text": "Die Siegerehrung beginnt in fünf Minuten.", "recording_url": null, "recording_mime": null,
@@ -67,6 +71,7 @@ Hinweise zu den Feldern:
 - `gong` ist `null`, wenn kein eigener Gong hinterlegt ist. Dann spielt der Pi seinen **eingebauten** Gong.
 - `rental` ist `null`, wenn das Gerät gerade keiner laufenden Veranstaltung zugeordnet ist. `files`, `minute_programs` und `queue` sind dann leer.
 - `tts.voice` ist ein freier, gerätespezifischer Name, z. B. eine Piper-Stimme. Er kann `null` sein. `tts.rate` liegt zwischen 0,5 und 2,0.
+- `scheduled` listet nur die noch nicht ausgelösten Einspieler, sortiert nach Zeit. Ist eine Startzeit länger als die Verfallszeit vorbei, ohne dass das Gerät `state` abgefragt hat, markiert der Server den Einspieler als „verpasst“. Er wird dann nicht nachgespielt.
 - `minute_programs[].start_at` enthält bereits die live gepflegte Verzögerung. Die Liste ist informativ, z. B. für eine Anzeige oder optionales automatisches Abspielen. Die Live-Oberfläche erzeugt für „Jingle zum Programmpunkt“ normale `jingle`-Aufträge.
 
 ### Auftragsarten (`queue[].kind`)

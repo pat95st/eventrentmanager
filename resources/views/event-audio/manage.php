@@ -12,6 +12,7 @@
  * @var \App\Domain\EventAudio\OrganizerLogin[] $logins
  * @var \App\Domain\EventAudio\PlaybackRequest[] $recent
  * @var ?array{username: string, password: string} $newCredentials
+ * @var ?\App\Domain\EventAudio\ScheduledPlayback[] $schedules
  */
 
 use App\Domain\EventAudio\AudioFileKind;
@@ -37,6 +38,12 @@ $defaultUntil = $rental->endDate->modify('+1 day')->setTime(23, 59);
 $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower(iconv('UTF-8', 'ASCII//TRANSLIT', $rental->eventName) ?: 'veranstaltung')), '-');
 $suggestedUsername = substr($slug !== '' ? $slug : 'veranstaltung', 0, 30) . '-' . substr(bin2hex(random_bytes(2)), 0, 4);
 $playerOnline = $player?->isOnline($now) ?? false;
+$fileTitles = [];
+foreach (array_merge($jingles, $audioFiles) as $f) {
+    $fileTitles[$f->id] = $f->title;
+}
+$schedules ??= null;
+$defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((int) $now->format('H'), 0));
 ?>
 <style>
     .ea-row { display:grid; grid-template-columns: minmax(0,1fr) auto; gap:.5rem 1rem; align-items:center; padding:.75rem 0; border-top:1px solid rgb(241 245 249); }
@@ -140,6 +147,63 @@ $playerOnline = $player?->isOnline($now) ?? false;
         </section>
     <?php endforeach; ?>
 
+    <?php if ($schedules !== null): ?>
+    <!-- Geplante Einspieler -->
+    <section id="planung" class="<?= $card ?>">
+        <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Geplante Einspieler</h2>
+        <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">
+            Jingles oder Audio-Dateien zu einer festen Uhrzeit abspielen. Zur Startzeit wird der Einspieler automatisch an das Abspielgerät geschickt.
+            Ist das Gerät zu dem Zeitpunkt länger als <?= (int) $settings->queueExpiryMinutes ?> Minuten nicht erreichbar, wird er als „verpasst“ markiert statt verspätet gespielt.
+        </p>
+        <?php if ($schedules === []): ?>
+            <p class="mb-3 text-sm text-slate-500 dark:text-slate-400">Noch nichts geplant.</p>
+        <?php else: ?>
+            <div class="mb-4 overflow-x-auto">
+                <table class="w-full text-left text-sm" style="min-width: 560px">
+                    <thead class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <tr><th class="py-2 pr-3">Zeitpunkt</th><th class="py-2 pr-3">Einspieler</th><th class="py-2 pr-3">Geplant von</th><th class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                        <?php foreach ($schedules as $s): ?>
+                            <tr>
+                                <td class="whitespace-nowrap py-2 pr-3 font-medium text-slate-900 dark:text-slate-100"><?= e($s->playAt->format('d.m.Y H:i')) ?></td>
+                                <td class="py-2 pr-3 text-slate-700 dark:text-slate-300"><?= e($fileTitles[$s->audioFileId] ?? 'Audio-Datei') ?><?php if ($s->note !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400"><?= e($s->note) ?></div><?php endif; ?></td>
+                                <td class="py-2 pr-3 text-slate-500 dark:text-slate-400"><?= e($s->createdByName) ?></td>
+                                <td class="py-2 pr-3"><span class="ea-pill" style="<?= e($s->status->badgeStyle()) ?>"><?= e($s->status->label()) ?></span></td>
+                                <td class="py-2 text-right">
+                                    <?php if ($s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Pending): ?>
+                                        <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/loeschen" data-confirm="Geplanten Einspieler um <?= e($s->playAt->format('H:i')) ?> Uhr abbrechen?">
+                                            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+                                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Abbrechen</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+        <form method="post" action="<?= e($base) ?>/planung" enctype="multipart/form-data" class="border-t border-slate-100 pt-4 dark:border-slate-800">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Neuer Einspieler</h3>
+            <div class="ea-grid2" style="grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));">
+                <label class="<?= $label ?>">Zeitpunkt<input type="datetime-local" name="play_at" required value="<?= e($defaultPlayAt->format('Y-m-d\TH:i')) ?>" min="<?= e($rental->startDate->modify('-1 day')->format('Y-m-d')) ?>T00:00" max="<?= e($rental->endDate->modify('+1 day')->format('Y-m-d')) ?>T23:59" class="mt-1 <?= $input ?>"></label>
+                <label class="<?= $label ?>">Jingle / Audio-Datei
+                    <select name="audio_file_id" class="mt-1 <?= $input ?>">
+                        <option value="">– eigene Datei hochladen –</option>
+                        <?php if ($jingles !== []): ?><optgroup label="Jingles"><?php foreach ($jingles as $f): ?><option value="<?= e($f->id) ?>"><?= e($f->title) ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+                        <?php if ($audioFiles !== []): ?><optgroup label="Weitere Audio-Dateien"><?php foreach ($audioFiles as $f): ?><option value="<?= e($f->id) ?>"><?= e($f->title) ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+                    </select>
+                </label>
+                <label class="<?= $label ?>">oder Datei hochladen<input type="file" name="file" accept="<?= e(AudioFormat::acceptAttribute()) ?>" class="mt-2 block w-full text-sm text-slate-600 dark:text-slate-300"></label>
+                <label class="<?= $label ?>">Notiz <span class="font-normal text-slate-400">(optional)</span><input type="text" name="note" maxlength="255" placeholder="z. B. Einlass" class="mt-1 <?= $input ?>"></label>
+            </div>
+            <button type="submit" class="<?= $primary ?> mt-3">Einplanen</button>
+        </form>
+    </section>
+    <?php endif; ?>
+
     <!-- Abspielgerät -->
     <section id="geraet" class="<?= $card ?>">
         <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Abspielgerät &amp; Gong</h2>
@@ -203,6 +267,7 @@ $playerOnline = $player?->isOnline($now) ?? false;
                     <div class="mb-2 flex flex-wrap items-center gap-2">
                         <span class="font-mono text-sm font-semibold text-slate-900 dark:text-slate-100"><?= e($login->username) ?></span>
                         <span class="ea-pill" style="<?= $status === 'aktiv' ? 'background:#d1fae5;color:#065f46' : 'background:#e2e8f0;color:#475569' ?>"><?= e($status) ?></span>
+                        <?php if ($login->canSchedule): ?><span class="ea-pill" style="background:#dbeafe;color:#1e40af">plant Einspieler</span><?php endif; ?>
                         <?php if ($login->lastLoginAt !== null): ?>
                             <span class="text-xs text-slate-400">zuletzt angemeldet <?= e($login->lastLoginAt->format('d.m.Y H:i')) ?></span>
                         <?php endif; ?>
@@ -214,6 +279,7 @@ $playerOnline = $player?->isOnline($now) ?? false;
                     </div>
                     <div class="mt-3 flex flex-wrap items-center gap-3">
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="enabled" value="1" <?= $login->enabled ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300"> aktiv</label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="can_schedule" value="1" <?= $login->canSchedule ? 'checked' : '' ?> class="h-4 w-4 rounded border-slate-300"> darf Einspieler planen</label>
                         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300"><input type="checkbox" name="reset_password" value="1" class="h-4 w-4 rounded border-slate-300"> neues Passwort erzeugen</label>
                         <button type="submit" class="<?= $btn ?>">Speichern</button>
                         <button type="submit" form="ea-del-<?= e($login->id) ?>" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
@@ -236,6 +302,10 @@ $playerOnline = $player?->isOnline($now) ?? false;
                 <label class="<?= $label ?>">Gültig ab<input type="datetime-local" name="valid_from" value="<?= e($dtLocal($defaultFrom)) ?>" class="mt-1 <?= $input ?>"></label>
                 <label class="<?= $label ?>">Gültig bis<input type="datetime-local" name="valid_until" value="<?= e($dtLocal($defaultUntil)) ?>" class="mt-1 <?= $input ?>"></label>
             </div>
+            <label class="mt-3 flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" name="can_schedule" value="1" class="mt-0.5 h-4 w-4 rounded border-slate-300">
+                <span>Darf Einspieler zeitlich planen <span class="block text-xs text-slate-500 dark:text-slate-400">inkl. Hochladen eigener Audio-Dateien über die Live-Oberfläche</span></span>
+            </label>
             <button type="submit" class="<?= $primary ?> mt-3">Zugang anlegen</button>
         </form>
     </section>

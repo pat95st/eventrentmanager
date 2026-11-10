@@ -45,11 +45,11 @@ final class MariadbOrganizerLoginRepository implements OrganizerLoginRepositoryI
     {
         $fmt = static fn (?DateTimeImmutable $d): ?string => $d?->format('Y-m-d H:i:s');
         $this->pdo->prepare(
-            'INSERT INTO rental_organizer_logins (id, rental_id, label, username, password_hash, valid_from, valid_until, enabled, failed_attempts, locked_until, last_login_at, created_at)
-             VALUES (:id, :rental, :label, :username, :hash, :from, :until, :enabled, :failed, :locked, :last, :created)
+            'INSERT INTO rental_organizer_logins (id, rental_id, label, username, password_hash, valid_from, valid_until, enabled, failed_attempts, locked_until, last_login_at, created_at, can_schedule)
+             VALUES (:id, :rental, :label, :username, :hash, :from, :until, :enabled, :failed, :locked, :last, :created, :schedule)
              ON DUPLICATE KEY UPDATE label = VALUES(label), username = VALUES(username), password_hash = VALUES(password_hash),
                 valid_from = VALUES(valid_from), valid_until = VALUES(valid_until), enabled = VALUES(enabled),
-                failed_attempts = VALUES(failed_attempts), locked_until = VALUES(locked_until), last_login_at = VALUES(last_login_at)'
+                failed_attempts = VALUES(failed_attempts), locked_until = VALUES(locked_until), last_login_at = VALUES(last_login_at), can_schedule = VALUES(can_schedule)'
         )->execute([
             'id' => $login->id,
             'rental' => $login->rentalId,
@@ -63,6 +63,7 @@ final class MariadbOrganizerLoginRepository implements OrganizerLoginRepositoryI
             'locked' => $fmt($login->lockedUntil),
             'last' => $fmt($login->lastLoginAt),
             'created' => $login->createdAt->format('Y-m-d H:i:s'),
+            'schedule' => $login->canSchedule ? 1 : 0,
         ]);
     }
 
@@ -88,6 +89,7 @@ final class MariadbOrganizerLoginRepository implements OrganizerLoginRepositoryI
             lockedUntil: $d($row['locked_until']),
             lastLoginAt: $d($row['last_login_at']),
             createdAt: new DateTimeImmutable($row['created_at']),
+            canSchedule: (bool) ($row['can_schedule'] ?? false),
         );
     }
 }

@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
+use App\Application\EventAudio\Command\CancelScheduledPlayback;
 use App\Application\EventAudio\Command\CreateOrganizerLogin;
+use App\Application\EventAudio\Command\SchedulePlayback;
+use App\Application\EventAudio\ScheduledPlaybackDispatcher;
+use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Application\EventAudio\Command\DeleteOrganizerLogin;
 use App\Application\EventAudio\Command\DeleteRentalAudioFile;
 use App\Application\EventAudio\Command\SaveRentalAudioSettings;
@@ -20,6 +24,7 @@ use App\Domain\EventAudio\PlaybackRequestRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioFile;
 use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
+use App\Domain\EventAudio\ScheduledPlaybackRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -49,6 +54,8 @@ final class EventAudioController
         private readonly OrganizerLoginRepositoryInterface $logins,
         private readonly PlaybackRequestRepositoryInterface $requests,
         private readonly LocalFileStorage $storage,
+        private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
+        private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
     ) {
     }
 
@@ -64,8 +71,10 @@ final class EventAudioController
         $credentials = $_SESSION[self::SESSION_CREDENTIALS] ?? null;
         unset($_SESSION[self::SESSION_CREDENTIALS]);
         $rentalSettings = $this->rentalSettings->get($rental->id);
+        $this->dispatcher?->dispatchDue($rental->id, new \DateTimeImmutable(), max(1, $this->settings->get()->queueExpiryMinutes));
 
         echo View::page('event-audio/manage', [
+            'schedules' => $this->schedules?->findForRental($rental->id, 10),
             'rental' => $rental,
             'jingles' => $this->files->findByRental($rental->id, AudioFileKind::Jingle),
             'audioFiles' => $this->files->findByRental($rental->id, AudioFileKind::Audio),
@@ -170,6 +179,7 @@ final class EventAudioController
                 $request->input('password'),
                 $request->input('valid_from'),
                 $request->input('valid_until'),
+                $request->input('can_schedule') === '1',
             ));
             $this->rememberCredentials($rentalId, $result['username'], $result['password']);
             Flash::success('Der Veranstalter-Zugang wurde angelegt.');
@@ -191,6 +201,7 @@ final class EventAudioController
                 $request->input('valid_until'),
                 $request->input('enabled') === '1',
                 $request->input('reset_password') === '1',
+                $request->input('can_schedule') === '1',
             ));
             if (is_string($newPassword)) {
                 $login = $this->logins->findById($request->param('loginId'));
@@ -209,6 +220,30 @@ final class EventAudioController
     {
         $rentalId = $this->requireRental($request);
         $this->run(fn () => $this->commands->dispatch(new DeleteOrganizerLogin($request->param('loginId'), $rentalId)), 'Der Zugang wurde gelöscht.', $rentalId, 'zugaenge');
+    }
+
+    public function schedule(Request $request): void
+    {
+        $rentalId = $this->requireRental($request);
+        $user = CurrentUser::get();
+        $upload = $request->file('file');
+        $this->run(fn () => $this->commands->dispatch(new SchedulePlayback(
+            $rentalId,
+            $request->input('audio_file_id'),
+            $upload !== null && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE ? $upload : null,
+            (string) $request->input('title', ''),
+            (string) $request->input('play_at', ''),
+            $request->input('note'),
+            'user',
+            $user?->id,
+            $user?->displayName() ?? 'Benutzer',
+        )), 'Der Einspieler wurde geplant.', $rentalId, 'planung');
+    }
+
+    public function cancelSchedule(Request $request): void
+    {
+        $rentalId = $this->requireRental($request);
+        $this->run(fn () => $this->commands->dispatch(new CancelScheduledPlayback($request->param('scheduleId'), $rentalId)), 'Der geplante Einspieler wurde abgebrochen.', $rentalId, 'planung');
     }
 
     private function rememberCredentials(string $rentalId, string $username, string $password): void

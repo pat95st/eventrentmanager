@@ -29,6 +29,8 @@ final class OrganizerLogin
         public ?DateTimeImmutable $lockedUntil,
         public ?DateTimeImmutable $lastLoginAt,
         public readonly DateTimeImmutable $createdAt,
+        // Migration 136: darf Einspieler zeitlich planen (inkl. eigener Audio-Uploads)
+        public bool $canSchedule = false,
     ) {
     }
 

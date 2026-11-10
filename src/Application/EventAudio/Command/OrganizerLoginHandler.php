@@ -71,6 +71,7 @@ final class OrganizerLoginHandler implements CommandHandlerInterface
             lockedUntil: null,
             lastLoginAt: null,
             createdAt: new DateTimeImmutable(),
+            canSchedule: $command->canSchedule,
         );
         $this->logins->save($login);
 
@@ -94,6 +95,7 @@ final class OrganizerLoginHandler implements CommandHandlerInterface
         $login->validFrom = $from;
         $login->validUntil = $until;
         $login->enabled = $command->enabled;
+        $login->canSchedule = $command->canSchedule;
         $login->failedAttempts = 0;
         $login->lockedUntil = null;
         $newPassword = null;

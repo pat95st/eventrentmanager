@@ -686,6 +686,12 @@ $playbackHandler = new \App\Application\EventAudio\Command\PlaybackHandler($play
 foreach (['RequestPlayback', 'CancelPlayback', 'ReportPlaybackStatus'] as $eaCommand) {
     $commandBus->register('App\\Application\\EventAudio\\Command\\' . $eaCommand, $playbackHandler);
 }
+// Geplante Einspieler (Migration 136)
+$scheduledPlaybackRepository = new \App\Infrastructure\Persistence\Pdo\MariadbScheduledPlaybackRepository($pdo);
+$scheduledPlaybackHandler = new \App\Application\EventAudio\Command\ScheduledPlaybackHandler($scheduledPlaybackRepository, $rentalAudioFileRepository, $rentalAudioFileHandler, $rentalRepository);
+$commandBus->register(\App\Application\EventAudio\Command\SchedulePlayback::class, $scheduledPlaybackHandler);
+$commandBus->register(\App\Application\EventAudio\Command\CancelScheduledPlayback::class, $scheduledPlaybackHandler);
+$scheduledPlaybackDispatcher = new \App\Application\EventAudio\ScheduledPlaybackDispatcher($scheduledPlaybackRepository, $playbackHandler);
 // Kontoführung (Migration 131)
 $commandBus->register(\App\Application\Banking\Command\SaveOpeningBalance::class, new \App\Application\Banking\Command\SaveOpeningBalanceHandler($accountLedgerRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\Banking\Command\AddAccountTransaction::class, new \App\Application\Banking\Command\AddAccountTransactionHandler($accountLedgerRepository, $bankAccountRepository));
@@ -1529,10 +1535,10 @@ $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSetti
 
 $rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository);
-$eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage);
-$eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository);
+$eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
+$eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
 $audioSettingsController = new \App\Infrastructure\Http\Controllers\AudioSettingsController($commandBus, $audioSettingsRepository, $audioPlayerRepository, $fileStorage);
-$audioPlayerApiController = new \App\Infrastructure\Http\Controllers\AudioPlayerApiController($commandBus, $audioPlayerRepository, $audioSettingsRepository, $rentalAudioSettingsRepository, $rentalAudioFileRepository, $playbackRequestRepository, $rentalRepository, $fileStorage, $minuteProgramRepository);
+$audioPlayerApiController = new \App\Infrastructure\Http\Controllers\AudioPlayerApiController($commandBus, $audioPlayerRepository, $audioSettingsRepository, $rentalAudioSettingsRepository, $rentalAudioFileRepository, $playbackRequestRepository, $rentalRepository, $fileStorage, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
@@ -2026,6 +2032,10 @@ $router->post('/veranstaltungen/{id}/audio/einstellungen', $auth->guard($eaManag
 $router->post('/veranstaltungen/{id}/audio/zugaenge', $auth->guard($eaManage, [$eventAudioController, 'createLogin']));
 $router->post('/veranstaltungen/{id}/audio/zugaenge/{loginId}', $auth->guard($eaManage, [$eventAudioController, 'updateLogin']));
 $router->post('/veranstaltungen/{id}/audio/zugaenge/{loginId}/loeschen', $auth->guard($eaManage, [$eventAudioController, 'deleteLogin']));
+$router->post('/veranstaltungen/{id}/audio/planung', $auth->guard($eaManage, [$eventAudioController, 'schedule']));
+$router->post('/veranstaltungen/{id}/audio/planung/{scheduleId}/loeschen', $auth->guard($eaManage, [$eventAudioController, 'cancelSchedule']));
+$router->post('/veranstaltungen/{id}/live/planen', $auth->guard($eaLive, [$eventAudioLiveController, 'userSchedule']));
+$router->post('/veranstaltungen/{id}/live/planung/{scheduleId}/loeschen', $auth->guard($eaLive, [$eventAudioLiveController, 'userCancelSchedule']));
 $router->get('/veranstaltungen/{id}/live', $auth->guard($eaLive, [$eventAudioLiveController, 'userPage']));
 $router->get('/veranstaltungen/{id}/live/status', $auth->guard($eaLive, [$eventAudioLiveController, 'userStatus']));
 $router->post('/veranstaltungen/{id}/live/abspielen', $auth->guard($eaLive, [$eventAudioLiveController, 'userPlay']));
@@ -2038,6 +2048,8 @@ $router->get('/live/{id}', [$eventAudioLiveController, 'organizerPage']);
 $router->get('/live/{id}/status', [$eventAudioLiveController, 'organizerStatus']);
 $router->post('/live/{id}/abspielen', [$eventAudioLiveController, 'organizerPlay']);
 $router->post('/live/{id}/abbrechen/{requestId}', [$eventAudioLiveController, 'organizerCancel']);
+$router->post('/live/{id}/planen', [$eventAudioLiveController, 'organizerSchedule']);
+$router->post('/live/{id}/planung/{scheduleId}/loeschen', [$eventAudioLiveController, 'organizerCancelSchedule']);
 $router->get('/einstellungen/veranstaltungs-audio', $auth->guard(Permission::Administration, [$audioSettingsController, 'index']));
 $router->post('/einstellungen/veranstaltungs-audio', $auth->guard(Permission::Administration, [$audioSettingsController, 'saveSettings']));
 $router->get('/einstellungen/veranstaltungs-audio/gong', $auth->guard(Permission::Administration, [$audioSettingsController, 'gong']));

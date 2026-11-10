@@ -15,13 +15,19 @@
  * @var string $ttsLanguage
  * @var array<string, mixed> $initialStatus
  * @var string $csrfToken
+ * @var bool $canSchedule
+ * @var int $maxUploadMb
+ * @var array{0: string, 1: string} $rentalWindow
  */
 
+use App\Domain\EventAudio\AudioFormat;
 use App\Infrastructure\Http\CompanyBranding;
 
 use function App\Infrastructure\Http\e;
 
 $logo = CompanyBranding::darkLogoUrl() ?? CompanyBranding::logoUrl();
+$canSchedule ??= false;
+$defaultPlayAt = (new DateTimeImmutable('+10 minutes'))->format('Y-m-d\TH:i');
 $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d') !== $rental->startDate->format('Y-m-d') ? ' – ' . $rental->endDate->format('d.m.Y') : '');
 ?>
 <!DOCTYPE html>
@@ -108,6 +114,24 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     .tile .k { position: absolute; top: 10px; right: 10px; font-size: .65rem; color: var(--muted); }
     .tile.jingle { border-left: 4px solid var(--accent); }
     .tile.audio { border-left: 4px solid var(--info); }
+    .field { display: block; font-size: .75rem; color: var(--muted); margin-top: 10px; }
+    .field input, .field select { display: block; width: 100%; margin-top: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; font-size: 1rem; color: var(--text); }
+    .field input[type=file] { padding: 9px; font-size: .85rem; }
+    .field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .grid2 { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+    @media (min-width: 520px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+    .or { text-align: center; font-size: .72rem; color: var(--muted); margin: 10px 0 -2px; letter-spacing: .1em; text-transform: uppercase; }
+    .sched { list-style: none; margin: 0 0 4px; padding: 0; }
+    .sched li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: .85rem; }
+    .sched li:first-child { border-top: 0; }
+    .sched .when { width: 4.2rem; flex: none; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); line-height: 1.1; }
+    .sched .lb { flex: 1; min-width: 0; }
+    .sched .lb b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sched .lb span { font-size: .72rem; color: var(--muted); }
+    .sched .when small { display: block; font-weight: 500; font-size: .68rem; color: var(--muted); }
+    .pill.pending { background: rgba(245,180,60,.15); color: var(--accent); }
+    .pill.triggered { background: rgba(34,197,94,.15); color: var(--go); }
+    .pill.missed { background: rgba(239,68,68,.18); color: #fca5a5; }
     .modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: end center; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); background: rgba(3,6,15,.6); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); opacity: 0; transition: opacity .15s; }
     .modal.show { opacity: 1; }
     @media (min-width: 640px) { .modal { place-items: center; } }
@@ -261,6 +285,30 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         </div>
 
         <div>
+            <section class="card" aria-labelledby="h-sched" id="sched-card">
+                <h2 id="h-sched">Geplante Einspieler</h2>
+                <ul class="sched" id="sched"></ul>
+                <p class="empty" id="sched-empty">Nichts geplant.</p>
+                <?php if ($canSchedule): ?>
+                    <form id="sched-form" style="margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px;">
+                        <div class="grid2">
+                            <label class="field">Zeitpunkt<input type="datetime-local" name="play_at" required value="<?= e($defaultPlayAt) ?>" min="<?= e($rentalWindow[0]) ?>" max="<?= e($rentalWindow[1]) ?>"></label>
+                            <label class="field">Notiz (optional)<input type="text" name="note" maxlength="255" placeholder="z. B. Einlass"></label>
+                        </div>
+                        <label class="field">Jingle / Audio-Datei
+                            <select name="audio_file_id" id="sched-file">
+                                <option value="">– bitte wählen –</option>
+                                <?php if ($jingles !== []): ?><optgroup label="Jingles"><?php foreach ($jingles as $f): ?><option value="<?= e($f->id) ?>"><?= e($f->title) ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+                                <?php if ($audioFiles !== []): ?><optgroup label="Weitere Audio-Dateien"><?php foreach ($audioFiles as $f): ?><option value="<?= e($f->id) ?>"><?= e($f->title) ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+                            </select>
+                        </label>
+                        <p class="or">oder eigene Datei</p>
+                        <label class="field">Audio-Datei hochladen (WAV, FLAC, AAC, MP3 · max. <?= (int) $maxUploadMb ?> MB)<input type="file" name="file" id="sched-upload" accept="<?= e(AudioFormat::acceptAttribute()) ?>"></label>
+                        <div class="row"><span class="spacer"></span><button type="submit" class="btn primary big" id="sched-send">Einplanen</button></div>
+                    </form>
+                <?php endif; ?>
+            </section>
+
             <section class="card" aria-labelledby="h-log">
                 <h2 id="h-log">Verlauf</h2>
                 <ul class="log" id="log"></ul>
@@ -289,6 +337,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     'use strict';
     var BASE = <?= json_encode($basePath, JSON_THROW_ON_ERROR) ?>;
     var CSRF = <?= json_encode($csrfToken, JSON_THROW_ON_ERROR) ?>;
+    var CAN_SCHEDULE = <?= $canSchedule ? 'true' : 'false' ?>;
     var TTS_LANG = <?= json_encode($ttsLanguage, JSON_THROW_ON_ERROR) ?>;
     var MAX_REC_MS = 120000;
     var $ = function (id) { return document.getElementById(id); };
@@ -340,6 +389,14 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 + '<span class="pill ' + esc(r.status) + '">' + esc(r.statusLabel) + '</span></li>';
         }).join('');
         $('log-empty').hidden = (status.requests || []).length > 0;
+
+        var sched = status.schedules || [];
+        $('sched').innerHTML = sched.map(function (s) {
+            return '<li><span class="when">' + esc(s.time) + (s.today ? '' : '<small>' + esc(s.date) + '</small>') + '</span><span class="lb"><b>' + esc(s.title) + '</b><span>' + (s.note ? esc(s.note) + ' · ' : '') + esc(s.by) + '</span></span>'
+                + (s.status === 'pending' && CAN_SCHEDULE ? '<button type="button" class="x" data-unschedule="' + esc(s.id) + '" data-label="' + esc(s.time + ' – ' + s.title) + '">Abbrechen</button>' : '')
+                + '<span class="pill ' + esc(s.status) + '">' + esc(s.statusLabel) + '</span></li>';
+        }).join('');
+        $('sched-empty').hidden = sched.length > 0;
     }
     var initial = <?= json_encode($initialStatus, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) ?>;
     render(initial);
@@ -368,14 +425,15 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         toast(s.warning || okMsg, !!s.warning);
     }
 
-    // ---------- Jingles / Audio: Rückfrage vor dem Abspielen
-    var confirmBox = $('confirm'), pending = null, lastFocus = null;
-    function openConfirm(b) {
-        pending = b;
+    // ---------- Rückfrage-Dialog (Abspielen, Einspieler abbrechen)
+    var confirmBox = $('confirm'), onYes = null, lastFocus = null;
+    function askConfirm(kind, what, sub, yesLabel, cb) {
+        onYes = cb;
         lastFocus = document.activeElement;
-        $('confirm-kind').textContent = (b.dataset.kind === 'audio' ? 'Audio-Datei' : 'Jingle') + ' abspielen?';
-        $('confirm-what').textContent = b.dataset.title;
-        $('confirm-sub').textContent = b.dataset.sub || '';
+        $('confirm-kind').textContent = kind;
+        $('confirm-what').textContent = what;
+        $('confirm-sub').textContent = sub || '';
+        $('confirm-yes').textContent = yesLabel;
         confirmBox.hidden = false;
         requestAnimationFrame(function () { confirmBox.classList.add('show'); });
         $('confirm-yes').focus();
@@ -383,24 +441,52 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     function closeConfirm() {
         confirmBox.classList.remove('show');
         setTimeout(function () { confirmBox.hidden = true; }, 150);
-        pending = null;
+        onYes = null;
         if (lastFocus && lastFocus.focus) { lastFocus.focus(); }
     }
-    document.addEventListener('click', function (e) {
-        var b = e.target.closest('[data-play]');
-        if (b) { openConfirm(b); }
-    });
     $('confirm-no').addEventListener('click', closeConfirm);
     confirmBox.addEventListener('click', function (e) { if (e.target === confirmBox) { closeConfirm(); } });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !confirmBox.hidden) { closeConfirm(); } });
     $('confirm-yes').addEventListener('click', function () {
-        var b = pending;
-        if (!b) { return; }
+        var cb = onYes;
         closeConfirm();
-        post('/abspielen', { kind: 'audio', audio_file_id: b.dataset.play })
-            .then(function (s) { afterRequest(s, '„' + b.dataset.title + '“ wird gespielt.'); })
-            .catch(function (err) { toast(err.message, true); });
+        if (cb) { cb(); }
     });
+
+    // ---------- Jingles / Audio abspielen (mit Rückfrage)
+    document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-play]');
+        if (!b) { return; }
+        askConfirm((b.dataset.kind === 'audio' ? 'Audio-Datei' : 'Jingle') + ' abspielen?', b.dataset.title, b.dataset.sub, '▶ Abspielen', function () {
+            post('/abspielen', { kind: 'audio', audio_file_id: b.dataset.play })
+                .then(function (s) { afterRequest(s, '„' + b.dataset.title + '“ wird gespielt.'); })
+                .catch(function (err) { toast(err.message, true); });
+        });
+    });
+
+    // ---------- Geplante Einspieler
+    $('sched').addEventListener('click', function (e) {
+        var b = e.target.closest('[data-unschedule]');
+        if (!b) { return; }
+        askConfirm('Geplanten Einspieler abbrechen?', b.dataset.label, '', 'Ja, abbrechen', function () {
+            post('/planung/' + encodeURIComponent(b.dataset.unschedule) + '/loeschen').then(function (s) { render(s); toast('Einspieler abgebrochen.'); }).catch(function (err) { toast(err.message, true); });
+        });
+    });
+    var schedForm = $('sched-form');
+    if (schedForm) {
+        $('sched-upload').addEventListener('change', function () { if (this.files.length) { $('sched-file').value = ''; } });
+        $('sched-file').addEventListener('change', function () { if (this.value) { $('sched-upload').value = ''; } });
+        schedForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!$('sched-file').value && !$('sched-upload').files.length) { toast('Bitte einen Jingle bzw. eine Audio-Datei wählen oder eine Datei hochladen.', true); return; }
+            var btn = $('sched-send');
+            btn.disabled = true; btn.textContent = $('sched-upload').files.length ? 'Wird hochgeladen …' : 'Wird geplant …';
+            post('/planen', new FormData(schedForm)).then(function (s) {
+                render(s); toast('Einspieler geplant.');
+                schedForm.reset();
+            }).catch(function (err) { toast(err.message, true); }).then(function () { btn.disabled = false; btn.textContent = 'Einplanen'; });
+        });
+    }
 
     // ---------- Stopp
     $('stop-btn').addEventListener('click', function () {

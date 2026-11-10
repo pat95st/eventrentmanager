@@ -6,6 +6,7 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
 use App\Application\EventAudio\Command\ReportPlaybackStatus;
+use App\Application\EventAudio\ScheduledPlaybackDispatcher;
 use App\Domain\EventAudio\AudioPlayer;
 use App\Domain\EventAudio\AudioPlayerRepositoryInterface;
 use App\Domain\EventAudio\AudioSettings;
@@ -16,6 +17,8 @@ use App\Domain\EventAudio\PlaybackStatus;
 use App\Domain\EventAudio\RentalAudioFile;
 use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\EventAudio\RentalAudioSettingsRepositoryInterface;
+use App\Domain\EventAudio\ScheduledPlaybackRepositoryInterface;
+use App\Domain\EventAudio\ScheduledPlaybackStatus;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
@@ -48,6 +51,8 @@ final class AudioPlayerApiController
         private readonly RentalRepositoryInterface $rentals,
         private readonly LocalFileStorage $storage,
         private readonly ?MinuteProgramRepositoryInterface $minutePrograms = null,
+        private readonly ?ScheduledPlaybackRepositoryInterface $schedules = null,
+        private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
     ) {
     }
 
@@ -82,10 +87,12 @@ final class AudioPlayerApiController
             'rental' => null,
             'files' => [],
             'minute_programs' => [],
+            'scheduled' => [],
             'queue' => [],
         ];
 
         if ($rental !== null) {
+            $this->dispatcher?->dispatchDue($rental->id, $now, max(1, $settings->queueExpiryMinutes));
             $this->requests->expireQueuedBefore($rental->id, $now->modify('-' . max(1, $settings->queueExpiryMinutes) . ' minutes'));
             $payload['rental'] = [
                 'id' => $rental->id,
@@ -114,6 +121,11 @@ final class AudioPlayerApiController
                     'jingle_before' => $program->jingleBefore,
                     'jingle_file_id' => $program->jingleBefore ? $program->jingleAudioFileId : null,
                 ];
+            }
+            foreach ($this->schedules?->findForRental($rental->id, 0) ?? [] as $s) {
+                if ($s->status === ScheduledPlaybackStatus::Pending) {
+                    $payload['scheduled'][] = ['id' => $s->id, 'file_id' => $s->audioFileId, 'play_at' => $s->playAt->format(DATE_ATOM), 'note' => $s->note];
+                }
             }
             $payload['queue'] = array_map(fn (PlaybackRequest $r): array => $this->queueItem($r, $base), $this->requests->queuedForRental($rental->id));
         }

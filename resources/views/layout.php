@@ -802,6 +802,13 @@ $canDocuments = $canRentals;
   <?php endif; ?>
 
   <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
+    <?php $settingsGroupKey = \App\Infrastructure\Http\SettingsSections::groupKeyFor($activeNav); ?>
+    <?php if ($settingsGroupKey !== null): ?>
+      <?php /* Einstellungsseiten: Navigation links (ab lg), Inhalt rechts — siehe settings/_tabs.php */ ?>
+      <div class="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-10">
+      <?php require __DIR__ . '/settings/_tabs.php'; ?>
+      <div class="min-w-0">
+    <?php endif; ?>
     <?php if ($flashSuccess): ?>
       <div class="mb-6 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
         <?= e($flashSuccess) ?>
@@ -813,12 +820,11 @@ $canDocuments = $canRentals;
       </div>
     <?php endif; ?>
 
-    <?php $settingsGroupKey = \App\Infrastructure\Http\SettingsSections::groupKeyFor($activeNav); ?>
-    <?php if ($settingsGroupKey !== null): ?>
-      <?php require __DIR__ . '/settings/_tabs.php'; ?>
-    <?php endif; ?>
-
     <?= $content ?>
+    <?php if ($settingsGroupKey !== null): ?>
+      </div>
+      </div>
+    <?php endif; ?>
   </main>
 
   <footer class="mt-auto border-t border-slate-200 bg-white py-4 dark:border-slate-800 dark:bg-slate-900">
@@ -1099,6 +1105,35 @@ $canDocuments = $canRentals;
             form.submit();
           }
         });
+      });
+
+      // Mitlaufende Aktionszeile langer Formulare (.form-actions, siehe
+      // resources/css/app.css): "is-stuck" nur setzen, solange die Zeile
+      // wirklich am Fensterrand klebt (dann bekommt sie einen Schatten).
+      if ('IntersectionObserver' in window) {
+        var stuckObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            entry.target.classList.toggle('is-stuck', entry.intersectionRatio < 1 && entry.boundingClientRect.top > 0);
+          });
+        }, { threshold: [1], rootMargin: '0px 0px -1px 0px' });
+        document.querySelectorAll('.p-6 > .form-actions').forEach(function (bar) { stuckObserver.observe(bar); });
+      }
+
+      // [data-mirror-text="<Selektor>"]: zeigt laufend denselben Text wie das
+      // erste Element zum Selektor an (z. B. die live berechnete Gesamtsumme
+      // in der mitlaufenden Speichern-Leiste von Angebot/AB/Rechnung).
+      document.querySelectorAll('[data-mirror-text]').forEach(function (mirror) {
+        var source = document.querySelector(mirror.getAttribute('data-mirror-text'));
+        if (!source) { return; }
+        var sync = function () { mirror.textContent = source.textContent; };
+        sync();
+        new MutationObserver(sync).observe(source, { childList: true, characterData: true, subtree: true });
+      });
+      // [data-mirror-label-of="<Selektor>"]: Beschriftung dazu = Text des
+      // Elements direkt davor (z. B. <dt>„Gesamtbetrag (brutto)“</dt>).
+      document.querySelectorAll('[data-mirror-label-of]').forEach(function (label) {
+        var source = document.querySelector(label.getAttribute('data-mirror-label-of'));
+        if (source && source.previousElementSibling) { label.textContent = source.previousElementSibling.textContent.trim(); }
       });
 
       // Aktions-/"..."-Dropdowns (<details> mit absolut positioniertem

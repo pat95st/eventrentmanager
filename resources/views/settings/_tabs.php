@@ -1,7 +1,9 @@
 <?php
 /**
- * Tab-Leiste über dem eigentlichen Seiteninhalt jeder "/einstellungen/..."-
- * Unterseite, mit allen Geschwister-Seiten desselben Themenbereichs (siehe
+ * Navigation jeder "/einstellungen/..."-Unterseite mit allen
+ * Geschwister-Seiten desselben Themenbereichs: ab lg als Seitenleiste links
+ * neben dem Inhalt (alle Unterseiten bleiben sichtbar, statt rechts aus der
+ * Tab-Leiste herauszulaufen), darunter als horizontale Tab-Leiste (siehe
  * App\Infrastructure\Http\SettingsSections) — wird zentral von layout.php
  * eingebunden ($activeNav und $settingsGroupKey sind zu diesem Zeitpunkt
  * bereits gesetzt), nicht von den einzelnen Einstellungsseiten selbst,
@@ -12,10 +14,29 @@
 /** @var string $settingsGroupKey */
 
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\t;
 
 $settingsGroup = \App\Infrastructure\Http\SettingsSections::groups()[$settingsGroupKey];
 ?>
-<nav data-settings-tabs="<?= e($settingsGroupKey) ?>" class="mb-6 overflow-x-auto border-b border-slate-200 dark:border-slate-800" aria-label="<?= e($settingsGroup['label']) ?>">
+<aside class="hidden lg:sticky lg:top-24 lg:block" aria-label="<?= e($settingsGroup['label']) ?>">
+    <a href="/einstellungen" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; <?= e(t('settings.nav.all_settings')) ?></a>
+    <p class="mt-4 px-3 text-sm font-semibold text-slate-900 dark:text-slate-100"><?= e($settingsGroup['label']) ?></p>
+    <ul class="mt-2 space-y-0.5">
+        <?php foreach ($settingsGroup['pages'] as $settingsPage): ?>
+            <?php $isActiveSettingsTab = $settingsPage['key'] === $activeNav; ?>
+            <li>
+                <a
+                    href="<?= e($settingsPage['href']) ?>"
+                    class="block rounded-md px-3 py-1.5 text-sm transition-colors <?= $isActiveSettingsTab
+                        ? 'bg-brand-50 font-medium text-brand-700 shadow-[inset_3px_0_0_rgb(var(--color-brand-600))] dark:bg-brand-950/40 dark:text-brand-300'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200' ?>"
+                    <?= $isActiveSettingsTab ? 'aria-current="page"' : '' ?>
+                ><?= e($settingsPage['label']) ?></a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+</aside>
+<nav data-settings-tabs="<?= e($settingsGroupKey) ?>" class="mb-6 overflow-x-auto border-b lg:hidden border-slate-200 dark:border-slate-800" aria-label="<?= e($settingsGroup['label']) ?>">
     <div class="flex gap-1 whitespace-nowrap">
         <a href="/einstellungen" title="Alle Einstellungen" class="border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">&larr; <?= e($settingsGroup['label']) ?></a>
         <?php foreach ($settingsGroup['pages'] as $settingsPage): ?>

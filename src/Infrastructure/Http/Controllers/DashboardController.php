@@ -65,6 +65,7 @@ final class DashboardController
         echo View::page('dashboard/index', [
             'widgets' => $widgets,
             'sections' => $sections,
+            'schedule' => in_array(DashboardWidget::UpcomingRentals, $widgets, true) ? $this->warehouseSchedule() : [],
             'statistics' => $this->statistics(),
         ], activeNav: 'dashboard', title: t('dashboard.title'));
     }
@@ -135,6 +136,60 @@ final class DashboardController
         }
 
         return ['count' => count($rentals), 'items' => $items, 'href' => '/veranstaltungen'];
+    }
+
+    /**
+     * Lagerplan für die Startseite: Ausgaben und Rückgaben der nächsten 14
+     * Tage, nach Tag gruppiert. Ausgabe = Ausgabetermin (pickupAt), sonst
+     * Startdatum; Rückgabe = Rücklieferungstermin (returnAt), sonst Enddatum.
+     * Heute steht immer als erster Tag drin (auch ohne Termine), damit die
+     * Liste klar sagt „heute ist nichts zu tun“.
+     *
+     * @return list<array{date: DateTimeImmutable, isToday: bool, events: list<array{kind: string, time: ?string, name: string, customer: string, location: string, href: string}>}>
+     */
+    private function warehouseSchedule(): array
+    {
+        $today = new DateTimeImmutable('today');
+        $lastDay = $today->modify('+13 days');
+        $days = [$today->format('Y-m-d') => []];
+
+        foreach ($this->rentals->findOverlapping($today, $lastDay) as $rental) {
+            $customer = $this->customerLabel($rental->customerId, null);
+            $moments = [
+                'out' => $rental->pickupAt ?? $rental->startDate,
+                'in' => $rental->returnAt ?? $rental->endDate,
+            ];
+            foreach ($moments as $kind => $moment) {
+                $day = $moment->setTime(0, 0);
+                if ($day < $today || $day > $lastDay) {
+                    continue;
+                }
+                $hasTime = ($kind === 'out' ? $rental->pickupAt : $rental->returnAt) !== null;
+                $days[$day->format('Y-m-d')][] = [
+                    'kind' => $kind,
+                    'time' => $hasTime ? $moment->format('H:i') : null,
+                    'name' => $rental->eventName,
+                    'customer' => $customer,
+                    'location' => $rental->eventLocation ?? '',
+                    'href' => '/veranstaltungen/' . $rental->id,
+                ];
+            }
+        }
+
+        ksort($days);
+        $schedule = [];
+        foreach ($days as $key => $events) {
+            // Innerhalb eines Tages: Rückgaben vor Ausgaben (Material kommt
+            // zuerst rein), dann nach Uhrzeit.
+            usort($events, fn (array $a, array $b) => [$a['kind'] === 'out', $a['time'] ?? ''] <=> [$b['kind'] === 'out', $b['time'] ?? '']);
+            $schedule[] = [
+                'date' => new DateTimeImmutable($key),
+                'isToday' => $key === $today->format('Y-m-d'),
+                'events' => $events,
+            ];
+        }
+
+        return $schedule;
     }
 
     private function openOffers(): array

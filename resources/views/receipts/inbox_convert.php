@@ -84,7 +84,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
                   class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700"><?= e($val('note')) ?></textarea>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('receipts.inbox.convert_submit')) ?>
         </button>

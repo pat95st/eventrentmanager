@@ -200,3 +200,33 @@ progress {
 [class*="space-y-"] > :not(input[type="hidden"]):not(:not(input[type="hidden"]) ~ *) {
   margin-top: 0;
 }
+
+/* Aktionszeile (Speichern/Abbrechen) langer Formulare bleibt am unteren
+   Fensterrand sichtbar, solange das Formular über den Bildschirm hinaus
+   reicht — in Angeboten oder Artikeln musste man sonst bis ganz nach unten
+   scrollen. Greift nur in Formularkarten mit p-6 (die negativen Ränder
+   gleichen genau dieses Padding aus). Bei kurzen Formularen steht die Zeile
+   ohnehin an ihrem normalen Platz, sticky ändert dort nichts. Die Klasse
+   "is-stuck" (gesetzt per IntersectionObserver in layout.php) gibt der
+   Leiste nur dann einen Schatten, wenn sie tatsächlich über Inhalt liegt. */
+.p-6 > .form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin: 0 -1.5rem -1.5rem;
+  padding: 1rem 1.5rem;
+  background-color: rgb(255 255 255);
+  border-bottom-left-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  transition: box-shadow 150ms ease;
+}
+html.dark .p-6 > .form-actions {
+  background-color: rgb(15 23 42);
+}
+.p-6 > .form-actions.is-stuck {
+  border-radius: 0;
+  box-shadow: 0 -8px 16px -10px rgb(15 23 42 / 0.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .p-6 > .form-actions { transition: none; }
+}

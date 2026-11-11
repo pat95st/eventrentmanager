@@ -88,7 +88,7 @@ $checkedSmallBusiness = array_key_exists('is_small_business', $old) ? $old['is_s
         <a href="/einstellungen/zahlungsarten" class="text-brand-700 hover:underline dark:text-brand-400"><?= e(t('nav.payment_methods')) ?></a>
     </p>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>

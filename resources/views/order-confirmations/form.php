@@ -606,11 +606,12 @@ foreach ($articles as $article) {
         <?php renderDocumentClosingTextField('closing_text', $val('closing_text', $orderConfirmation?->closingText), $errors['closingText'] ?? null); ?>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>
         <a href="<?= $orderConfirmation !== null ? '/auftragsbestaetigungen/' . e($orderConfirmation->id) : '/auftragsbestaetigungen' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
+        <span class="ml-auto text-sm text-slate-500 dark:text-slate-400"><span data-mirror-label-of="[data-total-grand]"><?= e(t('offers.show.grand_total')) ?></span> <strong class="font-semibold tabular-nums text-slate-900 dark:text-slate-100" data-mirror-text="[data-total-grand]">0,00 €</strong></span>
     </div>
 </form>
 

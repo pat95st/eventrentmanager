@@ -98,7 +98,7 @@ $depthDisplay = $rack?->installDepthCm !== null ? rtrim(rtrim(number_format((flo
         <textarea id="description" name="description" rows="3" class="<?= $input ?>"><?= e($val('description', $rack?->description)) ?></textarea>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>
         <a href="<?= $rack !== null ? '/racks/' . e($rack->id) : '/racks' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">Abbrechen</a>
     </div>

@@ -583,7 +583,7 @@ foreach ($laborArticles as $laborArticle) {
                    class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
             <div>
                 <label for="accessory_flat_rate_enabled" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    <?= e(t('offers.form.accessory_flat_rate', ['percent' => e($pricingSettings->accessoryFlatRatePercent)])) ?>
+                    <?= e(t('offers.form.accessory_flat_rate', ['percent' => number_format((float) ($pricingSettings->accessoryFlatRatePercent ?? '0'), 2, ',', '.')])) ?>
                 </label>
                 <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('offers.form.accessory_flat_rate_hint')) ?></p>
                 <p id="offer-accessory-labor-only-hint" class="mt-1 hidden text-xs text-amber-600 dark:text-amber-400"><?= e(t('offers.form.labor_only_hint')) ?></p>

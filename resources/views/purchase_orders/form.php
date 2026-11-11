@@ -169,10 +169,16 @@ $items = $old['items'] ?? $existingItems;
 
     addButton.addEventListener('click', function () { addRow(); });
 
-    if (EXISTING_ITEMS.length > 0) {
-        EXISTING_ITEMS.forEach(function (item) { addRow(item); });
-    } else {
-        addRow();
+    // live-search.js wird in layout.php mit "defer" geladen und läuft erst
+    // nach diesem Inline-Skript — initiale Zeilen daher erst rendern, sobald
+    // window.LiveSearch verfügbar ist (spätestens bei DOMContentLoaded).
+    function renderInitialRows() {
+        if (EXISTING_ITEMS.length > 0) {
+            EXISTING_ITEMS.forEach(function (item) { addRow(item); });
+        } else {
+            addRow();
+        }
     }
+    if (window.LiveSearch) { renderInitialRows(); } else { document.addEventListener('DOMContentLoaded', renderInitialRows); }
 })();
 </script>

@@ -16,7 +16,7 @@ $val = fn (string $key, ?string $fallback) => array_key_exists($key, $old) ? (st
     </p>
 </div>
 
-<form method="post" action="/einstellungen/rechnungserinnerungen" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/rechnungserinnerungen" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

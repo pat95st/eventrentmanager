@@ -70,7 +70,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
     <a href="/veranstaltungen/<?= e($rental->id) ?>/live" class="<?= $primary ?>">Live-Oberfläche öffnen</a>
 </div>
 
-<div class="max-w-5xl space-y-6">
+<div class="space-y-6">
     <!-- Dateien -->
     <section id="dateien" class="<?= $card ?>">
         <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Dateien hochladen</h2>

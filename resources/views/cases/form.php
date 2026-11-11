@@ -19,7 +19,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
 <form
     method="post"
     action="<?= $editingId !== null ? '/cases/' . e($editingId) : '/cases' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div>
@@ -78,7 +78,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
         ><?= e($val('description', $case?->description)) ?></textarea>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             Speichern
         </button>

@@ -78,7 +78,7 @@ use function App\Infrastructure\Http\t;
                         <td class="px-4 py-3">
                             <?php if ($article->isBillable): ?>
                                 <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800">
-                                    <?= $article->dailyRentalPrice !== null ? e($article->dailyRentalPrice) . ' ' . e(t('articles.table.per_day_short')) : e(t('articles.table.own_line_item')) ?>
+                                    <?= $article->dailyRentalPrice !== null ? e(number_format((float) $article->dailyRentalPrice, 2, ',', '.')) . ' ' . e(t('articles.table.per_day_short')) : e(t('articles.table.own_line_item')) ?>
                                 </span>
                             <?php else: ?>
                                 <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-600">

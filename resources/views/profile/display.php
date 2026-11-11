@@ -19,7 +19,7 @@ use function App\Infrastructure\Http\t;
 </div>
 
 <div class="flex flex-col gap-6 lg:flex-row lg:items-start">
-<div class="max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 lg:flex-1">
+<div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 lg:flex-1">
     <?php if (isset($errors['pageSize'])): ?>
         <div class="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300">
             <?= e($errors['pageSize']) ?>
@@ -85,7 +85,7 @@ use function App\Infrastructure\Http\t;
     // ersten Box stehen. Auf schmalen Bildschirmen (< lg) bleiben alle drei
     // Boxen wie bisher einfach untereinander gestapelt.
 ?>
-<div class="flex flex-col gap-6 lg:flex-1 lg:max-w-lg">
+<div class="flex flex-col gap-6 lg:flex-1">
 <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <label for="theme_toggle_select" class="block text-xs font-medium text-slate-600 dark:text-slate-400">
         <?= e(t('profile.display.theme_label')) ?>
@@ -157,7 +157,7 @@ use function App\Infrastructure\Http\t;
 </div>
 </div>
 
-<div id="push-section" class="mt-6 max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+<div id="push-section" class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
      data-vapid-public-key="<?= e($vapidPublicKey ?? '') ?>"
      data-label-enable="<?= e(t('profile.display.push.enable')) ?>"
      data-label-waiting="<?= e(t('profile.display.push.waiting')) ?>"

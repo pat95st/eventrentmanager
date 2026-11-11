@@ -44,7 +44,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 <form
     method="post"
     action="<?= $editingId !== null ? '/veranstaltungsorte/' . e($editingId) : '/veranstaltungsorte' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -130,7 +130,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
         <?php endif; ?>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>
@@ -139,7 +139,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 </form>
 
 <?php if ($venue !== null): ?>
-    <div class="mt-6 max-w-3xl rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('venues.power.title')) ?></h2>
 
         <?php if ($needsDistributorWithRcd): ?>
@@ -284,7 +284,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
         </form>
     </div>
 
-    <div class="mt-6 grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('venues.form.upcoming_events_title')) ?></h2>
             <?php if ($upcomingRentals === []): ?>

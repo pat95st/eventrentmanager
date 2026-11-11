@@ -12,7 +12,7 @@ use function App\Infrastructure\Http\t;
     </p>
 </div>
 
-<div class="max-w-3xl divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+<div class="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
     <?php foreach ($templates as $template): ?>
         <a href="/einstellungen/email-vorlagen/<?= e($template->key->value) ?>" class="flex items-center justify-between gap-4 px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/60">
             <div class="min-w-0">

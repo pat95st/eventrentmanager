@@ -15,7 +15,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.security.subtitle')) ?></p>
 </div>
 
-<div class="max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <p class="text-sm text-slate-600 dark:text-slate-400">
         <?= e(t('profile.security.current_method')) ?>
         <span class="font-medium text-slate-900 dark:text-slate-100"><?= e($twoFactorMethod->label()) ?></span>
@@ -78,7 +78,7 @@ use function App\Infrastructure\Http\t;
     </div>
 </div>
 
-<div id="passkeys-section" class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+<div id="passkeys-section" class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
      data-label-waiting="<?= e(t('profile.security.passkeys.waiting')) ?>"
      data-label-add="<?= e(t('profile.security.passkeys.add')) ?>"
      data-error-register="<?= e(t('profile.security.passkeys.error_register')) ?>"

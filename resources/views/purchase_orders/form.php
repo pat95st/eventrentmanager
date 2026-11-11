@@ -24,7 +24,7 @@ $items = $old['items'] ?? $existingItems;
 <form
     method="post"
     action="<?= $editingId !== null ? '/bestellungen/' . e($editingId) : '/bestellungen' ?>"
-    class="max-w-5xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
@@ -70,7 +70,7 @@ $items = $old['items'] ?? $existingItems;
         <div id="purchase-order-items" class="space-y-2"></div>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>

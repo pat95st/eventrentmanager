@@ -11,7 +11,7 @@ use function App\Infrastructure\Http\e;
     <p class="text-sm text-slate-500 dark:text-slate-400">Inventurnummer eingeben oder den Barcode scannen: Danach siehst du das Gerät mit Schutzklasse, Anschaffung, früheren Prüfungen und RMA-Einsätzen und kannst die neue Prüfung eintragen.</p>
 </div>
 
-<form method="get" action="/elektropruefung" class="mb-6 max-w-2xl space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="get" action="/elektropruefung" class="mb-6 space-y-3 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <label for="nummer" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Inventurnummer</label>
     <div class="flex flex-wrap gap-2">
         <input id="nummer" name="nummer" value="<?= e($query) ?>" required autofocus autocomplete="off" placeholder="z. B. THO-PLM-0012"

@@ -12,7 +12,7 @@ use function App\Infrastructure\Http\e;
     </p>
 </div>
 
-<form method="post" action="/einstellungen/gutscheine" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/gutscheine" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div>
@@ -23,7 +23,7 @@ use function App\Infrastructure\Http\e;
         <?php if (isset($errors['defaultValidityDays'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['defaultValidityDays']) ?></p><?php endif; ?>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             Speichern
         </button>

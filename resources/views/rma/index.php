@@ -276,7 +276,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
                        class="mt-1 block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-700 hover:file:bg-slate-200 dark:text-slate-400 dark:file:bg-slate-700 dark:file:text-slate-200 dark:hover:file:bg-slate-600">
             </div>
 
-            <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+            <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
                 <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
                     Speichern
                 </button>

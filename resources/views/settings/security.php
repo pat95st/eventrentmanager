@@ -17,7 +17,7 @@ $input = 'mt-1 w-full rounded-md border px-3 py-2 text-sm focus:border-brand-500
     <p class="text-sm text-slate-500 dark:text-slate-400">Einstellungen, die für alle Benutzer gelten. Nur Administratoren können sie ändern.</p>
 </div>
 
-<form method="post" action="/einstellungen/sicherheit" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/sicherheit" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div>

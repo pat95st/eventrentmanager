@@ -19,7 +19,7 @@ $currencyDisplay = $val('currency_display', $settings->currencyDisplay);
     </p>
 </div>
 
-<form method="post" action="/einstellungen/pdf-design" class="max-w-2xl space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/pdf-design" class="space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div>

@@ -17,7 +17,7 @@ $checkedSmallBusiness = array_key_exists('is_small_business', $old) ? $old['is_s
     </p>
 </div>
 
-<form method="post" action="/einstellungen/rechnung" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/rechnung" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div class="flex items-start gap-2">

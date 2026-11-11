@@ -12,7 +12,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.smtp.subtitle')) ?></p>
 </div>
 
-<form method="post" action="/einstellungen/smtp" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/smtp" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div class="sm:col-span-2">
@@ -112,7 +112,7 @@ use function App\Infrastructure\Http\t;
     </div>
 </form>
 
-<div class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.smtp.test.title')) ?></h2>
     <?php if (isset($errors['testAddress'])): ?>
         <p class="mb-3 text-xs text-red-600 dark:text-red-400"><?= e($errors['testAddress']) ?></p>

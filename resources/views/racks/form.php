@@ -21,7 +21,7 @@ $depthDisplay = $rack?->installDepthCm !== null ? rtrim(rtrim(number_format((flo
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $rack !== null ? 'Rack-Typ bearbeiten' : 'Neuer Rack-Typ' ?></h1>
 </div>
 
-<form method="post" action="<?= $rack !== null ? '/racks/' . e($rack->id) : '/racks' ?>" class="max-w-3xl space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="<?= $rack !== null ? '/racks/' . e($rack->id) : '/racks' ?>" class="space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

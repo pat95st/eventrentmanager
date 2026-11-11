@@ -129,7 +129,7 @@ $renderUpgrade = function (string $index, array $upgrade) use ($renderItemRow, $
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><?= e(t('sets.subtitle')) ?></p>
 </div>
 
-<form method="post" action="<?= $set !== null ? '/sets/' . e($set->id) : '/sets' ?>" class="max-w-4xl space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="<?= $set !== null ? '/sets/' . e($set->id) : '/sets' ?>" class="space-y-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div class="space-y-4">

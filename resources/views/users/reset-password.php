@@ -11,7 +11,7 @@ use function App\Infrastructure\Http\e;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e($user->email) ?></p>
 </div>
 
-<form method="post" action="/benutzer/<?= e($user->id) ?>/passwort" class="max-w-lg space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/benutzer/<?= e($user->id) ?>/passwort" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div>
         <label for="new_password" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Neues Passwort *</label>

@@ -31,7 +31,7 @@ $card = 'rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 d
     <p class="text-sm text-slate-500 dark:text-slate-400">Schriften aus Google Fonts (oder hochgeladen) für die Bereiche in allen PDF-Dokumenten und -Listen sowie für die Oberfläche der Anwendung.</p>
 </div>
 
-<div class="max-w-3xl space-y-6">
+<div class="space-y-6">
     <!-- Zuordnung -->
     <form method="post" action="/einstellungen/schriften/zuordnung" class="<?= $card ?> space-y-5">
         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">

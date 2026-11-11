@@ -22,7 +22,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
     method="post"
     action="<?= $editingId !== null ? '/belege/' . e($editingId) : '/belege' ?>"
     enctype="multipart/form-data"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     id="receipt-form"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">

@@ -16,7 +16,7 @@ use function App\Infrastructure\Http\t;
     </p>
 </div>
 
-<div class="grid max-w-4xl grid-cols-1 gap-6">
+<div class="grid grid-cols-1 gap-6">
 <form method="post" action="/einstellungen/email-vorlagen/<?= e($key->value) ?>" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 

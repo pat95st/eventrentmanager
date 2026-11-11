@@ -24,7 +24,7 @@ $card = 'rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 d
     <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= (int) $dryHireArticleCount ?> Artikel mit Dry-Hire-Preis · <?= (int) $dryHireCustomerCount ?> Dry-Hire-Kunden</p>
 </div>
 
-<div class="grid max-w-5xl gap-6" style="grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));">
+<div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));">
     <section class="<?= $card ?>">
         <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Stufen</h2>
         <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">„Ab Tag X kostet jeder Tag P % des Dry-Hire-Tagesmietsatzes“ – bis zur nächsten Stufe. Die letzte Stufe gilt für alle weiteren Tage.</p>

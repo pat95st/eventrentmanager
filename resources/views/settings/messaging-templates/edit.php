@@ -16,7 +16,7 @@ use function App\Infrastructure\Http\t;
 </div>
 
 <form method="post" action="/einstellungen/messenger-vorlagen/<?= e($channel->value) ?>/<?= e($key->value) ?>"
-      class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+      class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <?php if ($channel === MessagingChannel::WhatsApp): ?>
@@ -70,7 +70,7 @@ use function App\Infrastructure\Http\t;
     </div>
 </form>
 
-<form method="post" action="/einstellungen/messenger-vorlagen/<?= e($channel->value) ?>/<?= e($key->value) ?>/zuruecksetzen" class="mt-3 max-w-2xl"
+<form method="post" action="/einstellungen/messenger-vorlagen/<?= e($channel->value) ?>/<?= e($key->value) ?>/zuruecksetzen" class="mt-3"
       onsubmit="return confirm('<?= e(t('settings.messaging_templates.confirm_reset')) ?>')">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <button type="submit" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('settings.messaging_templates.reset')) ?></button>

@@ -28,7 +28,7 @@ $roundingDirectionVal = (string) ($old['price_rounding_direction'] ?? $pricingSe
     </p>
 </div>
 
-<form method="get" action="/einstellungen/preisstaffelung" class="mb-4 flex max-w-2xl flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+<form method="get" action="/einstellungen/preisstaffelung" class="mb-4 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <div>
         <label for="tage" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.price_tiers.days_count_label')) ?></label>
         <input type="number" id="tage" name="tage" min="2" max="<?= PriceTier::MAX_DAY_COUNT ?>" value="<?= $maxDays ?>"
@@ -40,7 +40,7 @@ $roundingDirectionVal = (string) ($old['price_rounding_direction'] ?? $pricingSe
     <p class="w-full text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.price_tiers.days_count_hint')) ?></p>
 </form>
 
-<form method="post" action="/einstellungen/preisstaffelung" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/preisstaffelung" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
   <input type="hidden" name="max_days" value="<?= $maxDays ?>">
     <?php if (isset($errors['max_days'])): ?>

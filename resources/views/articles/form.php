@@ -69,7 +69,7 @@ $bundleComponentRows ??= [];
 <form
     method="post"
     action="<?= $editingId !== null ? '/artikel/' . e($editingId) : '/artikel' ?>"
-    class="max-w-4xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <?php if ($article !== null && $editingId === null): /* Duplizieren: Quelle für Zubehör/Checks */ ?><input type="hidden" name="duplicate_of" value="<?= e($article->id) ?>"><?php endif; ?>

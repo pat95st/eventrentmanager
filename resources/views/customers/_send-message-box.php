@@ -19,7 +19,7 @@ $anyAvailable = in_array(true, $availableChannels, true);
 $preselectedChannel = array_search(true, $availableChannels, true) ?: null;
 ?>
 
-<div class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('customers.send_message.title')) ?></h2>
     <p class="mb-4 text-xs text-slate-400"><?= e(t('customers.send_message.hint')) ?></p>
 

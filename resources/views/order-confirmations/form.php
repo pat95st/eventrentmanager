@@ -125,7 +125,7 @@ foreach ($articles as $article) {
 </div>
 
 <?php if ($locked): ?>
-    <div class="mb-6 max-w-2xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+    <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
         <?= e(t('order_confirmations.form.locked_notice')) ?>
     </div>
     <a href="/auftragsbestaetigungen/<?= e($editingId) ?>" class="inline-block rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('order_confirmations.show.back')) ?></a>
@@ -134,7 +134,7 @@ foreach ($articles as $article) {
 <form
     method="post"
     action="<?= $editingId !== null ? '/auftragsbestaetigungen/' . e($editingId) : '/auftragsbestaetigungen' ?>"
-    class="max-w-5xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     id="order-confirmation-form"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
@@ -207,7 +207,7 @@ foreach ($articles as $article) {
     ?>
     <div>
         <label for="rental_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.rental')) ?></label>
-        <div class="mt-1 max-w-md">
+        <div class="mt-1 lg:w-[calc(50%-0.5rem)]">
             <?php
             renderLiveSearchField(
                 'rental_id',
@@ -282,7 +282,7 @@ foreach ($articles as $article) {
         // restliche Code dieser Formulare).
         $selectedContactIdVal = $val('contact_id', $selectedContactId);
     ?>
-    <div class="max-w-md">
+    <div class="lg:w-[calc(50%-0.5rem)]">
         <label for="contact_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.contact')) ?></label>
         <div class="mt-1">
             <select id="contact_id" name="contact_id" data-contact-select
@@ -402,7 +402,7 @@ foreach ($articles as $article) {
             if ($paymentMethodOption->isDefault) { $defaultPaymentMethod = $paymentMethodOption; }
         }
     ?>
-    <div class="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="payment_method_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('order_confirmations.form.payment_method')) ?></label>
             <select id="payment_method_id" name="payment_method_id"

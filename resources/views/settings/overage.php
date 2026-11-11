@@ -17,11 +17,11 @@ $checkedFlatFeeEnabled = array_key_exists('flat_fee_enabled', $old) ? $old['flat
     </p>
 </div>
 
-<div class="mb-6 max-w-2xl rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300">
+<div class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-300">
     <?= e(t('settings.overage.fixed_rule_hint')) ?>
 </div>
 
-<form method="post" action="/einstellungen/ueberziehung" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/ueberziehung" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div class="flex items-start gap-2">

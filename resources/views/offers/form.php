@@ -155,7 +155,7 @@ foreach ($laborArticles as $laborArticle) {
 
 <?php $statusLocked = $offer !== null && !$offer->isEditable(); ?>
 <?php if ($locked): ?>
-    <div class="mb-6 max-w-2xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+    <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
         <?= e(t($statusLocked ? 'offers.form.locked_notice' : 'offers.form.sale_items_locked_notice')) ?>
     </div>
 
@@ -179,7 +179,7 @@ foreach ($laborArticles as $laborArticle) {
 <form
     method="post"
     action="<?= $editingId !== null ? '/angebote/' . e($editingId) : '/angebote' ?>"
-    class="max-w-5xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     id="offer-form"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
@@ -253,7 +253,7 @@ foreach ($laborArticles as $laborArticle) {
     ?>
     <div>
         <label for="rental_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.rental')) ?></label>
-        <div class="mt-1 max-w-md">
+        <div class="mt-1 lg:w-[calc(50%-0.5rem)]">
             <?php
             renderLiveSearchField(
                 'rental_id',
@@ -327,7 +327,7 @@ foreach ($laborArticles as $laborArticle) {
         // restliche Code dieser Formulare).
         $selectedContactIdVal = $val('contact_id', $selectedContactId);
     ?>
-    <div class="max-w-md">
+    <div class="lg:w-[calc(50%-0.5rem)]">
         <label for="contact_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.contact')) ?></label>
         <div class="mt-1">
             <select id="contact_id" name="contact_id" data-contact-select
@@ -447,7 +447,7 @@ foreach ($laborArticles as $laborArticle) {
             if ($paymentMethodOption->isDefault) { $defaultPaymentMethod = $paymentMethodOption; }
         }
     ?>
-    <div class="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="payment_method_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('offers.form.payment_method')) ?></label>
             <select id="payment_method_id" name="payment_method_id"

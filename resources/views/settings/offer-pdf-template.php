@@ -69,7 +69,7 @@ if (!function_exists('renderOfferPdfRichTextField')) {
     </p>
 </div>
 
-<form method="post" action="/einstellungen/angebotsvorlage" class="max-w-3xl space-y-8">
+<form method="post" action="/einstellungen/angebotsvorlage" class="space-y-8">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <!-- Einleitungstext: erscheint im PDF vor der Positionstabelle. -->

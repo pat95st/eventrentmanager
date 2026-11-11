@@ -14,7 +14,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.mailbox.subtitle')) ?></p>
 </div>
 
-<form method="post" action="/einstellungen/mailserver" class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/einstellungen/mailserver" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <div>
@@ -89,7 +89,7 @@ use function App\Infrastructure\Http\t;
     </div>
 </form>
 
-<div class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.mailbox.test.title')) ?></h2>
     <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.mailbox.test.hint')) ?></p>
     <form method="post" action="/einstellungen/mailserver/testen">
@@ -100,7 +100,7 @@ use function App\Infrastructure\Http\t;
     </form>
 </div>
 
-<div class="mt-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.mailbox.allowed_senders.title')) ?></h2>
     <p class="mb-4 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.mailbox.allowed_senders.hint')) ?></p>
 
@@ -146,7 +146,7 @@ use function App\Infrastructure\Http\t;
     </form>
 </div>
 
-<div class="mt-6 max-w-2xl rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
+<div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
     <h2 class="mb-2 text-sm font-semibold text-amber-800 dark:text-amber-300"><?= e(t('settings.mailbox.cron.title')) ?></h2>
     <p class="mb-3 text-xs text-amber-700 dark:text-amber-400"><?= e(t('settings.mailbox.cron.explanation')) ?></p>
     <p class="mb-1 text-xs font-medium text-amber-800 dark:text-amber-300"><?= e(t('settings.mailbox.cron.script_path_label')) ?></p>

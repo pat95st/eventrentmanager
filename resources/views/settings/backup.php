@@ -12,7 +12,7 @@ $val = fn (string $key, string $fallback = '') => array_key_exists($key, $old) ?
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e(t('settings.backup.title')) ?></h1>
 </div>
 
-<div class="max-w-2xl space-y-6">
+<div class="space-y-6">
     <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.backup.export.title')) ?></h2>
         <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.backup.export.description')) ?></p>

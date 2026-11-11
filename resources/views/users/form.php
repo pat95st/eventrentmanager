@@ -26,7 +26,7 @@ $techTelegram = (string) $val('technician_telegram', $technicianProfile?->telegr
 <form
     method="post"
     action="<?= $editingId !== null ? '/benutzer/' . e($editingId) : '/benutzer' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

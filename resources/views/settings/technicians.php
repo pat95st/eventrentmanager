@@ -21,7 +21,7 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
     </p>
 </div>
 
-<div class="max-w-3xl space-y-6">
+<div class="space-y-6">
     <section class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Gewerke</h2>
         <?php if ($trades === []): ?>

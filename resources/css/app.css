@@ -188,3 +188,15 @@ input[type=range],
 progress {
   accent-color: rgb(var(--color-brand-600));
 }
+
+/* Versteckte Formularfelder (CSRF-Token, _method) stehen meist als erstes
+   Kind in Formularen mit space-y-*. Tailwinds space-y-Regel behandelt sie
+   als sichtbare Geschwister und gibt dem ersten SICHTBAREN Feld deshalb
+   einen zusätzlichen oberen Abstand — die Karte wirkte oben deutlich höher
+   gepolstert als unten. Diese Regel nimmt dem ersten Kind, vor dem nur
+   versteckte Felder stehen, den Abstand wieder weg. Die Spezifität (0,3,2)
+   liegt bewusst über der von .space-y-N > :not([hidden]) ~ :not([hidden])
+   (0,3,0), daher ohne !important. */
+[class*="space-y-"] > :not(input[type="hidden"]):not(:not(input[type="hidden"]) ~ *) {
+  margin-top: 0;
+}

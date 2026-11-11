@@ -19,7 +19,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 <form
     method="post"
     action="/belege/posteingang/anhaenge/<?= e($attachment->id) ?>/beleg-erstellen"
-    class="max-w-2xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 

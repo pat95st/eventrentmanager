@@ -19,7 +19,7 @@ $selectedType = $val('type', $supplier?->type->value) ?: SupplierType::Kauf->val
 <form
     method="post"
     action="<?= $editingId !== null ? '/lieferanten/' . e($editingId) : '/lieferanten' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

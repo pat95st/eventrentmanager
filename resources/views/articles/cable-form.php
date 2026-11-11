@@ -40,7 +40,7 @@ $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
 </div>
 
 <form method="post" action="<?= $editingId !== null ? '/artikel/' . e($editingId) : '/artikel' ?>"
-      class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+      class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <?php if ($article !== null && $editingId === null): /* Duplizieren: Quelle für Zubehör/Checks */ ?><input type="hidden" name="duplicate_of" value="<?= e($article->id) ?>"><?php endif; ?>
     <input type="hidden" id="category_id" name="category_id" value="<?= e($cableCategoryId) ?>">

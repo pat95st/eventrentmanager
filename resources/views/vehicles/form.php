@@ -21,7 +21,7 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
 <form
     method="post"
     action="<?= $editingId !== null ? '/fahrzeuge/' . e($editingId) : '/fahrzeuge' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 

@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Http\Controllers;
 
+use App\Application\Depreciation\DepreciationReport;
+use App\Application\Depreciation\GetDepreciationReport;
 use App\Application\Query\QueryBus;
 use App\Application\Reporting\Query\GetIncomeExpenseOverview;
 use App\Application\Reporting\Query\GetRevenueForecast;
+use App\Application\RevenueGoal\ListRevenueGoals;
+use App\Domain\RevenueGoal\RevenueGoalProgress;
+use App\Infrastructure\Csv\DepreciationCsvExporter;
 use App\Infrastructure\Http\Request;
+use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 use function App\Infrastructure\Http\t;
 
-/** Berichte für die Geschäftsführung — Einnahmen-/Ausgabenübersicht (siehe GetIncomeExpenseOverviewHandler) und Umsatzprognose (siehe GetRevenueForecastHandler), Permission::Administration (siehe bootstrap.php). */
+/** Berichte für die Geschäftsführung — Einnahmen-/Ausgabenübersicht (siehe GetIncomeExpenseOverviewHandler, inkl. Stand der Umsatzziele), Umsatzprognose (siehe GetRevenueForecastHandler) und Abschreibungen (siehe DepreciationQueryHandler), Permission::Administration (siehe bootstrap.php). */
 final class ReportingController
 {
     private const FORECAST_YEAR_COUNT = 5;
@@ -34,8 +40,15 @@ final class ReportingController
 
         $overview = $this->queries->ask(new GetIncomeExpenseOverview($year));
 
+        // Umsatzziele (Migration 146): Stand gemessen an den Einnahmen des Jahres.
+        $goalProgress = [];
+        foreach ($this->queries->ask(new ListRevenueGoals()) as $goal) {
+            $goalProgress[] = new RevenueGoalProgress($goal, $year, $overview->totalIncome());
+        }
+
         echo View::page('reporting/income-expense', [
             'overview' => $overview,
+            'goalProgress' => $goalProgress,
             'currentYear' => $currentYear,
         ], activeNav: 'reports', title: t('reporting.income_expense.title'));
     }
@@ -58,5 +71,35 @@ final class ReportingController
             'currentYear' => $currentYear,
             'fromYear' => $fromYear,
         ], activeNav: 'revenue-forecast', title: t('reporting.revenue_forecast.title'));
+    }
+
+    public function depreciation(Request $request): void
+    {
+        $report = $this->depreciationReport($request);
+
+        echo View::page('reporting/depreciation', [
+            'report' => $report,
+            'currentYear' => (int) date('Y'),
+            'hideWrittenOff' => $request->query('abgeschrieben') === '0',
+        ], activeNav: 'depreciation', title: t('reporting.depreciation.title'));
+    }
+
+    public function depreciationCsv(Request $request): void
+    {
+        $report = $this->depreciationReport($request);
+
+        Response::download((new DepreciationCsvExporter())->generate($report), 'Abschreibungen-' . $report->year . '.csv', 'text/csv; charset=UTF-8');
+    }
+
+    private function depreciationReport(Request $request): DepreciationReport
+    {
+        $currentYear = (int) date('Y');
+        $requestedYear = $request->input('jahr');
+        $year = $requestedYear !== null && ctype_digit($requestedYear) ? (int) $requestedYear : $currentYear;
+        if ($year < 2000 || $year > $currentYear + 10) {
+            $year = $currentYear;
+        }
+
+        return $this->queries->ask(new GetDepreciationReport($year));
     }
 }

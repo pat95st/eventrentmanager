@@ -2,6 +2,7 @@
 /**
  * @var \App\Application\Reporting\Query\IncomeExpenseOverview $overview
  * @var int $currentYear
+ * @var \App\Domain\RevenueGoal\RevenueGoalProgress[] $goalProgress
  */
 
 use function App\Infrastructure\Http\e;
@@ -54,6 +55,60 @@ function moneyFmt(float $value): string
         <p class="mt-1 text-2xl font-semibold <?= $overview->totalSaldo() >= 0 ? 'text-slate-800 dark:text-slate-100' : 'text-red-600 dark:text-red-400' ?>"><?= moneyFmt($overview->totalSaldo()) ?> €</p>
     </div>
 </div>
+
+<!-- Umsatzziele (Einstellungen › Umsatzziele): Stand gemessen an den Einnahmen des Jahres -->
+<?php if (($goalProgress ?? []) !== []): ?>
+    <?php
+    $goalStyles = [
+        \App\Domain\RevenueGoal\RevenueGoalProgress::STATUS_OPEN => ['bar' => 'bg-brand-600', 'badge' => 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700'],
+        \App\Domain\RevenueGoal\RevenueGoalProgress::STATUS_REACHED => ['bar' => 'bg-emerald-500', 'badge' => 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700'],
+        \App\Domain\RevenueGoal\RevenueGoalProgress::STATUS_OK => ['bar' => 'bg-emerald-500', 'badge' => 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700'],
+        \App\Domain\RevenueGoal\RevenueGoalProgress::STATUS_WARNING => ['bar' => 'bg-amber-400', 'badge' => 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700'],
+        \App\Domain\RevenueGoal\RevenueGoalProgress::STATUS_EXCEEDED => ['bar' => 'bg-red-400', 'badge' => 'bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/40 dark:text-red-400 dark:ring-red-800'],
+    ];
+    ?>
+    <div class="mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('reporting.revenue_goals.title', ['year' => (string) $overview->year])) ?></h2>
+            <a href="/einstellungen/umsatzziele?jahr=<?= $overview->year ?>" class="text-xs text-brand-700 hover:underline dark:text-brand-400"><?= e(t('reporting.revenue_goals.edit')) ?></a>
+        </div>
+        <div class="space-y-4">
+            <?php foreach ($goalProgress as $progress): ?>
+                <?php
+                $status = $progress->status();
+                $isLimit = $progress->goal->kind === \App\Domain\RevenueGoal\RevenueGoalKind::Limit;
+                $remaining = $progress->remaining();
+                if ($remaining >= 0) {
+                    $remainingText = t($isLimit ? 'reporting.revenue_goals.remaining_limit' : 'reporting.revenue_goals.remaining_target', ['amount' => moneyFmt($remaining)]);
+                } else {
+                    $remainingText = t($isLimit ? 'reporting.revenue_goals.over_limit' : 'reporting.revenue_goals.over_target', ['amount' => moneyFmt(-$remaining)]);
+                }
+                ?>
+                <div>
+                    <div class="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+                        <span class="font-medium text-slate-800 dark:text-slate-200">
+                            <?= e($progress->goal->name) ?>
+                            <span class="ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium <?= $goalStyles[$status]['badge'] ?>"><?= e(t('reporting.revenue_goals.status.' . $status)) ?></span>
+                        </span>
+                        <span class="tabular-nums text-slate-600 dark:text-slate-400">
+                            <?= moneyFmt($progress->actual) ?> € / <?= moneyFmt($progress->target()) ?> € (<?= e(number_format($progress->percent(), 1, ',', '.')) ?> %)
+                        </span>
+                    </div>
+                    <div class="flex h-3 w-full overflow-hidden rounded bg-slate-100 dark:bg-slate-800">
+                        <div class="h-full <?= $goalStyles[$status]['bar'] ?>" style="width: <?= min(100, max(0, $progress->percent())) ?>%"></div>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <?= e($remainingText) ?>
+                        <?php if ($progress->goal->hasOverrideFor($overview->year)): ?>
+                            · <?= e(t('reporting.revenue_goals.year_override', ['year' => (string) $overview->year, 'amount' => moneyFmt((float) $progress->goal->amount)])) ?>
+                        <?php endif; ?>
+                    </p>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <p class="mt-4 text-xs text-slate-400 dark:text-slate-500"><?= e(t('reporting.revenue_goals.basis_hint')) ?></p>
+    </div>
+<?php endif; ?>
 
 <style>
     /* Mobil: Monat + Balken in einer Zeile, Beträge und Saldo darunter. */

@@ -1369,15 +1369,25 @@ foreach ($laborArticles as $laborArticle) {
         .concat(EXISTING_SECTION_TEXTS.map(function (item) { return { type: 'section', sort: Number(item.sort_order || 0), data: item }; }))
         .sort(function (a, b) { return a.sort - b.sort; });
 
-    if (mergedRows.length > 0) {
-        mergedRows.forEach(function (row) {
-            if (row.type === 'item') { addRow(row.data); }
-            else if (row.type === 'free_text') { addFreeTextRow(row.data); }
-            else { addSectionRow(row.data); }
-        });
-    } else {
-        addRow();
+    // addRow() ruft window.LiveSearch.init() auf. live-search.js (und
+    // article-picker.js/set-picker.js/dry-hire.js) lädt layout.php mit
+    // "defer" am Ende von <body> — diese Skripte laufen erst NACH diesem
+    // Inline-Skript, aber VOR DOMContentLoaded. Die initialen Zeilen daher
+    // erst rendern, sobald window.LiveSearch verfügbar ist, und danach die
+    // Live-Gesamtsumme neu berechnen.
+    function renderInitialRows() {
+        if (mergedRows.length > 0) {
+            mergedRows.forEach(function (row) {
+                if (row.type === 'item') { addRow(row.data); }
+                else if (row.type === 'free_text') { addFreeTextRow(row.data); }
+                else { addSectionRow(row.data); }
+            });
+        } else {
+            addRow();
+        }
+        updateTotals();
     }
+    if (window.LiveSearch) { renderInitialRows(); } else { document.addEventListener('DOMContentLoaded', renderInitialRows); }
 
     // --- Live-Gesamtsumme -------------------------------------------------
     // Rein clientseitige Vorschau (siehe Aufgabenstellung: die Summe soll

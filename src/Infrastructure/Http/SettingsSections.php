@@ -109,7 +109,7 @@ final class SettingsSections
                 'desc' => 'Sicherheit, Schnittstellen, Datensicherung',
                 'pages' => [
                     $page('settings-sicherheit', '/einstellungen/sicherheit', 'Sicherheit', 'Automatische Abmeldung'),
-                    $page('settings-integrationen', '/einstellungen/integrationen', t('nav.integration_settings'), 'Google, WhatsApp und Basis-URL'),
+                    $page('settings-integrationen', '/einstellungen/integrationen', t('nav.integration_settings'), 'Google, WhatsApp, DATEV und Basis-URL'),
                     $page('settings-api', '/einstellungen/api', t('nav.api_settings'), 'REST-API und Zugriffs-Tokens'),
                     $page('settings-ki-werbebilder', '/einstellungen/ki-werbebilder', t('nav.ai_ad_image_settings'), 'KI-Dienst für Werbebilder'),
                     $page('settings-sicherung', '/einstellungen/sicherung', t('nav.backup_settings'), 'Export und Import der Daten'),

@@ -16,7 +16,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.carddav.subtitle')) ?></p>
 </div>
 
-<div class="max-w-2xl space-y-6">
+<div class="space-y-6">
     <!-- Verfügbare Adressbücher -->
     <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('profile.carddav.addressbooks.title')) ?></h2>

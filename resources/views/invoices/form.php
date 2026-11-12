@@ -154,7 +154,7 @@ foreach ($laborArticles as $laborArticle) {
 </div>
 
 <?php if ($locked): ?>
-    <div class="mb-6 max-w-2xl rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+    <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
         <?= e(t('invoices.form.locked_notice')) ?>
     </div>
     <a href="/rechnungen/<?= e($invoice->id) ?>" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('invoices.form.back_to_detail')) ?></a>
@@ -163,7 +163,7 @@ foreach ($laborArticles as $laborArticle) {
 <form
     method="post"
     action="<?= $editingId !== null ? '/rechnungen/' . e($editingId) : '/rechnungen' ?>"
-    class="max-w-5xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
     id="invoice-form"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
@@ -241,7 +241,7 @@ foreach ($laborArticles as $laborArticle) {
     ?>
     <div>
         <label for="rental_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.rental')) ?></label>
-        <div class="mt-1 max-w-md">
+        <div class="mt-1 lg:w-[calc(50%-0.5rem)]">
             <?php
             renderLiveSearchField(
                 'rental_id',
@@ -265,7 +265,7 @@ foreach ($laborArticles as $laborArticle) {
         // Kontaktliste wiederhergestellt werden kann.
         $selectedContactIdVal = $val('contact_id', $selectedContactId);
     ?>
-    <div class="max-w-md">
+    <div class="lg:w-[calc(50%-0.5rem)]">
         <label for="contact_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.contact')) ?></label>
         <div class="mt-1">
             <select id="contact_id" name="contact_id" data-contact-select
@@ -395,7 +395,7 @@ foreach ($laborArticles as $laborArticle) {
             if ($bankAccountOption->isDefault) { $defaultBankAccount = $bankAccountOption; }
         }
     ?>
-    <div class="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
             <label for="payment_method_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('invoices.form.payment_method')) ?></label>
             <select id="payment_method_id" name="payment_method_id"
@@ -699,7 +699,7 @@ foreach ($laborArticles as $laborArticle) {
                    class="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
             <div>
                 <label for="accessory_flat_rate_enabled" class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                    <?= e(t('invoices.form.accessory_flat_rate', ['percent' => e($pricingSettings->accessoryFlatRatePercent)])) ?>
+                    <?= e(t('invoices.form.accessory_flat_rate', ['percent' => number_format((float) ($pricingSettings->accessoryFlatRatePercent ?? '0'), 2, ',', '.')])) ?>
                 </label>
                 <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('invoices.form.accessory_flat_rate_hint')) ?></p>
                 <p id="invoice-accessory-labor-only-hint" class="mt-1 hidden text-xs text-amber-600 dark:text-amber-400"><?= e(t('invoices.form.labor_only_hint')) ?></p>
@@ -823,11 +823,12 @@ foreach ($laborArticles as $laborArticle) {
         <?php renderDocumentClosingTextField('closing_text', $val('closing_text', $invoice?->closingText), $errors['closingText'] ?? null); ?>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>
         <a href="<?= $invoice !== null ? '/rechnungen/' . e($invoice->id) : '/rechnungen' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
+        <span class="ml-auto text-sm text-slate-500 dark:text-slate-400"><span data-mirror-label-of="[data-total-grand]"><?= e(t('offers.show.grand_total')) ?></span> <strong class="font-semibold tabular-nums text-slate-900 dark:text-slate-100" data-mirror-text="[data-total-grand]">0,00 €</strong></span>
     </div>
 </form>
 
@@ -1359,15 +1360,25 @@ foreach ($laborArticles as $laborArticle) {
         .concat(EXISTING_SECTION_TEXTS.map(function (item) { return { type: 'section', sort: Number(item.sort_order || 0), data: item }; }))
         .sort(function (a, b) { return a.sort - b.sort; });
 
-    if (mergedRows.length > 0) {
-        mergedRows.forEach(function (row) {
-            if (row.type === 'item') { addRow(row.data); }
-            else if (row.type === 'free_text') { addFreeTextRow(row.data); }
-            else { addSectionRow(row.data); }
-        });
-    } else {
-        addRow();
+    // addRow() ruft window.LiveSearch.init() auf. live-search.js (und
+    // article-picker.js/set-picker.js/dry-hire.js) lädt layout.php mit
+    // "defer" am Ende von <body> — diese Skripte laufen erst NACH diesem
+    // Inline-Skript, aber VOR DOMContentLoaded. Die initialen Zeilen daher
+    // erst rendern, sobald window.LiveSearch verfügbar ist, und danach die
+    // Live-Gesamtsumme neu berechnen.
+    function renderInitialRows() {
+        if (mergedRows.length > 0) {
+            mergedRows.forEach(function (row) {
+                if (row.type === 'item') { addRow(row.data); }
+                else if (row.type === 'free_text') { addFreeTextRow(row.data); }
+                else { addSectionRow(row.data); }
+            });
+        } else {
+            addRow();
+        }
+        updateTotals();
     }
+    if (window.LiveSearch) { renderInitialRows(); } else { document.addEventListener('DOMContentLoaded', renderInitialRows); }
 
     // --- Live-Gesamtsumme -------------------------------------------------
     // Siehe offers/form.php für die identische Begründung/Funktionsweise

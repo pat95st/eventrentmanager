@@ -69,7 +69,7 @@ $bundleComponentRows ??= [];
 <form
     method="post"
     action="<?= $editingId !== null ? '/artikel/' . e($editingId) : '/artikel' ?>"
-    class="max-w-4xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <?php if ($article !== null && $editingId === null): /* Duplizieren: Quelle für Zubehör/Checks */ ?><input type="hidden" name="duplicate_of" value="<?= e($article->id) ?>"><?php endif; ?>
@@ -177,6 +177,16 @@ $bundleComponentRows ??= [];
                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.purchase_price_hint')) ?></p>
             <?php endif; ?>
         </div>
+        <?php if (\App\Infrastructure\Http\CurrentValueLookup::isAvailable()): ?>
+            <div>
+                <label for="fixed_current_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Fester Zeitwert <span class="font-normal text-slate-400">(optional)</span></label>
+                <input type="hidden" name="fixed_current_value_section" value="1">
+                <input type="number" step="0.01" min="0" id="fixed_current_value" name="fixed_current_value" placeholder="z. B. 15.00"
+                       value="<?= e((string) ($old['fixed_current_value'] ?? \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article?->id ?? ($old['duplicate_of'] ?? null)) ?? '')) ?>"
+                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Zeitwert je Exemplar für die Versicherungsliste, gilt für alle Inventarnummern ohne eigenen Zeitwert (z. B. Kabel).</p>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="space-y-6">
@@ -381,7 +391,7 @@ $bundleComponentRows ??= [];
         <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.form.document_short_text_hint')) ?></p>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>

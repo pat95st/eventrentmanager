@@ -37,7 +37,7 @@ $fields = function (?\App\Domain\CompanyHoliday\CompanyHoliday $holiday) use ($i
     </p>
 </div>
 
-<div class="max-w-4xl space-y-4">
+<div class="space-y-4">
     <?php if ($holidays === []): ?>
         <p class="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Noch kein Betriebsurlaub hinterlegt.</p>
     <?php endif; ?>

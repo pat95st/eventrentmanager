@@ -19,65 +19,115 @@ $totalIssued = count($detail->issuedItems);
 $totalReturned = count(array_filter($detail->issuedItems, fn ($issued) => $issued->issuedItem->returnedAt !== null));
 ?>
 
-<div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-    <div>
-        <a href="/veranstaltungen" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('rentals.show.back')) ?></a>
-        <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($rental->eventName) ?></h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400">
-            <?= e($detail->customer->displayName()) ?> · <?= $rental->eventLocation !== null ? e($rental->eventLocation) : e(t('rentals.show.no_location')) ?>
-            · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>
-            · <?= $rental->deploymentDays ?> <?= $rental->deploymentDays === 1 ? e(t('rentals.show.deployment_day')) : e(t('rentals.show.deployment_days_plural')) ?>
-        </p>
+<?php
+// Status-Hinweis neben dem Titel: wann die Veranstaltung beginnt bzw. ob
+// sie läuft oder noch Geräte zurückerwartet werden. Reine Anzeige aus
+// Datum + Ausgabe-/Rückgabestand, nichts davon wird gespeichert.
+$today = new \DateTimeImmutable('today');
+$startDay = $rental->startDate->setTime(0, 0);
+$endDay = $rental->endDate->setTime(0, 0);
+$daysUntilStart = (int) $today->diff($startDay)->format('%r%a');
+if ($daysUntilStart > 1) {
+    $statusLabel = t('rentals.show.status.starts_in', ['days' => (string) $daysUntilStart]);
+    $statusClass = $daysUntilStart <= 7
+        ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+} elseif ($daysUntilStart === 1) {
+    $statusLabel = t('rentals.show.status.starts_tomorrow');
+    $statusClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300';
+} elseif ($today <= $endDay) {
+    $statusLabel = t('rentals.show.status.running');
+    $statusClass = 'bg-brand-100 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300';
+} elseif ($totalReturned < $totalIssued) {
+    $statusLabel = t('rentals.show.status.return_open', ['count' => (string) ($totalIssued - $totalReturned)]);
+    $statusClass = 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300';
+} else {
+    $statusLabel = t('rentals.show.status.finished');
+    $statusClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300';
+}
+$menuItemClass = 'block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800';
+$secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800';
+?>
+<div class="mb-6">
+    <a href="/veranstaltungen" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('rentals.show.back')) ?></a>
+    <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($rental->eventName) ?></h1>
+        <span class="rounded-full px-2.5 py-0.5 text-xs font-medium <?= $statusClass ?>"><?= e($statusLabel) ?></span>
     </div>
-    <div class="flex flex-wrap items-center gap-3">
+    <p class="text-sm text-slate-500 dark:text-slate-400">
+        <?= e($detail->customer->displayName()) ?> · <?= $rental->eventLocation !== null ? e($rental->eventLocation) : e(t('rentals.show.no_location')) ?>
+        · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>
+        · <?= $rental->deploymentDays ?> <?= $rental->deploymentDays === 1 ? e(t('rentals.show.deployment_day')) : e(t('rentals.show.deployment_days_plural')) ?>
+    </p>
+
+    <div class="mt-4 flex flex-wrap items-center gap-2">
         <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('rentals.show.checklist_link', ['issued' => (string) $totalIssued, 'planned' => (string) $totalPlanned])) ?>
         </a>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/rueckgabe" class="rounded-md border border-brand-300 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-400 dark:hover:bg-brand-950/40">
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/rueckgabe" class="rounded-md border border-brand-300 bg-white px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:bg-slate-900 dark:text-brand-400 dark:hover:bg-brand-950/40">
             <?= e(t('rentals.show.return_checklist_link', ['returned' => (string) $totalReturned, 'issued' => (string) $totalIssued])) ?>
         </a>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/beladung" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-            Beladungsliste
-        </a>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+
+        <span class="mx-1 hidden h-6 w-px bg-slate-200 dark:bg-slate-700 sm:block" aria-hidden="true"></span>
+
+        <details class="relative">
+            <summary class="<?= $secondaryButtonClass ?>">
+                <?= e(t('rentals.show.documents_menu')) ?>
+                <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+            </summary>
+            <div data-dropdown-menu role="menu" class="absolute left-0 top-full z-20 mt-1 w-80 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/beladung" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.loading_list')) ?></a>
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/packliste.pdf" target="_blank" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.export_pdf')) ?></a>
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.insurance_list')) ?></a>
+                <details class="group">
+                    <summary class="<?= $menuItemClass ?> flex cursor-pointer list-none items-center justify-between">
+                        <?= e(t('rentals.show.send_email')) ?>
+                        <svg class="h-4 w-4 text-slate-400 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+                    </summary>
+                    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/packliste/email" class="space-y-3 border-y border-slate-100 bg-slate-50 px-3 py-3 dark:border-slate-800 dark:bg-slate-800/40">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.recipient_email')) ?></label>
+                            <input type="email" name="recipient_email" required
+                                   value="<?= e($detail->customer->email ?? '') ?>"
+                                   class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.note_optional')) ?></label>
+                            <textarea name="note" rows="2"
+                                      class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"></textarea>
+                        </div>
+                        <button type="submit" class="w-full rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+                            <?= e(t('rentals.show.send_packing_list')) ?>
+                        </button>
+                    </form>
+                </details>
+                <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rechnung-erstellen" data-confirm="<?= e(t('rentals.show.confirm_create_invoice')) ?>">
+                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <button type="submit" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.create_invoice')) ?></button>
+                </form>
+            </div>
+        </details>
+
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/bearbeiten" class="<?= $secondaryButtonClass ?>">
             <?= e(t('common.edit')) ?>
         </a>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/packliste.pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-            <?= e(t('rentals.show.export_pdf')) ?>
-        </a>
-        <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rechnung-erstellen" data-confirm="<?= e(t('rentals.show.confirm_create_invoice')) ?>">
-            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-            <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('rentals.show.create_invoice')) ?></button>
-        </form>
+
         <details class="relative">
-            <summary class="cursor-pointer list-none rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                <?= e(t('rentals.show.send_email')) ?>
+            <summary class="<?= $secondaryButtonClass ?> px-2.5" title="<?= e(t('rentals.show.more_actions')) ?>">
+                <svg class="h-5 w-5 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M3 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM8.5 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM15.5 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+                <span class="sr-only"><?= e(t('rentals.show.more_actions')) ?></span>
             </summary>
-            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/packliste/email"
-                  class="absolute right-0 z-10 mt-2 w-80 space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-900">
-              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.recipient_email')) ?></label>
-                    <input type="email" name="recipient_email" required
-                           value="<?= e($detail->customer->email ?? '') ?>"
-                           class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800">
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('rentals.show.note_optional')) ?></label>
-                    <textarea name="note" rows="2"
-                              class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-800"></textarea>
-                </div>
-                <button type="submit" class="w-full rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
-                    <?= e(t('rentals.show.send_packing_list')) ?>
-                </button>
-            </form>
+            <div data-dropdown-menu role="menu" class="absolute left-0 top-full z-20 mt-1 w-48 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:right-0">
+                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger">
+                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
+                        <?= e(t('rentals.show.delete_event')) ?>
+                    </button>
+                </form>
+            </div>
         </details>
-        <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger">
-          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-            <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
-                <?= e(t('common.delete')) ?>
-            </button>
-        </form>
     </div>
 </div>
 <?php require __DIR__ . '/_spare_fuses.php'; /* Ersatzsicherungen (Migration 129) */ ?>

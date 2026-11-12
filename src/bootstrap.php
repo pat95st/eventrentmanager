@@ -1085,6 +1085,36 @@ $commandBus->register(\App\Application\InvoiceCorrection\Command\EmailInvoiceCor
 $queryBus->register(\App\Application\InvoiceCorrection\Query\GetInvoiceCorrection::class, $getInvoiceCorrectionHandler);
 $queryBus->register(\App\Application\InvoiceCorrection\Query\GetNewInvoiceCorrection::class, $getInvoiceCorrectionHandler);
 $queryBus->register(\App\Application\InvoiceCorrection\Query\ListInvoiceCorrections::class, new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrectionsHandler($invoiceCorrectionRepository, $invoiceRepository, $customerRepository));
+
+// --- DATEV-Export für den Steuerberater (Migration 143) --------------------
+$datevSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDatevSettingsRepository($pdo);
+$datevExportRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDatevExportRepository($pdo);
+$datevExportBuilder = new \App\Application\Datev\DatevExportBuilder(
+    $datevSettingsRepository,
+    $invoiceRepository,
+    $getInvoiceHandler,
+    $invoiceSettingsRepository,
+    $invoiceCorrectionRepository,
+    $getInvoiceCorrectionHandler,
+    $receiptRepository,
+    $supplierRepository,
+    new \App\Infrastructure\Datev\DatevDocumentSource(
+        $invoicePdfGenerator,
+        $invoiceCorrectionDocuments,
+        $companySettingsRepository,
+        $invoiceSettingsRepository,
+        $legalSettingsRepository,
+        $invoicePdfSettingsRepository,
+        $pdfDesignSettingsRepository,
+        $pdfLayoutSettingsRepository,
+        $fileStorage,
+    ),
+);
+$queryBus->register(\App\Application\Datev\Query\GetDatevSettings::class, new \App\Application\Datev\Query\GetDatevSettingsHandler($datevSettingsRepository));
+$queryBus->register(\App\Application\Datev\Query\ListDatevExports::class, new \App\Application\Datev\Query\ListDatevExportsHandler($datevExportRepository));
+$commandBus->register(\App\Application\Datev\Command\UpdateDatevSettings::class, new \App\Application\Datev\Command\UpdateDatevSettingsHandler($datevSettingsRepository));
+$commandBus->register(\App\Application\Datev\Command\CreateDatevExport::class, new \App\Application\Datev\Command\CreateDatevExportHandler($datevExportBuilder, $datevSettingsRepository, $datevExportRepository, $mailer, $companySettingsRepository));
+
 $commandBus->register(\App\Application\Dunning\Command\EmailDunningNotice::class, new \App\Application\Dunning\Command\EmailDunningNoticeHandler(
     $getDunningNoticeHandler,
     $companySettingsRepository,
@@ -1325,6 +1355,17 @@ $getRentalHandler = new GetRentalHandler(
     $manufacturerRepository,
 );
 $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHandler);
+
+// Versicherungsliste: Zeitwerte je Inventarnummer/Artikel, KI-Schätzung, CSV-/PDF-Export (Migration 144).
+$currentValueRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCurrentValueRepository($pdo);
+$currentValueEstimator = new \App\Infrastructure\Integration\Insurance\OpenAiCurrentValueEstimator($aiAdImageSettingsRepository);
+\App\Infrastructure\Http\CurrentValueLookup::set($currentValueRepository, [$currentValueEstimator, 'isAvailable']);
+$getRentalInsuranceListHandler = new \App\Application\Insurance\Query\GetRentalInsuranceListHandler($getRentalHandler, $categoryRepository, $currentValueRepository);
+$queryBus->register(\App\Application\Insurance\Query\GetRentalInsuranceList::class, $getRentalInsuranceListHandler);
+$insuranceHandler = new \App\Application\Insurance\Command\InsuranceHandler($currentValueRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository, $categoryRepository, $currentValueEstimator, $getRentalInsuranceListHandler);
+foreach (['SetArticleFixedCurrentValue', 'SaveInsuranceExportFields', 'EstimateCurrentValue', 'EstimateMissingCurrentValues'] as $insuranceCommand) {
+    $commandBus->register('App\\Application\\Insurance\\Command\\' . $insuranceCommand, $insuranceHandler);
+}
 
 $queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramDetailHandler($minuteProgramRepository, $minuteProgramDetailBuilder));
 $queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramsForRental::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramsForRentalHandler($minuteProgramRepository));
@@ -1580,6 +1621,7 @@ $aiAdImageSettingsController = new \App\Infrastructure\Http\Controllers\AiAdImag
 $messageTemplateSettingsController = new \App\Infrastructure\Http\Controllers\MessageTemplateSettingsController($commandBus, $queryBus);
 $receiptInboxController = new ReceiptInboxController($commandBus, $queryBus, $receiptInboxAttachmentRepository, $fileStorage);
 $calendarController = new CalendarController($queryBus);
+$insuranceListController = new \App\Infrastructure\Http\Controllers\InsuranceListController($commandBus, $queryBus, $currentValueRepository, $currentValueEstimator, new \App\Infrastructure\Csv\InsuranceListCsvExporter(), new \App\Infrastructure\Pdf\InsuranceListPdfGenerator($fileStorage, $pdfAmountFormatter));
 $inventoryNumberController = new InventoryNumberController($queryBus, $commandBus, $supplierRepository, $rmaRepository, $electricalInspectionRepository, $customerRepository, $saleRepository);
 $labelPrinterController = new LabelPrinterController($commandBus, $queryBus);
 $documentStorageSettingsController = new \App\Infrastructure\Http\Controllers\DocumentStorageSettingsController($commandBus, $queryBus);
@@ -1828,6 +1870,7 @@ $router->post('/inventurnummern/{id}', $auth->guard(Permission::Artikelverwaltun
 $router->post('/inventurnummern/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteInventoryNumber']));
 $router->post('/inventurnummern/{id}/etikett-drucken', $auth->guard(Permission::Artikelverwaltung, [$inventoryNumberController, 'printLabel']));
 $router->post('/inventurnummern/{id}/verkaufen', $auth->guard(Permission::Artikelverwaltung, [$inventoryNumberController, 'sell']));
+$router->post('/inventurnummern/{id}/zeitwert/ki', $auth->guard([Permission::Artikelverwaltung, Permission::AusgabeRuecknahme], [$insuranceListController, 'estimateInventoryNumberValue']));
 
 $router->post('/artikel/{id}/firmware-versionen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'addFirmwareVersion']));
 $router->post('/firmware-versionen/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteFirmwareVersion']));
@@ -2013,6 +2056,10 @@ $router->post('/veranstaltungen', $auth->guard(Permission::AusgabeRuecknahme, [$
 $router->get('/veranstaltungen/{id}', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'show']));
 $router->get('/veranstaltungen/{id}/packliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'exportPackingListPdf']));
 $router->post('/veranstaltungen/{id}/packliste/email', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'emailPackingListPdf']));
+$router->get('/veranstaltungen/{id}/versicherungsliste', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'show']));
+$router->get('/veranstaltungen/{id}/versicherungsliste.csv', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportCsv']));
+$router->get('/veranstaltungen/{id}/versicherungsliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportPdf']));
+$router->post('/veranstaltungen/{id}/versicherungsliste/ki-schaetzen', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'estimateMissing']));
 $router->post('/veranstaltungen/{id}/rechnung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'createInvoice']));
 $router->get('/veranstaltungen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'edit']));
 $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'update']));
@@ -2354,6 +2401,8 @@ $router->get('/einstellungen/integrationen/google-business/verbinden', $auth->gu
 $router->get('/einstellungen/integrationen/google-business/callback', $auth->guard(Permission::Administration, [$integrationSettingsController, 'googleBusinessCallback']));
 $router->post('/einstellungen/integrationen/google-business/trennen', $auth->guard(Permission::Administration, [$integrationSettingsController, 'disconnectGoogleBusiness']));
 $router->post('/einstellungen/integrationen/whatsapp', $auth->guard(Permission::Administration, [$integrationSettingsController, 'updateWhatsapp']));
+$router->post('/einstellungen/integrationen/datev', $auth->guard(Permission::Administration, [$integrationSettingsController, 'updateDatev']));
+$router->post('/einstellungen/integrationen/datev/export', $auth->guard(Permission::Administration, [$integrationSettingsController, 'exportDatev']));
 
 // Öffentlich (kein Login), siehe PublicProductController-Docblock.
 $router->get('/produkte/{id}/bild', [$publicProductController, 'image']);

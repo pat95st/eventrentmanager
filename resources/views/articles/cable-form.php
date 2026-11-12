@@ -40,7 +40,7 @@ $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
 </div>
 
 <form method="post" action="<?= $editingId !== null ? '/artikel/' . e($editingId) : '/artikel' ?>"
-      class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+      class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <?php if ($article !== null && $editingId === null): /* Duplizieren: Quelle für Zubehör/Checks */ ?><input type="hidden" name="duplicate_of" value="<?= e($article->id) ?>"><?php endif; ?>
     <input type="hidden" id="category_id" name="category_id" value="<?= e($cableCategoryId) ?>">
@@ -144,7 +144,7 @@ $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
         </ul>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"><?= $editingId !== null ? 'Speichern' : 'Leitung anlegen' ?></button>
         <a href="<?= $article !== null ? '/artikel/' . e($article->id) : '/artikel' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">Abbrechen</a>
     </div>

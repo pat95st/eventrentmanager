@@ -63,7 +63,7 @@ if (!function_exists('renderMarkdownField')) {
     </p>
 </div>
 
-<form method="post" action="/einstellungen/rechtliches" class="max-w-3xl space-y-8">
+<form method="post" action="/einstellungen/rechtliches" class="space-y-8">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <!-- Vermietbedingungen: ausschließlich Markdown-Text. -->

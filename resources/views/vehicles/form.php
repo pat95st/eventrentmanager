@@ -21,7 +21,7 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
 <form
     method="post"
     action="<?= $editingId !== null ? '/fahrzeuge/' . e($editingId) : '/fahrzeuge' ?>"
-    class="max-w-3xl space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+    class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
 >
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
@@ -132,7 +132,7 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
         ><?= e($val('notes', $vehicle?->notes)) ?></textarea>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             Speichern
         </button>

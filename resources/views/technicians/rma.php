@@ -22,7 +22,7 @@ $input = 'mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus
 <?php if ($detail->issuedItems === []): ?>
     <p class="max-w-2xl rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">In dieser Veranstaltung wurden noch keine Geräte ausgegeben.</p>
 <?php else: ?>
-    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rma" class="max-w-2xl space-y-4 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rma" class="space-y-4 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
         <div>
             <label for="rma-device" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Gerät *</label>

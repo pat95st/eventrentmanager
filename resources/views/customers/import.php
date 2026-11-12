@@ -11,7 +11,7 @@ use function App\Infrastructure\Http\t;
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><?= e(t('customers.import.subtitle')) ?></p>
 </div>
 
-<div class="max-w-2xl space-y-5">
+<div class="space-y-5">
     <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="text-sm font-medium text-slate-700 dark:text-slate-300"><?= e(t('customers.import.step1.heading')) ?></h2>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400"><?= e(t('customers.import.step1.hint')) ?></p>
@@ -53,7 +53,7 @@ use function App\Infrastructure\Http\t;
             </div>
         <?php endif; ?>
 
-        <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+        <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
             <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
                 <?= e(t('customers.import.submit')) ?>
             </button>

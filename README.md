@@ -108,6 +108,27 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   zusätzlich: das Leergewicht (kg). Ein Fahrzeug lässt sich nicht löschen,
   solange es noch in einer Beladungsliste oder einer Zugfahrzeug-Zuordnung
   verwendet wird.
+- **Versicherungsliste** (je Veranstaltung unter „Dokumente › Versicherungsliste“,
+  `/veranstaltungen/{id}/versicherungsliste`, Migration 144): listet alle
+  ausgegebenen Exemplare (optional auch die nur geplanten, noch nicht
+  ausgegebenen Stückzahlen ohne Inventarnummer) und exportiert sie als **CSV**
+  (Semikolon, Dezimalkomma, UTF-8 mit BOM) oder **PDF** (Aufbau wie die
+  Packliste, mit Gesamtsummen von Zeitwert und Anschaffungspreisen). Die
+  Spalten sind frei wählbar (Artikelkategorie, Hersteller und Modell,
+  Inventarnummer, Anschaffungsjahr, geschätzter Zeitwert, Anschaffungspreis);
+  die Auswahl kann als Standard gemerkt werden. Fehlende Werte bleiben leer.
+  Der **Zeitwert** wird direkt an der Inventarnummer gespeichert (Spalte
+  `inventory_numbers.current_value`, gepflegt über „Bearbeiten“ der
+  Inventarnummer auf der Artikel-Detailseite); die Versicherungsliste liest ihn
+  nur. Zusätzlich kann je Artikel ein
+  **fester Zeitwert** hinterlegt werden (Artikelformular, z. B. für XLR-Kabel),
+  der für alle Exemplare ohne eigenen Wert gilt. Per **KI** (OpenAI, Schlüssel
+  aus Einstellungen › KI-Werbebilder) lässt sich der Zeitwert einzelner Geräte
+  (Detailseite der Inventarnummer) oder aller noch fehlenden Geräte einer
+  Veranstaltung schätzen – das Ergebnis landet ebenfalls an der Inventarnummer; gleichartige
+  Exemplare (gleicher Artikel, gleiches Anschaffungsjahr, gleicher Preis)
+  werden dabei nur einmal angefragt. Der Anschaffungspreis ist der abweichende
+  Einkaufspreis der Inventarnummer, sonst der des Artikels.
 - **Beladungsliste** (je Veranstaltung über „Beladungsliste“ auf der
   Veranstaltungs-Detailseite, `/veranstaltungen/{id}/beladung`): ordnet die
   bereits **ausgegebenen** Posten einer Veranstaltung (konkrete
@@ -153,6 +174,22 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   zurückgegeben wurden. Die Bestätigungen des Kunden sind bewusst eine
   reine Kundenansicht und werden NICHT in der internen Rückgabe-Checkliste
   angezeigt.
+- **DATEV-Export für den Steuerberater** (Einstellungen → Integrationen →
+  DATEV): erzeugt für einen Zeitraum ein ZIP-Paket mit einem
+  DATEV-Buchungsstapel im offiziellen DATEV-Format (EXTF, CSV,
+  Formatversion 13) und den Belegen als PDF. Enthalten sind alle
+  finalisierten Ausgangsrechnungen (nach Rechnungsdatum),
+  Rechnungskorrekturen/Stornorechnungen und optional die Eingangsbelege aus
+  der Belege-Verwaltung. Ausgangsrechnungen werden brutto vom Debitor
+  (Sammelkonto oder Einzelkonto je Kunde aus der Kundennummer) an das
+  passende Erlöskonto gebucht (19 %/7 %/steuerfrei/Kleinunternehmer,
+  Vorschlagskonten für SKR 03/SKR 04, frei überschreibbar), Eingangsbelege
+  vom Aufwandskonto der Belegkategorie an das Kreditoren-Sammelkonto. Der
+  Stapel wird nicht festgeschrieben, Auffälligkeiten (z. B. unbekannter
+  Steuersatz, fehlende Belegdatei) stehen in `Hinweise.txt`. Das Paket kann
+  heruntergeladen, per Knopfdruck an die hinterlegte E-Mail-Adresse des
+  Steuerberaters geschickt oder monatlich/vierteljährlich automatisch
+  versendet werden (Cronjob `bin/send-datev-export.php`, siehe unten).
 - **Backup-Export/-Import**: unter „Einstellungen → Sicherung" lässt sich
   jederzeit eine vollständige ZIP-Sicherung herunterladen (gesamte
   Datenbank + alle Dateien aus `storage/uploads/`) und — nach einer
@@ -448,6 +485,20 @@ den Installer):**
    Ohne eingerichteten Cronjob bleiben Vermietungen einfach unerinnert, es
    passiert sonst nichts Schädliches. Jede Erinnerungsart wird pro
    Vermietung nur einmal automatisch verschickt (siehe `rental_reminders`).
+
+   **DATEV-Export per Cronjob (nach Migration 143):** schickt den letzten
+   abgeschlossenen Monat bzw. das letzte Quartal automatisch als DATEV-Paket
+   an den Steuerberater (Einstellungen → Integrationen → DATEV → „Export
+   automatisch per E-Mail senden“, SMTP muss eingerichtet sein). Empfohlen
+   **täglich** — versendet wird erst ab dem eingestellten Tag des
+   Folgemonats und jeder Zeitraum nur einmal (Protokoll `datev_exports`):
+
+   ```
+   15 6 * * * /usr/bin/php /pfad/zum/projekt/bin/send-datev-export.php >> /pfad/zum/projekt/storage/logs/datev-export.log 2>&1
+   ```
+
+   Mit `--force` lässt sich der Zeitraum erneut bzw. vor dem Versandtag
+   verschicken.
 
    Ein bequemer Weg, offene Migrationen zu finden: die Namen der bereits
    angelegten Tabellen mit `SHOW TABLES;` gegen die obige Liste abgleichen,

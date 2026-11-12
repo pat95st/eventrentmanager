@@ -21,7 +21,10 @@ Suiten:
 composer install
 ```
 
-Dabei wird automatisch `vendor/bin/codecept build` ausgeführt (siehe
+Dabei wird automatisch `tests/.env.testing` aus `tests/.env.testing.dist`
+angelegt, falls noch nicht vorhanden (Codeception liest diese Datei bei jedem
+Lauf ein, auch für die Unit-Suite; sie ist gitignored), und anschließend
+`vendor/bin/codecept build` ausgeführt (siehe
 `composer.json` → `post-install-cmd`/`post-update-cmd`), was die von den
 aktivierten Modulen bereitgestellten `$I->...()`-Methoden für die
 Actor-Klassen (`UnitTester`/`AcceptanceTester`) generiert. Das muss danach
@@ -53,8 +56,9 @@ Keine weitere Vorbereitung nötig.
    GRANT ALL PRIVILEGES ON materialverleih_test.* TO 'materialverleih_test'@'127.0.0.1';
    ```
 
-2. `tests/.env.testing.dist` nach `tests/.env.testing` kopieren und mit den
-   echten Zugangsdaten aus Schritt 1 befüllen (diese Datei ist gitignored).
+2. `tests/.env.testing` (von `composer install` aus `tests/.env.testing.dist`
+   angelegt, sonst von Hand kopieren) mit den echten Zugangsdaten aus Schritt 1
+   befüllen (diese Datei ist gitignored).
 
 3. Eine zweite, separate `database.yaml` für die Test-Instanz der Anwendung
    anlegen (zeigt auf dieselbe Test-Datenbank wie `tests/.env.testing`, siehe

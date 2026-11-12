@@ -29,7 +29,7 @@ $now = new DateTimeImmutable();
     </p>
 </div>
 
-<div class="max-w-3xl space-y-6">
+<div class="space-y-6">
     <section id="geraete" class="<?= $card ?>">
         <h2 class="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-200">Abspielgeräte</h2>
         <p class="mb-4 text-xs text-slate-500 dark:text-slate-400">

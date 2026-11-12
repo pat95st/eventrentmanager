@@ -13,7 +13,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.numbering.subtitle')) ?></p>
 </div>
 
-<form method="post" action="/einstellungen/nummerierung" class="max-w-3xl space-y-6">
+<form method="post" action="/einstellungen/nummerierung" class="space-y-6">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <?php foreach ($entries as $entry): ?>

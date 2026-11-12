@@ -13,3 +13,9 @@
 /node_modules/
 .DS_Store
 var/phpstan/
+# Test-Zugangsdaten (Kopie von tests/.env.testing.dist), von `codecept build`
+# erzeugte Actor-Traits und Testausgaben
+/tests/.env.testing
+/tests/_support/_generated/
+/tests/_output/*
+!/tests/_output/.gitkeep

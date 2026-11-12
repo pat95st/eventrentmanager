@@ -11,12 +11,12 @@ use function App\Infrastructure\Http\t;
 </div>
 
 <?php if ($forced): ?>
-    <div class="mb-6 max-w-lg rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+    <div class="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
         <?= e(t('profile.password.forced_hint')) ?>
     </div>
 <?php endif; ?>
 
-<form method="post" action="/profil/passwort" class="max-w-lg space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<form method="post" action="/profil/passwort" class="space-y-5 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <div>
         <label for="current_password" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('profile.password.field.current')) ?></label>
@@ -36,7 +36,7 @@ use function App\Infrastructure\Http\t;
         <?php endif; ?>
     </div>
 
-    <div class="flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+    <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('common.save')) ?>
         </button>

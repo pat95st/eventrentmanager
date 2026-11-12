@@ -10,7 +10,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.sessions.subtitle')) ?></p>
 </div>
 
-<div class="max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <div class="mb-4 flex items-center justify-between">
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.sessions.hint')) ?></p>
         <?php if (count($sessions) > 1): ?>

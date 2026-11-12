@@ -14,7 +14,7 @@ use function App\Infrastructure\Http\t;
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.dunning_levels.subtitle')) ?></p>
 </div>
 
-<div class="mb-6 max-w-2xl rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+<div class="mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.dunning_levels.auto_send.title')) ?></h2>
     <form method="post" action="/einstellungen/mahnwesen/einstellungen">
         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">

@@ -18,14 +18,17 @@ final class MariadbInventoryNumberRepository implements InventoryNumberRepositor
     public function save(InventoryNumber $inventoryNumber): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO inventory_numbers (id, article_id, number, acquisition_date, supplier_id, receipt_id, purchase_price, storage_location, installed_firmware_version_id, created_at, updated_at)
-             VALUES (:id, :article_id, :number, :acquisition_date, :supplier_id, :receipt_id, :purchase_price, :storage_location, :installed_firmware_version_id, :created_at, :updated_at)
+            'INSERT INTO inventory_numbers (id, article_id, number, acquisition_date, supplier_id, receipt_id, purchase_price, storage_location, installed_firmware_version_id, current_value, current_value_source, current_value_note, current_value_updated_at, created_at, updated_at)
+             VALUES (:id, :article_id, :number, :acquisition_date, :supplier_id, :receipt_id, :purchase_price, :storage_location, :installed_firmware_version_id, :current_value, :current_value_source, :current_value_note, :current_value_updated_at, :created_at, :updated_at)
              ON DUPLICATE KEY UPDATE number = :number2, acquisition_date = :acquisition_date2,
                 supplier_id = :supplier_id2, receipt_id = :receipt_id2, purchase_price = :purchase_price2,
-                storage_location = :storage_location2, installed_firmware_version_id = :installed_firmware_version_id2, updated_at = :updated_at2'
+                storage_location = :storage_location2, installed_firmware_version_id = :installed_firmware_version_id2,
+                current_value = :current_value2, current_value_source = :current_value_source2,
+                current_value_note = :current_value_note2, current_value_updated_at = :current_value_updated_at2, updated_at = :updated_at2'
         );
 
         $acquisitionDate = $inventoryNumber->acquisitionDate?->format('Y-m-d');
+        $currentValueUpdatedAt = $inventoryNumber->currentValueUpdatedAt?->format('Y-m-d H:i:s');
 
         $stmt->execute([
             'id' => $inventoryNumber->id,
@@ -37,6 +40,10 @@ final class MariadbInventoryNumberRepository implements InventoryNumberRepositor
             'purchase_price' => $inventoryNumber->purchasePriceOverride,
             'storage_location' => $inventoryNumber->storageLocation,
             'installed_firmware_version_id' => $inventoryNumber->installedFirmwareVersionId,
+            'current_value' => $inventoryNumber->currentValue,
+            'current_value_source' => $inventoryNumber->currentValueSource,
+            'current_value_note' => $inventoryNumber->currentValueNote,
+            'current_value_updated_at' => $currentValueUpdatedAt,
             'created_at' => $inventoryNumber->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $inventoryNumber->updatedAt->format('Y-m-d H:i:s'),
             'number2' => $inventoryNumber->number,
@@ -46,6 +53,10 @@ final class MariadbInventoryNumberRepository implements InventoryNumberRepositor
             'purchase_price2' => $inventoryNumber->purchasePriceOverride,
             'storage_location2' => $inventoryNumber->storageLocation,
             'installed_firmware_version_id2' => $inventoryNumber->installedFirmwareVersionId,
+            'current_value2' => $inventoryNumber->currentValue,
+            'current_value_source2' => $inventoryNumber->currentValueSource,
+            'current_value_note2' => $inventoryNumber->currentValueNote,
+            'current_value_updated_at2' => $currentValueUpdatedAt,
             'updated_at2' => $inventoryNumber->updatedAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -178,6 +189,10 @@ final class MariadbInventoryNumberRepository implements InventoryNumberRepositor
             installedFirmwareVersionId: $row['installed_firmware_version_id'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            currentValue: isset($row['current_value']) ? (string) $row['current_value'] : null,
+            currentValueSource: isset($row['current_value_source']) ? (string) $row['current_value_source'] : null,
+            currentValueNote: isset($row['current_value_note']) ? (string) $row['current_value_note'] : null,
+            currentValueUpdatedAt: isset($row['current_value_updated_at']) ? new DateTimeImmutable((string) $row['current_value_updated_at']) : null,
         );
     }
 }

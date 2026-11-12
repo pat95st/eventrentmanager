@@ -193,11 +193,13 @@ progress {
    Kind in Formularen mit space-y-*. Tailwinds space-y-Regel behandelt sie
    als sichtbare Geschwister und gibt dem ersten SICHTBAREN Feld deshalb
    einen zusätzlichen oberen Abstand — die Karte wirkte oben deutlich höher
-   gepolstert als unten. Diese Regel nimmt dem ersten Kind, vor dem nur
-   versteckte Felder stehen, den Abstand wieder weg. Die Spezifität (0,3,2)
+   gepolstert als unten. Dasselbe gilt für ausgeblendete Elemente (.hidden,
+   z. B. eine noch leere Fehlermeldung oben in einem Modal). Diese Regel
+   nimmt dem ersten sichtbaren Kind, vor dem nur solche Elemente stehen,
+   den Abstand wieder weg. Die Spezifität (0,3,2)
    liegt bewusst über der von .space-y-N > :not([hidden]) ~ :not([hidden])
    (0,3,0), daher ohne !important. */
-[class*="space-y-"] > :not(input[type="hidden"]):not(:not(input[type="hidden"]) ~ *) {
+[class*="space-y-"] > :not(input[type="hidden"], .hidden):not(:not(input[type="hidden"], .hidden) ~ *) {
   margin-top: 0;
 }
 
@@ -229,4 +231,28 @@ html.dark .p-6 > .form-actions {
 }
 @media (prefers-reduced-motion: reduce) {
   .p-6 > .form-actions { transition: none; }
+}
+
+/* Native Datums-/Zeitauswahl: ganzes Feld zeigt den Zeiger, der Kalender
+   öffnet sich beim Klick ins Feld (siehe layout.php, showPicker()). Im
+   Dunkelmodus zeichnet der Browser Kalender und Symbol dunkel. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"] {
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="week"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color-scheme: dark;
 }

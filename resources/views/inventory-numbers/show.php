@@ -156,7 +156,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                 <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Zeitwert (Versicherung)</h2>
                 <p class="mb-3 text-slate-600 dark:text-slate-400">
                     <?php if ($inv->currentValue !== null): ?>
-                        <span class="font-mono text-slate-800 dark:text-slate-200"><?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €</span>
+                        <span class="font-semibold tabular-nums text-slate-800 dark:text-slate-200"><?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €</span>
                         <span class="text-xs text-slate-400 dark:text-slate-500">
                             (<?= $inv->isCurrentValueAiEstimate() ? 'per KI geschätzt' : 'händisch' ?><?= $inv->currentValueUpdatedAt !== null ? ' am ' . e($inv->currentValueUpdatedAt->format('d.m.Y')) : '' ?>)
                         </span>
@@ -164,7 +164,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                             <span class="mt-1 block text-xs italic text-slate-500 dark:text-slate-400"><?= e($inv->currentValueNote) ?></span>
                         <?php endif; ?>
                     <?php elseif ($articleFixedValue !== null): ?>
-                        <span class="font-mono text-slate-800 dark:text-slate-200"><?= e(number_format((float) $articleFixedValue, 2, ',', '.')) ?> €</span>
+                        <span class="font-semibold tabular-nums text-slate-800 dark:text-slate-200"><?= e(number_format((float) $articleFixedValue, 2, ',', '.')) ?> €</span>
                         <span class="text-xs text-slate-400 dark:text-slate-500">(fester Zeitwert des Artikels)</span>
                     <?php else: ?>
                         Noch kein Zeitwert erfasst.

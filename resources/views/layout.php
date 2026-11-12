@@ -153,41 +153,90 @@ $canDocuments = $canRentals;
 <link rel="stylesheet" href="/assets/css/app.css?v=<?= (string) (@filemtime(dirname(__DIR__, 2) . '/public/assets/css/app.css') ?: 1) ?>">
 <?= class_exists(\App\Infrastructure\Http\UiFonts::class) ? \App\Infrastructure\Http\UiFonts::styles() : '' /* Schriftarten der Oberfläche */ ?>
 <style>
-  /* Modals (Nutzerwunsch): abgedunkelter Hintergrund, mehr Innenabstand,
-     etwas größer. Klassen wie bg-black/40 oder backdrop:… fehlen im
-     kompilierten app.css, daher hier zentral. */
-  .fixed.inset-0.z-50 { background-color: rgba(15, 23, 42, 0.55); padding: 1.5rem; }
-  dialog::backdrop { background-color: rgba(15, 23, 42, 0.55); }
-  @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    .fixed.inset-0.z-50, dialog::backdrop { -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  /* Einblendfenster (Modals): einheitliches Aussehen für beide Arten —
+     Overlays (<div class="fixed inset-0 z-50">) und native <dialog>.
+     Klassen wie bg-black/40 oder backdrop:… fehlen im kompilierten
+     app.css, daher zentral hier. Auf dem Handy erscheinen sie als
+     Blatt, das von unten hereinfährt (leichter mit dem Daumen erreichbar). */
+  .fixed.inset-0.z-50 { background-color: rgba(15, 23, 42, 0.5); padding: 1.5rem; }
+  dialog::backdrop { background-color: rgba(15, 23, 42, 0.5); }
+  @supports ((backdrop-filter: blur(3px)) or (-webkit-backdrop-filter: blur(3px))) {
+    .fixed.inset-0.z-50, dialog::backdrop { -webkit-backdrop-filter: blur(3px) saturate(.8); backdrop-filter: blur(3px) saturate(.8); }
   }
-  .modal-panel { width: 100%; max-width: 40rem; max-height: 88vh; border-radius: 0.75rem; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.45); }
+  .modal-panel {
+    width: 100%; max-width: 40rem; max-height: 88vh;
+    border: 0 !important; border-radius: 1rem !important;
+    box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 24px 48px -12px rgba(15, 23, 42, 0.35), 0 8px 16px -8px rgba(15, 23, 42, 0.2) !important;
+  }
+  html.dark .modal-panel { box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.14), 0 24px 48px -12px rgba(0, 0, 0, 0.7) !important; }
   .modal-panel.modal-panel-lg { max-width: 52rem; }
-  .modal-panel.modal-panel-sm { max-width: 32rem; }
-  dialog.modal-panel { margin: auto; overflow: auto; }
+  .modal-panel.modal-panel-sm { max-width: 28rem; }
+  dialog.modal-panel { margin: auto; overflow: auto; padding: 0; }
   .modal-panel.p-4, .modal-panel.p-5, .modal-panel > .p-4, .modal-panel > form.p-4 { padding: 1.5rem; }
   .modal-panel > .px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
   .modal-panel > .py-3 { padding-top: 1rem; padding-bottom: 1rem; }
+  /* Kopfzeile (erstes Kind mit Trennlinie): ruhiger, Titel größer. */
+  .modal-panel > .border-b:first-child { border-color: rgb(241 245 249); padding-top: 1.125rem; padding-bottom: 1.125rem; }
+  html.dark .modal-panel > .border-b:first-child { border-color: rgb(30 41 59); }
+  .modal-panel > .border-b:first-child h2, .modal-panel > .border-b:first-child h3 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; }
+  /* Fußzeile (letztes Kind mit Trennlinie): leicht abgesetzt. */
+  .modal-panel > .border-t:last-child { border-color: rgb(241 245 249); background-color: rgb(248 250 252); border-radius: 0 0 1rem 1rem; }
+  html.dark .modal-panel > .border-t:last-child { border-color: rgb(30 41 59); background-color: rgb(15 23 42 / 0.6); }
+  /* Schließen-Kreuz: großzügige, runde Klickfläche statt eines winzigen „×“. */
+  .modal-panel > .border-b:first-child > button:last-child {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; height: 2rem; margin: -0.25rem -0.5rem -0.25rem 0; border-radius: 9999px;
+    font-size: 1.375rem; line-height: 1; color: rgb(100 116 139);
+  }
+  .modal-panel > .border-b:first-child > button:last-child:hover { background-color: rgb(241 245 249); color: rgb(15 23 42); }
+  html.dark .modal-panel > .border-b:first-child > button:last-child:hover { background-color: rgb(30 41 59); color: rgb(241 245 249); }
+  .modal-panel > .border-b:first-child > button:last-child:focus-visible { outline: 2px solid rgb(var(--color-brand-500)); outline-offset: 1px; }
+
   @media (max-width: 640px) {
-    .fixed.inset-0.z-50 { padding: 0.75rem; }
-    .modal-panel.p-4, .modal-panel.p-5, .modal-panel > .p-4, .modal-panel > form.p-4 { padding: 1.125rem; }
-    .modal-panel > .px-4 { padding-left: 1.125rem; padding-right: 1.125rem; }
+    .fixed.inset-0.z-50 { padding: 0; align-items: flex-end !important; }
+    .modal-panel { max-width: none !important; max-height: 92vh; border-radius: 1rem 1rem 0 0 !important; }
+    .modal-panel > .border-t:last-child { border-radius: 0; padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    dialog.modal-panel { margin: auto 0 0; width: 100%; max-width: 100% !important; }
+    .modal-panel.p-4, .modal-panel.p-5, .modal-panel > .p-4, .modal-panel > form.p-4 { padding: 1.25rem; }
+    .modal-panel > .px-4 { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .modal-panel::before { content: ""; display: block; width: 2.5rem; height: 0.25rem; margin: 0.5rem auto -0.25rem; border-radius: 9999px; background: rgb(203 213 225); }
+    html.dark .modal-panel::before { background: rgb(71 85 105); }
   }
 
-  /* Weiches Ein-/Ausblenden der Modals, siehe /assets/js/modal-fade.js */
-  .modal-fade { transition: opacity 180ms ease; }
+  /* Bestätigungsdialog (siehe #global-confirm-dialog und window.confirmModal) */
+  .confirm-icon { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 9999px; }
+  .confirm-icon svg { width: 1.25rem; height: 1.25rem; }
+  .confirm-icon-default { background-color: rgb(var(--color-brand-100)); color: rgb(var(--color-brand-700)); }
+  .confirm-icon-danger { background-color: rgb(254 226 226); color: rgb(220 38 38); }
+  html.dark .confirm-icon-default { background-color: rgb(var(--color-brand-950) / 0.6); color: rgb(var(--color-brand-300)); }
+  html.dark .confirm-icon-danger { background-color: rgb(127 29 29 / 0.45); color: rgb(252 165 165); }
+
+  /* Weiches Ein-/Ausblenden, siehe /assets/js/modal-fade.js. Das Fenster
+     selbst wächst leicht aus der Mitte (Handy: fährt von unten herein),
+     der Hintergrund blendet nur über. */
+  .modal-fade { transition: opacity 200ms ease; }
+  .modal-fade > .modal-panel { transition: transform 240ms cubic-bezier(.16, 1, .3, 1); }
   .modal-fade.modal-fade-out { opacity: 0; }
-  @keyframes modal-fade-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
-  @keyframes modal-fade-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(6px) scale(.98); } }
+  .modal-fade.modal-fade-out > .modal-panel { transform: translateY(8px) scale(.96); }
+  @keyframes modal-fade-in { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+  @keyframes modal-fade-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(.96); } }
   @keyframes modal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes modal-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
-  dialog[open] { animation: modal-fade-in 180ms ease; }
-  dialog[open]::backdrop { animation: modal-backdrop-in 180ms ease; }
+  dialog[open] { animation: modal-fade-in 240ms cubic-bezier(.16, 1, .3, 1); }
+  dialog[open]::backdrop { animation: modal-backdrop-in 200ms ease; }
   dialog.modal-closing { animation: modal-fade-out 180ms ease forwards; }
   dialog.modal-closing::backdrop { animation: modal-backdrop-out 180ms ease forwards; }
+  @media (max-width: 640px) {
+    .modal-fade.modal-fade-out > .modal-panel { transform: translateY(100%); }
+    @keyframes modal-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+    @keyframes modal-sheet-out { from { transform: none; } to { transform: translateY(100%); } }
+    dialog[open] { animation-name: modal-sheet-in; }
+    dialog.modal-closing { animation-name: modal-sheet-out; }
+  }
   @media (prefers-reduced-motion: reduce) {
     dialog[open], dialog[open]::backdrop, dialog.modal-closing, dialog.modal-closing::backdrop { animation: none; }
-    .modal-fade { transition: none; }
+    .modal-fade, .modal-fade > .modal-panel { transition: none; }
+    .modal-fade.modal-fade-out > .modal-panel { transform: none; }
   }
   /* Untermenüs der Hauptnavigation: Breite nach dem längsten Eintrag (auch
      bei breiteren Schriftarten) mit gleichem Abstand links und rechts; mit
@@ -305,13 +354,20 @@ $canDocuments = $canRentals;
     style="danger" für den roten Bestätigen-Button) statt eines
     onsubmit="return confirm(...)"-Attributs.
   -->
-  <dialog id="global-confirm-dialog" class="modal-panel modal-panel-sm w-full max-w-md rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
-    <div class="p-4">
-      <p id="global-confirm-message" class="mb-4 text-sm text-slate-700 dark:text-slate-300"></p>
-      <div class="flex justify-end gap-2">
-        <button type="button" id="global-confirm-cancel" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Abbrechen</button>
-        <button type="button" id="global-confirm-ok" class="rounded-md px-3 py-1.5 text-sm font-medium text-white">Bestätigen</button>
+  <dialog id="global-confirm-dialog" class="modal-panel modal-panel-sm w-full bg-white dark:bg-slate-900" aria-labelledby="global-confirm-title" aria-describedby="global-confirm-message">
+    <div class="flex gap-4 px-6 pb-5 pt-6">
+      <span id="global-confirm-icon" class="confirm-icon confirm-icon-default" aria-hidden="true">
+        <svg data-icon="default" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM8.94 6.94a.75.75 0 11-1.061-1.061 3 3 0 112.871 5.026v.345a.75.75 0 01-1.5 0v-.5c0-.72.57-1.172 1.081-1.287A1.5 1.5 0 108.94 6.94zM10 15a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+        <svg data-icon="danger" class="hidden" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      </span>
+      <div class="min-w-0 pt-1.5">
+        <h2 id="global-confirm-title" class="text-base font-semibold text-slate-900 dark:text-slate-100"><?= e(t('confirm.title')) ?></h2>
+        <p id="global-confirm-message" class="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400"></p>
       </div>
+    </div>
+    <div class="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end">
+      <button type="button" id="global-confirm-cancel" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.cancel')) ?></button>
+      <button type="button" id="global-confirm-ok" class="rounded-md px-4 py-2 text-sm font-medium text-white"><?= e(t('confirm.ok')) ?></button>
     </div>
   </dialog>
   <header class="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" style="position:sticky;top:0;z-index:30">
@@ -1016,12 +1072,32 @@ $canDocuments = $canRentals;
       var OK_DEFAULT_CLASSES = ['bg-brand-600', 'hover:bg-brand-700'];
       var OK_DANGER_CLASSES = ['bg-red-600', 'hover:bg-red-700'];
 
-      window.confirmModal = function (message, style) {
+      var titleEl = document.getElementById('global-confirm-title');
+      var iconEl = document.getElementById('global-confirm-icon');
+      var DEFAULT_TITLE = titleEl.textContent;
+      var DEFAULT_OK = okBtn.textContent;
+
+      // window.confirmModal(message, style, options): options.okLabel benennt
+      // den Bestätigen-Button nach der eigentlichen Aktion (z. B.
+      // „Veranstaltung löschen“); der Titel wird dann zur Frage
+      // („Veranstaltung löschen?“). Ohne Angabe: „Bitte bestätigen“/„Bestätigen“.
+      window.confirmModal = function (message, style, options) {
+        var okLabel = options && options.okLabel ? String(options.okLabel) : '';
         return new Promise(function (resolve) {
           messageEl.textContent = message;
+          titleEl.textContent = okLabel !== '' ? okLabel + '?' : DEFAULT_TITLE;
+          okBtn.textContent = okLabel !== '' ? okLabel : DEFAULT_OK;
 
+          var danger = style === 'danger';
           okBtn.classList.remove.apply(okBtn.classList, OK_DEFAULT_CLASSES.concat(OK_DANGER_CLASSES));
-          okBtn.classList.add.apply(okBtn.classList, style === 'danger' ? OK_DANGER_CLASSES : OK_DEFAULT_CLASSES);
+          okBtn.classList.add.apply(okBtn.classList, danger ? OK_DANGER_CLASSES : OK_DEFAULT_CLASSES);
+          iconEl.className = 'confirm-icon ' + (danger ? 'confirm-icon-danger' : 'confirm-icon-default');
+          iconEl.querySelector('[data-icon="default"]').classList.toggle('hidden', danger);
+          iconEl.querySelector('[data-icon="danger"]').classList.toggle('hidden', !danger);
+
+          // Offene Menüs (z. B. das „⋯“-Menü, aus dem „Löschen“ kam) schließen,
+          // damit sie nicht hinter dem Dialog stehen bleiben.
+          document.querySelectorAll('details[open]').forEach(function (d) { d.removeAttribute('open'); });
 
           var settled = false;
 
@@ -1058,6 +1134,9 @@ $canDocuments = $canRentals;
           dialog.addEventListener('close', onClose);
 
           dialog.showModal();
+          // Bei gefährlichen Aktionen liegt der Fokus auf „Abbrechen“, damit
+          // ein versehentliches Enter nichts löscht.
+          (danger ? cancelBtn : okBtn).focus();
         });
       };
 
@@ -1096,8 +1175,13 @@ $canDocuments = $canRentals;
 
         var message = form.getAttribute('data-confirm');
         var style = form.getAttribute('data-confirm-style');
+        // Button-Beschriftung: data-confirm-ok am Formular, sonst der Text
+        // des geklickten Absenden-Buttons (sofern kurz genug für einen Button).
+        var submitter = e.submitter || form.querySelector('button[type="submit"]');
+        var submitterText = submitter ? (submitter.textContent || submitter.value || '').replace(/\s+/g, ' ').trim() : '';
+        var okLabel = form.getAttribute('data-confirm-ok') || (submitterText.length > 0 && submitterText.length <= 40 ? submitterText : '');
 
-        window.confirmModal(message, style).then(function (confirmed) {
+        window.confirmModal(message, style, { okLabel: okLabel }).then(function (confirmed) {
           if (confirmed) {
             // .submit() statt .requestSubmit(), damit KEIN neues
             // "submit"-Ereignis ausgelöst wird (siehe WHATWG-Spezifikation)
@@ -1105,6 +1189,22 @@ $canDocuments = $canRentals;
             form.submit();
           }
         });
+      });
+
+      // Datumsfelder: den im Browser eingebauten Kalender schon beim Klick
+      // irgendwo ins Feld öffnen (Chrome/Edge öffnen ihn sonst nur über das
+      // kleine Symbol rechts). Tastatureingabe bleibt unverändert möglich;
+      // Browser ohne showPicker() behalten einfach ihr normales Verhalten.
+      var PICKER_TYPES = ['date', 'datetime-local', 'month', 'week', 'time'];
+      document.addEventListener('click', function (e) {
+        var input = e.target;
+        if (!(input instanceof HTMLInputElement) || PICKER_TYPES.indexOf(input.type) === -1) {
+          return;
+        }
+        if (input.disabled || input.readOnly || typeof input.showPicker !== 'function') {
+          return;
+        }
+        try { input.showPicker(); } catch (err) { /* z. B. in iframes ohne Nutzergeste – dann eben nicht */ }
       });
 
       // Mitlaufende Aktionszeile langer Formulare (.form-actions, siehe

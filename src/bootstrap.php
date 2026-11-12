@@ -1083,6 +1083,36 @@ $commandBus->register(\App\Application\InvoiceCorrection\Command\EmailInvoiceCor
 $queryBus->register(\App\Application\InvoiceCorrection\Query\GetInvoiceCorrection::class, $getInvoiceCorrectionHandler);
 $queryBus->register(\App\Application\InvoiceCorrection\Query\GetNewInvoiceCorrection::class, $getInvoiceCorrectionHandler);
 $queryBus->register(\App\Application\InvoiceCorrection\Query\ListInvoiceCorrections::class, new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrectionsHandler($invoiceCorrectionRepository, $invoiceRepository, $customerRepository));
+
+// --- DATEV-Export für den Steuerberater (Migration 143) --------------------
+$datevSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDatevSettingsRepository($pdo);
+$datevExportRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDatevExportRepository($pdo);
+$datevExportBuilder = new \App\Application\Datev\DatevExportBuilder(
+    $datevSettingsRepository,
+    $invoiceRepository,
+    $getInvoiceHandler,
+    $invoiceSettingsRepository,
+    $invoiceCorrectionRepository,
+    $getInvoiceCorrectionHandler,
+    $receiptRepository,
+    $supplierRepository,
+    new \App\Infrastructure\Datev\DatevDocumentSource(
+        $invoicePdfGenerator,
+        $invoiceCorrectionDocuments,
+        $companySettingsRepository,
+        $invoiceSettingsRepository,
+        $legalSettingsRepository,
+        $invoicePdfSettingsRepository,
+        $pdfDesignSettingsRepository,
+        $pdfLayoutSettingsRepository,
+        $fileStorage,
+    ),
+);
+$queryBus->register(\App\Application\Datev\Query\GetDatevSettings::class, new \App\Application\Datev\Query\GetDatevSettingsHandler($datevSettingsRepository));
+$queryBus->register(\App\Application\Datev\Query\ListDatevExports::class, new \App\Application\Datev\Query\ListDatevExportsHandler($datevExportRepository));
+$commandBus->register(\App\Application\Datev\Command\UpdateDatevSettings::class, new \App\Application\Datev\Command\UpdateDatevSettingsHandler($datevSettingsRepository));
+$commandBus->register(\App\Application\Datev\Command\CreateDatevExport::class, new \App\Application\Datev\Command\CreateDatevExportHandler($datevExportBuilder, $datevSettingsRepository, $datevExportRepository, $mailer, $companySettingsRepository));
+
 $commandBus->register(\App\Application\Dunning\Command\EmailDunningNotice::class, new \App\Application\Dunning\Command\EmailDunningNoticeHandler(
     $getDunningNoticeHandler,
     $companySettingsRepository,
@@ -2368,6 +2398,8 @@ $router->get('/einstellungen/integrationen/google-business/verbinden', $auth->gu
 $router->get('/einstellungen/integrationen/google-business/callback', $auth->guard(Permission::Administration, [$integrationSettingsController, 'googleBusinessCallback']));
 $router->post('/einstellungen/integrationen/google-business/trennen', $auth->guard(Permission::Administration, [$integrationSettingsController, 'disconnectGoogleBusiness']));
 $router->post('/einstellungen/integrationen/whatsapp', $auth->guard(Permission::Administration, [$integrationSettingsController, 'updateWhatsapp']));
+$router->post('/einstellungen/integrationen/datev', $auth->guard(Permission::Administration, [$integrationSettingsController, 'updateDatev']));
+$router->post('/einstellungen/integrationen/datev/export', $auth->guard(Permission::Administration, [$integrationSettingsController, 'exportDatev']));
 
 // Öffentlich (kein Login), siehe PublicProductController-Docblock.
 $router->get('/produkte/{id}/bild', [$publicProductController, 'image']);

@@ -7,7 +7,8 @@ namespace Tests\Unit\Application\Insurance;
 use App\Application\Insurance\Command\EstimateMissingCurrentValues;
 use App\Application\Insurance\Command\EstimationSummary;
 use App\Application\Insurance\Command\InsuranceHandler;
-use App\Application\Insurance\Command\SetInventoryNumberCurrentValue;
+use App\Application\Insurance\Command\EstimateCurrentValue;
+use App\Application\Insurance\Command\SetArticleFixedCurrentValue;
 use App\Application\Insurance\Estimation\CurrentValueEstimate;
 use App\Application\Insurance\Estimation\CurrentValueEstimationRequest;
 use App\Application\Insurance\Estimation\CurrentValueEstimatorInterface;
@@ -27,7 +28,6 @@ use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Customer\Customer;
 use App\Domain\Customer\CustomerType;
 use App\Domain\Exception\ValidationException;
-use App\Domain\Insurance\CurrentValue;
 use App\Domain\Insurance\CurrentValueResolver;
 use App\Domain\Insurance\InsuranceField;
 use App\Domain\InventoryNumber\InventoryNumber;
@@ -97,7 +97,7 @@ final class RentalInsuranceListTest extends Unit
 
     public function testBuildsOneRowPerDeviceWithResolvedValues(): void
     {
-        $this->values->setForInventoryNumber('inv-1', '60.00', CurrentValue::SOURCE_AI, 'Gebraucht');
+        $this->inventoryNumbers['inv-1']->setCurrentValue('60.00', InventoryNumber::CURRENT_VALUE_AI, 'Gebraucht');
         $this->values->setArticleFixedValue('art-xlr', '15.00');
 
         $list = $this->listHandler()->handle(new GetRentalInsuranceList('rent-1'));
@@ -140,7 +140,7 @@ final class RentalInsuranceListTest extends Unit
 
     public function testCsvContainsOnlyTheSelectedColumnsAndLeavesMissingValuesEmpty(): void
     {
-        $this->values->setForInventoryNumber('inv-1', '1234.5');
+        $this->inventoryNumbers['inv-1']->setCurrentValue('1234.50');
         $list = $this->listHandler()->handle(new GetRentalInsuranceList('rent-1', includeUnissued: false));
 
         $csv = (new InsuranceListCsvExporter())->generate($list, [InsuranceField::InventoryNumber, InsuranceField::AcquisitionYear, InsuranceField::CurrentValue]);
@@ -165,7 +165,7 @@ final class RentalInsuranceListTest extends Unit
 
     public function testEstimatesMissingValuesOnceForIdenticalDevicesAndKeepsExistingOnes(): void
     {
-        $this->values->setForInventoryNumber('inv-1', '70.00');
+        $this->inventoryNumbers['inv-1']->setCurrentValue('70.00');
         $estimator = $this->estimator();
         $handler = $this->insuranceHandler($estimator);
 
@@ -173,8 +173,11 @@ final class RentalInsuranceListTest extends Unit
 
         $this->assertInstanceOf(EstimationSummary::class, $summary);
         $this->assertSame(2, $summary->estimated); // inv-2 und inv-3; inv-1 hat schon einen Wert
-        $this->assertSame('70.00', $this->values->forInventoryNumber('inv-1')?->value);
-        $this->assertTrue($this->values->forInventoryNumber('inv-2')?->isAiEstimate());
+        $this->assertSame('70.00', $this->inventoryNumbers['inv-1']->currentValue);
+        $this->assertFalse($this->inventoryNumbers['inv-1']->isCurrentValueAiEstimate());
+        $this->assertSame('42.00', $this->inventoryNumbers['inv-2']->currentValue);
+        $this->assertTrue($this->inventoryNumbers['inv-2']->isCurrentValueAiEstimate());
+        $this->assertSame('Test', $this->inventoryNumbers['inv-2']->currentValueNote);
         $this->assertSame(2, $estimator->calls);
     }
 
@@ -190,17 +193,26 @@ final class RentalInsuranceListTest extends Unit
         $this->assertSame(0, $estimator->calls);
     }
 
-    public function testManualValueIsValidated(): void
+    public function testSingleEstimateIsStoredAtTheInventoryNumber(): void
+    {
+        $result = $this->insuranceHandler($this->estimator())->handle(new EstimateCurrentValue('inv-3'));
+
+        $this->assertSame($this->inventoryNumbers['inv-3'], $result);
+        $this->assertSame('42.00', $this->inventoryNumbers['inv-3']->currentValue);
+        $this->assertTrue($this->inventoryNumbers['inv-3']->isCurrentValueAiEstimate());
+    }
+
+    public function testArticleFixedValueIsValidated(): void
     {
         $handler = $this->insuranceHandler($this->estimator());
-        $handler->handle(new SetInventoryNumberCurrentValue('inv-1', '149,90'));
-        $this->assertSame('149.90', $this->values->forInventoryNumber('inv-1')?->value);
+        $handler->handle(new SetArticleFixedCurrentValue('art-xlr', '14,90'));
+        $this->assertSame('14.90', $this->values->articleFixedValue('art-xlr'));
 
-        $handler->handle(new SetInventoryNumberCurrentValue('inv-1', ''));
-        $this->assertNull($this->values->forInventoryNumber('inv-1'));
+        $handler->handle(new SetArticleFixedCurrentValue('art-xlr', ''));
+        $this->assertNull($this->values->articleFixedValue('art-xlr'));
 
         $this->expectException(ValidationException::class);
-        $handler->handle(new SetInventoryNumberCurrentValue('inv-1', 'abc'));
+        $handler->handle(new SetArticleFixedCurrentValue('art-xlr', 'abc'));
     }
 
     public function testParsesTheAiAnswer(): void

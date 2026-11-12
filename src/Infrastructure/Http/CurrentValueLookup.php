@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Http;
 
-use App\Domain\Insurance\CurrentValue;
 use App\Domain\Insurance\CurrentValueRepositoryInterface;
 
 /**
- * Zugriff der Views (Artikelformular, Inventarnummer-Detailseite) auf die
- * Zeitwerte der Versicherungsliste (Migration 143), analog zu DryHireLookup –
+ * Zugriff der Views (Artikelformular, Inventarnummern) auf die festen
+ * Artikel-Zeitwerte der Versicherungsliste (Migration 143), analog zu DryHireLookup –
  * wird in bootstrap.php gesetzt. Ohne Repository liefert alles null.
  */
 final class CurrentValueLookup
@@ -28,11 +27,6 @@ final class CurrentValueLookup
     public static function articleFixedValue(?string $articleId): ?string
     {
         return $articleId !== null && $articleId !== '' ? self::$repo?->articleFixedValue($articleId) : null;
-    }
-
-    public static function forInventoryNumber(string $inventoryNumberId): ?CurrentValue
-    {
-        return self::$repo?->forInventoryNumber($inventoryNumberId);
     }
 
     public static function isAvailable(): bool

@@ -1331,7 +1331,7 @@ $currentValueEstimator = new \App\Infrastructure\Integration\Insurance\OpenAiCur
 $getRentalInsuranceListHandler = new \App\Application\Insurance\Query\GetRentalInsuranceListHandler($getRentalHandler, $categoryRepository, $currentValueRepository);
 $queryBus->register(\App\Application\Insurance\Query\GetRentalInsuranceList::class, $getRentalInsuranceListHandler);
 $insuranceHandler = new \App\Application\Insurance\Command\InsuranceHandler($currentValueRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository, $categoryRepository, $currentValueEstimator, $getRentalInsuranceListHandler);
-foreach (['SetInventoryNumberCurrentValue', 'SetArticleFixedCurrentValue', 'SaveInsuranceExportFields', 'EstimateCurrentValue', 'EstimateMissingCurrentValues'] as $insuranceCommand) {
+foreach (['SetArticleFixedCurrentValue', 'SaveInsuranceExportFields', 'EstimateCurrentValue', 'EstimateMissingCurrentValues'] as $insuranceCommand) {
     $commandBus->register('App\\Application\\Insurance\\Command\\' . $insuranceCommand, $insuranceHandler);
 }
 
@@ -1837,7 +1837,6 @@ $router->post('/inventurnummern/{id}', $auth->guard(Permission::Artikelverwaltun
 $router->post('/inventurnummern/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteInventoryNumber']));
 $router->post('/inventurnummern/{id}/etikett-drucken', $auth->guard(Permission::Artikelverwaltung, [$inventoryNumberController, 'printLabel']));
 $router->post('/inventurnummern/{id}/verkaufen', $auth->guard(Permission::Artikelverwaltung, [$inventoryNumberController, 'sell']));
-$router->post('/inventurnummern/{id}/zeitwert', $auth->guard([Permission::Artikelverwaltung, Permission::AusgabeRuecknahme], [$insuranceListController, 'saveInventoryNumberValue']));
 $router->post('/inventurnummern/{id}/zeitwert/ki', $auth->guard([Permission::Artikelverwaltung, Permission::AusgabeRuecknahme], [$insuranceListController, 'estimateInventoryNumberValue']));
 
 $router->post('/artikel/{id}/firmware-versionen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'addFirmwareVersion']));
@@ -2027,7 +2026,6 @@ $router->post('/veranstaltungen/{id}/packliste/email', $auth->guard(Permission::
 $router->get('/veranstaltungen/{id}/versicherungsliste', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'show']));
 $router->get('/veranstaltungen/{id}/versicherungsliste.csv', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportCsv']));
 $router->get('/veranstaltungen/{id}/versicherungsliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportPdf']));
-$router->post('/veranstaltungen/{id}/versicherungsliste/zeitwerte', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'saveValues']));
 $router->post('/veranstaltungen/{id}/versicherungsliste/ki-schaetzen', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'estimateMissing']));
 $router->post('/veranstaltungen/{id}/rechnung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'createInvoice']));
 $router->get('/veranstaltungen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'edit']));

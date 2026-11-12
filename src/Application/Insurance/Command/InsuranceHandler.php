@@ -16,15 +16,18 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
-use App\Domain\Insurance\CurrentValue;
 use App\Domain\Insurance\CurrentValueRepositoryInterface;
 use App\Domain\Insurance\CurrentValueResolver;
 use App\Domain\Insurance\InsuranceField;
+use App\Domain\InventoryNumber\InventoryNumber;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use DateTimeImmutable;
 
-/** Zeitwerte pflegen, per KI schätzen und Exportspalten merken (Migration 143). */
+/**
+ * Zeitwerte per KI schätzen (gespeichert an der Inventarnummer), feste
+ * Artikel-Zeitwerte pflegen und Exportspalten merken (Migration 143).
+ */
 final class InsuranceHandler implements CommandHandlerInterface
 {
     public function __construct(
@@ -41,23 +44,12 @@ final class InsuranceHandler implements CommandHandlerInterface
     public function handle(CommandInterface $command): mixed
     {
         return match (true) {
-            $command instanceof SetInventoryNumberCurrentValue => $this->setInventoryNumberValue($command),
             $command instanceof SetArticleFixedCurrentValue => $this->setArticleFixedValue($command),
             $command instanceof SaveInsuranceExportFields => $this->saveExportFields($command),
             $command instanceof EstimateCurrentValue => $this->estimateOne($command->inventoryNumberId),
             $command instanceof EstimateMissingCurrentValues => $this->estimateMissing($command),
             default => throw new \LogicException('Unbekannter Befehl ' . $command::class),
         };
-    }
-
-    private function setInventoryNumberValue(SetInventoryNumberCurrentValue $command): mixed
-    {
-        if ($this->inventoryNumbers->findById($command->inventoryNumberId) === null) {
-            throw new NotFoundException('Inventarnummer wurde nicht gefunden.');
-        }
-        $this->currentValues->setForInventoryNumber($command->inventoryNumberId, $this->amount($command->value, 'current_value'));
-
-        return null;
     }
 
     private function setArticleFixedValue(SetArticleFixedCurrentValue $command): mixed
@@ -81,15 +73,27 @@ final class InsuranceHandler implements CommandHandlerInterface
         return null;
     }
 
-    private function estimateOne(string $inventoryNumberId): CurrentValue
+    /** Schätzt und speichert den Zeitwert an der Inventarnummer; liefert die aktualisierte Inventarnummer. */
+    private function estimateOne(string $inventoryNumberId): InventoryNumber
     {
         $this->assertEstimatorAvailable();
         $request = $this->estimationRequest($inventoryNumberId);
         $estimate = $this->estimator->estimate($request);
-        $this->currentValues->setForInventoryNumber($inventoryNumberId, $estimate->value, CurrentValue::SOURCE_AI, $estimate->reasoning);
 
-        return $this->currentValues->forInventoryNumber($inventoryNumberId)
-            ?? new CurrentValue($inventoryNumberId, $estimate->value, CurrentValue::SOURCE_AI, $estimate->reasoning, new DateTimeImmutable());
+        return $this->storeEstimate($inventoryNumberId, $estimate);
+    }
+
+    private function storeEstimate(string $inventoryNumberId, CurrentValueEstimate $estimate): InventoryNumber
+    {
+        $inventoryNumber = $this->inventoryNumbers->findById($inventoryNumberId);
+        if ($inventoryNumber === null) {
+            throw new NotFoundException('Inventarnummer wurde nicht gefunden.');
+        }
+        $inventoryNumber->setCurrentValue($estimate->value, InventoryNumber::CURRENT_VALUE_AI, $estimate->reasoning);
+        $inventoryNumber->updatedAt = new DateTimeImmutable();
+        $this->inventoryNumbers->save($inventoryNumber);
+
+        return $inventoryNumber;
     }
 
     private function estimateMissing(EstimateMissingCurrentValues $command): EstimationSummary
@@ -120,7 +124,7 @@ final class InsuranceHandler implements CommandHandlerInterface
                     $requests++;
                     $cache[$key] = $this->estimator->estimate($request);
                 }
-                $this->currentValues->setForInventoryNumber($row->inventoryNumberId, $cache[$key]->value, CurrentValue::SOURCE_AI, $cache[$key]->reasoning);
+                $this->storeEstimate($row->inventoryNumberId, $cache[$key]);
                 $estimated++;
             } catch (CurrentValueEstimationException | NotFoundException $e) {
                 $failed++;

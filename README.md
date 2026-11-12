@@ -117,12 +117,15 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Spalten sind frei wählbar (Artikelkategorie, Hersteller und Modell,
   Inventarnummer, Anschaffungsjahr, geschätzter Zeitwert, Anschaffungspreis);
   die Auswahl kann als Standard gemerkt werden. Fehlende Werte bleiben leer.
-  Der **Zeitwert** wird je Inventarnummer gespeichert (auf der Versicherungsliste
-  oder der Detailseite der Inventarnummer); zusätzlich kann je Artikel ein
+  Der **Zeitwert** wird direkt an der Inventarnummer gespeichert (Spalte
+  `inventory_numbers.current_value`, gepflegt über „Bearbeiten“ der
+  Inventarnummer auf der Artikel-Detailseite); die Versicherungsliste liest ihn
+  nur. Zusätzlich kann je Artikel ein
   **fester Zeitwert** hinterlegt werden (Artikelformular, z. B. für XLR-Kabel),
   der für alle Exemplare ohne eigenen Wert gilt. Per **KI** (OpenAI, Schlüssel
   aus Einstellungen › KI-Werbebilder) lässt sich der Zeitwert einzelner Geräte
-  oder aller noch fehlenden Geräte einer Veranstaltung schätzen; gleichartige
+  (Detailseite der Inventarnummer) oder aller noch fehlenden Geräte einer
+  Veranstaltung schätzen – das Ergebnis landet ebenfalls an der Inventarnummer; gleichartige
   Exemplare (gleicher Artikel, gleiches Anschaffungsjahr, gleicher Preis)
   werden dabei nur einmal angefragt. Der Anschaffungspreis ist der abweichende
   Einkaufspreis der Inventarnummer, sonst der des Artikels.

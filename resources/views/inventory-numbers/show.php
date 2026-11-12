@@ -149,20 +149,19 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
     <div class="space-y-4">
         <?php if (\App\Infrastructure\Http\CurrentValueLookup::isAvailable()): ?>
             <?php
-            $ownCurrentValue = \App\Infrastructure\Http\CurrentValueLookup::forInventoryNumber($inv->id);
             $articleFixedValue = \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article->id);
             $aiAvailable = \App\Infrastructure\Http\CurrentValueLookup::isAiAvailable();
             ?>
             <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
                 <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Zeitwert (Versicherung)</h2>
                 <p class="mb-3 text-slate-600 dark:text-slate-400">
-                    <?php if ($ownCurrentValue !== null): ?>
-                        <span class="font-mono text-slate-800 dark:text-slate-200"><?= e(number_format((float) $ownCurrentValue->value, 2, ',', '.')) ?> €</span>
+                    <?php if ($inv->currentValue !== null): ?>
+                        <span class="font-mono text-slate-800 dark:text-slate-200"><?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €</span>
                         <span class="text-xs text-slate-400 dark:text-slate-500">
-                            (<?= $ownCurrentValue->isAiEstimate() ? 'per KI geschätzt' : 'händisch' ?> am <?= e($ownCurrentValue->updatedAt->format('d.m.Y')) ?>)
+                            (<?= $inv->isCurrentValueAiEstimate() ? 'per KI geschätzt' : 'händisch' ?><?= $inv->currentValueUpdatedAt !== null ? ' am ' . e($inv->currentValueUpdatedAt->format('d.m.Y')) : '' ?>)
                         </span>
-                        <?php if ($ownCurrentValue->note !== null): ?>
-                            <span class="mt-1 block text-xs italic text-slate-500 dark:text-slate-400"><?= e($ownCurrentValue->note) ?></span>
+                        <?php if ($inv->currentValueNote !== null): ?>
+                            <span class="mt-1 block text-xs italic text-slate-500 dark:text-slate-400"><?= e($inv->currentValueNote) ?></span>
                         <?php endif; ?>
                     <?php elseif ($articleFixedValue !== null): ?>
                         <span class="font-mono text-slate-800 dark:text-slate-200"><?= e(number_format((float) $articleFixedValue, 2, ',', '.')) ?> €</span>
@@ -171,23 +170,17 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                         Noch kein Zeitwert erfasst.
                     <?php endif; ?>
                 </p>
-                <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/zeitwert" class="space-y-2">
-                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                    <label for="current_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Eigener Zeitwert in €</label>
-                    <input type="text" inputmode="decimal" id="current_value" name="current_value"
-                           value="<?= e($ownCurrentValue !== null ? number_format((float) $ownCurrentValue->value, 2, ',', '') : '') ?>"
-                           placeholder="<?= e($articleFixedValue !== null ? number_format((float) $articleFixedValue, 2, ',', '') : 'leer = kein eigener Wert') ?>"
-                           class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-                    <div class="flex flex-wrap gap-2">
-                        <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>
-                        <?php if ($aiAvailable): ?>
-                            <button type="submit" formaction="/inventurnummern/<?= e($inv->id) ?>/zeitwert/ki"
-                                    class="rounded-md border border-violet-300 bg-white px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:bg-slate-900 dark:text-violet-300 dark:hover:bg-violet-950/40">
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">Bearbeiten</a>
+                    <?php if ($aiAvailable): ?>
+                        <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/zeitwert/ki">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <button type="submit" class="rounded-md border border-violet-300 bg-white px-3 py-2 text-sm font-medium text-violet-700 hover:bg-violet-50 dark:border-violet-800 dark:bg-slate-900 dark:text-violet-300 dark:hover:bg-violet-950/40">
                                 Per KI schätzen
                             </button>
-                        <?php endif; ?>
-                    </div>
-                </form>
+                        </form>
+                    <?php endif; ?>
+                </div>
                 <?php if (!$aiAvailable): ?>
                     <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">KI-Schätzung: OpenAI-API-Schlüssel unter Einstellungen › KI-Werbebilder hinterlegen.</p>
                 <?php endif; ?>
@@ -300,7 +293,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
         <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Hinweis</h2>
             <p class="text-slate-500 dark:text-slate-400">
-                Anschaffungsdatum, Lieferant, abweichender Einkaufspreis und Lagerort lassen
+                Anschaffungsdatum, Lieferant, abweichender Einkaufspreis, Zeitwert und Lagerort lassen
                 sich auf der <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="underline">Artikel-Detailseite</a> bearbeiten.
             </p>
         </div>

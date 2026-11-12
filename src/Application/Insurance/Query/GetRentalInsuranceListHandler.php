@@ -37,13 +37,10 @@ final class GetRentalInsuranceListHandler implements QueryHandlerInterface
             array_map(static fn ($i) => $i->article->id, $detail->items),
         );
         $fixedValues = $this->currentValues->articleFixedValues($articleIds);
-        $itemValues = $this->currentValues->forInventoryNumbers(
-            array_map(static fn ($i) => $i->inventoryNumber->id, $detail->issuedItems)
-        );
 
         $rows = [];
         foreach ($detail->issuedItems as $issued) {
-            $resolved = CurrentValueResolver::resolve($itemValues[$issued->inventoryNumber->id] ?? null, $fixedValues[$issued->article->id] ?? null);
+            $resolved = CurrentValueResolver::resolve($issued->inventoryNumber, $fixedValues[$issued->article->id] ?? null);
             $rows[] = new InsuranceListRow(
                 articleId: $issued->article->id,
                 inventoryNumberId: $issued->inventoryNumber->id,
@@ -54,6 +51,7 @@ final class GetRentalInsuranceListHandler implements QueryHandlerInterface
                 currentValue: $resolved['value'],
                 currentValueOrigin: $resolved['origin'],
                 purchasePrice: $issued->inventoryNumber->effectivePurchasePrice($issued->article->purchasePrice),
+                currentValueNote: $resolved['origin'] === CurrentValueResolver::ORIGIN_AI ? $issued->inventoryNumber->currentValueNote : null,
             );
         }
 

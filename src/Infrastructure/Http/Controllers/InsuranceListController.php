@@ -9,8 +9,6 @@ use App\Application\Insurance\Command\EstimateCurrentValue;
 use App\Application\Insurance\Command\EstimateMissingCurrentValues;
 use App\Application\Insurance\Command\EstimationSummary;
 use App\Application\Insurance\Command\SaveInsuranceExportFields;
-use App\Application\Insurance\Command\SetArticleFixedCurrentValue;
-use App\Application\Insurance\Command\SetInventoryNumberCurrentValue;
 use App\Application\Insurance\Estimation\CurrentValueEstimationException;
 use App\Application\Insurance\Estimation\CurrentValueEstimatorInterface;
 use App\Application\Insurance\Query\GetRentalInsuranceList;
@@ -18,7 +16,6 @@ use App\Application\Insurance\Query\RentalInsuranceList;
 use App\Application\Query\QueryBus;
 use App\Application\Settings\Query\GetCompanySettings;
 use App\Domain\Exception\NotFoundException;
-use App\Domain\Exception\ValidationException;
 use App\Domain\Insurance\CurrentValueRepositoryInterface;
 use App\Domain\Insurance\InsuranceField;
 use App\Infrastructure\Csv\InsuranceListCsvExporter;
@@ -29,9 +26,10 @@ use App\Infrastructure\Http\View;
 use App\Infrastructure\Pdf\InsuranceListPdfGenerator;
 
 /**
- * Versicherungsliste einer Veranstaltung (Migration 143): Übersicht mit
- * pflegbaren Zeitwerten, KI-Schätzung sowie CSV-/PDF-Export mit frei
- * wählbaren Spalten.
+ * Versicherungsliste einer Veranstaltung (Migration 143): Übersicht, KI-
+ * Schätzung fehlender Zeitwerte sowie CSV-/PDF-Export mit frei wählbaren
+ * Spalten. Die Zeitwerte selbst werden an den Inventarnummern gepflegt
+ * (Inventarnummer bearbeiten) bzw. als fester Wert am Artikel.
  */
 final class InsuranceListController
 {
@@ -59,20 +57,10 @@ final class InsuranceListController
         }
         assert($list instanceof RentalInsuranceList);
 
-        $issuedIds = array_values(array_filter(array_map(static fn ($r) => $r->inventoryNumberId, $list->rows)));
-        $articles = [];
-        foreach ($list->rows as $row) {
-            $articles[$row->articleId] ??= ['name' => $row->manufacturerModel, 'category' => $row->category, 'count' => 0];
-            $articles[$row->articleId]['count']++;
-        }
-
         echo View::page('rentals/insurance-list', [
             'list' => $list,
             'includeUnissued' => $includeUnissued,
             'selectedFields' => $this->currentValues->exportFields(),
-            'itemValues' => $this->currentValues->forInventoryNumbers($issuedIds),
-            'articles' => $articles,
-            'fixedValues' => $this->currentValues->articleFixedValues(array_keys($articles)),
             'aiAvailable' => $this->estimator->isAvailable(),
         ], activeNav: 'rentals', title: 'Versicherungsliste: ' . $list->rental->eventName);
     }
@@ -85,40 +73,6 @@ final class InsuranceListController
     public function exportPdf(Request $request): void
     {
         $this->export($request, 'pdf');
-    }
-
-    /** Speichert geänderte Zeitwerte je Inventarnummer und feste Zeitwerte je Artikel. */
-    public function saveValues(Request $request): void
-    {
-        $id = $request->param('id');
-        $errors = [];
-        $saved = 0;
-
-        foreach ($this->changedValues($request, 'values') as $inventoryNumberId => $value) {
-            try {
-                $this->commands->dispatch(new SetInventoryNumberCurrentValue($inventoryNumberId, $value));
-                $saved++;
-            } catch (ValidationException | NotFoundException $e) {
-                $errors[] = $e instanceof ValidationException ? implode(' ', $e->errors()) : $e->getMessage();
-            }
-        }
-        foreach ($this->changedValues($request, 'fixed') as $articleId => $value) {
-            try {
-                $this->commands->dispatch(new SetArticleFixedCurrentValue($articleId, $value));
-                $saved++;
-            } catch (ValidationException | NotFoundException $e) {
-                $errors[] = $e instanceof ValidationException ? implode(' ', $e->errors()) : $e->getMessage();
-            }
-        }
-
-        if ($errors !== []) {
-            Flash::error(implode(' ', array_unique($errors)));
-        }
-        if ($saved > 0 || $errors === []) {
-            Flash::success($saved === 0 ? 'Keine Änderungen.' : $saved . ($saved === 1 ? ' Zeitwert gespeichert.' : ' Zeitwerte gespeichert.'));
-        }
-
-        Response::redirect($this->listUrl($id, $request));
     }
 
     /** Schätzt alle fehlenden Zeitwerte der ausgegebenen Exemplare per KI. */
@@ -153,31 +107,13 @@ final class InsuranceListController
         Response::redirect($this->listUrl($id, $request));
     }
 
-    /** POST /inventurnummern/{id}/zeitwert — händisch (Detailseite der Inventarnummer). */
-    public function saveInventoryNumberValue(Request $request): void
-    {
-        $id = $request->param('id');
-        try {
-            $this->commands->dispatch(new SetInventoryNumberCurrentValue($id, $request->input('current_value')));
-            Flash::success('Zeitwert gespeichert.');
-        } catch (ValidationException $e) {
-            Flash::error(implode(' ', $e->errors()));
-        } catch (NotFoundException $e) {
-            Response::notFound($e->getMessage());
-
-            return;
-        }
-
-        Response::redirect($this->backUrl($request, '/inventurnummern/' . $id));
-    }
-
     /** POST /inventurnummern/{id}/zeitwert/ki — Zeitwert eines Exemplars per KI schätzen. */
     public function estimateInventoryNumberValue(Request $request): void
     {
         $id = $request->param('id');
         try {
-            $value = $this->commands->dispatch(new EstimateCurrentValue($id));
-            Flash::success('KI-Schätzung gespeichert: ' . number_format((float) $value->value, 2, ',', '.') . ' €' . ($value->note !== null ? ' – ' . $value->note : ''));
+            $inventoryNumber = $this->commands->dispatch(new EstimateCurrentValue($id));
+            Flash::success('KI-Schätzung gespeichert: ' . number_format((float) $inventoryNumber->currentValue, 2, ',', '.') . ' €' . ($inventoryNumber->currentValueNote !== null ? ' – ' . $inventoryNumber->currentValueNote : ''));
         } catch (CurrentValueEstimationException $e) {
             Flash::error($e->getMessage());
         } catch (NotFoundException $e) {
@@ -222,35 +158,6 @@ final class InsuranceListController
 
         $companySettings = $this->queries->ask(new GetCompanySettings());
         Response::inlinePdf($this->pdfGenerator->generate($list, $fields, $companySettings), $basename . '.pdf');
-    }
-
-    /**
-     * Nur Felder, deren Wert sich gegenüber dem beim Laden angezeigten Wert
-     * (Hidden-Feld "<name>_orig") geändert hat — so wird z. B. eine
-     * unveränderte KI-Schätzung nicht beim Speichern zur händischen Angabe.
-     *
-     * @return array<string, string|null>
-     */
-    private function changedValues(Request $request, string $name): array
-    {
-        $values = $request->post[$name] ?? [];
-        $originals = $request->post[$name . '_orig'] ?? [];
-        if (!is_array($values)) {
-            return [];
-        }
-        $changed = [];
-        foreach ($values as $key => $value) {
-            if (!is_string($key) || !is_scalar($value)) {
-                continue;
-            }
-            $value = trim((string) $value);
-            $original = is_array($originals) && isset($originals[$key]) && is_scalar($originals[$key]) ? trim((string) $originals[$key]) : '';
-            if ($value !== $original) {
-                $changed[$key] = $value !== '' ? $value : null;
-            }
-        }
-
-        return $changed;
     }
 
     private function listUrl(string $rentalId, Request $request): string

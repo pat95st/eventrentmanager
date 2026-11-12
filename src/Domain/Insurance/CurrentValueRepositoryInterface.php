@@ -5,23 +5,13 @@ declare(strict_types=1);
 namespace App\Domain\Insurance;
 
 /**
- * Zeitwerte für die Versicherungsliste (Migration 143): je Inventarnummer
- * ein eigener Wert, je Artikel optional ein fester Wert, der für alle
- * Exemplare ohne eigenen Wert gilt.
+ * Ergänzende Daten der Versicherungsliste (Migration 143). Der Zeitwert
+ * eines einzelnen Exemplars liegt direkt an der Inventarnummer (siehe
+ * App\Domain\InventoryNumber\InventoryNumber::$currentValue); hier nur der
+ * optionale feste Zeitwert je Artikel und die zuletzt gewählten Exportspalten.
  */
 interface CurrentValueRepositoryInterface
 {
-    public function forInventoryNumber(string $inventoryNumberId): ?CurrentValue;
-
-    /**
-     * @param string[] $inventoryNumberIds
-     * @return array<string, CurrentValue> inventory_number_id => Wert (nur vorhandene)
-     */
-    public function forInventoryNumbers(array $inventoryNumberIds): array;
-
-    /** null löscht den gespeicherten Wert. */
-    public function setForInventoryNumber(string $inventoryNumberId, ?string $value, string $source = CurrentValue::SOURCE_MANUAL, ?string $note = null): void;
-
     public function articleFixedValue(string $articleId): ?string;
 
     /**

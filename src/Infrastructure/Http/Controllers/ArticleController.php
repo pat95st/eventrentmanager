@@ -898,7 +898,17 @@ final class ArticleController
         $installedFirmwareVersionId = $this->nullIfEmpty($request->input('installed_firmware_version_id'));
 
         try {
-            $this->commands->dispatch(new UpdateInventoryNumber($inventoryNumberId, $acquisitionDate, $supplierId, $receiptId, $purchasePriceOverride, $storageLocation, $installedFirmwareVersionId));
+            $this->commands->dispatch(new UpdateInventoryNumber(
+                $inventoryNumberId,
+                $acquisitionDate,
+                $supplierId,
+                $receiptId,
+                $purchasePriceOverride,
+                $storageLocation,
+                $installedFirmwareVersionId,
+                currentValue: $request->input('current_value'),
+                updateCurrentValue: $request->input('current_value_section') === '1',
+            ));
             Flash::success('Inventurnummer wurde aktualisiert.');
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));

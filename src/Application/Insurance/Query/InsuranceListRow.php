@@ -24,6 +24,7 @@ final class InsuranceListRow
         public readonly ?string $currentValue,
         public readonly ?string $currentValueOrigin, // siehe CurrentValueResolver::ORIGIN_*
         public readonly ?string $purchasePrice,
+        public readonly ?string $currentValueNote = null, // Begründung einer KI-Schätzung
     ) {
     }
 

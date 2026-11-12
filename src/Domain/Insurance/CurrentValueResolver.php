@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Insurance;
 
+use App\Domain\InventoryNumber\InventoryNumber;
+
 /**
  * Ermittelt den in der Versicherungsliste ausgewiesenen Zeitwert eines
  * Exemplars. Reihenfolge (das Spezifischere gewinnt, analog zum
@@ -18,11 +20,14 @@ final class CurrentValueResolver
     public const ORIGIN_AI = 'ai';
     public const ORIGIN_ARTICLE = 'article';
 
-    /** @return array{value: string|null, origin: string|null} */
-    public static function resolve(?CurrentValue $itemValue, ?string $articleFixedValue): array
+    /**
+     * @param InventoryNumber|null $inventoryNumber null für noch nicht ausgegebene (nur geplante) Exemplare
+     * @return array{value: string|null, origin: string|null}
+     */
+    public static function resolve(?InventoryNumber $inventoryNumber, ?string $articleFixedValue): array
     {
-        if ($itemValue !== null) {
-            return ['value' => $itemValue->value, 'origin' => $itemValue->isAiEstimate() ? self::ORIGIN_AI : self::ORIGIN_ITEM];
+        if ($inventoryNumber?->currentValue !== null) {
+            return ['value' => $inventoryNumber->currentValue, 'origin' => $inventoryNumber->isCurrentValueAiEstimate() ? self::ORIGIN_AI : self::ORIGIN_ITEM];
         }
         if ($articleFixedValue !== null) {
             return ['value' => $articleFixedValue, 'origin' => self::ORIGIN_ARTICLE];

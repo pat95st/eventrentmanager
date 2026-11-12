@@ -245,6 +245,11 @@ $canDocuments = $canRentals;
   details[data-dropdown] > [data-dropdown-menu] { z-index: 60 !important; }
   [data-dropdown-menu] { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   .nav-flyout { width: max-content; min-width: 11rem; max-width: 22rem; }
+  /* Aktionsmenüs (z. B. „⋯“ in der Kundenliste): Breite nach dem längsten
+     Eintrag statt fest, damit auch breitere Oberflächenschriften (siehe
+     Einstellungen → Schriftarten) nicht über den Rand laufen. */
+  .menu-fit { width: max-content; min-width: 11rem; max-width: min(22rem, calc(100vw - 1rem)); }
+  .menu-fit > a, .menu-fit > form > button { white-space: nowrap; }
   .nav-flyout > a { padding-left: 0.875rem; padding-right: 0.875rem; white-space: nowrap; }
   body.has-bg-image .nav-flyout, body.has-bg-image [data-dropdown-menu], body.has-bg-image [data-live-search-results] { background-color: rgb(255 255 255) !important; }
   html.dark body.has-bg-image .nav-flyout, html.dark body.has-bg-image [data-dropdown-menu], html.dark body.has-bg-image [data-live-search-results] { background-color: rgb(15 23 42) !important; box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(71 85 105 / 0.6); }

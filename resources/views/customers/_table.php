@@ -78,7 +78,7 @@ $canCreateDocuments = \App\Infrastructure\Http\Auth\CurrentUser::get()?->has(\Ap
                                             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"/></svg>
                                             <?= e(t('customers.quick_actions.new')) ?>
                                         </summary>
-                                        <div data-dropdown-menu role="menu" class="absolute right-0 z-10 w-56 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 <?= $openUpward ? 'bottom-full mb-1' : 'top-full mt-1' ?>">
+                                        <div data-dropdown-menu role="menu" class="menu-fit absolute right-0 z-10 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 <?= $openUpward ? 'bottom-full mb-1' : 'top-full mt-1' ?>">
                                             <p class="px-3 pb-1 pt-1.5 text-xs text-slate-400 dark:text-slate-500"><?= e(t('customers.quick_actions.for', ['name' => $customer->displayName()])) ?></p>
                                             <?php foreach ([
                                                 ['/veranstaltungen/neu', 'customers.quick_actions.rental'],
@@ -96,7 +96,7 @@ $canCreateDocuments = \App\Infrastructure\Http\Auth\CurrentUser::get()?->has(\Ap
                                         <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 3a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 8.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM10 14a1.5 1.5 0 110 3 1.5 1.5 0 010-3z"/></svg>
                                         <span class="sr-only"><?= e(t('customers.quick_actions.more')) ?></span>
                                     </summary>
-                                    <div data-dropdown-menu role="menu" class="absolute right-0 z-10 w-44 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 <?= $openUpward ? 'bottom-full mb-1' : 'top-full mt-1' ?>">
+                                    <div data-dropdown-menu role="menu" class="menu-fit absolute right-0 z-10 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 <?= $openUpward ? 'bottom-full mb-1' : 'top-full mt-1' ?>">
                                         <a role="menuitem" href="/kunden/<?= e($customer->id) ?>/bearbeiten" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
                                         <?php if ($canCreateDocuments): ?>
                                             <a role="menuitem" href="/veranstaltungen?kunde=<?= e(rawurlencode($customer->id)) ?>" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('customers.quick_actions.show_rentals')) ?></a>

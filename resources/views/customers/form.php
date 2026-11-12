@@ -13,14 +13,25 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 $selectedType = $val('type', $customer?->type->value) ?: CustomerType::Privat->value;
 ?>
 
-<div class="mb-6">
-    <a href="/kunden" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('customers.form.back')) ?></a>
-    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
-        <?= $customer !== null ? e(t('customers.edit')) : e(t('customers.new')) ?>
-        <?php if ($customer !== null): ?>
-            <span class="ml-2 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($customer->customerNumber) ?></span>
-        <?php endif; ?>
-    </h1>
+<div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div>
+        <a href="/kunden" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('customers.form.back')) ?></a>
+        <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">
+            <?= $customer !== null ? e(t('customers.edit')) : e(t('customers.new')) ?>
+            <?php if ($customer !== null): ?>
+                <span class="ml-2 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e($customer->customerNumber) ?></span>
+            <?php endif; ?>
+        </h1>
+    </div>
+    <?php if ($customer !== null && (\App\Infrastructure\Http\Auth\CurrentUser::get()?->has(\App\Domain\User\Permission::AusgabeRuecknahme) ?? false)): ?>
+        <?php /* Schnellaktionen: neue Veranstaltung/neues Dokument für diesen Kunden (siehe CustomerPrefill). */ ?>
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/veranstaltungen/neu?kunde=<?= e(rawurlencode($customer->id)) ?>" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">+ <?= e(t('customers.quick_actions.rental')) ?></a>
+            <a href="/angebote/neu?kunde=<?= e(rawurlencode($customer->id)) ?>" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">+ <?= e(t('customers.quick_actions.offer')) ?></a>
+            <a href="/auftragsbestaetigungen/neu?kunde=<?= e(rawurlencode($customer->id)) ?>" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">+ <?= e(t('customers.quick_actions.order_confirmation')) ?></a>
+            <a href="/rechnungen/neu?kunde=<?= e(rawurlencode($customer->id)) ?>" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">+ <?= e(t('customers.quick_actions.invoice')) ?></a>
+        </div>
+    <?php endif; ?>
 </div>
 
 <form

@@ -9,6 +9,8 @@ declare(strict_types=1);
 // word-for-word ports of the German.
 return [
     // --- Common / recurring actions -------------------------------------
+    'confirm.title' => 'Please confirm',
+    'confirm.ok' => 'Confirm',
     'common.save' => 'Save',
     'common.cancel' => 'Cancel',
     'common.delete' => 'Delete',
@@ -1464,6 +1466,15 @@ return [
     'receipts.flash.marked_open' => 'Receipt was marked as open.',
 
     // --- Customers -------------------------------------------------------------
+    'customers.quick_actions.new' => 'New',
+    'customers.quick_actions.for' => 'For {name}',
+    'customers.quick_actions.rental' => 'Event',
+    'customers.quick_actions.offer' => 'Offer',
+    'customers.quick_actions.order_confirmation' => 'Order confirmation',
+    'customers.quick_actions.invoice' => 'Invoice',
+    'customers.quick_actions.more' => 'More actions',
+    'customers.quick_actions.show_rentals' => 'Show events',
+    'customers.quick_actions.delete' => 'Delete customer',
     'customers.title' => 'Customers',
     'customers.new' => 'New customer',
     'customers.edit' => 'Edit customer',

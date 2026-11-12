@@ -102,7 +102,8 @@ final class InvoiceController
 
     public function create(Request $request): void
     {
-        $this->renderForm(null, [], []);
+        // "?kunde=<ID>" belegt den Kunden vor (Schnellaktion in der Kundenliste).
+        $this->renderForm(null, [], \App\Infrastructure\Http\CustomerPrefill::old($request, $this->queries));
     }
 
     public function store(Request $request): void

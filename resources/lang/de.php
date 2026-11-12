@@ -9,6 +9,8 @@ declare(strict_types=1);
 // zusätzliche Auflösungslogik funktioniert).
 return [
     // --- Allgemein / wiederkehrende Aktionen -------------------------------
+    'confirm.title' => 'Bitte bestätigen',
+    'confirm.ok' => 'Bestätigen',
     'common.save' => 'Speichern',
     'common.cancel' => 'Abbrechen',
     'common.delete' => 'Löschen',
@@ -1465,6 +1467,15 @@ return [
     'receipts.flash.marked_open' => 'Beleg wurde als offen markiert.',
 
     // --- Kunden -------------------------------------------------------------
+    'customers.quick_actions.new' => 'Neu',
+    'customers.quick_actions.for' => 'Für {name}',
+    'customers.quick_actions.rental' => 'Veranstaltung',
+    'customers.quick_actions.offer' => 'Angebot',
+    'customers.quick_actions.order_confirmation' => 'Auftragsbestätigung',
+    'customers.quick_actions.invoice' => 'Rechnung',
+    'customers.quick_actions.more' => 'Weitere Aktionen',
+    'customers.quick_actions.show_rentals' => 'Veranstaltungen anzeigen',
+    'customers.quick_actions.delete' => 'Kunde löschen',
     'customers.title' => 'Kunden',
     'customers.new' => 'Neuer Kunde',
     'customers.edit' => 'Kunde bearbeiten',

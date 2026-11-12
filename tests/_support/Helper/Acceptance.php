@@ -50,10 +50,30 @@ class Acceptance extends Module
         ]);
 
         // ProfileController::changePassword() leitet nach Erfolg auf '/'
-        // weiter, DashboardController::index() leitet von dort sofort
-        // weiter auf '/artikel' (siehe dort) — PhpBrowser folgt beiden
-        // Redirects automatisch, die Anmeldung endet also auf '/artikel'.
+        // (Startseite/Dashboard) weiter. Ob die Änderung wirklich durch ist,
+        // prüfen wir unabhängig von der Startseite: eine geschützte Seite
+        // muss jetzt direkt erreichbar sein, statt erneut auf
+        // /profil/passwort (Passwort noch nicht geändert) oder /login
+        // (Sitzung verloren) umzuleiten.
+        $browser->dontSeeCurrentUrlEquals('/profil/passwort');
+        $browser->amOnPage('/artikel');
         $browser->seeCurrentUrlEquals('/artikel');
+    }
+
+    /**
+     * Prüft einen Header der letzten Antwort. PhpBrowser selbst bietet das
+     * nicht (seeHttpHeader() gibt es nur im REST-Modul, das hier nicht
+     * installiert ist). Ein Wert wie "text/html; charset=utf-8" erfüllt auch
+     * die Erwartung "text/html" — nur der Teil vor einem ";" muss passen.
+     */
+    public function seeHttpHeader(string $name, ?string $value = null): void
+    {
+        $actual = $this->phpBrowser()->client->getInternalResponse()->getHeader($name);
+
+        $this->assertNotNull($actual, "Header '{$name}' fehlt in der Antwort.");
+        if ($value !== null) {
+            $this->assertSame($value, trim(explode(';', (string) $actual, 2)[0]), "Header '{$name}' hat einen unerwarteten Wert.");
+        }
     }
 
     private function phpBrowser(): PhpBrowser

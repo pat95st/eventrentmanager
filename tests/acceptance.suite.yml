@@ -4,7 +4,8 @@
 # tests/README.md und tests/.env.testing.dist.
 #
 # Das Db-Modul leert die konfigurierte Datenbank vor JEDEM Test und lädt sie
-# aus database/schema.sql neu (inkl. Seed-Daten wie dem Standard-Administrator
+# aus database/schema.sql neu (ohne CREATE DATABASE/USE, landet also immer in
+# der Datenbank aus TEST_DB_DSN; inkl. Seed-Daten wie dem Standard-Administrator
 # admin@materialverleih.local — siehe dort) — dieselbe Datei, die auch für
 # den Produktivbetrieb verwendet wird, es gibt also keine separate,
 # potenziell veraltete Test-Fixture-Kopie des Schemas.

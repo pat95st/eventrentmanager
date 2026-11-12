@@ -263,10 +263,17 @@ den Installer):**
 1. **Datenbank anlegen**
 
    ```bash
-   mysql -u root -p < database/schema.sql
+   mysql -u root -p -e "CREATE DATABASE materialverleih CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
    ```
 
-   (Das Skript legt die Datenbank `materialverleih` selbst an.)
+   ```bash
+   mysql -u root -p materialverleih < database/schema.sql
+   ```
+
+   (`schema.sql` enthält bewusst kein `CREATE DATABASE`/`USE`, sondern wird
+   in die beim Aufruf angegebene Datenbank eingespielt — dieselbe Datei
+   nutzen auch der Web-Installer und die Acceptance-Tests für ihre jeweils
+   eigene Datenbank.)
 
    **Bestehende Installation aktualisieren:** Wer die Software bereits im
    Einsatz hat (vor Einführung der Hersteller-/Artikel-Präfixe für

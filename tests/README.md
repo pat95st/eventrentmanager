@@ -50,6 +50,11 @@ Keine weitere Vorbereitung nötig.
    `database/schema.sql` neu, inklusive des dort geseedeten
    Standard-Administrators `admin@materialverleih.local`).
 
+   `database/schema.sql` enthält kein `CREATE DATABASE`/`USE`: der Dump
+   landet immer in der Datenbank aus `TEST_DB_DSN` (`dbname=...`), nie in
+   `materialverleih`. Der Test-Benutzer braucht deshalb nur Rechte auf die
+   Test-Datenbank:
+
    ```sql
    CREATE DATABASE materialverleih_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
    CREATE USER 'materialverleih_test'@'127.0.0.1' IDENTIFIED BY 'ein-sicheres-test-passwort';
@@ -76,6 +81,24 @@ Keine weitere Vorbereitung nötig.
    # oder direkt:
    vendor/bin/codecept run acceptance
    ```
+
+Hinweise:
+
+- Der Seed-Administrator muss beim ersten Login sein Passwort ändern
+  (`must_change_password = 1`, wie bei einer echten Neuinstallation).
+  `$I->loginAsAdmin()` (`tests/_support/Helper/Acceptance.php`) erledigt
+  Login **und** Passwortänderung und prüft anschließend, dass eine
+  geschützte Seite (`/artikel`) erreichbar ist.
+- Die Migrationen in `database/migrations/` laufen hier **nicht** — die
+  Test-Datenbank entsteht allein aus `database/schema.sql`. Wer eine neue
+  Migration anlegt, muss die Änderung daher auch in `database/schema.sql`
+  nachtragen. Die Unit-Suite prüft das ohne Datenbank
+  (`tests/unit/Infrastructure/Database/SchemaSnapshotTest.php`: jede
+  Tabelle aus den Migrationen muss in `schema.sql` vorkommen, kein
+  `CREATE DATABASE`/`USE`).
+- Fehlschläge mit HTTP 500 lassen sich am schnellsten im Log des
+  PHP-Entwicklungsservers aus Schritt 3 nachvollziehen (z. B. „Table ...
+  doesn't exist“ bei einer fehlenden Tabelle in `schema.sql`).
 
 ### Warum eine laufende Anwendung UND eine Datenbank?
 

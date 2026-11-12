@@ -85,7 +85,9 @@ function databaseIsEmpty(\PDO $pdo): bool
  *
  * database/schema.sql wird deshalb als vollständiger, aktueller
  * Schema-Snapshot gepflegt (zuletzt abgeglichen gegen alle Migrationen bis
- * einschließlich 088_add_ai_ad_images.sql) und hier direkt eingespielt.
+ * einschließlich 145_trusted_devices.sql; Abgleich wird durch
+ * tests/unit/Infrastructure/Database/SchemaSnapshotTest.php abgesichert) und hier direkt
+ * eingespielt.
  * Damit ein anschließendes "php bin/migrate.php" (oder ein erneuter
  * Installationslauf) die soeben eingespielten Migrationen nicht fälschlich
  * ein zweites Mal anwendet (würde z. B. mit "Duplicate column" fehlschlagen),

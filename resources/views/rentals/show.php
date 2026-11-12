@@ -78,6 +78,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
             <div data-dropdown-menu role="menu" class="absolute left-0 top-full z-20 mt-1 w-80 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900">
                 <a href="/veranstaltungen/<?= e($rental->id) ?>/beladung" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.loading_list')) ?></a>
                 <a href="/veranstaltungen/<?= e($rental->id) ?>/packliste.pdf" target="_blank" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.export_pdf')) ?></a>
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.insurance_list')) ?></a>
                 <details class="group">
                     <summary class="<?= $menuItemClass ?> flex cursor-pointer list-none items-center justify-between">
                         <?= e(t('rentals.show.send_email')) ?>

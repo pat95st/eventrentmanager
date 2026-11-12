@@ -7,6 +7,7 @@ namespace App\Application\Auth\Command;
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Auth\PasswordSetupTokenRepositoryInterface;
+use App\Domain\Auth\TrustedDeviceRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\User\UserRepositoryInterface;
@@ -29,6 +30,8 @@ final class CompletePasswordSetupHandler implements CommandHandlerInterface
     public function __construct(
         private readonly PasswordSetupTokenRepositoryInterface $tokens,
         private readonly UserRepositoryInterface $users,
+        /** Neues Passwort → alle "vertrauten Geräte" (Migration 145) verlieren ihr Vertrauen. */
+        private readonly ?TrustedDeviceRepositoryInterface $trustedDevices = null,
     ) {
     }
 
@@ -66,6 +69,7 @@ final class CompletePasswordSetupHandler implements CommandHandlerInterface
         $user->mustChangePassword = false;
         $user->updatedAt = $now;
         $this->users->save($user);
+        $this->trustedDevices?->deleteAllForUser($user->id);
 
         // Erst NACH dem erfolgreichen Speichern verbrauchen — bei einem
         // Fehler dazwischen bleibt der Link nutzbar, statt den Benutzer

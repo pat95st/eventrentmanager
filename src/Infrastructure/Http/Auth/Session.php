@@ -16,6 +16,8 @@ final class Session
 {
     private const KEY_USER_ID = 'auth_user_id';
     private const KEY_PENDING_2FA_USER_ID = 'auth_pending_2fa_user_id';
+    /** Haken "Dem Gerät für die nächsten 10 Tage vertrauen" aus dem Login-Formular, bis der zweite Faktor bestätigt ist. */
+    private const KEY_PENDING_TRUST_DEVICE = 'auth_pending_trust_device';
     private const KEY_REDIRECT_AFTER_LOGIN = 'auth_redirect_after_login';
     private const KEY_TOTP_SETUP_SECRET = 'auth_totp_setup_secret';
     /**
@@ -54,7 +56,7 @@ final class Session
         self::ensureStarted();
         session_regenerate_id(true);
         $_SESSION[self::KEY_USER_ID] = $userId;
-        unset($_SESSION[self::KEY_PENDING_2FA_USER_ID]);
+        unset($_SESSION[self::KEY_PENDING_2FA_USER_ID], $_SESSION[self::KEY_PENDING_TRUST_DEVICE]);
         // Sicherheitsrelevant: session_regenerate_id() erneuert nur die
         // Session-ID, nicht den Inhalt von $_SESSION. Ohne dieses unset()
         // könnten Reste einer vorherigen Impersonation (KEY_IMPERSONATOR_ID/
@@ -78,10 +80,19 @@ final class Session
     }
 
     /** Erste Stufe (Passwort korrekt, zweiter Faktor noch offen) — bewusst getrennt von KEY_USER_ID. */
-    public static function startTwoFactorChallenge(string $userId): void
+    public static function startTwoFactorChallenge(string $userId, bool $trustDevice = false): void
     {
         self::ensureStarted();
         $_SESSION[self::KEY_PENDING_2FA_USER_ID] = $userId;
+        $_SESSION[self::KEY_PENDING_TRUST_DEVICE] = $trustDevice;
+    }
+
+    /** Wurde beim Login "Dem Gerät vertrauen" angehakt? (Vorbelegung des Hakens auf der 2FA-Seite) */
+    public static function pendingTrustDevice(): bool
+    {
+        self::ensureStarted();
+
+        return ($_SESSION[self::KEY_PENDING_TRUST_DEVICE] ?? false) === true;
     }
 
     public static function pendingTwoFactorUserId(): ?string

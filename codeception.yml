@@ -2,6 +2,11 @@
 # Acceptance) werden in tests/unit.suite.yml bzw. tests/acceptance.suite.yml
 # konfiguriert — siehe dort für Details und tests/README.md für die
 # Kurzanleitung zum Ausführen.
+# Namespace der Test-Klassen (siehe autoload-dev in composer.json): ohne diese
+# Angaben erzeugt `codecept build` die Actor-Traits (tests/_support/_generated)
+# im falschen Namespace und die Suiten brechen mit "Trait not found" ab.
+namespace: Tests
+support_namespace: Support
 paths:
     tests: tests
     output: tests/_output
@@ -16,5 +21,8 @@ extensions:
 # database.yaml-Begründung in bootstrap.php: keine Zugangsdaten im
 # Projektordner), sondern aus tests/.env.testing (siehe
 # tests/.env.testing.dist zum Kopieren, Datei selbst ist gitignored).
+# Codeception lädt Params nur global — die Datei muss daher auch für die
+# Unit-Suite existieren (eine unveränderte Kopie der .dist-Vorlage genügt;
+# `composer install` legt sie bei Bedarf automatisch an).
 params:
     - tests/.env.testing

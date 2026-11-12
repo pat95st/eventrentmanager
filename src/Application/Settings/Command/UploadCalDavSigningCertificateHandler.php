@@ -43,14 +43,16 @@ final class UploadCalDavSigningCertificateHandler implements CommandHandlerInter
         $certificateContent = (string) file_get_contents($certificateFile['tmp_name']);
         $privateKeyContent = (string) file_get_contents($privateKeyFile['tmp_name']);
 
-        $certificate = openssl_x509_read($certificateContent);
+        // @: OpenSSL meldet ungültige Eingaben zusätzlich als PHP-Warnung; der
+        // Rückgabewert false wird unten als Validierungsfehler behandelt.
+        $certificate = @openssl_x509_read($certificateContent);
         if ($certificate === false) {
             throw new ValidationException(['certificate' => 'Das ist kein gültiges PEM-Zertifikat.']);
         }
 
         // Keine Passphrase-Unterstützung: die Anwendung muss den Schlüssel bei
         // jedem .mobileconfig-Download ohne Rückfrage verwenden können.
-        $privateKey = openssl_pkey_get_private($privateKeyContent);
+        $privateKey = @openssl_pkey_get_private($privateKeyContent);
         if ($privateKey === false) {
             throw new ValidationException(['private_key' => 'Das ist kein gültiger, unverschlüsselter PEM-Privatschlüssel (eine Passphrase wird nicht unterstützt).']);
         }

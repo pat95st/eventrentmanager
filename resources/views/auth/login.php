@@ -1,6 +1,7 @@
 <?php
 /** @var array<string, string> $errors */
 /** @var string $email */
+/** @var bool $trustDevice */
 
 use App\Infrastructure\Http\CompanyBranding;
 use App\Infrastructure\Http\Locale;
@@ -137,6 +138,13 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
           <input type="password" id="password" name="password" required
                  class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
         </div>
+        <!-- Überspringt auf diesem Gerät 10 Tage lang die Abfrage des
+             zweiten Faktors, siehe App\Application\Auth\TrustedDeviceService. -->
+        <label class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+          <input type="checkbox" name="trust_device" value="1" <?= ($trustDevice ?? false) ? 'checked' : '' ?>
+                 class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+          <span><?= e(t('auth.login.trust_device')) ?></span>
+        </label>
         <button type="submit" class="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
           <?= e(t('auth.login.submit')) ?>
         </button>

@@ -494,6 +494,8 @@ $loginChallengeRepository = new MariadbLoginChallengeRepository($pdo);
 $webauthnCredentialRepository = new MariadbWebauthnCredentialRepository($pdo);
 $webauthnChallengeRepository = new MariadbWebauthnChallengeRepository($pdo);
 $userSessionRepository = new MariadbUserSessionRepository($pdo);
+$trustedDeviceRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTrustedDeviceRepository($pdo);
+$trustedDeviceService = new \App\Application\Auth\TrustedDeviceService($trustedDeviceRepository);
 $recordUserSession = new \App\Infrastructure\Http\Auth\RecordUserSession($userSessionRepository);
 $impersonationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbImpersonationRepository($pdo);
 $webAuthnService = new WebAuthnService();
@@ -858,11 +860,11 @@ $commandBus->register(\App\Application\NoticeDocument\Command\DeleteNoticeDocume
 $commandBus->register(\App\Application\User\Command\CreateUser::class, new CreateUserHandler($userRepository, $passwordSetupTokenIssuer));
 $commandBus->register(\App\Application\User\Command\UpdateUser::class, new UpdateUserHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\DeleteUser::class, new DeleteUserHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\ChangePassword::class, new ChangePasswordHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\ChangeOwnPassword::class, new ChangeOwnPasswordHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\EnableTotp::class, new EnableTotpHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\EnableEmailOtp::class, new EnableEmailOtpHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\DisableTwoFactor::class, new DisableTwoFactorHandler($userRepository));
+$commandBus->register(\App\Application\User\Command\ChangePassword::class, new ChangePasswordHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\ChangeOwnPassword::class, new ChangeOwnPasswordHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\EnableTotp::class, new EnableTotpHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\EnableEmailOtp::class, new EnableEmailOtpHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\DisableTwoFactor::class, new DisableTwoFactorHandler($userRepository, $trustedDeviceRepository));
 $commandBus->register(\App\Application\User\Command\UpdateDefaultPageSize::class, new UpdateDefaultPageSizeHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\UpdateDashboardWidgets::class, new \App\Application\User\Command\UpdateDashboardWidgetsHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new UpdateLocaleHandler($userRepository));
@@ -878,12 +880,12 @@ $commandBus->register(\App\Application\Auth\Command\CompletePasskeyLogin::class,
 $commandBus->register(\App\Application\Auth\Command\DeletePasskey::class, new DeletePasskeyHandler($webauthnCredentialRepository));
 
 $commandBus->register(\App\Application\Auth\Command\RequestPasswordSetup::class, new RequestPasswordSetupHandler($userRepository, $passwordSetupTokenIssuer));
-$commandBus->register(\App\Application\Auth\Command\CompletePasswordSetup::class, new CompletePasswordSetupHandler($passwordSetupTokenRepository, $userRepository));
+$commandBus->register(\App\Application\Auth\Command\CompletePasswordSetup::class, new CompletePasswordSetupHandler($passwordSetupTokenRepository, $userRepository, $trustedDeviceRepository));
 
 $commandBus->register(\App\Application\Auth\Command\RevokeSession::class, new \App\Application\Auth\Command\RevokeSessionHandler($userSessionRepository));
 $commandBus->register(\App\Application\Auth\Command\RevokeOtherSessions::class, new \App\Application\Auth\Command\RevokeOtherSessionsHandler($userSessionRepository));
 $commandBus->register(\App\Application\Auth\Command\AdminRevokeSession::class, new \App\Application\Auth\Command\AdminRevokeSessionHandler($userSessionRepository));
-$commandBus->register(\App\Application\Auth\Command\AdminRevokeAllSessions::class, new \App\Application\Auth\Command\AdminRevokeAllSessionsHandler($userSessionRepository));
+$commandBus->register(\App\Application\Auth\Command\AdminRevokeAllSessions::class, new \App\Application\Auth\Command\AdminRevokeAllSessionsHandler($userSessionRepository, $trustedDeviceRepository));
 $commandBus->register(\App\Application\Auth\Command\StartImpersonation::class, new \App\Application\Auth\Command\StartImpersonationHandler($userRepository, $impersonationRepository));
 $commandBus->register(\App\Application\Auth\Command\StopImpersonation::class, new \App\Application\Auth\Command\StopImpersonationHandler($impersonationRepository));
 
@@ -1354,6 +1356,17 @@ $getRentalHandler = new GetRentalHandler(
 );
 $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHandler);
 
+// Versicherungsliste: Zeitwerte je Inventarnummer/Artikel, KI-Schätzung, CSV-/PDF-Export (Migration 144).
+$currentValueRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCurrentValueRepository($pdo);
+$currentValueEstimator = new \App\Infrastructure\Integration\Insurance\OpenAiCurrentValueEstimator($aiAdImageSettingsRepository);
+\App\Infrastructure\Http\CurrentValueLookup::set($currentValueRepository, [$currentValueEstimator, 'isAvailable']);
+$getRentalInsuranceListHandler = new \App\Application\Insurance\Query\GetRentalInsuranceListHandler($getRentalHandler, $categoryRepository, $currentValueRepository);
+$queryBus->register(\App\Application\Insurance\Query\GetRentalInsuranceList::class, $getRentalInsuranceListHandler);
+$insuranceHandler = new \App\Application\Insurance\Command\InsuranceHandler($currentValueRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository, $categoryRepository, $currentValueEstimator, $getRentalInsuranceListHandler);
+foreach (['SetArticleFixedCurrentValue', 'SaveInsuranceExportFields', 'EstimateCurrentValue', 'EstimateMissingCurrentValues'] as $insuranceCommand) {
+    $commandBus->register('App\\Application\\Insurance\\Command\\' . $insuranceCommand, $insuranceHandler);
+}
+
 $queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramDetailHandler($minuteProgramRepository, $minuteProgramDetailBuilder));
 $queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramsForRental::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramsForRentalHandler($minuteProgramRepository));
 $queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramTemplates::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramTemplatesHandler($minuteProgramTemplateRepository));
@@ -1608,15 +1621,16 @@ $aiAdImageSettingsController = new \App\Infrastructure\Http\Controllers\AiAdImag
 $messageTemplateSettingsController = new \App\Infrastructure\Http\Controllers\MessageTemplateSettingsController($commandBus, $queryBus);
 $receiptInboxController = new ReceiptInboxController($commandBus, $queryBus, $receiptInboxAttachmentRepository, $fileStorage);
 $calendarController = new CalendarController($queryBus);
+$insuranceListController = new \App\Infrastructure\Http\Controllers\InsuranceListController($commandBus, $queryBus, $currentValueRepository, $currentValueEstimator, new \App\Infrastructure\Csv\InsuranceListCsvExporter(), new \App\Infrastructure\Pdf\InsuranceListPdfGenerator($fileStorage, $pdfAmountFormatter));
 $inventoryNumberController = new InventoryNumberController($queryBus, $commandBus, $supplierRepository, $rmaRepository, $electricalInspectionRepository, $customerRepository, $saleRepository);
 $labelPrinterController = new LabelPrinterController($commandBus, $queryBus);
 $documentStorageSettingsController = new \App\Infrastructure\Http\Controllers\DocumentStorageSettingsController($commandBus, $queryBus);
-$authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession);
+$authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession, $trustedDeviceService);
 $setupPasswordController = new SetupPasswordController($commandBus, $passwordSetupTokenRepository, $recordUserSession);
 $passkeyController = new PasskeyController($commandBus, $queryBus, $recordUserSession);
 $calDavSigningCertificateProvider = new \App\Infrastructure\Http\CalDav\CalDavSigningCertificateProvider($calDavSigningSettingsRepository, $fileStorage, $companySettingsRepository);
 $mobileConfigBuilder = new \App\Infrastructure\Http\CalDav\MobileConfigBuilder($calDavSigningCertificateProvider);
-$profileController = new ProfileController($commandBus, $queryBus, $mobileConfigBuilder);
+$profileController = new ProfileController($commandBus, $queryBus, $mobileConfigBuilder, $trustedDeviceService);
 $userController = new UserController($commandBus, $queryBus, $technicianProfileRepository);
 $rentalTechnicianController = new \App\Infrastructure\Http\Controllers\RentalTechnicianController($commandBus, $queryBus, $rentalTechnicianRepository);
 $technicianSettingsController = new \App\Infrastructure\Http\Controllers\TechnicianSettingsController($commandBus, $tradeRepository, $technicianSettingsRepository);
@@ -1729,6 +1743,7 @@ $router->get('/profil/sicherheit', $auth->guard(null, [$profileController, 'show
 $router->post('/profil/sicherheit/totp', $auth->guard(null, [$profileController, 'enableTotp']));
 $router->post('/profil/sicherheit/email', $auth->guard(null, [$profileController, 'enableEmailOtp']));
 $router->post('/profil/sicherheit/deaktivieren', $auth->guard(null, [$profileController, 'disableTwoFactor']));
+$router->post('/profil/sicherheit/vertraute-geraete/widerrufen', $auth->guard(null, [$profileController, 'revokeTrustedDevices']));
 $router->get('/profil/darstellung', $auth->guard(null, [$profileController, 'showDisplaySettings']));
 $router->post('/profil/darstellung', $auth->guard(null, [$profileController, 'updateDisplaySettings']));
 $router->get('/profil/dashboard', $auth->guard(null, [$profileController, 'showDashboardSettings']));
@@ -1855,6 +1870,7 @@ $router->post('/inventurnummern/{id}', $auth->guard(Permission::Artikelverwaltun
 $router->post('/inventurnummern/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteInventoryNumber']));
 $router->post('/inventurnummern/{id}/etikett-drucken', $auth->guard(Permission::Artikelverwaltung, [$inventoryNumberController, 'printLabel']));
 $router->post('/inventurnummern/{id}/verkaufen', $auth->guard(Permission::Artikelverwaltung, [$inventoryNumberController, 'sell']));
+$router->post('/inventurnummern/{id}/zeitwert/ki', $auth->guard([Permission::Artikelverwaltung, Permission::AusgabeRuecknahme], [$insuranceListController, 'estimateInventoryNumberValue']));
 
 $router->post('/artikel/{id}/firmware-versionen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'addFirmwareVersion']));
 $router->post('/firmware-versionen/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteFirmwareVersion']));
@@ -2040,6 +2056,10 @@ $router->post('/veranstaltungen', $auth->guard(Permission::AusgabeRuecknahme, [$
 $router->get('/veranstaltungen/{id}', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'show']));
 $router->get('/veranstaltungen/{id}/packliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'exportPackingListPdf']));
 $router->post('/veranstaltungen/{id}/packliste/email', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'emailPackingListPdf']));
+$router->get('/veranstaltungen/{id}/versicherungsliste', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'show']));
+$router->get('/veranstaltungen/{id}/versicherungsliste.csv', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportCsv']));
+$router->get('/veranstaltungen/{id}/versicherungsliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportPdf']));
+$router->post('/veranstaltungen/{id}/versicherungsliste/ki-schaetzen', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'estimateMissing']));
 $router->post('/veranstaltungen/{id}/rechnung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'createInvoice']));
 $router->get('/veranstaltungen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'edit']));
 $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'update']));

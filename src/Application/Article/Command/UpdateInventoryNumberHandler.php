@@ -10,6 +10,7 @@ use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Article\FirmwareVersionRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Insurance\CurrentValueResolver;
 use App\Domain\InventoryNumber\InventoryNumberRepositoryInterface;
 use App\Domain\Receipt\ReceiptRepositoryInterface;
 use App\Domain\Supplier\SupplierRepositoryInterface;
@@ -61,6 +62,19 @@ final class UpdateInventoryNumberHandler implements CommandHandlerInterface
             : null;
         if ($storageLocation !== null && mb_strlen($storageLocation) > 255) {
             throw new ValidationException(['storageLocation' => 'Der Lagerort darf höchstens 255 Zeichen lang sein.']);
+        }
+
+        if ($command->updateCurrentValue) {
+            try {
+                $currentValue = CurrentValueResolver::normalizeAmount($command->currentValue);
+            } catch (\InvalidArgumentException) {
+                throw new ValidationException(['currentValue' => 'Bitte einen gültigen Zeitwert in Euro angeben (z. B. 149,90).']);
+            }
+            // Nur bei echter Änderung neu setzen – so bleibt eine unveränderte
+            // KI-Schätzung samt Begründung als solche erhalten.
+            if ($currentValue !== $inventoryNumber->currentValue) {
+                $inventoryNumber->setCurrentValue($currentValue);
+            }
         }
 
         $inventoryNumber->acquisitionDate = $command->acquisitionDate !== null && $command->acquisitionDate !== ''

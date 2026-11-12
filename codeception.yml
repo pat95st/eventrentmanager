@@ -2,6 +2,11 @@
 # Acceptance) werden in tests/unit.suite.yml bzw. tests/acceptance.suite.yml
 # konfiguriert — siehe dort für Details und tests/README.md für die
 # Kurzanleitung zum Ausführen.
+# Namespace der Test-Klassen (siehe autoload-dev in composer.json): ohne diese
+# Angaben erzeugt `codecept build` die Actor-Traits (tests/_support/_generated)
+# im falschen Namespace und die Suiten brechen mit "Trait not found" ab.
+namespace: Tests
+support_namespace: Support
 paths:
     tests: tests
     output: tests/_output

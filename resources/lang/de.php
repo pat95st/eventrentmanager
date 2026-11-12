@@ -644,6 +644,7 @@ return [
     'rentals.show.checklist_link' => 'Ausgabe-Checkliste ({issued}/{planned})',
     'rentals.show.return_checklist_link' => 'Rückgabe-Checkliste ({returned}/{issued})',
     'rentals.show.export_pdf' => 'Als PDF exportieren',
+    'rentals.show.insurance_list' => 'Versicherungsliste (CSV/PDF)',
     'rentals.show.send_email' => 'Per E-Mail senden',
     'rentals.show.recipient_email' => 'Empfänger-E-Mail',
     'rentals.show.note_optional' => 'Notiz (optional)',

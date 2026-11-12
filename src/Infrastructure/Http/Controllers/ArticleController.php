@@ -467,6 +467,7 @@ final class ArticleController
         try {
             $articleId = $this->commands->dispatch($command);
             $this->saveDryHirePrice((string) $articleId, $request);
+            $this->saveFixedCurrentValue((string) $articleId, $request);
             $duplicateOf = $this->nullIfEmpty($request->input('duplicate_of'));
             if ($duplicateOf !== null) {
                 $this->copyArticleExtras($duplicateOf, (string) $articleId);
@@ -661,6 +662,7 @@ final class ArticleController
         try {
             $this->commands->dispatch($command);
             $this->saveDryHirePrice($id, $request);
+            $this->saveFixedCurrentValue($id, $request);
             Flash::success(t('articles.flash.updated'));
             Response::redirect('/artikel/' . $id);
         } catch (ValidationException $e) {
@@ -679,6 +681,19 @@ final class ArticleController
         }
         try {
             $this->commands->dispatch(new \App\Application\DryHire\Command\SetArticleDryHirePrice($articleId, $request->input('dry_hire_daily_price')));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        }
+    }
+
+    /** Fester Zeitwert für die Versicherungsliste (Migration 143) – nur wenn das Feld im Formular war. */
+    private function saveFixedCurrentValue(string $articleId, Request $request): void
+    {
+        if ($request->input('fixed_current_value_section') !== '1') {
+            return;
+        }
+        try {
+            $this->commands->dispatch(new \App\Application\Insurance\Command\SetArticleFixedCurrentValue($articleId, $request->input('fixed_current_value')));
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
         }

@@ -47,4 +47,12 @@ interface ReceiptRepositoryInterface
      * @return Receipt[]
      */
     public function findPaidBetween(DateTimeImmutable $from, DateTimeImmutable $to): array;
+
+    /**
+     * Belege mit Belegdatum im angegebenen Zeitraum (inklusive Grenzen),
+     * unabhängig vom Zahlungsstatus — Grundlage für den DATEV-Export.
+     *
+     * @return Receipt[] sortiert nach Belegdatum
+     */
+    public function findByReceiptDateBetween(DateTimeImmutable $from, DateTimeImmutable $to): array;
 }

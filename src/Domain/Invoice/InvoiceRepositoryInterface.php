@@ -90,6 +90,16 @@ interface InvoiceRepositoryInterface
      */
     public function findPaidBetween(DateTimeImmutable $from, DateTimeImmutable $to): array;
 
+    /**
+     * Finalisierte Rechnungen (Rechnungsnummer vergeben) mit Rechnungsdatum
+     * im angegebenen Zeitraum (inklusive Grenzen), unabhängig vom späteren
+     * Status — Grundlage für den DATEV-Export (Sollversteuerung nach
+     * Rechnungsdatum; Stornos laufen über eigene Stornorechnungen).
+     *
+     * @return Invoice[] sortiert nach Rechnungsdatum und -nummer
+     */
+    public function findFinalizedBetween(DateTimeImmutable $from, DateTimeImmutable $to): array;
+
     /** @return InvoiceFreeTextItem[] sortiert nach sortOrder aufsteigend (orderedRows()-Konzept, siehe InvoiceDetail). */
     public function findFreeTextItemsByInvoice(string $invoiceId): array;
 

@@ -443,6 +443,20 @@ final class MariadbInvoiceRepository implements InvoiceRepositoryInterface
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
 
+    public function findFinalizedBetween(DateTimeImmutable $from, DateTimeImmutable $to): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM invoices WHERE invoice_number IS NOT NULL AND invoice_date IS NOT NULL
+             AND invoice_date >= :from AND invoice_date <= :to ORDER BY invoice_date ASC, invoice_number ASC'
+        );
+        $stmt->execute([
+            'from' => $from->format('Y-m-d'),
+            'to' => $to->format('Y-m-d'),
+        ]);
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     public function findNotCancelledForRevenueForecast(): array
     {
         $stmt = $this->pdo->prepare(

@@ -643,6 +643,7 @@ return [
     'rentals.show.checklist_link' => 'Check-out checklist ({issued}/{planned})',
     'rentals.show.return_checklist_link' => 'Check-in checklist ({returned}/{issued})',
     'rentals.show.export_pdf' => 'Export as PDF',
+    'rentals.show.insurance_list' => 'Insurance list (CSV/PDF)',
     'rentals.show.send_email' => 'Send by email',
     'rentals.show.recipient_email' => 'Recipient email',
     'rentals.show.note_optional' => 'Note (optional)',

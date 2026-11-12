@@ -616,6 +616,16 @@ $availabilityStatusMeta = [
                                            class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                                 </div>
                                 <div>
+                                    <?php $articleFixedCurrentValue = \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article->id); ?>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400">Zeitwert</label>
+                                    <input type="hidden" name="current_value_section" value="1">
+                                    <input type="number" step="0.01" min="0" name="current_value"
+                                           placeholder="<?= e($articleFixedCurrentValue ?? '–') ?>"
+                                           title="<?= e($articleFixedCurrentValue !== null ? 'Leer = fester Zeitwert des Artikels' : 'Geschätzter Zeitwert für die Versicherungsliste') ?>"
+                                           value="<?= e($inv->currentValue ?? '') ?>"
+                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <div>
                                     <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.storage_location')) ?></label>
                                     <input type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>"
                                            value="<?= e($inv->storageLocation ?? '') ?>"
@@ -665,6 +675,9 @@ $availabilityStatusMeta = [
                                         <?php endif; ?>
                                         <?php if ($inv->storageLocation !== null): ?>
                                             · <?= e(t('articles.show.storage_location')) ?>: <?= e($inv->storageLocation) ?>
+                                        <?php endif; ?>
+                                        <?php if ($inv->currentValue !== null): ?>
+                                            · Zeitwert: <?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €<?= $inv->isCurrentValueAiEstimate() ? ' (KI)' : '' ?>
                                         <?php endif; ?>
                                         <?php if ($article->hasFirmware && $entry->installedFirmwareVersion !== null): ?>
                                             · <?= e(t('articles.show.installed_firmware_version')) ?>: <?= e($entry->installedFirmwareVersion->version) ?>

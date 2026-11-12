@@ -108,6 +108,27 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   zusätzlich: das Leergewicht (kg). Ein Fahrzeug lässt sich nicht löschen,
   solange es noch in einer Beladungsliste oder einer Zugfahrzeug-Zuordnung
   verwendet wird.
+- **Versicherungsliste** (je Veranstaltung unter „Dokumente › Versicherungsliste“,
+  `/veranstaltungen/{id}/versicherungsliste`, Migration 144): listet alle
+  ausgegebenen Exemplare (optional auch die nur geplanten, noch nicht
+  ausgegebenen Stückzahlen ohne Inventarnummer) und exportiert sie als **CSV**
+  (Semikolon, Dezimalkomma, UTF-8 mit BOM) oder **PDF** (Aufbau wie die
+  Packliste, mit Gesamtsummen von Zeitwert und Anschaffungspreisen). Die
+  Spalten sind frei wählbar (Artikelkategorie, Hersteller und Modell,
+  Inventarnummer, Anschaffungsjahr, geschätzter Zeitwert, Anschaffungspreis);
+  die Auswahl kann als Standard gemerkt werden. Fehlende Werte bleiben leer.
+  Der **Zeitwert** wird direkt an der Inventarnummer gespeichert (Spalte
+  `inventory_numbers.current_value`, gepflegt über „Bearbeiten“ der
+  Inventarnummer auf der Artikel-Detailseite); die Versicherungsliste liest ihn
+  nur. Zusätzlich kann je Artikel ein
+  **fester Zeitwert** hinterlegt werden (Artikelformular, z. B. für XLR-Kabel),
+  der für alle Exemplare ohne eigenen Wert gilt. Per **KI** (OpenAI, Schlüssel
+  aus Einstellungen › KI-Werbebilder) lässt sich der Zeitwert einzelner Geräte
+  (Detailseite der Inventarnummer) oder aller noch fehlenden Geräte einer
+  Veranstaltung schätzen – das Ergebnis landet ebenfalls an der Inventarnummer; gleichartige
+  Exemplare (gleicher Artikel, gleiches Anschaffungsjahr, gleicher Preis)
+  werden dabei nur einmal angefragt. Der Anschaffungspreis ist der abweichende
+  Einkaufspreis der Inventarnummer, sonst der des Artikels.
 - **Beladungsliste** (je Veranstaltung über „Beladungsliste“ auf der
   Veranstaltungs-Detailseite, `/veranstaltungen/{id}/beladung`): ordnet die
   bereits **ausgegebenen** Posten einer Veranstaltung (konkrete

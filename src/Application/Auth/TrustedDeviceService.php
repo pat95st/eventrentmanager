@@ -10,7 +10,7 @@ use App\Shared\Uuid;
 use DateTimeImmutable;
 
 /**
- * "Dem Gerät für die nächsten 10 Tage vertrauen" (Migration 143).
+ * "Dem Gerät für die nächsten 10 Tage vertrauen" (Migration 145).
  *
  * Das Gerät bekommt ein Token der Form "selector:validator". Über den
  * selector wird der Datenbank-Eintrag gefunden, der validator wird nur als

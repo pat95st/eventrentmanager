@@ -32,7 +32,7 @@ use function App\Infrastructure\Http\t;
     <?php endif; ?>
 </div>
 
-<!-- "Dem Gerät für die nächsten 10 Tage vertrauen" (Haken beim Login, Migration 143) -->
+<!-- "Dem Gerät für die nächsten 10 Tage vertrauen" (Haken beim Login, Migration 145) -->
 <div class="mt-6 max-w-lg rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('profile.security.trusted_devices.title')) ?></h2>
     <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.security.trusted_devices.hint')) ?></p>

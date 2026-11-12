@@ -694,7 +694,7 @@ Anwendung erzwingt dies automatisch, bevor irgendeine andere Seite
 aufgerufen werden kann.
 
 **„Dem Gerät für die nächsten 10 Tage vertrauen“** (Migration
-`143_trusted_devices.sql`): Ist der Haken beim Login (oder auf der
+`145_trusted_devices.sql`): Ist der Haken beim Login (oder auf der
 2FA-Seite) gesetzt, entfällt nach erfolgreicher Bestätigung des zweiten
 Faktors auf diesem Browser 10 Tage lang die Code-Abfrage. Das Passwort
 bleibt immer Pflicht. Ohne eingerichteten zweiten Faktor bewirkt der Haken

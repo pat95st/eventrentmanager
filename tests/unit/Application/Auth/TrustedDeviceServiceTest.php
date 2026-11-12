@@ -10,7 +10,7 @@ use App\Domain\Auth\TrustedDeviceRepositoryInterface;
 use Codeception\Test\Unit;
 use DateTimeImmutable;
 
-/** "Dem Gerät für die nächsten 10 Tage vertrauen" (Migration 143). */
+/** "Dem Gerät für die nächsten 10 Tage vertrauen" (Migration 145). */
 final class TrustedDeviceServiceTest extends Unit
 {
     private TrustedDeviceService $service;

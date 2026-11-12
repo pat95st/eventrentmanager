@@ -9,7 +9,7 @@ use DateTimeImmutable;
 
 /**
  * Ein Gerät (Browser), dem ein Benutzer beim Login für eine begrenzte Zeit
- * vertraut ("Dem Gerät für die nächsten 10 Tage vertrauen", Migration 143).
+ * vertraut ("Dem Gerät für die nächsten 10 Tage vertrauen", Migration 145).
  * Solange der Eintrag gültig ist, entfällt auf diesem Gerät die Abfrage des
  * zweiten Faktors. Vom geheimen Teil des Cookies wird nur der SHA-256-Hash
  * gespeichert (tokenHash), siehe App\Application\Auth\TrustedDeviceService.

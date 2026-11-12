@@ -11,7 +11,7 @@ use App\Domain\Auth\UserSessionRepositoryInterface;
 
 final class AdminRevokeAllSessionsHandler implements CommandHandlerInterface
 {
-    /** Beendet zusätzlich das Vertrauen aller Geräte (Migration 143), z. B. bei verlorenem Gerät. */
+    /** Beendet zusätzlich das Vertrauen aller Geräte (Migration 145), z. B. bei verlorenem Gerät. */
     public function __construct(
         private readonly UserSessionRepositoryInterface $sessions,
         private readonly ?TrustedDeviceRepositoryInterface $trustedDevices = null,

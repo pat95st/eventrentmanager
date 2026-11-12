@@ -30,7 +30,7 @@ final class CompletePasswordSetupHandler implements CommandHandlerInterface
     public function __construct(
         private readonly PasswordSetupTokenRepositoryInterface $tokens,
         private readonly UserRepositoryInterface $users,
-        /** Neues Passwort → alle "vertrauten Geräte" (Migration 143) verlieren ihr Vertrauen. */
+        /** Neues Passwort → alle "vertrauten Geräte" (Migration 145) verlieren ihr Vertrauen. */
         private readonly ?TrustedDeviceRepositoryInterface $trustedDevices = null,
     ) {
     }

@@ -16,7 +16,7 @@ final class DisableTwoFactorHandler implements CommandHandlerInterface
 {
     /**
      * $trustedDevices: nach einer Passwort-/2FA-Änderung verliert jedes
-     * "vertraute Gerät" (Migration 143) sein Vertrauen und muss den zweiten
+     * "vertraute Gerät" (Migration 145) sein Vertrauen und muss den zweiten
      * Faktor wieder abfragen.
      */
     public function __construct(

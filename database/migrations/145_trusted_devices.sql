@@ -1,4 +1,4 @@
--- Migration 143: "Dem Gerät für die nächsten 10 Tage vertrauen"
+-- Migration 145: "Dem Gerät für die nächsten 10 Tage vertrauen"
 --  - trusted_devices: Geräte (Browser), auf denen ein Benutzer nach
 --    erfolgreicher Zwei-Faktor-Anmeldung den Haken "Dem Gerät vertrauen"
 --    gesetzt hat. Bis expires_at entfällt dort die Abfrage des zweiten

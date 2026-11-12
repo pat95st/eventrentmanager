@@ -166,7 +166,7 @@ final class ProfileController
         Response::redirect('/profil/sicherheit');
     }
 
-    /** Entzieht allen Geräten das Vertrauen ("Dem Gerät für die nächsten 10 Tage vertrauen", Migration 143). */
+    /** Entzieht allen Geräten das Vertrauen ("Dem Gerät für die nächsten 10 Tage vertrauen", Migration 145). */
     public function revokeTrustedDevices(Request $request): void
     {
         $user = CurrentUser::get();

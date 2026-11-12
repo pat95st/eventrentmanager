@@ -129,6 +129,32 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Exemplare (gleicher Artikel, gleiches Anschaffungsjahr, gleicher Preis)
   werden dabei nur einmal angefragt. Der Anschaffungspreis ist der abweichende
   Einkaufspreis der Inventarnummer, sonst der des Artikels.
+- **Umsatzziele** (Einstellungen › Firma & Steuern › Umsatzziele,
+  `/einstellungen/umsatzziele`, Migration 146): frei benennbare Umsatzziele
+  und -grenzen, z. B. „Liebhabereigrenze“ oder „Kleinunternehmergrenze“. Jedes
+  Ziel hat einen **Standardbetrag, der für jedes Jahr gilt**, und lässt sich
+  **je Jahr anpassen** (Jahr oben wählen, Betrag in der Spalte „Betrag
+  {Jahr}“ eintragen; leer = Standardbetrag). Die Art unterscheidet ein Ziel,
+  das erreicht werden soll, von einer Grenze, die eingehalten werden soll
+  (Warnung ab 80 %). Der Stand je Ziel steht im Bericht **Einnahmen und
+  Ausgaben** (`/berichte/einnahmen-ausgaben`) für das dort gewählte Jahr,
+  gemessen an den Einnahmen (bezahlte Rechnungen, brutto).
+- **Abschreibungen (AfA)** (Bericht `/berichte/abschreibungen`, Migration
+  146): lineare Abschreibung je Inventarnummer aus Anschaffungsdatum und
+  Einkaufspreis (eigener Preis der Inventarnummer, sonst der des Artikels) —
+  je Jahr Abschreibung, Buchwert am Jahresanfang/-ende und Summen, mit
+  CSV-Export. Verkaufte Exemplare werden bis zum Monat vor dem Verkauf
+  abgeschrieben, der Restbuchwert wird im Verkaufsjahr ausgebucht. Exemplare
+  ohne Anschaffungsdatum oder Einkaufspreis werden gesondert aufgelistet. Die
+  Detailseite jeder Inventarnummer zeigt ihren vollständigen
+  Abschreibungsplan. Die Werte werden nicht gespeichert, sondern stets neu
+  berechnet (`App\Domain\Depreciation\DepreciationCalculator`).
+  **Einstellungen** unter Firma & Steuern › Abschreibungen
+  (`/einstellungen/abschreibungen`): Standard-Nutzungsdauer, abweichende
+  Nutzungsdauer je Artikelkategorie (vererbt sich auf Unterkategorien),
+  GWG-Grenze für die Sofortabschreibung (Standard 800 €, 0 = aus),
+  Anschaffungsjahr monatsgenau oder mit voller Jahresrate sowie ein
+  Erinnerungswert. Cases/Racks sind nicht enthalten.
 - **Beladungsliste** (je Veranstaltung über „Beladungsliste“ auf der
   Veranstaltungs-Detailseite, `/veranstaltungen/{id}/beladung`): ordnet die
   bereits **ausgegebenen** Posten einer Veranstaltung (konkrete

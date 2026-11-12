@@ -76,6 +76,7 @@ final class InventoryNumberController
             'saleCustomer' => $sale?->customerId !== null ? $this->customers->findById($sale->customerId) : null,
             'customers' => $customers,
             'saleErrors' => [],
+            'depreciation' => $this->queries->ask(new \App\Application\Depreciation\GetInventoryNumberDepreciation($id)),
         ], activeNav: 'articles', title: 'Inventurnummer: ' . $context->inventoryNumber->number);
     }
 

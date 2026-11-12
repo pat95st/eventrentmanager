@@ -10,6 +10,7 @@
 /** @var \App\Domain\Customer\Customer|null $saleCustomer */
 /** @var \App\Domain\Customer\Customer[] $customers */
 /** @var array<string, string> $saleErrors */
+/** @var \App\Domain\Depreciation\DepreciationSchedule|null $depreciation */
 
 use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
@@ -107,6 +108,80 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                     </div>
                 <?php endif; ?>
             </dl>
+        </div>
+
+        <?php $depreciation = $depreciation ?? null; ?>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Abschreibung (AfA)</h2>
+                <?php if ($depreciation !== null): ?>
+                    <span class="text-xs text-slate-400 dark:text-slate-500">
+                        <?= $depreciation->lowValueAsset
+                            ? 'Geringwertiges Wirtschaftsgut — Sofortabschreibung im Anschaffungsjahr'
+                            : 'Linear über ' . $depreciation->usefulLifeYears . ' ' . ($depreciation->usefulLifeYears === 1 ? 'Jahr' : 'Jahre') ?>
+                    </span>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($depreciation === null): ?>
+                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    Für die Abschreibung werden Anschaffungsdatum und Einkaufspreis benötigt.
+                    <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400">Angaben ergänzen</a>
+                </p>
+            <?php else: ?>
+                <?php
+                $afaYear = (int) $today->format('Y');
+                $afaMoney = static fn (float $v): string => number_format($v, 2, ',', '.');
+                ?>
+                <dl class="mb-4 grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+                    <div>
+                        <dt class="text-xs text-slate-400 dark:text-slate-500">Anschaffungskosten</dt>
+                        <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $afaMoney($depreciation->cost) ?> €</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-slate-400 dark:text-slate-500">Abschreibung <?= $afaYear ?></dt>
+                        <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $afaMoney($depreciation->amountIn($afaYear)) ?> €</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-slate-400 dark:text-slate-500">Restbuchwert Ende <?= $afaYear ?></dt>
+                        <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $afaMoney($depreciation->bookValueAtEndOf($afaYear)) ?> €</dd>
+                    </div>
+                </dl>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                            <tr>
+                                <th class="py-2 pr-4 text-left">Jahr</th>
+                                <th class="whitespace-nowrap px-4 py-2 text-right">Abschreibung</th>
+                                <th class="whitespace-nowrap py-2 pl-4 text-right">Restbuchwert 31.12.</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <?php foreach ($depreciation->years as $afaEntry): ?>
+                                <tr class="<?= $afaEntry->year === $afaYear ? 'bg-brand-50 dark:bg-brand-950/40' : '' ?>">
+                                    <td class="py-2 pr-4 text-slate-700 dark:text-slate-300">
+                                        <?= $afaEntry->year ?>
+                                        <?php if ($afaEntry->year === $afaYear): ?><span class="text-xs text-slate-400 dark:text-slate-500">(aktuell)</span><?php endif; ?>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-2 text-right tabular-nums text-slate-800 dark:text-slate-200">
+                                        <?= $afaMoney($afaEntry->amount) ?> €
+                                        <?php if ($depreciation->disposalDate !== null && $afaEntry->year === (int) $depreciation->disposalDate->format('Y')): ?>
+                                            <span class="block text-xs text-slate-400 dark:text-slate-500">Verkauf: Restbuchwert <?= $afaMoney($afaEntry->disposal) ?> € ausgebucht</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="whitespace-nowrap py-2 pl-4 text-right tabular-nums text-slate-800 dark:text-slate-200"><?= $afaMoney($afaEntry->bookValueEnd) ?> €</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php if (\App\Infrastructure\Http\Auth\CurrentUser::get()?->has(\App\Domain\User\Permission::Administration)): ?>
+                    <p class="mt-3 text-xs text-slate-400 dark:text-slate-500">
+                        Berechnung laut <a href="/einstellungen/abschreibungen" class="text-brand-700 hover:underline dark:text-brand-400">Einstellungen › Abschreibungen</a> ·
+                        <a href="/berichte/abschreibungen" class="text-brand-700 hover:underline dark:text-brand-400">Alle Abschreibungen</a>
+                    </p>
+                <?php endif; ?>
+            <?php endif; ?>
         </div>
 
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

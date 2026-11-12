@@ -46,6 +46,8 @@ final class SettingsSections
                 'pages' => [
                     $page('settings-firma', '/einstellungen/firma', 'Firma', 'Name, Anschrift, Kontakt, Logo, Favicon und Hintergründe'),
                     $page('settings-rechnung', '/einstellungen/rechnung', 'Steuern & Firmendaten', 'Kleinunternehmer/Umsatzsteuer, Steuernummer, USt-IdNr., Handelsregister, Geschäftsführung, Befreiungshinweis'),
+                    $page('settings-umsatzziele', '/einstellungen/umsatzziele', t('nav.revenue_goals'), 'Umsatzziele und -grenzen je Jahr, z. B. Liebhabereigrenze'),
+                    $page('settings-abschreibungen', '/einstellungen/abschreibungen', t('nav.depreciation_settings'), 'Nutzungsdauer, GWG-Grenze und Berechnung der AfA'),
                     $page('settings-bankverbindungen', '/einstellungen/bankverbindungen', t('nav.bank_accounts'), 'Firmenkonten für Dokumente und Kontoführung'),
                     $page('settings-rechtliches', '/einstellungen/rechtliches', t('nav.legal_settings'), 'Vermietbedingungen, Impressum, Datenschutz'),
                     $page('settings-betriebsurlaub', '/einstellungen/betriebsurlaub', 'Betriebsurlaub', 'Zeiträume ohne Ausgabe und Rücknahme'),

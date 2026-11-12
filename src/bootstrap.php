@@ -1487,6 +1487,20 @@ $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageUploadLog:
 
 // --- Controller --------------------------------------------------------
 $dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository, $supplierRepository);
+// Umsatzziele je Jahr und Abschreibungen (Migration 146)
+$revenueGoalRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRevenueGoalRepository($pdo);
+$depreciationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDepreciationRepository($pdo);
+$queryBus->register(\App\Application\RevenueGoal\ListRevenueGoals::class, new \App\Application\RevenueGoal\ListRevenueGoalsHandler($revenueGoalRepository));
+$revenueGoalCommandHandler = new \App\Application\RevenueGoal\RevenueGoalCommandHandler($revenueGoalRepository);
+$commandBus->register(\App\Application\RevenueGoal\SaveRevenueGoals::class, $revenueGoalCommandHandler);
+$commandBus->register(\App\Application\RevenueGoal\DeleteRevenueGoal::class, $revenueGoalCommandHandler);
+$depreciationQueryHandler = new \App\Application\Depreciation\DepreciationQueryHandler($depreciationRepository, $categoryRepository);
+$queryBus->register(\App\Application\Depreciation\GetDepreciationReport::class, $depreciationQueryHandler);
+$queryBus->register(\App\Application\Depreciation\GetInventoryNumberDepreciation::class, $depreciationQueryHandler);
+$queryBus->register(\App\Application\Depreciation\GetDepreciationSettings::class, $depreciationQueryHandler);
+$commandBus->register(\App\Application\Depreciation\UpdateDepreciationSettings::class, new \App\Application\Depreciation\UpdateDepreciationSettingsHandler($depreciationRepository, $categoryRepository));
+$revenueGoalSettingsController = new \App\Infrastructure\Http\Controllers\RevenueGoalSettingsController($commandBus, $queryBus);
+$depreciationSettingsController = new \App\Infrastructure\Http\Controllers\DepreciationSettingsController($commandBus, $queryBus, $categoryRepository);
 $reportingController = new \App\Infrastructure\Http\Controllers\ReportingController($queryBus);
 $statisticsController = new \App\Infrastructure\Http\Controllers\StatisticsController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
@@ -2294,6 +2308,13 @@ $router->get('/kalender', $auth->guard(Permission::AusgabeRuecknahme, [$calendar
 // Berichte (nur Administration) — aktuell nur die Einnahmen-/Ausgabenübersicht.
 $router->get('/berichte/einnahmen-ausgaben', $auth->guard(Permission::Administration, [$reportingController, 'incomeExpense']));
 $router->get('/berichte/umsatzprognose', $auth->guard(Permission::Administration, [$reportingController, 'revenueForecast']));
+$router->get('/berichte/abschreibungen', $auth->guard(Permission::Administration, [$reportingController, 'depreciation']));
+$router->get('/berichte/abschreibungen.csv', $auth->guard(Permission::Administration, [$reportingController, 'depreciationCsv']));
+$router->get('/einstellungen/umsatzziele', $auth->guard(Permission::Administration, [$revenueGoalSettingsController, 'edit']));
+$router->post('/einstellungen/umsatzziele', $auth->guard(Permission::Administration, [$revenueGoalSettingsController, 'update']));
+$router->post('/einstellungen/umsatzziele/{id}/loeschen', $auth->guard(Permission::Administration, [$revenueGoalSettingsController, 'delete']));
+$router->get('/einstellungen/abschreibungen', $auth->guard(Permission::Administration, [$depreciationSettingsController, 'edit']));
+$router->post('/einstellungen/abschreibungen', $auth->guard(Permission::Administration, [$depreciationSettingsController, 'update']));
 
 // Benutzerverwaltung (nur Administration).
 $router->get('/benutzer', $auth->guard(Permission::Administration, [$userController, 'index']));

@@ -21,7 +21,7 @@ use function App\Infrastructure\Http\t;
 
 <div class="space-y-6">
     <!-- Basis-URL -->
-    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.integrations.base_url.title')) ?></h2>
         <p class="mb-3 text-xs text-slate-500 dark:text-slate-400"><?= e(t('settings.integrations.base_url.hint')) ?></p>
         <form method="post" action="/einstellungen/integrationen/basis-url" class="flex flex-wrap items-end gap-3">
@@ -36,7 +36,7 @@ use function App\Infrastructure\Http\t;
     </div>
 
     <!-- Google Merchant Center -->
-    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.integrations.google_merchant.title')) ?></h2>
         <p class="mb-3 text-xs text-slate-500 dark:text-slate-400"><?= e(t('settings.integrations.google_merchant.hint')) ?></p>
 
@@ -69,7 +69,7 @@ use function App\Infrastructure\Http\t;
         </form>
 
         <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.google_merchant.service_account')) ?></p>
+            <p class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('settings.integrations.google_merchant.service_account')) ?></p>
             <?php if ($googleMerchantSettings->serviceAccountJsonFilename !== null): ?>
                 <div class="flex items-center gap-3">
                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-700">
@@ -94,7 +94,7 @@ use function App\Infrastructure\Http\t;
     </div>
 
     <!-- Google Unternehmensprofil -->
-    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.integrations.google_business.title')) ?></h2>
         <p class="mb-3 text-xs text-slate-500 dark:text-slate-400"><?= e(t('settings.integrations.google_business.hint')) ?></p>
 
@@ -139,7 +139,7 @@ use function App\Infrastructure\Http\t;
     </div>
 
     <!-- WhatsApp Business -->
-    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.integrations.whatsapp.title')) ?></h2>
         <p class="mb-3 text-xs text-slate-500 dark:text-slate-400"><?= e(t('settings.integrations.whatsapp.hint')) ?></p>
 
@@ -176,7 +176,7 @@ use function App\Infrastructure\Http\t;
     [$datevDefaultFrom, $datevDefaultTo] = $datevSettings->interval->previousPeriod(new DateTimeImmutable());
     $datevReady = $datevSettings->enabled && $datevSettings->missingRequirements() === [];
     ?>
-    <div id="datev" class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div id="datev" class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <div class="mb-1 flex flex-wrap items-center gap-2">
             <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('settings.integrations.datev.title')) ?></h2>
             <?php if ($datevSettings->enabled): ?>
@@ -198,7 +198,7 @@ use function App\Infrastructure\Http\t;
             </label>
 
             <fieldset>
-                <legend class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.section_client')) ?></legend>
+                <legend class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('settings.integrations.datev.section_client')) ?></legend>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.integrations.datev.consultant_number')) ?></label>
@@ -243,7 +243,7 @@ use function App\Infrastructure\Http\t;
             </fieldset>
 
             <fieldset>
-                <legend class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.section_accounts')) ?></legend>
+                <legend class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('settings.integrations.datev.section_accounts')) ?></legend>
                 <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.accounts_hint')) ?></p>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
@@ -282,7 +282,7 @@ use function App\Infrastructure\Http\t;
             </fieldset>
 
             <fieldset>
-                <legend class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.section_content')) ?></legend>
+                <legend class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('settings.integrations.datev.section_content')) ?></legend>
                 <div class="space-y-2">
                     <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                         <input type="checkbox" name="datev_include_receipts" value="1" <?= $dc('datev_include_receipts', $datevSettings->includeReceipts) ? 'checked' : '' ?> class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-600">
@@ -296,11 +296,11 @@ use function App\Infrastructure\Http\t;
             </fieldset>
 
             <fieldset>
-                <legend class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.section_delivery')) ?></legend>
+                <legend class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('settings.integrations.datev.section_delivery')) ?></legend>
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="sm:col-span-2 lg:col-span-3">
                         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.integrations.datev.advisor_email')) ?></label>
-                        <input type="email" name="datev_advisor_email" value="<?= e($dv('datev_advisor_email', $datevSettings->advisorEmail)) ?>" placeholder="kanzlei@steuerberater.de" class="<?= $inputClass('datev_advisor_email') ?>">
+                        <input type="email" name="datev_advisor_email" value="<?= e($dv('datev_advisor_email', $datevSettings->advisorEmail)) ?>" placeholder="kanzlei@steuerberater.de" class="<?= $selectClass('datev_advisor_email') ?>">
                         <?= $fieldError('datev_advisor_email') ?>
                     </div>
                     <div class="sm:col-span-2 lg:col-span-3">
@@ -333,7 +333,7 @@ use function App\Infrastructure\Http\t;
         </form>
 
         <div class="mt-5 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.export_title')) ?></p>
+            <p class="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('settings.integrations.datev.export_title')) ?></p>
             <?php if (!$datevReady): ?>
                 <p class="text-sm text-slate-400 dark:text-slate-500"><?= e(t('settings.integrations.datev.export_not_ready')) ?></p>
             <?php else: ?>
@@ -341,11 +341,11 @@ use function App\Infrastructure\Http\t;
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <div>
                         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.integrations.datev.from')) ?></label>
-                        <input type="date" name="datev_from" value="<?= e($datevDefaultFrom->format('Y-m-d')) ?>" required class="<?= $inputClass('datev_from') ?>">
+                        <input type="date" name="datev_from" value="<?= e($datevDefaultFrom->format('Y-m-d')) ?>" required class="<?= $selectClass('datev_from') ?>">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.integrations.datev.to')) ?></label>
-                        <input type="date" name="datev_to" value="<?= e($datevDefaultTo->format('Y-m-d')) ?>" required class="<?= $inputClass('datev_to') ?>">
+                        <input type="date" name="datev_to" value="<?= e($datevDefaultTo->format('Y-m-d')) ?>" required class="<?= $selectClass('datev_to') ?>">
                     </div>
                     <button type="submit" name="action" value="download" class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('settings.integrations.datev.download')) ?></button>
                     <?php if ($datevSettings->advisorEmail !== null): ?>

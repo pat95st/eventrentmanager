@@ -18,8 +18,13 @@ Suiten:
 ## Einmalige Einrichtung
 
 ```bash
+cp tests/.env.testing.dist tests/.env.testing
 composer install
 ```
+
+Die Datei `tests/.env.testing` muss auch für die Unit-Suite existieren
+(Codeception lädt sie global); für reine Unit-Tests genügt die unveränderte
+Kopie der Vorlage, echte Werte braucht nur die Acceptance-Suite (siehe unten).
 
 Dabei wird automatisch `vendor/bin/codecept build` ausgeführt (siehe
 `composer.json` → `post-install-cmd`/`post-update-cmd`), was die von den

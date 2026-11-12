@@ -12,9 +12,15 @@ actor_suffix: Tester
 extensions:
     enabled:
         - Codeception\Extension\RunFailed
+# Generierte Tester-Klassen liegen im Namespace Tests\Support\_generated
+# (siehe tests/_support/UnitTester.php bzw. AcceptanceTester.php).
+namespace: Tests
+support_namespace: Support
 # Zugangsdaten/URL für die Acceptance-Suite kommen NICHT hier rein (siehe
 # database.yaml-Begründung in bootstrap.php: keine Zugangsdaten im
 # Projektordner), sondern aus tests/.env.testing (siehe
 # tests/.env.testing.dist zum Kopieren, Datei selbst ist gitignored).
+# Codeception lädt Params nur global — die Datei muss daher auch für die
+# Unit-Suite existieren (eine unveränderte Kopie der .dist-Vorlage genügt).
 params:
     - tests/.env.testing

@@ -29,6 +29,7 @@ enum MailCategory: string
     case RentalCustomerChecklist = 'rental_customer_checklist';
     case NoticeDocuments = 'notice_documents';
     case TechnicianNotification = 'technician_notification';
+    case DatevExport = 'datev_export';
 
     public function label(): string
     {
@@ -48,6 +49,7 @@ enum MailCategory: string
             self::RentalCustomerChecklist => 'Kunden-Checkliste (Vollständigkeitsprüfung)',
             self::NoticeDocuments => 'Hinweisdokumente per E-Mail',
             self::TechnicianNotification => 'Techniker-Anfragen und -Einplanungen',
+            self::DatevExport => 'DATEV-Export an den Steuerberater',
         };
     }
 }

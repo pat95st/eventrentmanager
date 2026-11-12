@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
+use App\Application\Datev\Command\CreateDatevExport;
+use App\Application\Datev\Command\UpdateDatevSettings;
+use App\Application\Datev\DatevExportPackage;
+use App\Application\Datev\Query\GetDatevSettings;
+use App\Application\Datev\Query\ListDatevExports;
 use App\Application\Query\QueryBus;
 use App\Application\Settings\Command\CompleteGoogleBusinessOAuth;
 use App\Application\Settings\Command\DeleteGoogleMerchantServiceAccount;
@@ -18,7 +23,11 @@ use App\Application\Settings\Query\GetGoogleBusinessSettings;
 use App\Application\Settings\Query\GetGoogleMerchantSettings;
 use App\Application\Settings\Query\GetIntegrationBaseSettings;
 use App\Application\Settings\Query\GetWhatsappBusinessSettings;
+use App\Domain\Datev\DatevAccountRole;
+use App\Domain\Datev\DatevExportTrigger;
 use App\Domain\Exception\ValidationException;
+use App\Infrastructure\Mail\MailerException;
+use DateTimeImmutable;
 use App\Infrastructure\Http\Csrf;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
@@ -185,14 +194,133 @@ final class IntegrationSettingsController
         Response::redirect('/einstellungen/integrationen');
     }
 
-    /** @param array<string, string> $errors */
-    private function render(array $errors): void
+    public function updateDatev(Request $request): void
+    {
+        $accounts = [];
+        foreach (DatevAccountRole::cases() as $role) {
+            $accounts[$role->value] = $request->input('datev_account_' . $role->value);
+        }
+
+        try {
+            $this->commands->dispatch(new UpdateDatevSettings(
+                enabled: $request->input('datev_enabled') !== null,
+                consultantNumber: $request->input('datev_consultant_number'),
+                clientNumber: $request->input('datev_client_number'),
+                chartOfAccounts: $request->input('datev_chart_of_accounts'),
+                accountLength: $request->input('datev_account_length'),
+                fiscalYearStartMonth: $request->input('datev_fiscal_year_start_month'),
+                debtorMode: $request->input('datev_debtor_mode'),
+                debtorAccount: $request->input('datev_debtor_account'),
+                creditorAccount: $request->input('datev_creditor_account'),
+                accounts: $accounts,
+                receiptTaxKey: $request->input('datev_receipt_tax_key'),
+                includeReceipts: $request->input('datev_include_receipts') !== null,
+                includeDocuments: $request->input('datev_include_documents') !== null,
+                advisorEmail: $request->input('datev_advisor_email'),
+                autoSendEnabled: $request->input('datev_auto_send_enabled') !== null,
+                interval: $request->input('datev_interval'),
+                sendDay: $request->input('datev_send_day'),
+            ));
+            Flash::success('DATEV-Einstellungen wurden gespeichert.');
+        } catch (ValidationException $e) {
+            $this->render($e->errors(), $this->datevOldInput($request));
+
+            return;
+        }
+
+        Response::redirect('/einstellungen/integrationen#datev');
+    }
+
+    /** Erzeugt den DATEV-Export für einen Zeitraum: Download (action=download) oder Versand an den Steuerberater (action=send). */
+    public function exportDatev(Request $request): void
+    {
+        $from = $this->parseDate($request->input('datev_from'));
+        $to = $this->parseDate($request->input('datev_to'));
+        if ($from === null || $to === null) {
+            Flash::error('Bitte einen gültigen Zeitraum für den DATEV-Export angeben.');
+            Response::redirect('/einstellungen/integrationen#datev');
+
+            return;
+        }
+
+        $send = $request->input('action') === 'send';
+
+        try {
+            $package = $this->commands->dispatch(new CreateDatevExport(
+                $from,
+                $to,
+                $send ? DatevExportTrigger::ManualEmail : DatevExportTrigger::Download,
+            ));
+            assert($package instanceof DatevExportPackage);
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+            Response::redirect('/einstellungen/integrationen#datev');
+
+            return;
+        } catch (MailerException $e) {
+            Flash::error('Der DATEV-Export konnte nicht per E-Mail versendet werden: ' . $e->getMessage());
+            Response::redirect('/einstellungen/integrationen#datev');
+
+            return;
+        }
+
+        if (!$send) {
+            Response::download($package->zipContent, $package->filename, 'application/zip');
+
+            return;
+        }
+
+        $message = 'DATEV-Export (' . $package->bookingCount() . ' Buchungen, ' . $package->documentCount . ' Belege) wurde an den Steuerberater gesendet.';
+        if ($package->warnings !== []) {
+            Flash::error($message . ' Hinweise: ' . implode(' ', $package->warnings));
+        } else {
+            Flash::success($message);
+        }
+        Response::redirect('/einstellungen/integrationen#datev');
+    }
+
+    private function parseDate(?string $value): ?DateTimeImmutable
+    {
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', trim((string) $value));
+
+        return $date !== false ? $date : null;
+    }
+
+    /** @return array<string, string|null> */
+    private function datevOldInput(Request $request): array
+    {
+        $keys = [
+            'datev_enabled', 'datev_consultant_number', 'datev_client_number', 'datev_chart_of_accounts', 'datev_account_length',
+            'datev_fiscal_year_start_month', 'datev_debtor_mode', 'datev_debtor_account', 'datev_creditor_account',
+            'datev_receipt_tax_key', 'datev_include_receipts', 'datev_include_documents', 'datev_advisor_email',
+            'datev_auto_send_enabled', 'datev_interval', 'datev_send_day',
+        ];
+        foreach (DatevAccountRole::cases() as $role) {
+            $keys[] = 'datev_account_' . $role->value;
+        }
+
+        $old = ['_submitted' => '1'];
+        foreach ($keys as $key) {
+            $old[$key] = $request->input($key);
+        }
+
+        return $old;
+    }
+
+    /**
+     * @param array<string, string> $errors
+     * @param array<string, string|null> $datevOld Formulareingaben bei Validierungsfehlern im DATEV-Formular
+     */
+    private function render(array $errors, array $datevOld = []): void
     {
         echo View::page('settings/integrations', [
             'baseSettings' => $this->queries->ask(new GetIntegrationBaseSettings()),
             'googleMerchantSettings' => $this->queries->ask(new GetGoogleMerchantSettings()),
             'googleBusinessSettings' => $this->queries->ask(new GetGoogleBusinessSettings()),
             'whatsappSettings' => $this->queries->ask(new GetWhatsappBusinessSettings()),
+            'datevSettings' => $this->queries->ask(new GetDatevSettings()),
+            'datevExports' => $this->queries->ask(new ListDatevExports(10)),
+            'datevOld' => $datevOld,
             'errors' => $errors,
         ], activeNav: 'settings-integrationen', title: 'Integrationen');
     }

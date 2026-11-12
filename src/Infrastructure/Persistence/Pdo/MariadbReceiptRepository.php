@@ -194,6 +194,19 @@ final class MariadbReceiptRepository implements ReceiptRepositoryInterface
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
 
+    public function findByReceiptDateBetween(DateTimeImmutable $from, DateTimeImmutable $to): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT * FROM receipts WHERE receipt_date >= :from AND receipt_date <= :to ORDER BY receipt_date ASC, created_at ASC'
+        );
+        $stmt->execute([
+            'from' => $from->format('Y-m-d'),
+            'to' => $to->format('Y-m-d'),
+        ]);
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     private function hydrate(array $row): Receipt
     {
         return new Receipt(

@@ -8,6 +8,7 @@ use App\Application\Auth\Command\AuthenticatePassword;
 use App\Application\Auth\Command\RequestEmailOtp;
 use App\Application\Auth\Command\RequestPasswordSetup;
 use App\Application\Auth\Command\VerifyTwoFactorCode;
+use App\Application\Auth\TrustedDeviceService;
 use App\Application\Command\CommandBus;
 use App\Domain\Auth\UserSessionRepositoryInterface;
 use App\Domain\Exception\ValidationException;
@@ -15,6 +16,7 @@ use App\Domain\User\TwoFactorMethod;
 use App\Domain\User\UserRepositoryInterface;
 use App\Infrastructure\Http\Auth\RecordUserSession;
 use App\Infrastructure\Http\Auth\Session;
+use App\Infrastructure\Http\Auth\TrustedDeviceCookie;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Origin;
 use App\Infrastructure\Http\Request;
@@ -29,6 +31,7 @@ final class AuthController
         private readonly UserRepositoryInterface $users,
         private readonly UserSessionRepositoryInterface $userSessions,
         private readonly RecordUserSession $recordUserSession,
+        private readonly TrustedDeviceService $trustedDevices,
     ) {
     }
 
@@ -41,22 +44,30 @@ final class AuthController
         }
 
         // Hinweis z. B. nach automatischer Abmeldung wegen Inaktivität (AuthGuard).
-        echo View::render('auth/login', ['errors' => [], 'email' => '', 'notice' => Flash::consumeError()]);
+        echo View::render('auth/login', ['errors' => [], 'email' => '', 'trustDevice' => false, 'notice' => Flash::consumeError()]);
     }
 
     public function login(Request $request): void
     {
         $email = $request->input('email', '') ?? '';
+        $trustDevice = ($request->input('trust_device', '') ?? '') === '1';
 
         try {
             $user = $this->commands->dispatch(new AuthenticatePassword($email, $request->input('password', '') ?? ''));
         } catch (ValidationException $e) {
-            echo View::render('auth/login', ['errors' => $e->errors(), 'email' => $email]);
+            echo View::render('auth/login', ['errors' => $e->errors(), 'email' => $email, 'trustDevice' => $trustDevice]);
 
             return;
         }
 
-        if ($user->twoFactorMethod === TwoFactorMethod::None) {
+        // Ohne zweiten Faktor gibt es nichts zu überspringen — der Haken
+        // bleibt dann wirkungslos (das Passwort ist immer Pflicht).
+        // Mit zweitem Faktor: Ist dieses Gerät für genau diesen Benutzer
+        // noch vertraut (Cookie, max. 10 Tage), entfällt die Code-Abfrage.
+        if (
+            $user->twoFactorMethod === TwoFactorMethod::None
+            || $this->trustedDevices->isTrusted(TrustedDeviceCookie::read(), $user->id)
+        ) {
             Session::login($user->id);
             $this->recordUserSession->record($user->id);
             Response::redirect(Session::consumeRedirectAfterLogin());
@@ -64,7 +75,7 @@ final class AuthController
             return;
         }
 
-        Session::startTwoFactorChallenge($user->id);
+        Session::startTwoFactorChallenge($user->id, $trustDevice);
 
         if ($user->twoFactorMethod === TwoFactorMethod::Email) {
             $this->commands->dispatch(new RequestEmailOtp($user->id));
@@ -94,6 +105,7 @@ final class AuthController
             'method' => $user->twoFactorMethod,
             'errors' => [],
             'flashSuccess' => Flash::consumeSuccess(),
+            'trustDevice' => Session::pendingTrustDevice(),
         ]);
     }
 
@@ -114,6 +126,8 @@ final class AuthController
             return;
         }
 
+        $trustDevice = ($request->input('trust_device', '') ?? '') === '1';
+
         try {
             $this->commands->dispatch(new VerifyTwoFactorCode($userId, $request->input('code', '') ?? ''));
         } catch (ValidationException $e) {
@@ -121,9 +135,20 @@ final class AuthController
                 'method' => $user->twoFactorMethod,
                 'errors' => $e->errors(),
                 'flashSuccess' => null,
+                'trustDevice' => $trustDevice,
             ]);
 
             return;
+        }
+
+        if ($trustDevice) {
+            // Ein evtl. vorhandenes älteres Token dieses Browsers ersetzen.
+            $this->trustedDevices->forget(TrustedDeviceCookie::read());
+            TrustedDeviceCookie::write($this->trustedDevices->issue(
+                $userId,
+                $_SERVER['HTTP_USER_AGENT'] ?? null,
+                $_SERVER['REMOTE_ADDR'] ?? null,
+            ));
         }
 
         Session::login($userId);

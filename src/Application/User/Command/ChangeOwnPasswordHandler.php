@@ -6,6 +6,7 @@ namespace App\Application\User\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Auth\TrustedDeviceRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\User\UserRepositoryInterface;
@@ -14,8 +15,15 @@ use DateTimeImmutable;
 
 final class ChangeOwnPasswordHandler implements CommandHandlerInterface
 {
-    public function __construct(private readonly UserRepositoryInterface $users)
-    {
+    /**
+     * $trustedDevices: nach einer Passwort-/2FA-Änderung verliert jedes
+     * "vertraute Gerät" (Migration 145) sein Vertrauen und muss den zweiten
+     * Faktor wieder abfragen.
+     */
+    public function __construct(
+        private readonly UserRepositoryInterface $users,
+        private readonly ?TrustedDeviceRepositoryInterface $trustedDevices = null,
+    ) {
     }
 
     public function handle(CommandInterface $command): mixed
@@ -41,6 +49,7 @@ final class ChangeOwnPasswordHandler implements CommandHandlerInterface
         $user->updatedAt = new DateTimeImmutable();
 
         $this->users->save($user);
+        $this->trustedDevices?->deleteAllForUser($user->id);
 
         return null;
     }

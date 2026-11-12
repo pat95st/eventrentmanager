@@ -494,6 +494,8 @@ $loginChallengeRepository = new MariadbLoginChallengeRepository($pdo);
 $webauthnCredentialRepository = new MariadbWebauthnCredentialRepository($pdo);
 $webauthnChallengeRepository = new MariadbWebauthnChallengeRepository($pdo);
 $userSessionRepository = new MariadbUserSessionRepository($pdo);
+$trustedDeviceRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTrustedDeviceRepository($pdo);
+$trustedDeviceService = new \App\Application\Auth\TrustedDeviceService($trustedDeviceRepository);
 $recordUserSession = new \App\Infrastructure\Http\Auth\RecordUserSession($userSessionRepository);
 $impersonationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbImpersonationRepository($pdo);
 $webAuthnService = new WebAuthnService();
@@ -858,11 +860,11 @@ $commandBus->register(\App\Application\NoticeDocument\Command\DeleteNoticeDocume
 $commandBus->register(\App\Application\User\Command\CreateUser::class, new CreateUserHandler($userRepository, $passwordSetupTokenIssuer));
 $commandBus->register(\App\Application\User\Command\UpdateUser::class, new UpdateUserHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\DeleteUser::class, new DeleteUserHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\ChangePassword::class, new ChangePasswordHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\ChangeOwnPassword::class, new ChangeOwnPasswordHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\EnableTotp::class, new EnableTotpHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\EnableEmailOtp::class, new EnableEmailOtpHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\DisableTwoFactor::class, new DisableTwoFactorHandler($userRepository));
+$commandBus->register(\App\Application\User\Command\ChangePassword::class, new ChangePasswordHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\ChangeOwnPassword::class, new ChangeOwnPasswordHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\EnableTotp::class, new EnableTotpHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\EnableEmailOtp::class, new EnableEmailOtpHandler($userRepository, $trustedDeviceRepository));
+$commandBus->register(\App\Application\User\Command\DisableTwoFactor::class, new DisableTwoFactorHandler($userRepository, $trustedDeviceRepository));
 $commandBus->register(\App\Application\User\Command\UpdateDefaultPageSize::class, new UpdateDefaultPageSizeHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\UpdateDashboardWidgets::class, new \App\Application\User\Command\UpdateDashboardWidgetsHandler($userRepository));
 $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new UpdateLocaleHandler($userRepository));
@@ -878,12 +880,12 @@ $commandBus->register(\App\Application\Auth\Command\CompletePasskeyLogin::class,
 $commandBus->register(\App\Application\Auth\Command\DeletePasskey::class, new DeletePasskeyHandler($webauthnCredentialRepository));
 
 $commandBus->register(\App\Application\Auth\Command\RequestPasswordSetup::class, new RequestPasswordSetupHandler($userRepository, $passwordSetupTokenIssuer));
-$commandBus->register(\App\Application\Auth\Command\CompletePasswordSetup::class, new CompletePasswordSetupHandler($passwordSetupTokenRepository, $userRepository));
+$commandBus->register(\App\Application\Auth\Command\CompletePasswordSetup::class, new CompletePasswordSetupHandler($passwordSetupTokenRepository, $userRepository, $trustedDeviceRepository));
 
 $commandBus->register(\App\Application\Auth\Command\RevokeSession::class, new \App\Application\Auth\Command\RevokeSessionHandler($userSessionRepository));
 $commandBus->register(\App\Application\Auth\Command\RevokeOtherSessions::class, new \App\Application\Auth\Command\RevokeOtherSessionsHandler($userSessionRepository));
 $commandBus->register(\App\Application\Auth\Command\AdminRevokeSession::class, new \App\Application\Auth\Command\AdminRevokeSessionHandler($userSessionRepository));
-$commandBus->register(\App\Application\Auth\Command\AdminRevokeAllSessions::class, new \App\Application\Auth\Command\AdminRevokeAllSessionsHandler($userSessionRepository));
+$commandBus->register(\App\Application\Auth\Command\AdminRevokeAllSessions::class, new \App\Application\Auth\Command\AdminRevokeAllSessionsHandler($userSessionRepository, $trustedDeviceRepository));
 $commandBus->register(\App\Application\Auth\Command\StartImpersonation::class, new \App\Application\Auth\Command\StartImpersonationHandler($userRepository, $impersonationRepository));
 $commandBus->register(\App\Application\Auth\Command\StopImpersonation::class, new \App\Application\Auth\Command\StopImpersonationHandler($impersonationRepository));
 
@@ -1623,12 +1625,12 @@ $insuranceListController = new \App\Infrastructure\Http\Controllers\InsuranceLis
 $inventoryNumberController = new InventoryNumberController($queryBus, $commandBus, $supplierRepository, $rmaRepository, $electricalInspectionRepository, $customerRepository, $saleRepository);
 $labelPrinterController = new LabelPrinterController($commandBus, $queryBus);
 $documentStorageSettingsController = new \App\Infrastructure\Http\Controllers\DocumentStorageSettingsController($commandBus, $queryBus);
-$authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession);
+$authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession, $trustedDeviceService);
 $setupPasswordController = new SetupPasswordController($commandBus, $passwordSetupTokenRepository, $recordUserSession);
 $passkeyController = new PasskeyController($commandBus, $queryBus, $recordUserSession);
 $calDavSigningCertificateProvider = new \App\Infrastructure\Http\CalDav\CalDavSigningCertificateProvider($calDavSigningSettingsRepository, $fileStorage, $companySettingsRepository);
 $mobileConfigBuilder = new \App\Infrastructure\Http\CalDav\MobileConfigBuilder($calDavSigningCertificateProvider);
-$profileController = new ProfileController($commandBus, $queryBus, $mobileConfigBuilder);
+$profileController = new ProfileController($commandBus, $queryBus, $mobileConfigBuilder, $trustedDeviceService);
 $userController = new UserController($commandBus, $queryBus, $technicianProfileRepository);
 $rentalTechnicianController = new \App\Infrastructure\Http\Controllers\RentalTechnicianController($commandBus, $queryBus, $rentalTechnicianRepository);
 $technicianSettingsController = new \App\Infrastructure\Http\Controllers\TechnicianSettingsController($commandBus, $tradeRepository, $technicianSettingsRepository);
@@ -1741,6 +1743,7 @@ $router->get('/profil/sicherheit', $auth->guard(null, [$profileController, 'show
 $router->post('/profil/sicherheit/totp', $auth->guard(null, [$profileController, 'enableTotp']));
 $router->post('/profil/sicherheit/email', $auth->guard(null, [$profileController, 'enableEmailOtp']));
 $router->post('/profil/sicherheit/deaktivieren', $auth->guard(null, [$profileController, 'disableTwoFactor']));
+$router->post('/profil/sicherheit/vertraute-geraete/widerrufen', $auth->guard(null, [$profileController, 'revokeTrustedDevices']));
 $router->get('/profil/darstellung', $auth->guard(null, [$profileController, 'showDisplaySettings']));
 $router->post('/profil/darstellung', $auth->guard(null, [$profileController, 'updateDisplaySettings']));
 $router->get('/profil/dashboard', $auth->guard(null, [$profileController, 'showDashboardSettings']));

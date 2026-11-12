@@ -181,7 +181,7 @@ $bundleComponentRows ??= [];
             <div>
                 <label for="fixed_current_value" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Fester Zeitwert <span class="font-normal text-slate-400">(optional)</span></label>
                 <input type="hidden" name="fixed_current_value_section" value="1">
-                <input type="number" step="0.01" min="0" id="fixed_current_value" name="fixed_current_value" placeholder="z. B. 15.00"
+                <input type="number" step="0.01" min="0" id="fixed_current_value" name="fixed_current_value" placeholder="z. B. 15,00"
                        value="<?= e((string) ($old['fixed_current_value'] ?? \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article?->id ?? ($old['duplicate_of'] ?? null)) ?? '')) ?>"
                        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
                 <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">Zeitwert je Exemplar für die Versicherungsliste, gilt für alle Inventarnummern ohne eigenen Zeitwert (z. B. Kabel).</p>

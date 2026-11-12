@@ -33,22 +33,22 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
 </div>
 
 <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-    <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <p class="text-xs text-slate-500 dark:text-slate-400">Geräte</p>
         <p class="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100"><?= count($list->rows) ?></p>
         <p class="text-xs text-slate-400 dark:text-slate-500"><?= $issuedCount ?> ausgegeben<?= $includeUnissued && $issuedCount < count($list->rows) ? ', ' . (count($list->rows) - $issuedCount) . ' nur geplant' : '' ?></p>
     </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <p class="text-xs text-slate-500 dark:text-slate-400">Summe Zeitwert</p>
-        <p class="mt-1 font-mono text-lg font-semibold text-slate-900 dark:text-slate-100"><?= e($money($list->totalCurrentValue())) ?></p>
+        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100"><?= e($money($list->totalCurrentValue())) ?></p>
         <p class="text-xs <?= $list->countMissingCurrentValues() > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500' ?>"><?= $list->countMissingCurrentValues() ?> ohne Zeitwert</p>
     </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <p class="text-xs text-slate-500 dark:text-slate-400">Summe Anschaffungspreise</p>
-        <p class="mt-1 font-mono text-lg font-semibold text-slate-900 dark:text-slate-100"><?= e($money($list->totalPurchasePrice())) ?></p>
+        <p class="mt-1 text-lg font-semibold tabular-nums text-slate-900 dark:text-slate-100"><?= e($money($list->totalPurchasePrice())) ?></p>
         <p class="text-xs <?= $list->countMissingPurchasePrices() > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500' ?>"><?= $list->countMissingPurchasePrices() ?> ohne Anschaffungspreis</p>
     </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <p class="text-xs text-slate-500 dark:text-slate-400">Ansicht</p>
         <p class="mt-1 text-sm text-slate-800 dark:text-slate-200"><?= $includeUnissued ? 'Inkl. noch nicht ausgegebener Geräte' : 'Nur ausgegebene Geräte' ?></p>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste<?= $includeUnissued ? '?unissued=0' : '' ?>" class="text-xs text-brand-700 hover:underline dark:text-brand-400">
@@ -57,7 +57,7 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
     </div>
 </div>
 
-<form method="get" action="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste.csv" class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+<form method="get" action="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste.csv" class="mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Export</h2>
     <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">Spalten</p>
     <div class="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -86,7 +86,7 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
     <p class="mt-2 text-xs text-slate-400 dark:text-slate-500">Das PDF enthält unabhängig von der Spaltenauswahl immer die Gesamtsummen von Zeitwert und Anschaffungspreisen.</p>
 </form>
 
-<div class="mb-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+<div class="mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
     <div class="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
             <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Geräte</h2>
@@ -139,10 +139,10 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
                                     <span class="font-sans text-xs italic text-slate-400 dark:text-slate-500">noch nicht ausgegeben</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="py-1.5 pr-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= $row->acquisitionYear !== null ? (int) $row->acquisitionYear : '' ?></td>
-                            <td class="py-1.5 pr-3 text-right font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($money($row->purchasePrice)) ?></td>
+                            <td class="py-1.5 pr-3 tabular-nums text-slate-600 dark:text-slate-400"><?= $row->acquisitionYear !== null ? (int) $row->acquisitionYear : '' ?></td>
+                            <td class="whitespace-nowrap py-1.5 pr-3 text-right tabular-nums text-slate-600 dark:text-slate-400"><?= e($money($row->purchasePrice)) ?></td>
                             <td class="whitespace-nowrap py-1.5 pr-3 text-right">
-                                <span class="font-mono text-xs text-slate-800 dark:text-slate-200"><?= e($money($row->currentValue)) ?></span>
+                                <span class="tabular-nums text-slate-800 dark:text-slate-200"><?= e($money($row->currentValue)) ?></span>
                                 <span class="inline-block w-8 text-left"><?= $originBadge($row->currentValueOrigin, $row->currentValueNote) ?></span>
                             </td>
                             <td class="py-1.5 text-right">

@@ -16,7 +16,7 @@ final class UpdateInventoryNumber implements CommandInterface
         public readonly ?string $purchasePriceOverride = null,
         public readonly ?string $storageLocation = null,
         public readonly ?string $installedFirmwareVersionId = null,
-        // Migration 143: Zeitwert für die Versicherungsliste. Nur wenn
+        // Migration 144: Zeitwert für die Versicherungsliste. Nur wenn
         // updateCurrentValue gesetzt ist (Feld war im Formular), wird er
         // übernommen; leer löscht ihn.
         public readonly ?string $currentValue = null,

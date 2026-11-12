@@ -1324,7 +1324,7 @@ $getRentalHandler = new GetRentalHandler(
 );
 $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHandler);
 
-// Versicherungsliste: Zeitwerte je Inventarnummer/Artikel, KI-Schätzung, CSV-/PDF-Export (Migration 143).
+// Versicherungsliste: Zeitwerte je Inventarnummer/Artikel, KI-Schätzung, CSV-/PDF-Export (Migration 144).
 $currentValueRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCurrentValueRepository($pdo);
 $currentValueEstimator = new \App\Infrastructure\Integration\Insurance\OpenAiCurrentValueEstimator($aiAdImageSettingsRepository);
 \App\Infrastructure\Http\CurrentValueLookup::set($currentValueRepository, [$currentValueEstimator, 'isAvailable']);

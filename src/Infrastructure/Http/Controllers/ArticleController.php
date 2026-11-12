@@ -686,7 +686,7 @@ final class ArticleController
         }
     }
 
-    /** Fester Zeitwert für die Versicherungsliste (Migration 143) – nur wenn das Feld im Formular war. */
+    /** Fester Zeitwert für die Versicherungsliste (Migration 144) – nur wenn das Feld im Formular war. */
     private function saveFixedCurrentValue(string $articleId, Request $request): void
     {
         if ($request->input('fixed_current_value_section') !== '1') {

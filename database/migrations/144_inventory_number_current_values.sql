@@ -1,4 +1,4 @@
--- Migration 143: Zeitwerte für die Versicherungsliste einer Veranstaltung
+-- Migration 144: Zeitwerte für die Versicherungsliste einer Veranstaltung
 --  - inventory_numbers.current_value*: geschätzter Zeitwert direkt an der
 --    Inventarnummer (händisch im Inventarnummern-Formular gepflegt oder per KI
 --    geschätzt, siehe current_value_source/current_value_note)

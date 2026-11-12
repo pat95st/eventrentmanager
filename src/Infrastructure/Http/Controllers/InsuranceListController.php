@@ -26,7 +26,7 @@ use App\Infrastructure\Http\View;
 use App\Infrastructure\Pdf\InsuranceListPdfGenerator;
 
 /**
- * Versicherungsliste einer Veranstaltung (Migration 143): Übersicht, KI-
+ * Versicherungsliste einer Veranstaltung (Migration 144): Übersicht, KI-
  * Schätzung fehlender Zeitwerte sowie CSV-/PDF-Export mit frei wählbaren
  * Spalten. Die Zeitwerte selbst werden an den Inventarnummern gepflegt
  * (Inventarnummer bearbeiten) bzw. als fester Wert am Artikel.

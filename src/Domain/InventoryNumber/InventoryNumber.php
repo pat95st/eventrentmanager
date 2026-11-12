@@ -22,7 +22,7 @@ final class InventoryNumber
         public ?string $installedFirmwareVersionId, // installierte Firmware-Version (FK auf FirmwareVersion); nur relevant, wenn der zugehörige Artikel hasFirmware ist. Bewusst eine Auswahl aus dem Artikel-Katalog (kein Freitext), damit der Update-verfügbar-Vergleich immer über einen exakten ID-Abgleich funktioniert
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
-        // Migration 143: geschätzter Zeitwert dieses Exemplars für die Versicherungsliste
+        // Migration 144: geschätzter Zeitwert dieses Exemplars für die Versicherungsliste
         // (Euro als String, siehe purchasePriceOverride); optional. Quelle "manual" oder
         // "ai", bei KI-Schätzungen mit kurzer Begründung in currentValueNote.
         public ?string $currentValue = null,

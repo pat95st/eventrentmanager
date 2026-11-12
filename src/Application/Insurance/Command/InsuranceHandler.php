@@ -26,7 +26,7 @@ use DateTimeImmutable;
 
 /**
  * Zeitwerte per KI schätzen (gespeichert an der Inventarnummer), feste
- * Artikel-Zeitwerte pflegen und Exportspalten merken (Migration 143).
+ * Artikel-Zeitwerte pflegen und Exportspalten merken (Migration 144).
  */
 final class InsuranceHandler implements CommandHandlerInterface
 {

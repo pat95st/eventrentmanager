@@ -8,7 +8,7 @@ use App\Domain\Insurance\CurrentValueRepositoryInterface;
 
 /**
  * Zugriff der Views (Artikelformular, Inventarnummern) auf die festen
- * Artikel-Zeitwerte der Versicherungsliste (Migration 143), analog zu DryHireLookup –
+ * Artikel-Zeitwerte der Versicherungsliste (Migration 144), analog zu DryHireLookup –
  * wird in bootstrap.php gesetzt. Ohne Repository liefert alles null.
  */
 final class CurrentValueLookup

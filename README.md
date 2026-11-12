@@ -109,7 +109,7 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   solange es noch in einer Beladungsliste oder einer Zugfahrzeug-Zuordnung
   verwendet wird.
 - **Versicherungsliste** (je Veranstaltung unter „Dokumente › Versicherungsliste“,
-  `/veranstaltungen/{id}/versicherungsliste`, Migration 143): listet alle
+  `/veranstaltungen/{id}/versicherungsliste`, Migration 144): listet alle
   ausgegebenen Exemplare (optional auch die nur geplanten, noch nicht
   ausgegebenen Stückzahlen ohne Inventarnummer) und exportiert sie als **CSV**
   (Semikolon, Dezimalkomma, UTF-8 mit BOM) oder **PDF** (Aufbau wie die

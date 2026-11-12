@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Insurance;
 
 /**
- * Ergänzende Daten der Versicherungsliste (Migration 143). Der Zeitwert
+ * Ergänzende Daten der Versicherungsliste (Migration 144). Der Zeitwert
  * eines einzelnen Exemplars liegt direkt an der Inventarnummer (siehe
  * App\Domain\InventoryNumber\InventoryNumber::$currentValue); hier nur der
  * optionale feste Zeitwert je Artikel und die zuletzt gewählten Exportspalten.

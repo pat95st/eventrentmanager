@@ -102,6 +102,7 @@ final class AddInventoryNumberHandler implements CommandHandlerInterface
                 receiptId: null,
                 purchasePriceOverride: null,
                 storageLocation: null,
+                installedFirmwareVersionId: null,
                 createdAt: new DateTimeImmutable(),
                 updatedAt: new DateTimeImmutable(),
             );

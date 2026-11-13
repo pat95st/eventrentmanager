@@ -15,6 +15,14 @@ interface ShareClientInterface
      */
     public function createPublicLink(string $remotePath, SharePermission $permission, ?string $password, string $label): PublicShare;
 
+    /**
+     * Teilt den Ordner mit einer E-Mail-Adresse; der Server verschickt die
+     * Einladung selbst (nur Nextcloud, siehe StorageProtocol::supportsNativeMailShare()).
+     *
+     * @throws StorageUploadException
+     */
+    public function createMailShare(string $remotePath, string $email, SharePermission $permission, ?string $password, string $label): PublicShare;
+
     /** @throws StorageUploadException */
     public function updatePermission(string $shareId, SharePermission $permission): void;
 

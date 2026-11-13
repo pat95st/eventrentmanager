@@ -31,6 +31,7 @@ enum EmailTemplateKey: string
     case TechnicianAssigned = 'technician_assigned';
     // Ordner im Dateiablagesystem (Migration 148)
     case StorageFolderShare = 'storage_folder_share';
+    case StorageFolderSharePassword = 'storage_folder_share_password';
 
     public function label(): string
     {
@@ -50,6 +51,7 @@ enum EmailTemplateKey: string
             self::TechnicianReminder => 'Techniker: Erinnerung an offene Anfrage',
             self::TechnicianAssigned => 'Techniker: Einplanung für eine Veranstaltung',
             self::StorageFolderShare => 'Ordner-Freigabe (Nextcloud/ownCloud)',
+            self::StorageFolderSharePassword => 'Ordner-Freigabe: Passwort',
         };
     }
 
@@ -70,7 +72,8 @@ enum EmailTemplateKey: string
             self::TechnicianRequest => 'Wird an einen Techniker verschickt, der einer Veranstaltung erst zustimmen muss, sobald er angefragt wird. Enthält eine Termineinladung (.ics).',
             self::TechnicianReminder => 'Wird erneut verschickt, wenn ein angefragter Techniker nicht zu- oder abgesagt hat (Zeitpunkte unter Einstellungen › Techniker & Gewerke). Enthält eine Termineinladung (.ics).',
             self::TechnicianAssigned => 'Wird an einen direkt verplanbaren Techniker verschickt, sobald er einer Veranstaltung zugeteilt wird. Enthält eine Termineinladung (.ics).',
-            self::StorageFolderShare => 'Wird an den Kunden verschickt, sobald der Ordner einer Veranstaltung oder eines Kunden per Link freigegeben wird. Das Freigabe-Passwort steht bewusst nicht in der E-Mail.',
+            self::StorageFolderShare => 'Wird an den Kunden verschickt, sobald der Ordner einer Veranstaltung oder eines Kunden per Link freigegeben wird. Das Freigabe-Passwort steht bewusst nicht in der E-Mail. Bei Nextcloud verschickt Nextcloud die Einladung selbst; diese Vorlage wird dort nur für „Link erneut senden“ verwendet.',
+            self::StorageFolderSharePassword => 'Wird nur verschickt, wenn der Benutzer nach dem Erzeugen eines Freigabe-Passworts ausdrücklich „per E-Mail senden“ wählt.',
         };
     }
 
@@ -168,6 +171,11 @@ enum EmailTemplateKey: string
                 'permission' => 'Was der Kunde über den Link darf (z. B. "Nur ansehen und herunterladen")',
                 'password_line' => 'Absatz mit dem Hinweis auf den Passwortschutz, oder leer, falls kein Passwort gesetzt ist',
             ],
+            self::StorageFolderSharePassword => [
+                'customer_name' => 'Name des Kunden',
+                'folder_name' => 'Name des freigegebenen Ordners',
+                'password' => 'Das Passwort der Freigabe',
+            ],
         };
     }
 
@@ -189,6 +197,7 @@ enum EmailTemplateKey: string
             self::TechnicianReminder => 'Erinnerung – bitte zu- oder absagen: {{event_name}} ({{date_range}})',
             self::TechnicianAssigned => 'Einplanung: {{event_name}} ({{date_range}})',
             self::StorageFolderShare => 'Ordner-Freigabe: {{folder_name}}',
+            self::StorageFolderSharePassword => 'Passwort für Ihren Ordner {{folder_name}}',
         };
     }
 
@@ -210,6 +219,7 @@ enum EmailTemplateKey: string
             self::TechnicianReminder => "<p>Hallo {{technician_name}},</p>\n<p>zu folgender Veranstaltung haben wir noch keine Rückmeldung von dir:</p>\n<p>Veranstaltung: {{event_name}}<br>Zeitraum: {{date_range}}<br>{{schedule_line}}{{location_line}}Gewerke: {{trades}}</p>\n{{note_line}}\n<p>Bitte sag uns über deinen Login zu oder ab:<br><a href=\"{{link}}\">{{link}}</a></p>\n<p>Viele Grüße<br>{{company_name}}</p>",
             self::TechnicianAssigned => "<p>Hallo {{technician_name}},</p>\n<p>du bist für folgende Veranstaltung eingeplant:</p>\n<p>Veranstaltung: {{event_name}}<br>Zeitraum: {{date_range}}<br>{{schedule_line}}{{location_line}}Gewerke: {{trades}}</p>\n{{note_line}}\n<p>Alle Details findest du in der App:<br><a href=\"{{link}}\">{{link}}</a></p>\n<p>Die Termineinladung findest du im Anhang.</p>\n<p>Viele Grüße<br>{{company_name}}</p>",
             self::StorageFolderShare => "<p>Guten Tag {{customer_name}},</p>\n<p>wir haben einen Ordner für Sie freigegeben:</p>\n<p>Ordner: {{folder_name}}<br>Berechtigung: {{permission}}</p>\n<p><a href=\"{{link}}\">{{link}}</a></p>\n{{password_line}}\n<p>Mit freundlichen Grüßen</p>",
+            self::StorageFolderSharePassword => "<p>Guten Tag {{customer_name}},</p>\n<p>das Passwort für den freigegebenen Ordner „{{folder_name}}“ lautet:</p>\n<p><strong>{{password}}</strong></p>\n<p>Den Link zum Ordner haben Sie in einer separaten E-Mail erhalten.</p>\n<p>Mit freundlichen Grüßen</p>",
         };
     }
 }

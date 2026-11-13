@@ -76,12 +76,12 @@ $sfHintClass = 'block text-xs text-slate-400 dark:text-slate-500';
             <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
                 <input type="checkbox" name="storage_folder_share_enabled" value="1" class="mt-0.5" data-sf-share <?= $storageFolder['shareEnabled'] ? 'checked' : '' ?>>
                 <span>
-                    Ordner mit dem Kunden teilen (Link per E-Mail)
+                    Ordner mit dem Kunden teilen (per E-Mail)
                     <span class="<?= $sfHintClass ?>">
                         <?php if ($sfFolder !== null && $sfFolder->isShared()): ?>
                             Wird der Haken entfernt, wird der Freigabe-Link beim Speichern ungültig.
                         <?php else: ?>
-                            Beim Speichern wird ein Freigabe-Link angelegt und an die E-Mail-Adresse des Kunden geschickt.
+                            Beim Speichern wird der Ordner für die E-Mail-Adresse des Kunden freigegeben. Nextcloud verschickt die Einladung selbst; bei ownCloud geht der Freigabe-Link per E-Mail aus dieser Anwendung raus.
                         <?php endif; ?>
                     </span>
                 </span>
@@ -114,7 +114,7 @@ $sfHintClass = 'block text-xs text-slate-400 dark:text-slate-500';
                         <input type="checkbox" name="storage_folder_regenerate_password" value="1" class="mt-0.5">
                         <span>
                             Neues Passwort generieren
-                            <span class="<?= $sfHintClass ?>">Das neue Passwort wird nach dem Speichern einmalig angezeigt; <?= $sfFolder->shareHasPassword ? 'das bisherige gilt dann nicht mehr.' : 'die Freigabe ist danach passwortgeschützt.' ?></span>
+                            <span class="<?= $sfHintClass ?>">Das neue Passwort wird nach dem Speichern einmalig angezeigt (mit der Frage, ob und wie es an den Kunden geht); <?= $sfFolder->shareHasPassword ? 'das bisherige gilt dann nicht mehr.' : 'die Freigabe ist danach passwortgeschützt.' ?></span>
                         </span>
                     </label>
                     <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
@@ -183,7 +183,7 @@ $sfHintClass = 'block text-xs text-slate-400 dark:text-slate-500';
         shareDetails.hidden = !share.checked;
         if (passwordHint) {
             passwordHint.textContent = alwaysPassword
-                ? 'Die Freigabe wird mit einem automatisch erzeugten Passwort geschützt. Es wird nach dem Speichern einmalig angezeigt und steht nicht in der E-Mail.'
+                ? 'Die Freigabe wird mit einem automatisch erzeugten Passwort geschützt. Es wird nach dem Speichern einmalig angezeigt – dort werden Sie gefragt, ob und wie es an den Kunden geschickt wird.'
                 : 'Die Freigabe wird ohne Passwort angelegt. Ein Passwort lässt sich später beim Bearbeiten erzeugen.';
         }
     }

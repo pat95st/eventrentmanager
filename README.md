@@ -85,16 +85,24 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   ordner, Kundenordner, Veranstaltung als Unterordner des Kundenordners).
   Hat der Kunde einen Ordner, kann die Veranstaltung als dessen Unterordner
   angelegt werden. Bei den Protokollen **Nextcloud** und **ownCloud** kann
-  der Ordner zusätzlich per Freigabe-Link mit dem Kunden geteilt werden
-  (Berechtigung je Veranstaltung/Kunde wählbar: ansehen, bearbeiten, nur
-  hochladen); der Link geht über die E-Mail-Vorlage „Ordner-Freigabe“ an
-  die E-Mail-Adresse des Kunden. Je Ziellaufwerk lässt sich festlegen, dass
-  Freigaben immer ein automatisch erzeugtes Passwort bekommen, und nach
-  welcher Richtlinie (Länge, Zeichenarten). Das Passwort wird nur einmalig
-  nach dem Speichern angezeigt, nicht gespeichert und nicht per E-Mail
-  verschickt; beim Bearbeiten lässt sich ein neues erzeugen. Ein angelegter
-  Ordner behält seinen Pfad bei späteren Umbenennungen; wird der Haken
-  entfernt, wird nur die Freigabe aufgehoben, der Ordner bleibt bestehen.
+  der Ordner zusätzlich mit dem Kunden geteilt werden (Berechtigung je
+  Veranstaltung/Kunde wählbar: ansehen, bearbeiten, nur hochladen).
+  Nextcloud teilt dabei nativ „per E-Mail“ und verschickt die Einladung
+  selbst; ownCloud kennt diesen Freigabetyp nicht, dort entsteht ein
+  Freigabe-Link, den die Anwendung über die E-Mail-Vorlage „Ordner-Freigabe“
+  verschickt. Je Ziellaufwerk lässt sich festlegen, dass Freigaben immer ein
+  automatisch erzeugtes Passwort bekommen, und nach welcher Richtlinie
+  (Länge, Zeichenarten). Das Passwort wird nur einmalig nach dem Speichern
+  angezeigt und nicht gespeichert; dabei wird gefragt, ob und auf welchem
+  beim Kunden hinterlegten Weg (E-Mail, Telegram, Signal) es verschickt
+  werden soll – ohne Auswahl geht nichts raus. Beim Bearbeiten lässt sich
+  ein neues Passwort erzeugen. Ändert sich durch das Bearbeiten der Name
+  laut Namensregel, wird gefragt, ob der Ordner mit umbenannt werden soll
+  (Unterordner und Freigabe bleiben erhalten); beim Löschen einer
+  Veranstaltung/eines Kunden wird gefragt, ob auch der Ordner samt Inhalt
+  gelöscht werden soll. Umbenennen geht mit allen Protokollen außer S3,
+  Löschen mit Nextcloud/ownCloud/WebDAV, SFTP und SCP. Wird nur der Haken
+  entfernt, wird die Freigabe aufgehoben, der Ordner bleibt bestehen.
 - **Cases** (Menüpunkt „Cases“, im Untermenü von „Artikel“): ein Case ist
   ein Transport-/Flightcase-Modell, das funktional wie ein Artikel behandelt
   wird — mit Hersteller (aus derselben Herstellerliste wie Artikel), eigenem

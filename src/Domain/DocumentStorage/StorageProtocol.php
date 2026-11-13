@@ -35,6 +35,24 @@ enum StorageProtocol: string
         return $this === self::Nextcloud || $this === self::OwnCloud;
     }
 
+    /** Nextcloud teilt Ordner selbst per E-Mail (Freigabetyp "E-Mail"); ownCloud kennt nur Freigabe-Links. */
+    public function supportsNativeMailShare(): bool
+    {
+        return $this === self::Nextcloud;
+    }
+
+    /** Lässt sich ein angelegter Ordner nachträglich umbenennen/verschieben? S3 kennt kein Umbenennen. */
+    public function supportsFolderRename(): bool
+    {
+        return $this !== self::S3;
+    }
+
+    /** Lässt sich ein Ordner samt Inhalt löschen? Für FTPS und S3 nicht umgesetzt. */
+    public function supportsFolderDelete(): bool
+    {
+        return $this->usesWebDav() || $this === self::Sftp || $this === self::Scp;
+    }
+
     /** Wird über WebDAV angesprochen (siehe App\Infrastructure\DocumentStorage\WebDavClient). */
     public function usesWebDav(): bool
     {

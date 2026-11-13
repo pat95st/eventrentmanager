@@ -30,6 +30,7 @@ final class MariadbStorageFolderRepository implements StorageFolderRepositoryInt
                 :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
+                path = VALUES(path),
                 share_id = VALUES(share_id), share_url = VALUES(share_url),
                 share_permission = VALUES(share_permission), share_has_password = VALUES(share_has_password),
                 share_mailed_at = VALUES(share_mailed_at), share_mailed_to = VALUES(share_mailed_to),
@@ -64,16 +65,44 @@ final class MariadbStorageFolderRepository implements StorageFolderRepositoryInt
         return $row ? $this->hydrate($row) : null;
     }
 
-    public function customerFolderTargets(): array
+    public function customerFolders(): array
     {
-        $stmt = $this->pdo->query('SELECT customer_id, storage_target_id FROM storage_folders WHERE customer_id IS NOT NULL');
+        $stmt = $this->pdo->query('SELECT * FROM storage_folders WHERE customer_id IS NOT NULL');
 
         $result = [];
         foreach ($stmt->fetchAll() as $row) {
-            $result[(string) $row['customer_id']] = (string) $row['storage_target_id'];
+            $result[(string) $row['customer_id']] = $this->hydrate($row);
         }
 
         return $result;
+    }
+
+    public function replacePathPrefix(string $storageTargetId, string $oldPath, string $newPath): void
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE storage_folders
+                SET path = CONCAT(:new_path, SUBSTRING(path, :offset))
+              WHERE storage_target_id = :target_id AND LEFT(path, :prefix_length) = :prefix'
+        );
+        $stmt->execute([
+            'new_path' => $newPath,
+            'offset' => mb_strlen($oldPath) + 1,
+            'target_id' => $storageTargetId,
+            'prefix_length' => mb_strlen($oldPath) + 1,
+            'prefix' => $oldPath . '/',
+        ]);
+    }
+
+    public function deleteBelowPath(string $storageTargetId, string $path): void
+    {
+        $stmt = $this->pdo->prepare(
+            'DELETE FROM storage_folders WHERE storage_target_id = :target_id AND LEFT(path, :prefix_length) = :prefix'
+        );
+        $stmt->execute([
+            'target_id' => $storageTargetId,
+            'prefix_length' => mb_strlen($path) + 1,
+            'prefix' => $path . '/',
+        ]);
     }
 
     public function delete(string $id): void

@@ -30,16 +30,34 @@ final class InMemoryStorageFolderRepository implements StorageFolderRepositoryIn
         return null;
     }
 
-    public function customerFolderTargets(): array
+    public function customerFolders(): array
     {
         $result = [];
         foreach ($this->folders as $folder) {
             if ($folder->ownerType === StorageFolderOwnerType::Customer) {
-                $result[$folder->ownerId] = $folder->storageTargetId;
+                $result[$folder->ownerId] = $folder;
             }
         }
 
         return $result;
+    }
+
+    public function replacePathPrefix(string $storageTargetId, string $oldPath, string $newPath): void
+    {
+        foreach ($this->folders as $folder) {
+            if ($folder->storageTargetId === $storageTargetId && str_starts_with($folder->path, $oldPath . '/')) {
+                $folder->path = $newPath . substr($folder->path, strlen($oldPath));
+            }
+        }
+    }
+
+    public function deleteBelowPath(string $storageTargetId, string $path): void
+    {
+        foreach ($this->folders as $id => $folder) {
+            if ($folder->storageTargetId === $storageTargetId && str_starts_with($folder->path, $path . '/')) {
+                unset($this->folders[$id]);
+            }
+        }
     }
 
     public function delete(string $id): void

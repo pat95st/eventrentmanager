@@ -134,7 +134,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                 <span class="sr-only"><?= e(t('rentals.show.more_actions')) ?></span>
             </summary>
             <div data-dropdown-menu role="menu" class="menu-fit absolute left-0 top-full z-20 mt-1 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:right-0">
-                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger">
+                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger"<?= \App\Infrastructure\Http\StorageFolderForm::deleteQuestionAttributes(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $rental->id) ?>>
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
                         <?= e(t('rentals.show.delete_event')) ?>

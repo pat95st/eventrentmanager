@@ -1190,15 +1190,18 @@ $commandBus->register(\App\Application\DocumentStorage\Command\TestStorageConnec
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageAssignment::class, new \App\Application\DocumentStorage\Command\CreateStorageAssignmentHandler($documentStorageAssignmentRepository, $documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageAssignment::class, new \App\Application\DocumentStorage\Command\DeleteStorageAssignmentHandler($documentStorageAssignmentRepository));
 // Ordner für Veranstaltungen/Kunden samt Freigabe (Migration 148)
+$storageFolderPaths = new \App\Application\DocumentStorage\StorageFolderPaths($rentalRepository, $customerRepository);
+$storageFolderShareNotifier = new \App\Application\DocumentStorage\EmailStorageFolderShareNotifier($mailer, $emailTemplateRenderer, $messagingSettingsRepository, $messageSender);
 $commandBus->register(\App\Application\DocumentStorage\Command\SyncStorageFolder::class, new \App\Application\DocumentStorage\Command\SyncStorageFolderHandler(
     $storageFolderRepository,
     $documentStorageTargetRepository,
-    $rentalRepository,
-    $customerRepository,
+    $storageFolderPaths,
     $documentStorageClientFactory,
-    new \App\Application\DocumentStorage\EmailStorageFolderShareNotifier($mailer, $emailTemplateRenderer),
+    $storageFolderShareNotifier,
 ));
-\App\Infrastructure\Http\StorageFolderForm::configure($commandBus, $storageFolderRepository, $documentStorageTargetRepository);
+$commandBus->register(\App\Application\DocumentStorage\Command\RenameStorageFolder::class, new \App\Application\DocumentStorage\Command\RenameStorageFolderHandler($storageFolderRepository, $documentStorageTargetRepository, $storageFolderPaths, $documentStorageClientFactory));
+$commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageFolder::class, new \App\Application\DocumentStorage\Command\DeleteStorageFolderHandler($storageFolderRepository, $documentStorageTargetRepository, $documentStorageClientFactory));
+\App\Infrastructure\Http\StorageFolderForm::configure($commandBus, $storageFolderRepository, $documentStorageTargetRepository, $storageFolderPaths, $storageFolderShareNotifier);
 
 $commandBus->register(\App\Application\Settings\Command\UpdateIntegrationBaseSettings::class, new \App\Application\Settings\Command\UpdateIntegrationBaseSettingsHandler($integrationBaseSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateGoogleMerchantSettings::class, new \App\Application\Settings\Command\UpdateGoogleMerchantSettingsHandler($googleMerchantSettingsRepository));
@@ -2554,6 +2557,10 @@ $router->post('/einstellungen/speicherziele/zuordnungen/{id}/loeschen', $auth->g
 $router->get('/einstellungen/speicherziele/{id}/bearbeiten', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'edit']));
 $router->post('/einstellungen/speicherziele/{id}', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'update']));
 $router->post('/einstellungen/speicherziele/{id}/loeschen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'destroy']));
+// Rückfragen zu Ordnern im Dateiablagesystem (Migration 148) — Gegenstand steht in der Session, siehe StorageFolderController.
+$storageFolderController = new \App\Infrastructure\Http\Controllers\StorageFolderController();
+$router->post('/ablageordner/passwort-senden', $auth->guard([Permission::AusgabeRuecknahme, Permission::Kundenverwaltung], [$storageFolderController, 'sendPassword']));
+$router->post('/ablageordner/umbenennen', $auth->guard([Permission::AusgabeRuecknahme, Permission::Kundenverwaltung], [$storageFolderController, 'rename']));
 $router->post('/einstellungen/speicherziele/{id}/testen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'testConnection']));
 
 // Backup-Export/-Import (nur Administration) — siehe BackupSettingsController.

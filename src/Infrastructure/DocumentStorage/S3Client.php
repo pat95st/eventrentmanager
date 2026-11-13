@@ -55,6 +55,16 @@ final class S3Client implements StorageClientInterface
         $this->request('PUT', $key . '/', '');
     }
 
+    public function moveDirectory(string $fromPath, string $toPath): void
+    {
+        throw new StorageUploadException('S3-Speicher können Ordner nicht umbenennen.');
+    }
+
+    public function deleteDirectory(string $remotePath): void
+    {
+        throw new StorageUploadException('Das Löschen von Ordnern wird für S3-Speicher nicht unterstützt — bitte direkt im Speicher löschen.');
+    }
+
     private function request(string $method, string $objectKey, ?string $body): void
     {
         $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));

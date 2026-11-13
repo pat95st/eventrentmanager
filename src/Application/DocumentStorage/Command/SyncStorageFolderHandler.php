@@ -6,10 +6,10 @@ namespace App\Application\DocumentStorage\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Application\DocumentStorage\StorageFolderPaths;
 use App\Application\DocumentStorage\StorageFolderShareNotifierInterface;
 use App\Application\DocumentStorage\StorageFolderSyncResult;
 use App\Domain\Customer\Customer;
-use App\Domain\Customer\CustomerRepositoryInterface;
 use App\Domain\DocumentStorage\DocumentStorageTarget;
 use App\Domain\DocumentStorage\DocumentStorageTargetRepositoryInterface;
 use App\Domain\DocumentStorage\FolderPathTemplate;
@@ -19,7 +19,6 @@ use App\Domain\DocumentStorage\StorageFolderOwnerType;
 use App\Domain\DocumentStorage\StorageFolderRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
-use App\Domain\Rental\RentalRepositoryInterface;
 use App\Infrastructure\DocumentStorage\ShareClientInterface;
 use App\Infrastructure\DocumentStorage\StorageClientFactoryInterface;
 use App\Infrastructure\DocumentStorage\StorageUploadException;
@@ -47,8 +46,7 @@ final class SyncStorageFolderHandler implements CommandHandlerInterface
     public function __construct(
         private readonly StorageFolderRepositoryInterface $folders,
         private readonly DocumentStorageTargetRepositoryInterface $targets,
-        private readonly RentalRepositoryInterface $rentals,
-        private readonly CustomerRepositoryInterface $customers,
+        private readonly StorageFolderPaths $paths,
         private readonly StorageClientFactoryInterface $clientFactory,
         private readonly StorageFolderShareNotifierInterface $notifier,
     ) {
@@ -64,7 +62,7 @@ final class SyncStorageFolderHandler implements CommandHandlerInterface
             return $this->detach($folder);
         }
 
-        [$customer, $templateValues] = $this->loadOwner($command);
+        [$customer, $templateValues] = $this->paths->owner($command->ownerType, $command->ownerId);
 
         if ($folder === null) {
             [$target, $folder] = $this->createFolder($command, $customer, $templateValues);
@@ -115,33 +113,6 @@ final class SyncStorageFolderHandler implements CommandHandlerInterface
         $this->folders->delete($folder->id);
 
         return new StorageFolderSyncResult(null, null, $warnings);
-    }
-
-    /**
-     * @return array{0: Customer, 1: array<string, string>} Kunde (Empfänger der
-     *         Freigabe) und die Platzhalterwerte für die Pfadvorlage
-     */
-    private function loadOwner(SyncStorageFolder $command): array
-    {
-        if ($command->ownerType === StorageFolderOwnerType::Customer) {
-            $customer = $this->customers->findById($command->ownerId);
-            if ($customer === null) {
-                throw new NotFoundException("Kunde \"{$command->ownerId}\" wurde nicht gefunden.");
-            }
-
-            return [$customer, FolderPathTemplate::customerValues($customer)];
-        }
-
-        $rental = $this->rentals->findById($command->ownerId);
-        if ($rental === null) {
-            throw new NotFoundException("Vermietung \"{$command->ownerId}\" wurde nicht gefunden.");
-        }
-        $customer = $this->customers->findById($rental->customerId);
-        if ($customer === null) {
-            throw new NotFoundException("Kunde \"{$rental->customerId}\" wurde nicht gefunden.");
-        }
-
-        return [$customer, FolderPathTemplate::eventValues($rental, $customer)];
     }
 
     /**
@@ -234,16 +205,32 @@ final class SyncStorageFolderHandler implements CommandHandlerInterface
         $warnings = [];
         $sendMail = $command->resendMail;
 
+        $email = trim((string) $customer->email);
+        $hasEmail = $email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+        // Nextcloud teilt selbst per E-Mail und verschickt die Einladung;
+        // bei ownCloud entsteht ein Link, den die Anwendung verschickt.
+        $nativeMailShare = $target->protocol->supportsNativeMailShare();
+
         if (!$folder->isShared()) {
+            if ($nativeMailShare && !$hasEmail) {
+                throw new ValidationException(['storageFolder' => 'Beim Kunden ist keine gültige E-Mail-Adresse hinterlegt — Nextcloud teilt den Ordner direkt mit einer E-Mail-Adresse. Bitte die Adresse beim Kunden eintragen und erneut speichern.']);
+            }
+
             $newPassword = $target->shareAlwaysPassword ? $target->sharePasswordPolicy()->generate() : null;
-            $share = $shareClient->createPublicLink($folder->path, $permission, $newPassword, $folder->name());
+            $share = $nativeMailShare
+                ? $shareClient->createMailShare($folder->path, $email, $permission, $newPassword, $folder->name())
+                : $shareClient->createPublicLink($folder->path, $permission, $newPassword, $folder->name());
 
             $folder->shareId = $share->id;
             $folder->shareUrl = $share->url;
             $folder->sharePermission = $permission;
             $folder->shareHasPassword = $newPassword !== null;
+            if ($nativeMailShare) {
+                $folder->shareMailedAt = new DateTimeImmutable();
+                $folder->shareMailedTo = $email;
+            }
             $this->save($folder);
-            $sendMail = true;
+            $sendMail = !$nativeMailShare;
         } else {
             if ($folder->sharePermission !== $permission) {
                 $shareClient->updatePermission((string) $folder->shareId, $permission);
@@ -259,8 +246,7 @@ final class SyncStorageFolderHandler implements CommandHandlerInterface
         }
 
         if ($sendMail) {
-            $email = trim((string) $customer->email);
-            if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            if (!$hasEmail) {
                 $warnings[] = 'Beim Kunden ist keine gültige E-Mail-Adresse hinterlegt — der Freigabe-Link wurde angelegt, aber nicht verschickt.';
             } else {
                 try {

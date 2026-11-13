@@ -139,6 +139,51 @@ final class FtpsClient implements StorageClientInterface
         }
     }
 
+    public function moveDirectory(string $fromPath, string $toPath): void
+    {
+        if (trim($fromPath, '/') === '' || trim($toPath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $parent = dirname(trim($toPath, '/'));
+        if ($parent !== '.' && $parent !== '') {
+            $this->createDirectory($parent);
+        }
+
+        $ch = curl_init();
+        if ($ch === false) {
+            throw new StorageUploadException('curl konnte nicht initialisiert werden.');
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->buildUrl(''),
+            CURLOPT_USE_SSL => CURLUSESSL_ALL,
+            CURLOPT_USERPWD => $this->target->username . ':' . ($this->target->password ?? ''),
+            CURLOPT_QUOTE => [
+                'RNFR ' . $this->remotePathWithoutBase($fromPath),
+                'RNTO ' . $this->remotePathWithoutBase($toPath),
+            ],
+            CURLOPT_NOBODY => true,
+            CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SECONDS,
+            CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
+            CURLOPT_RETURNTRANSFER => true,
+        ]);
+
+        $ok = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($ok === false || $errno !== 0) {
+            throw new StorageUploadException("FTPS-Ordner konnte nicht umbenannt werden: {$error}");
+        }
+    }
+
+    public function deleteDirectory(string $remotePath): void
+    {
+        throw new StorageUploadException('Das Löschen von Ordnern samt Inhalt wird für FTPS nicht unterstützt — bitte direkt auf dem Server löschen.');
+    }
+
     private function deleteFile(string $remotePath): bool
     {
         $ch = curl_init();

@@ -9,7 +9,8 @@ use DateTimeImmutable;
 /**
  * Ein für eine Veranstaltung oder einen Kunden angelegter Ordner auf einem
  * Ziellaufwerk (Migration 148), optional mit Freigabe-Link für den Kunden
- * (nur Nextcloud/ownCloud). Der Pfad wird beim Anlegen festgeschrieben.
+ * (nur Nextcloud/ownCloud). Der Pfad ändert sich nur, wenn der Benutzer dem
+ * Umbenennen des Ordners ausdrücklich zustimmt (siehe RenameStorageFolder).
  */
 final class StorageFolder
 {
@@ -18,7 +19,7 @@ final class StorageFolder
         public readonly StorageFolderOwnerType $ownerType,
         public readonly string $ownerId,
         public readonly string $storageTargetId,
-        public readonly string $path,
+        public string $path,
         public readonly bool $inCustomerFolder,
         public ?string $shareId,
         public ?string $shareUrl,

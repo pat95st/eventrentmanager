@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Application\DocumentStorage;
 
+use App\Application\DocumentStorage\Command\DeleteStorageFolder;
+use App\Application\DocumentStorage\Command\DeleteStorageFolderHandler;
+use App\Application\DocumentStorage\Command\RenameStorageFolder;
+use App\Application\DocumentStorage\Command\RenameStorageFolderHandler;
 use App\Application\DocumentStorage\Command\SyncStorageFolder;
 use App\Application\DocumentStorage\Command\SyncStorageFolderHandler;
+use App\Application\DocumentStorage\StorageFolderPaths;
 use App\Application\DocumentStorage\StorageFolderSyncResult;
 use App\Domain\Customer\Customer;
 use App\Domain\Customer\CustomerType;
@@ -33,6 +38,9 @@ final class SyncStorageFolderHandlerTest extends Unit
     private InMemoryCustomerRepository $customers;
     private FakeStorageBackend $backend;
     private SyncStorageFolderHandler $handler;
+    private StorageFolderPaths $paths;
+    private RenameStorageFolderHandler $rename;
+    private DeleteStorageFolderHandler $delete;
 
     protected function setUp(): void
     {
@@ -42,7 +50,10 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->rentals = new InMemoryRentalRepository();
         $this->customers = new InMemoryCustomerRepository();
         $this->backend = new FakeStorageBackend();
-        $this->handler = new SyncStorageFolderHandler($this->folders, $this->targets, $this->rentals, $this->customers, $this->backend, $this->backend);
+        $this->paths = new StorageFolderPaths($this->rentals, $this->customers);
+        $this->handler = new SyncStorageFolderHandler($this->folders, $this->targets, $this->paths, $this->backend, $this->backend);
+        $this->rename = new RenameStorageFolderHandler($this->folders, $this->targets, $this->paths, $this->backend);
+        $this->delete = new DeleteStorageFolderHandler($this->folders, $this->targets, $this->backend);
 
         $now = new DateTimeImmutable();
         $this->customers->save(new Customer(
@@ -161,9 +172,9 @@ final class SyncStorageFolderHandlerTest extends Unit
         }
     }
 
-    public function testSharingCreatesLinkWithPermissionAndMailsTheCustomer(): void
+    public function testOwnCloudSharingCreatesLinkWithPermissionAndMailsTheCustomer(): void
     {
-        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->target('oc', StorageProtocol::OwnCloud);
 
         $result = $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true, permission: 'upload');
 
@@ -172,6 +183,7 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->assertSame('Veranstaltungen/2026/2026-06-13 Sommerfest 26-27', $share['path']);
         $this->assertSame(SharePermission::Upload, $share['permission']);
         $this->assertNull($share['password']);
+        $this->assertNull($share['mailTo'], 'ownCloud kennt nur Freigabe-Links.');
         $this->assertNull($result->newPassword);
         $this->assertSame([['to' => 'anna@example.org', 'url' => 'https://cloud.example/s/1']], $this->backend->mails);
         $this->assertSame('anna@example.org', $result->folder?->shareMailedTo);
@@ -190,11 +202,11 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->assertSame($result->newPassword, $this->backend->shares['1']['password']);
         $this->assertTrue($result->folder?->shareHasPassword);
 
-        // Beim nächsten Speichern gibt es kein Passwort mehr und keine zweite Freigabe/Mail.
+        // Beim nächsten Speichern gibt es kein Passwort mehr und keine zweite Freigabe.
         $again = $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true);
         $this->assertNull($again->newPassword);
         $this->assertCount(1, $this->backend->shares);
-        $this->assertCount(1, $this->backend->mails);
+        $this->assertSame([], $this->backend->sentPasswords, 'Ein Passwort wird nie ungefragt verschickt.');
     }
 
     public function testRegeneratingPasswordOnEditReplacesItOnTheServer(): void
@@ -207,7 +219,7 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->assertNotNull($second->newPassword);
         $this->assertNotSame($first->newPassword, $second->newPassword);
         $this->assertSame($second->newPassword, $this->backend->shares['1']['password']);
-        $this->assertCount(1, $this->backend->mails, 'Ein neues Passwort verschickt keine neue Mail.');
+        $this->assertSame([], $this->backend->mails, 'Ein neues Passwort verschickt keine Mail.');
     }
 
     public function testRegeneratingAlsoProtectsAShareCreatedWithoutPassword(): void
@@ -230,7 +242,8 @@ final class SyncStorageFolderHandlerTest extends Unit
 
         $this->assertSame(SharePermission::Edit, $this->backend->shares['1']['permission']);
         $this->assertSame(SharePermission::Edit, $result->folder?->sharePermission);
-        $this->assertCount(2, $this->backend->mails);
+        // Nextcloud hat die Einladung selbst verschickt; "erneut senden" kommt aus der Anwendung.
+        $this->assertSame([['to' => 'anna@example.org', 'url' => 'https://cloud.example/s/1']], $this->backend->mails);
     }
 
     public function testDisablingShareRevokesLinkButKeepsFolder(): void
@@ -284,9 +297,9 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->assertNull($result->newPassword);
     }
 
-    public function testMissingCustomerEmailStillCreatesLinkAndWarns(): void
+    public function testOwnCloudMissingCustomerEmailStillCreatesLinkAndWarns(): void
     {
-        $this->target('nc', StorageProtocol::Nextcloud, alwaysPassword: true);
+        $this->target('oc', StorageProtocol::OwnCloud, alwaysPassword: true);
         $this->customers->findById('customer-1')->email = null;
 
         $result = $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true);
@@ -298,9 +311,9 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->assertNull($result->folder?->shareMailedAt);
     }
 
-    public function testMailFailureKeepsShareAndPassword(): void
+    public function testOwnCloudMailFailureKeepsShareAndPassword(): void
     {
-        $this->target('nc', StorageProtocol::Nextcloud, alwaysPassword: true);
+        $this->target('oc', StorageProtocol::OwnCloud, alwaysPassword: true);
         $this->backend->failMail = true;
 
         $result = $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true);
@@ -337,6 +350,153 @@ final class SyncStorageFolderHandlerTest extends Unit
         $this->assertSame('Kunden/K-0007 Müller - Söhne GmbH', $this->backend->shares['1']['path']);
         $this->assertNotNull($result->newPassword);
         $this->assertSame('anna@example.org', $this->backend->mails[0]['to']);
+    }
+
+    public function testNextcloudSharesNativelyByMailWithoutMailFromTheApplication(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud, alwaysPassword: true);
+
+        $result = $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true, permission: 'edit');
+
+        $share = $this->backend->shares['1'];
+        $this->assertSame('anna@example.org', $share['mailTo']);
+        $this->assertSame(SharePermission::Edit, $share['permission']);
+        $this->assertSame($result->newPassword, $share['password']);
+        $this->assertSame([], $this->backend->mails, 'Die Einladung verschickt Nextcloud selbst.');
+        $this->assertSame('anna@example.org', $result->folder?->shareMailedTo);
+        $this->assertNotNull($result->folder->shareMailedAt);
+        $this->assertSame([], $result->warnings);
+    }
+
+    public function testNextcloudShareNeedsCustomerEmailAndKeepsTheFolder(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->customers->findById('customer-1')->email = null;
+
+        try {
+            $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true);
+            $this->fail('Erwartete ValidationException.');
+        } catch (ValidationException) {
+        }
+
+        $this->assertSame([], $this->backend->shares);
+        $this->assertNotNull($this->folders->findByOwner(StorageFolderOwnerType::Rental, 'rental-1'));
+    }
+
+    public function testRenamingTheEventDoesNotMoveTheFolderUntilConfirmed(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true);
+        $folder = $this->folders->findByOwner(StorageFolderOwnerType::Rental, 'rental-1');
+        $target = $this->targets->findById('nc');
+
+        $this->rentals->findById('rental-1')->eventName = 'Herbstfest';
+        $this->sync(StorageFolderOwnerType::Rental, 'rental-1', share: true);
+
+        // Unverändert — aber die Namensregel ergibt jetzt einen anderen Pfad (Anlass für die Rückfrage).
+        $this->assertSame('Veranstaltungen/2026/2026-06-13 Sommerfest 26-27', $folder->path);
+        $this->assertSame('Veranstaltungen/2026/2026-06-13 Herbstfest', $this->paths->expectedPath($folder, $target));
+
+        $newPath = $this->rename->handle(new RenameStorageFolder(StorageFolderOwnerType::Rental, 'rental-1'));
+
+        $this->assertSame('Veranstaltungen/2026/2026-06-13 Herbstfest', $newPath);
+        $this->assertSame([$newPath], $this->backend->directories);
+        $this->assertSame($newPath, $this->folders->findByOwner(StorageFolderOwnerType::Rental, 'rental-1')?->path);
+        $this->assertTrue($folder->isShared(), 'Die Freigabe bleibt beim Umbenennen erhalten.');
+    }
+
+    public function testRenamingCustomerFolderTakesEventSubfoldersAlong(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->sync(StorageFolderOwnerType::Customer, 'customer-1');
+        $this->sync(StorageFolderOwnerType::Rental, 'rental-1', inCustomerFolder: true);
+
+        $this->customers->findById('customer-1')->companyName = 'Neu AG';
+        $this->rename->handle(new RenameStorageFolder(StorageFolderOwnerType::Customer, 'customer-1'));
+
+        $this->assertSame(
+            ['Kunden/K-0007 Neu AG', 'Kunden/K-0007 Neu AG/2026-06-13 Sommerfest 26-27'],
+            $this->backend->directories,
+        );
+        $this->assertSame(
+            'Kunden/K-0007 Neu AG/2026-06-13 Sommerfest 26-27',
+            $this->folders->findByOwner(StorageFolderOwnerType::Rental, 'rental-1')?->path,
+        );
+    }
+
+    public function testRenamedEventStaysInsideItsCustomerFolder(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->sync(StorageFolderOwnerType::Customer, 'customer-1');
+        $this->sync(StorageFolderOwnerType::Rental, 'rental-1', inCustomerFolder: true);
+
+        $this->rentals->findById('rental-1')->eventName = 'Herbstfest';
+        $newPath = $this->rename->handle(new RenameStorageFolder(StorageFolderOwnerType::Rental, 'rental-1'));
+
+        $this->assertSame('Kunden/K-0007 Müller - Söhne GmbH/2026-06-13 Herbstfest', $newPath);
+    }
+
+    public function testFailedRenameKeepsTheStoredPath(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->sync(StorageFolderOwnerType::Rental, 'rental-1');
+        $this->rentals->findById('rental-1')->eventName = 'Herbstfest';
+        $this->backend->failMove = true;
+
+        try {
+            $this->rename->handle(new RenameStorageFolder(StorageFolderOwnerType::Rental, 'rental-1'));
+            $this->fail('Erwartete StorageUploadException.');
+        } catch (StorageUploadException) {
+        }
+
+        $this->assertSame(
+            'Veranstaltungen/2026/2026-06-13 Sommerfest 26-27',
+            $this->folders->findByOwner(StorageFolderOwnerType::Rental, 'rental-1')?->path,
+        );
+    }
+
+    public function testS3CannotRenameOrDelete(): void
+    {
+        $this->target('s3', StorageProtocol::S3);
+        $result = $this->sync(StorageFolderOwnerType::Rental, 'rental-1');
+        $this->rentals->findById('rental-1')->eventName = 'Herbstfest';
+
+        foreach ([
+            fn () => $this->rename->handle(new RenameStorageFolder(StorageFolderOwnerType::Rental, 'rental-1')),
+            fn () => $this->delete->handle(new DeleteStorageFolder($result->folder)),
+        ] as $action) {
+            try {
+                $action();
+                $this->fail('Erwartete StorageUploadException.');
+            } catch (StorageUploadException) {
+            }
+        }
+        $this->assertCount(1, $this->backend->directories);
+    }
+
+    public function testDeletingCustomerFolderRemovesItWithEventSubfolders(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $customerFolder = $this->sync(StorageFolderOwnerType::Customer, 'customer-1')->folder;
+        $this->sync(StorageFolderOwnerType::Rental, 'rental-1', inCustomerFolder: true);
+
+        $this->delete->handle(new DeleteStorageFolder($customerFolder));
+
+        $this->assertSame([], $this->backend->directories);
+        $this->assertNull($this->folders->findByOwner(StorageFolderOwnerType::Customer, 'customer-1'));
+        $this->assertNull($this->folders->findByOwner(StorageFolderOwnerType::Rental, 'rental-1'));
+    }
+
+    public function testDeletingEventFolderLeavesCustomerFolderAlone(): void
+    {
+        $this->target('nc', StorageProtocol::Nextcloud);
+        $this->sync(StorageFolderOwnerType::Customer, 'customer-1');
+        $eventFolder = $this->sync(StorageFolderOwnerType::Rental, 'rental-1', inCustomerFolder: true)->folder;
+
+        $this->delete->handle(new DeleteStorageFolder($eventFolder));
+
+        $this->assertSame(['Kunden/K-0007 Müller - Söhne GmbH'], $this->backend->directories);
+        $this->assertNotNull($this->folders->findByOwner(StorageFolderOwnerType::Customer, 'customer-1'));
     }
 
     private function sync(

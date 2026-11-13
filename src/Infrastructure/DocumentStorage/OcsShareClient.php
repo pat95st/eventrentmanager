@@ -8,12 +8,14 @@ use App\Domain\DocumentStorage\DocumentStorageTarget;
 use App\Domain\DocumentStorage\SharePermission;
 
 /**
- * Freigabe-Links über die OCS-Share-API (/ocs/v2.php/apps/files_sharing/api/v1/shares),
- * die Nextcloud und ownCloud gleichermaßen anbieten. Angelegt wird immer ein
- * öffentlicher Link (shareType 3) — den Link verschickt die Anwendung selbst
- * per E-Mail an den Kunden (siehe SyncStorageFolderHandler). Die native
- * "per E-Mail teilen"-Freigabe gibt es nur bei Nextcloud und setzt dort einen
- * eigenen, funktionierenden Mailversand voraus.
+ * Freigaben über die OCS-Share-API (/ocs/v2.php/apps/files_sharing/api/v1/shares),
+ * die Nextcloud und ownCloud gleichermaßen anbieten.
+ *
+ * - Nextcloud: Freigabe "per E-Mail" (shareType 4) — Nextcloud verschickt die
+ *   Einladung an den Kunden selbst.
+ * - ownCloud kennt diesen Freigabetyp nicht: dort wird ein öffentlicher Link
+ *   (shareType 3) angelegt, den die Anwendung per E-Mail verschickt (siehe
+ *   SyncStorageFolderHandler).
  *
  * Handgeschrieben über curl wie WebDavClient; TLS-Verifikation bleibt aktiv,
  * außer "Selbstsigniertes Zertifikat erlauben" ist für das Ziellaufwerk gesetzt.
@@ -22,6 +24,7 @@ final class OcsShareClient implements ShareClientInterface
 {
     private const TIMEOUT_SECONDS = 20;
     private const SHARE_TYPE_PUBLIC_LINK = 3;
+    private const SHARE_TYPE_EMAIL = 4;
 
     public function __construct(private readonly DocumentStorageTarget $target)
     {
@@ -29,11 +32,24 @@ final class OcsShareClient implements ShareClientInterface
 
     public function createPublicLink(string $remotePath, SharePermission $permission, ?string $password, string $label): PublicShare
     {
+        return $this->createShare($remotePath, self::SHARE_TYPE_PUBLIC_LINK, null, $permission, $password, $label);
+    }
+
+    public function createMailShare(string $remotePath, string $email, SharePermission $permission, ?string $password, string $label): PublicShare
+    {
+        return $this->createShare($remotePath, self::SHARE_TYPE_EMAIL, $email, $permission, $password, $label);
+    }
+
+    private function createShare(string $remotePath, int $shareType, ?string $shareWith, SharePermission $permission, ?string $password, string $label): PublicShare
+    {
         $fields = [
             'path' => WebDavEndpoint::userFilesPath($this->target, $remotePath),
-            'shareType' => (string) self::SHARE_TYPE_PUBLIC_LINK,
+            'shareType' => (string) $shareType,
             'permissions' => (string) $permission->ocsPermissions(),
         ];
+        if ($shareWith !== null) {
+            $fields['shareWith'] = $shareWith;
+        }
         if ($password !== null) {
             $fields['password'] = $password;
         }
@@ -46,6 +62,7 @@ final class OcsShareClient implements ShareClientInterface
         $data = $this->request('POST', '', $fields);
 
         $id = isset($data['id']) ? (string) $data['id'] : '';
+        // E-Mail-Freigaben liefern keine fertige URL, aber denselben Token wie ein Link.
         $url = isset($data['url']) && is_string($data['url']) ? $data['url'] : '';
         if ($url === '' && isset($data['token']) && is_string($data['token']) && $data['token'] !== '') {
             $url = WebDavEndpoint::rootUrl($this->target) . '/index.php/s/' . rawurlencode($data['token']);

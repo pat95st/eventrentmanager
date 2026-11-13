@@ -798,9 +798,13 @@ final class RentalController
         );
 
         try {
+            // Ordner im Dateiablagesystem (Migration 148): Ändert diese Bearbeitung
+            // den Namen laut Namensregel, wird nachgefragt, ob der Ordner mitzieht.
+            $folderPathBefore = \App\Infrastructure\Http\StorageFolderForm::expectedPath(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $id);
             $this->commands->dispatch($command);
             Flash::success(t('rentals.flash.updated'));
             \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $id, $request);
+            \App\Infrastructure\Http\StorageFolderForm::askAboutRename(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $id, $folderPathBefore);
             Response::redirect('/veranstaltungen/' . $id);
         } catch (ValidationException $e) {
             $detail = $this->queries->ask(new GetRental($id));
@@ -815,8 +819,10 @@ final class RentalController
         $id = $request->param('id');
 
         try {
+            $folderToDelete = \App\Infrastructure\Http\StorageFolderForm::folderToDelete(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $id, $request);
             $this->commands->dispatch(new DeleteRental($id));
             Flash::success(t('rentals.flash.deleted'));
+            \App\Infrastructure\Http\StorageFolderForm::deleteFolder($folderToDelete);
             Response::redirect('/veranstaltungen');
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());

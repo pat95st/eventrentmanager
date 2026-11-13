@@ -95,6 +95,55 @@ final class WebDavClient implements StorageClientInterface
         }
     }
 
+    public function moveDirectory(string $fromPath, string $toPath): void
+    {
+        $from = trim($fromPath, '/');
+        $to = trim($toPath, '/');
+        if ($from === '' || $to === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $parent = dirname($to);
+        if ($parent !== '.' && $parent !== '') {
+            $this->createDirectory($parent);
+        }
+
+        $response = $this->request('MOVE', $this->buildUrl($from), null, [
+            'Destination: ' . $this->buildUrl($to),
+            'Overwrite: F',
+        ]);
+
+        if ($response['errno'] !== 0) {
+            throw new StorageUploadException("Ordner konnte nicht umbenannt werden: {$response['error']}");
+        }
+        if ($response['httpCode'] === 412) {
+            throw new StorageUploadException("Der Ordner \"{$to}\" existiert bereits.");
+        }
+        if ($response['httpCode'] === 404) {
+            throw new StorageUploadException("Der Ordner \"{$from}\" wurde auf dem Speicherziel nicht gefunden (wurde er dort verschoben oder gelöscht?).");
+        }
+        if ($response['httpCode'] < 200 || $response['httpCode'] >= 300) {
+            throw new StorageUploadException("Ordner konnte nicht umbenannt werden (HTTP {$response['httpCode']}).");
+        }
+    }
+
+    public function deleteDirectory(string $remotePath): void
+    {
+        // Niemals den Basis-Pfad selbst löschen.
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $response = $this->request('DELETE', $this->buildUrl($remotePath), null);
+
+        if ($response['errno'] !== 0) {
+            throw new StorageUploadException("Ordner konnte nicht gelöscht werden: {$response['error']}");
+        }
+        if ($response['httpCode'] !== 404 && ($response['httpCode'] < 200 || $response['httpCode'] >= 300)) {
+            throw new StorageUploadException("Ordner konnte nicht gelöscht werden (HTTP {$response['httpCode']}).");
+        }
+    }
+
     /**
      * Legt fehlende Zwischenverzeichnisse rekursiv per MKCOL an (WebDAV
      * verlangt, dass jeder Pfadteil einzeln existiert, ein PUT auf ein
@@ -122,15 +171,18 @@ final class WebDavClient implements StorageClientInterface
         return WebDavEndpoint::fileUrl($this->target, $remotePath);
     }
 
-    /** @return array{errno: int, error: string, httpCode: int, body: string} */
-    private function request(string $method, string $url, ?string $body): array
+    /**
+     * @param list<string> $extraHeaders
+     * @return array{errno: int, error: string, httpCode: int, body: string}
+     */
+    private function request(string $method, string $url, ?string $body, array $extraHeaders = []): array
     {
         $ch = curl_init($url);
         if ($ch === false) {
             throw new StorageUploadException('curl konnte nicht initialisiert werden.');
         }
 
-        $headers = [];
+        $headers = $extraHeaders;
         if ($body !== null) {
             $headers[] = 'Content-Type: application/octet-stream';
         }

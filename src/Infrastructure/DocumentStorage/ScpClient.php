@@ -79,6 +79,55 @@ final class ScpClient implements StorageClientInterface
         }
     }
 
+    public function moveDirectory(string $fromPath, string $toPath): void
+    {
+        if (trim($fromPath, '/') === '' || trim($toPath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $from = escapeshellarg($this->fullRemotePath($fromPath));
+        $to = escapeshellarg($this->fullRemotePath($toPath));
+        $parent = escapeshellarg(dirname($this->fullRemotePath($toPath)));
+
+        // "[ ! -e ]": ein vorhandenes Ziel nicht überschreiben (mv würde sonst hinein verschieben).
+        $this->runShell(
+            "[ ! -e {$to} ] && mkdir -p -- {$parent} && mv -- {$from} {$to}",
+            'Ordner konnte per SSH nicht umbenannt werden (existiert das Ziel bereits?).',
+        );
+    }
+
+    public function deleteDirectory(string $remotePath): void
+    {
+        // Niemals den Basis-Pfad selbst löschen.
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $this->runShell(
+            'rm -rf -- ' . escapeshellarg($this->fullRemotePath($remotePath)),
+            'Ordner konnte per SSH nicht gelöscht werden.',
+        );
+    }
+
+    private function runShell(string $command, string $errorMessage): void
+    {
+        $this->assertExtensionAvailable();
+
+        $stream = @ssh2_exec($this->connect(), $command . ' && echo MV_OK');
+        if ($stream === false) {
+            throw new StorageUploadException('Das SSH-Konto erlaubt keine Shell-Befehle (für Ordner bitte SFTP verwenden).');
+        }
+
+        stream_set_blocking($stream, true);
+        stream_set_timeout($stream, 30);
+        $output = (string) stream_get_contents($stream);
+        fclose($stream);
+
+        if (!str_contains($output, 'MV_OK')) {
+            throw new StorageUploadException($errorMessage);
+        }
+    }
+
     public function testConnection(): string
     {
         $this->assertExtensionAvailable();

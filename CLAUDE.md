@@ -1,5 +1,13 @@
 # Hinweise für Claude
 
+## Sprache im Repository
+
+- **Commit-Messages, Pull-Request-Titel/-Beschreibungen, GitHub-Kommentare
+  und neue Code-Kommentare auf Englisch** schreiben.
+- Texte der Benutzeroberfläche (Views, Flash-/Fehlermeldungen,
+  Übersetzungsdateien) bleiben wie bisher deutsch bzw. folgen `resources/lang/`.
+- Bestehende deutsche Kommentare müssen nicht nachträglich übersetzt werden.
+
 ## Datenbank-Migrationen (`database/migrations/`)
 
 - **Kein `USE <datenbank>;`** (und kein `CREATE DATABASE`) in Migrationen.

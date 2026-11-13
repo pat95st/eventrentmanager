@@ -3,8 +3,6 @@
 -- App\Domain\Offer\Offer und App\Domain\Offer\OfferItem. Ein Angebot kann
 -- über ConvertOfferToRentalHandler in eine Veranstaltung (rentals)
 -- umgewandelt werden (converted_rental_id).
-USE materialverleih;
-
 CREATE TABLE offers (
     id                    CHAR(36)      NOT NULL PRIMARY KEY,
     -- Bewusst nullable: ein Angebot kann als grober Entwurf ohne

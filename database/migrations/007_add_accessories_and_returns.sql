@@ -12,8 +12,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/007_add_accessories_and_returns.sql
 
-USE materialverleih;
-
 CREATE TABLE article_accessories (
     id           CHAR(36)     NOT NULL PRIMARY KEY,
     article_id   CHAR(36)     NOT NULL,

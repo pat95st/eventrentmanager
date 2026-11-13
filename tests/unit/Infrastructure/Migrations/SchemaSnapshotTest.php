@@ -68,4 +68,23 @@ final class SchemaSnapshotTest extends Unit
 
         self::assertSame(array_values(array_unique($recorded)), $recorded);
     }
+
+    /**
+     * Migrationen wählen keine Datenbank aus: MigrationRunner, Web-Installer
+     * und "mysql <datenbank> < datei.sql" sind bereits mit der richtigen
+     * Datenbank verbunden. Ein fest verdrahtetes "USE materialverleih" würde
+     * bei abweichendem Datenbanknamen fehlschlagen oder in die falsche
+     * Datenbank schreiben.
+     */
+    public function testMigrationsDoNotSelectADatabase(): void
+    {
+        $offending = [];
+        foreach (glob(self::ROOT . '/database/migrations/*.sql') ?: [] as $file) {
+            if (preg_match('/^\s*USE\s+`?\w+`?\s*;/mi', (string) file_get_contents($file)) === 1) {
+                $offending[] = basename($file);
+            }
+        }
+
+        self::assertSame([], $offending, 'Migrationen dürfen kein "USE <datenbank>;" enthalten.');
+    }
 }

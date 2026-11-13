@@ -13,8 +13,6 @@
 -- auf Domain-Ebene: "alle Kategorien archivieren", siehe
 -- SmtpSettings::shouldArchive()) bleibt unverändert NULL — schließt die
 -- neue Kategorie dort bereits automatisch mit ein.
-USE materialverleih;
-
 INSERT INTO email_templates (template_key, subject, body_html) VALUES
 ('invoice_pdf', 'Ihre Rechnung {{invoice_number}}',
  '<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie Ihre Rechnung {{invoice_number}} (inkl. XRechnung-XML zur elektronischen Weiterverarbeitung).</p>\n<p>{{location_line}}Leistungszeitraum: {{date_range}}<br>Fällig am: {{due_date}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>');

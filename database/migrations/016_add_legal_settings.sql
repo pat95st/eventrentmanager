@@ -4,8 +4,6 @@
 -- Datenschutzerklärung können wahlweise als Markdown-Text ODER als externe
 -- URL gepflegt werden (siehe *_mode-Spalten); Vermietbedingungen sind
 -- ausschließlich Markdown.
-USE materialverleih;
-
 CREATE TABLE legal_settings (
     id                    TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
     rental_terms_markdown TEXT         NULL,

@@ -8,8 +8,6 @@
 --     center_x_m    Mittelpunkt: Abstand von der linken Bühnenkante
 --     center_y_m    Mittelpunkt: Abstand von der Bühnenhinterkante
 --     rotation_deg  Drehung im Uhrzeigersinn um den Mittelpunkt (0–359)
-USE materialverleih;
-
 CREATE TABLE venue_stage_risers (
     id            CHAR(36)          NOT NULL PRIMARY KEY,
     stage_id      CHAR(36)          NOT NULL,

@@ -24,8 +24,6 @@
 -- unverändert erhalten (UpdateInvoiceHandler fasst dieses Feld nicht an).
 --
 -- Vor dem Ausführen ein Backup der Datenbank anlegen.
-USE materialverleih;
-
 ALTER TABLE invoices
     ADD COLUMN shipping_amount DECIMAL(10, 2) NULL AFTER discount_value;
 

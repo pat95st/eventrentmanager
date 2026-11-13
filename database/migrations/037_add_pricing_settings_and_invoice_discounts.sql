@@ -14,8 +14,6 @@
 -- Siehe App\Domain\Pricing\DocumentTotals für die Berechnungsreihenfolge
 -- (Mietpreise -> Zubehörpauschale -> Kombirabatt -> Netto/USt/Brutto).
 -- Die analogen Spalten für offers folgen in Migration 038.
-USE materialverleih;
-
 CREATE TABLE pricing_settings (
     id                           TINYINT       NOT NULL PRIMARY KEY DEFAULT 1,
     accessory_flat_rate_percent  DECIMAL(5, 2) NOT NULL DEFAULT 0,

@@ -16,8 +16,6 @@
 -- enabled=0 (Standard) sorgt dafür, dass der Cronjob sofort und sauber
 -- abbricht, ohne einen Verbindungsversuch zu unternehmen, solange der
 -- Posteingang nicht bewusst vom Administrator aktiviert wurde.
-USE materialverleih;
-
 CREATE TABLE mailbox_settings (
     id            TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
     protocol      ENUM('imap', 'pop3') NOT NULL DEFAULT 'imap',

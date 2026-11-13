@@ -24,8 +24,6 @@
 -- eigentliche Schutzmechanismus. Der Fremdschlüssel dient hier nur als
 -- Verteidigung in der Tiefe (defense in depth), z. B. falls ein Beleg auf
 -- einem anderen Weg als über die Anwendung gelöscht wird.
-USE materialverleih;
-
 ALTER TABLE inventory_numbers
     ADD COLUMN receipt_id CHAR(36) NULL AFTER supplier_id,
     ADD CONSTRAINT fk_inventory_numbers_receipt FOREIGN KEY (receipt_id) REFERENCES receipts (id) ON DELETE SET NULL,

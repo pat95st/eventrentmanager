@@ -21,8 +21,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/087_add_article_pre_issue_checks.sql
 
-USE materialverleih;
-
 CREATE TABLE article_pre_issue_checks (
     id           CHAR(36)     NOT NULL PRIMARY KEY,
     article_id   CHAR(36)     NOT NULL,

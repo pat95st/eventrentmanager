@@ -11,8 +11,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/074_add_vouchers.sql
 
-USE materialverleih;
-
 -- ---------------------------------------------------------------------
 -- Gutschein-Stammdaten. discount_value wird je nach discount_type als
 -- Prozentsatz (0-100) oder als Betrag in EUR interpretiert (die Anwendung

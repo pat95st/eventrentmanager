@@ -1,8 +1,6 @@
 -- Migration für bereits bestehende Installationen: Etikettendrucker-Verwaltung
 -- (netzwerkfähige Brother-P-touch-Drucker o. ä.), siehe
 -- App\Domain\Printing\LabelPrinter und App\Infrastructure\Printing\*.
-USE materialverleih;
-
 CREATE TABLE label_printers (
     id            VARCHAR(36)  NOT NULL PRIMARY KEY,
     name          VARCHAR(100) NOT NULL,

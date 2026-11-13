@@ -9,8 +9,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/006_add_prices_and_customer_number.sql
 
-USE materialverleih;
-
 ALTER TABLE suppliers
     ADD COLUMN customer_number VARCHAR(100) NULL AFTER email;
 

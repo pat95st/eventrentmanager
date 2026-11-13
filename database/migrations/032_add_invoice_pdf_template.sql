@@ -6,8 +6,6 @@
 -- invoice_pdf) — dort geht es um den Text der E-Mail, hier um den Text im
 -- PDF-Anhang. Beide Spalten sind NULL, solange kein Administrator etwas
 -- hinterlegt hat.
-USE materialverleih;
-
 CREATE TABLE invoice_pdf_settings (
     id                TINYINT    NOT NULL PRIMARY KEY DEFAULT 1,
     intro_markdown    MEDIUMTEXT NULL,

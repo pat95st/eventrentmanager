@@ -22,8 +22,6 @@
 -- (bin/send-rental-reminders.php) noch die "Nachricht senden"-Aktion auf
 -- der Kundenseite versucht, über einen noch nicht bewusst aktivierten
 -- Kanal zu verschicken.
-USE materialverleih;
-
 CREATE TABLE messaging_settings (
     id                            TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
 

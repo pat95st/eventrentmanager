@@ -7,8 +7,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/004_add_suppliers.sql
 
-USE materialverleih;
-
 CREATE TABLE suppliers (
     id              CHAR(36)     NOT NULL PRIMARY KEY,
     name            VARCHAR(255) NOT NULL,

@@ -15,8 +15,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/001_add_prefixes.sql
 
-USE materialverleih;
-
 ALTER TABLE manufacturers
     ADD COLUMN prefix VARCHAR(20) NULL AFTER name,
     ADD UNIQUE KEY uq_manufacturers_prefix (prefix);

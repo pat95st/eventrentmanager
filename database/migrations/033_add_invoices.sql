@@ -11,8 +11,6 @@
 -- aus einer Veranstaltung (source_rental_id) entstehen; beide Verweise sind
 -- rein informativ (ON DELETE SET NULL), die Rechnung bleibt beim Löschen der
 -- Quelle unverändert bestehen.
-USE materialverleih;
-
 CREATE TABLE invoices (
     id                  CHAR(36)       NOT NULL PRIMARY KEY,
     -- Bewusst nullable wie bei offers: eine Rechnung kann als Entwurf ohne

@@ -16,8 +16,6 @@
 -- Erinnerung (invoice_id), verhindert per UNIQUE-Constraint doppelten
 -- Versand bei mehrfachem Cronjob-Lauf innerhalb des Vorlauf-Zeitfensters —
 -- exakt dasselbe Prinzip wie rental_reminders (Migration 067).
-USE materialverleih;
-
 CREATE TABLE invoice_due_reminder_settings (
     id         TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
     enabled    TINYINT(1)   NOT NULL DEFAULT 0,

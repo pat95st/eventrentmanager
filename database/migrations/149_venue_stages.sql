@@ -7,8 +7,6 @@
 --   2. venue_stage_power_distances: Entfernung (Meter) einer Bühne zu einem
 --      Stromanschluss desselben Veranstaltungsorts. Nur tatsächlich
 --      angegebene Entfernungen werden gespeichert (kein Datensatz = unbekannt).
-USE materialverleih;
-
 CREATE TABLE venue_stages (
     id          CHAR(36)      NOT NULL PRIMARY KEY,
     venue_id    CHAR(36)      NOT NULL,

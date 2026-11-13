@@ -5,7 +5,5 @@
 -- wo eine kürzere/freundlichere Bezeichnung sinnvoll ist (aktuell: Alt-Text
 -- des Logos im Header). Bleibt der Markenname leer, wird weiterhin der
 -- bisherige Standardtext verwendet.
-USE materialverleih;
-
 ALTER TABLE company_settings
     ADD COLUMN brand_name VARCHAR(255) NULL AFTER name;

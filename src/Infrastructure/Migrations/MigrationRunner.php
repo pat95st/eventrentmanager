@@ -98,10 +98,10 @@ final class MigrationRunner
             throw new PDOException("Datei \"{$file}\" konnte nicht gelesen werden.");
         }
 
-        // "USE <datenbank>;"-Zeilen (in mehreren Migrationsdateien aus der
-        // Historie vorhanden, als die Datenbank noch fest "materialverleih"
-        // hieß) entfernen: die PDO-Verbindung ist bereits über den DSN an die
-        // vom Administrator gewählte Datenbank gebunden, ein hartcodierter
+        // "USE <datenbank>;"-Zeilen vorsorglich entfernen (die Migrationen im
+        // Repository enthalten keine mehr, SchemaSnapshotTest wacht darüber;
+        // ältere, lokal kopierte Dateien können sie aber noch haben): die
+        // PDO-Verbindung ist bereits über den DSN an die vom Administrator gewählte Datenbank gebunden, ein hartcodierter
         // Datenbankname in der Migration selbst würde bei abweichendem Namen
         // fehlschlagen oder (schlimmer) stillschweigend in die falsche
         // Datenbank schreiben.

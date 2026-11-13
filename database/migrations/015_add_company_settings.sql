@@ -1,8 +1,6 @@
 -- Migration für bereits bestehende Installationen: Firmeneinstellungen
 -- (Name/Adresse/Logo), analog zur bereits bestehenden Singleton-Tabelle
 -- smtp_settings. Wird auf der Detailseite/im Briefkopf verwendet.
-USE materialverleih;
-
 CREATE TABLE company_settings (
     id            TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
     name          VARCHAR(255) NULL,

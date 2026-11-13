@@ -16,8 +16,6 @@
 -- gelöscht werden, analog zur bestehenden Löschsperre über
 -- inventory_numbers.supplier_id (siehe SupplierRepositoryInterface::isUsedByInventoryNumbers()
 -- bzw. die neue Methode isUsedByReceipts()).
-USE materialverleih;
-
 CREATE TABLE receipts (
     id                  CHAR(36)      NOT NULL PRIMARY KEY,
     supplier_id         CHAR(36)      NOT NULL,

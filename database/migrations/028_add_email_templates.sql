@@ -12,8 +12,6 @@
 -- Installationen nach dieser Migration exakt dieselben Mails wie zuvor
 -- verschicken — bis ein Administrator eine Vorlage im Einstellungsbereich
 -- anpasst.
-USE materialverleih;
-
 CREATE TABLE email_templates (
     template_key VARCHAR(64)   NOT NULL PRIMARY KEY,
     subject      VARCHAR(255)  NOT NULL,

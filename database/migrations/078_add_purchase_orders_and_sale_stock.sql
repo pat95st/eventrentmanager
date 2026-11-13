@@ -48,8 +48,6 @@
 -- also nicht gegenseitig.
 --
 -- Vor dem Ausführen ein Backup der Datenbank anlegen.
-USE materialverleih;
-
 ALTER TABLE sales
     MODIFY COLUMN inventory_number_id CHAR(36) NULL,
     ADD COLUMN quantity INT UNSIGNED NOT NULL DEFAULT 1 AFTER article_id,

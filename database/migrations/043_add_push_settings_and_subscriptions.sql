@@ -19,8 +19,6 @@
 -- vapid_private_key_pem wird bewusst im Klartext gespeichert (genau wie das
 -- SMTP-/Mailbox-Passwort, siehe dortige Migrationen) — nur für
 -- Administratoren über die Anwendung erreichbar.
-USE materialverleih;
-
 CREATE TABLE push_settings (
     id                     TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
     vapid_public_key       VARCHAR(255) NULL,

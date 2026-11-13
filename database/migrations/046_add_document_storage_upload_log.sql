@@ -11,8 +11,6 @@
 -- Löschen der Zuordnung noch erkennen lässt, welches Ziellaufwerk gemeint
 -- war (ON DELETE SET NULL statt CASCADE bei beiden Fremdschlüsseln — das
 -- Protokoll soll ein Löschen der Konfiguration überdauern).
-USE materialverleih;
-
 CREATE TABLE document_storage_upload_log (
     id                CHAR(36)     NOT NULL PRIMARY KEY,
     document_type     ENUM('invoice', 'offer', 'packing_list', 'receipt') NOT NULL,

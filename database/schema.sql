@@ -1,10 +1,14 @@
 -- Materialverleih Software — Datenbankschema (MariaDB 10.6+)
 -- Zeichensatz/Kollation durchgängig utf8mb4 für Sonderzeichen & Emojis.
 
-CREATE DATABASE IF NOT EXISTS materialverleih
-    CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-USE materialverleih;
+--
+-- Diese Datei wählt bewusst KEINE Datenbank aus (kein CREATE DATABASE/USE):
+-- sie wird in die Datenbank geladen, mit der der Aufrufer verbunden ist —
+-- Web-Installer, "mysql <datenbank> < database/schema.sql" (siehe README)
+-- und die Acceptance-Suite (tests/acceptance.suite.yml, eigene Test-Datenbank).
+-- Ein fest verdrahtetes "USE materialverleih" würde die Test-Suite je nach
+-- Rechten des Test-Benutzers abbrechen lassen oder — schlimmer — in die
+-- Produktivdatenbank schreiben.
 
 -- ---------------------------------------------------------------------
 -- Kategorien (selbstreferenzierender Baum über parent_id)

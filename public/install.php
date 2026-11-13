@@ -105,15 +105,11 @@ function applyFreshSchema(\PDO $pdo): array
         throw new \RuntimeException('database/schema.sql konnte nicht gelesen werden.');
     }
 
-    // "CREATE DATABASE ...;" und "USE ...;" entfernen: die PDO-Verbindung
-    // zeigt über Connection::fromConfig() bereits auf die vom Administrator
-    // im Formular angegebene Datenbank, deren Name vom hier hartkodierten
-    // "materialverleih" abweichen kann (z. B. eine Testdatenbank wie
-    // "materialtest") — ein erneutes CREATE DATABASE/USE würde entweder an
-    // fehlenden Rechten scheitern (typisch bei Hosting-Angeboten) oder
-    // versehentlich in die falsche Datenbank schreiben. Exakt dasselbe
-    // Vorgehen wie bereits in MigrationRunner::applyOne() für "USE"-Zeilen
-    // in einzelnen Migrationsdateien.
+    // Etwaige "CREATE DATABASE ...;"- und "USE ...;"-Anweisungen entfernen.
+    // schema.sql enthält sie inzwischen nicht mehr; der Filter bleibt als
+    // Absicherung, damit eine (z. B. lokal angepasste) Datei nie in eine
+    // andere als die vom Administrator im Formular angegebene Datenbank
+    // schreibt, auf die die PDO-Verbindung bereits zeigt.
     $schemaSql = (string) preg_replace('/CREATE\s+DATABASE.*?;/si', '', $schemaSql);
     $schemaSql = (string) preg_replace('/^\s*USE\s+`?\w+`?\s*;\s*$/mi', '', $schemaSql);
 

@@ -263,10 +263,12 @@ den Installer):**
 1. **Datenbank anlegen**
 
    ```bash
-   mysql -u root -p < database/schema.sql
+   mysql -u root -p -e "CREATE DATABASE materialverleih CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+   mysql -u root -p --default-character-set=utf8mb4 materialverleih < database/schema.sql
    ```
 
-   (Das Skript legt die Datenbank `materialverleih` selbst an.)
+   (`schema.sql` legt die Datenbank nicht selbst an, sondern wird in die
+   angegebene Datenbank geladen.)
 
    `schema.sql` vermerkt in `schema_migrations`, welche Migrationen es
    bereits enthält. Sobald `storage/database.yaml` eingerichtet ist (Schritt

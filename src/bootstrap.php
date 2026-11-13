@@ -116,14 +116,18 @@ use App\Application\Supplier\Command\UpdateSupplierHandler;
 use App\Application\Supplier\Query\GetSupplierHandler;
 use App\Application\Supplier\Query\ListSuppliersHandler;
 use App\Application\Venue\Command\AddVenuePowerConnectionHandler;
+use App\Application\Venue\Command\AddVenueStageHandler;
 use App\Application\Venue\Command\CreateVenueHandler;
 use App\Application\Venue\Command\DeleteVenueHandler;
 use App\Application\Venue\Command\DeleteVenuePowerConnectionHandler;
+use App\Application\Venue\Command\DeleteVenueStageHandler;
 use App\Application\Venue\Command\UpdateVenueHandler;
 use App\Application\Venue\Command\UpdateVenuePowerConnectionHandler;
+use App\Application\Venue\Command\UpdateVenueStageHandler;
 use App\Application\Venue\Query\GetVenueHandler;
 use App\Application\Venue\Query\GetVenuesNeedDistributorFlagsHandler;
 use App\Application\Venue\Query\ListVenuePowerConnectionsHandler;
+use App\Application\Venue\Query\ListVenueStagesHandler;
 use App\Application\Venue\Query\ListVenuesHandler;
 use App\Application\Warehouse\Command\CreateWarehouseHandler;
 use App\Application\Warehouse\Command\DeleteWarehouseHandler;
@@ -340,6 +344,7 @@ use App\Infrastructure\Persistence\Pdo\MariadbWhatsappBusinessSettingsRepository
 use App\Infrastructure\Persistence\Pdo\MariadbSupplierRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbUserRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbVenuePowerConnectionRepository;
+use App\Infrastructure\Persistence\Pdo\MariadbVenueStageRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbVenueRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbWarehouseRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbUserSessionRepository;
@@ -461,6 +466,7 @@ $companyHolidayRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCompa
 $rentalScheduleRules = new \App\Application\Rental\RentalScheduleRules($rentalRepository, $companyHolidayRepository);
 $venueRepository = new MariadbVenueRepository($pdo);
 $venuePowerConnectionRepository = new MariadbVenuePowerConnectionRepository($pdo);
+$venueStageRepository = new MariadbVenueStageRepository($pdo);
 $warehouseRepository = new MariadbWarehouseRepository($pdo);
 $geocoder = new NominatimGeocoder();
 $rentalItemRepository = new MariadbRentalItemRepository($pdo);
@@ -805,6 +811,9 @@ $commandBus->register(\App\Application\Venue\Command\DeleteVenue::class, new Del
 $commandBus->register(\App\Application\Venue\Command\AddVenuePowerConnection::class, new AddVenuePowerConnectionHandler($venuePowerConnectionRepository, $venueRepository));
 $commandBus->register(\App\Application\Venue\Command\UpdateVenuePowerConnection::class, new UpdateVenuePowerConnectionHandler($venuePowerConnectionRepository));
 $commandBus->register(\App\Application\Venue\Command\DeleteVenuePowerConnection::class, new DeleteVenuePowerConnectionHandler($venuePowerConnectionRepository));
+$commandBus->register(\App\Application\Venue\Command\AddVenueStage::class, new AddVenueStageHandler($venueStageRepository, $venueRepository, $venuePowerConnectionRepository));
+$commandBus->register(\App\Application\Venue\Command\UpdateVenueStage::class, new UpdateVenueStageHandler($venueStageRepository, $venuePowerConnectionRepository));
+$commandBus->register(\App\Application\Venue\Command\DeleteVenueStage::class, new DeleteVenueStageHandler($venueStageRepository));
 $commandBus->register(\App\Application\Warehouse\Command\CreateWarehouse::class, new CreateWarehouseHandler($warehouseRepository, $geocoder));
 $commandBus->register(\App\Application\Warehouse\Command\UpdateWarehouse::class, new UpdateWarehouseHandler($warehouseRepository, $geocoder));
 $commandBus->register(\App\Application\Warehouse\Command\DeleteWarehouse::class, new DeleteWarehouseHandler($warehouseRepository));
@@ -1363,6 +1372,7 @@ $queryBus->register(\App\Application\Settings\Query\GetVoucherSettings::class, n
 $queryBus->register(\App\Application\Venue\Query\ListVenues::class, new ListVenuesHandler($venueRepository));
 $queryBus->register(\App\Application\Venue\Query\GetVenue::class, new GetVenueHandler($venueRepository));
 $queryBus->register(\App\Application\Venue\Query\ListVenuePowerConnections::class, new ListVenuePowerConnectionsHandler($venuePowerConnectionRepository));
+$queryBus->register(\App\Application\Venue\Query\ListVenueStages::class, new ListVenueStagesHandler($venueStageRepository));
 $queryBus->register(\App\Application\Venue\Query\GetVenuesNeedDistributorFlags::class, new GetVenuesNeedDistributorFlagsHandler($venuePowerConnectionRepository));
 $queryBus->register(\App\Application\Warehouse\Query\ListWarehouses::class, new ListWarehousesHandler($warehouseRepository));
 $queryBus->register(\App\Application\Warehouse\Query\GetWarehouse::class, new GetWarehouseHandler($warehouseRepository));
@@ -2075,6 +2085,9 @@ $router->post('/veranstaltungsorte/{id}/loeschen', $auth->guard(Permission::Ausg
 $router->post('/veranstaltungsorte/{id}/stromanschluesse', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'addPowerConnection']));
 $router->post('/veranstaltungsorte/{id}/stromanschluesse/{connectionId}', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'updatePowerConnection']));
 $router->post('/veranstaltungsorte/{id}/stromanschluesse/{connectionId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'deletePowerConnection']));
+$router->post('/veranstaltungsorte/{id}/buehnen', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'addStage']));
+$router->post('/veranstaltungsorte/{id}/buehnen/{stageId}', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'updateStage']));
+$router->post('/veranstaltungsorte/{id}/buehnen/{stageId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'deleteStage']));
 
 $router->get('/lagerorte', $auth->guard(Permission::AusgabeRuecknahme, [$warehouseController, 'index']));
 $router->get('/lagerorte/neu', $auth->guard(Permission::AusgabeRuecknahme, [$warehouseController, 'create']));

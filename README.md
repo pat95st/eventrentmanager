@@ -77,6 +77,13 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Straße/Hausnummer, Adresszusatz, PLZ, Ort, Telefon, E-Mail-Adresse.
   Liste mit Freitextsuche (Name/Firma/Ort/E-Mail) sowie separater
   Anlegen-/Bearbeiten-Formularseite.
+- **Bühnen je Veranstaltungsort** (Migration 149): Auf der Bearbeiten-Seite
+  eines Veranstaltungsorts lassen sich beliebig viele Bühnen hinterlegen —
+  je mit Name, Breite × Tiefe, Bühnenhöhe (alle Maße in Metern, 0 =
+  ebenerdig) und Bauart (fest installiert oder mobil). Zu jedem
+  Stromanschluss des Veranstaltungsorts kann pro Bühne die Entfernung in
+  Metern eingetragen werden (leer = nicht erfasst). Diese Daten sind die
+  Grundlage für Bühnenpläne an Veranstaltungen.
 - **Ordner im Dateiablagesystem** (Migration 148): Für Veranstaltungen und
   Kunden lässt sich per Haken im jeweiligen Formular ein Ordner auf einem
   Ziellaufwerk anlegen (Einstellungen › Ziellaufwerke, dort je Laufwerk

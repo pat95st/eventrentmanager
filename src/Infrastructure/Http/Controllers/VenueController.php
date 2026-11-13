@@ -8,21 +8,26 @@ use App\Application\Command\CommandBus;
 use App\Application\Query\QueryBus;
 use App\Application\Rental\Query\ListRentalsForVenue;
 use App\Application\Venue\Command\AddVenuePowerConnection;
+use App\Application\Venue\Command\AddVenueStage;
 use App\Application\Venue\Command\CreateVenue;
 use App\Application\Venue\Command\DeleteVenue;
 use App\Application\Venue\Command\DeleteVenuePowerConnection;
+use App\Application\Venue\Command\DeleteVenueStage;
 use App\Application\Venue\Command\UpdateVenue;
 use App\Application\Venue\Command\UpdateVenuePowerConnection;
+use App\Application\Venue\Command\UpdateVenueStage;
 use App\Application\Settings\Query\GetCompanySettings;
 use App\Application\Venue\Query\GetVenue;
 use App\Application\Venue\Query\GetVenuesNeedDistributorFlags;
 use App\Application\Venue\Query\ListVenuePowerConnections;
+use App\Application\Venue\Query\ListVenueStages;
 use App\Application\Venue\Query\ListVenues;
 use App\Application\Warehouse\Query\ListWarehouses;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Venue\PowerConnection;
+use App\Domain\Venue\Stage;
 use App\Domain\Venue\Venue;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
@@ -155,7 +160,9 @@ final class VenueController
 
         $powerConnections = $this->queries->ask(new ListVenuePowerConnections($venue->id));
 
-        $this->renderForm($venue, [], [], $venue->id, $upcomingRentals, $pastRentals, $powerConnections);
+        $stages = $this->queries->ask(new ListVenueStages($venue->id));
+
+        $this->renderForm($venue, [], [], $venue->id, $upcomingRentals, $pastRentals, $powerConnections, $stages);
     }
 
     /** Baut die einzeilige Firmenadresse (für den Google-Maps-Routen-Button) aus den Firmeneinstellungen. */
@@ -192,7 +199,8 @@ final class VenueController
         } catch (ValidationException $e) {
             $venue = $this->queries->ask(new GetVenue($id));
             $powerConnections = $this->queries->ask(new ListVenuePowerConnections($id));
-            $this->renderForm($venue, $e->errors(), $this->oldFromCommand($command), $id, powerConnections: $powerConnections);
+            $stages = $this->queries->ask(new ListVenueStages($id));
+            $this->renderForm($venue, $e->errors(), $this->oldFromCommand($command), $id, powerConnections: $powerConnections, stages: $stages);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }
@@ -283,12 +291,84 @@ final class VenueController
         Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten');
     }
 
+    public function addStage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        $command = new AddVenueStage(
+            venueId: $venueId,
+            name: $request->input('name', '') ?? '',
+            width: $request->input('width', '') ?? '',
+            depth: $request->input('depth', '') ?? '',
+            height: $request->input('height', '') ?? '',
+            type: $request->input('type', '') ?? '',
+            powerDistances: $request->inputMap('distances'),
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success(t('venues.stages.flash.added'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehnen');
+    }
+
+    public function updateStage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        $command = new UpdateVenueStage(
+            id: $request->param('stageId'),
+            venueId: $venueId,
+            name: $request->input('name', '') ?? '',
+            width: $request->input('width', '') ?? '',
+            depth: $request->input('depth', '') ?? '',
+            height: $request->input('height', '') ?? '',
+            type: $request->input('type', '') ?? '',
+            powerDistances: $request->inputMap('distances'),
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success(t('venues.stages.flash.updated'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehnen');
+    }
+
+    public function deleteStage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        try {
+            $this->commands->dispatch(new DeleteVenueStage($request->param('stageId'), $venueId));
+            Flash::success(t('venues.stages.flash.deleted'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehnen');
+    }
+
     /**
      * @param array<string, string> $errors
      * @param array<string, mixed> $old
      * @param \App\Application\Rental\Query\VenueRentalEntry[] $upcomingRentals
      * @param \App\Application\Rental\Query\VenueRentalEntry[] $pastRentals
      * @param PowerConnection[] $powerConnections
+     * @param Stage[] $stages
      */
     private function renderForm(
         ?Venue $venue,
@@ -298,6 +378,7 @@ final class VenueController
         array $upcomingRentals = [],
         array $pastRentals = [],
         array $powerConnections = [],
+        array $stages = [],
     ): void {
         echo View::page('venues/form', [
             'venue' => $venue,
@@ -307,6 +388,7 @@ final class VenueController
             'upcomingRentals' => $upcomingRentals,
             'pastRentals' => $pastRentals,
             'powerConnections' => $powerConnections,
+            'stages' => $stages,
             'needsDistributorWithRcd' => PowerConnection::anyNeedsDistributorWithRcd($powerConnections),
             'warehouses' => $this->queries->ask(new ListWarehouses())->items,
             'companyAddress' => $this->companyAddress(),

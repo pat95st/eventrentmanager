@@ -341,6 +341,37 @@ CREATE TABLE venue_power_connections (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- Bühnen je Veranstaltungsort (Name, Breite × Tiefe, Bühnenhöhe, fest
+-- installiert oder mobil; alle Längen in Metern) samt Entfernung zu den
+-- Stromanschlüssen des Veranstaltungsorts — Grundlage für Bühnenpläne
+-- (siehe database/migrations/149_venue_stages.sql).
+-- ---------------------------------------------------------------------
+CREATE TABLE venue_stages (
+    id          CHAR(36)      NOT NULL PRIMARY KEY,
+    venue_id    CHAR(36)      NOT NULL,
+    name        VARCHAR(150)  NOT NULL,
+    width_m     DECIMAL(5,2)  NOT NULL,
+    depth_m     DECIMAL(5,2)  NOT NULL,
+    height_m    DECIMAL(5,2)  NOT NULL,
+    stage_type  VARCHAR(10)   NOT NULL, -- fixed | mobile
+    created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_venue_stages_venue
+        FOREIGN KEY (venue_id) REFERENCES venues (id) ON DELETE CASCADE,
+    INDEX idx_venue_stages_venue (venue_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE venue_stage_power_distances (
+    stage_id             CHAR(36)      NOT NULL,
+    power_connection_id  CHAR(36)      NOT NULL,
+    distance_m           DECIMAL(6,2)  NOT NULL,
+    PRIMARY KEY (stage_id, power_connection_id),
+    CONSTRAINT fk_venue_stage_power_distances_stage
+        FOREIGN KEY (stage_id) REFERENCES venue_stages (id) ON DELETE CASCADE,
+    CONSTRAINT fk_venue_stage_power_distances_connection
+        FOREIGN KEY (power_connection_id) REFERENCES venue_power_connections (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- Lagerorte der Firma (z. B. Hauptlager, Außenlager). Ausgabe und
 -- Rücklieferung einer Vermietung können jeweils einem Lagerort und einem
 -- eigenen Termin zugeordnet werden, siehe rentals.pickup_warehouse_id/
@@ -3923,4 +3954,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('143_datev_export.sql', NOW()),
     ('144_inventory_number_current_values.sql', NOW()),
     ('145_trusted_devices.sql', NOW()),
-    ('148_storage_folders.sql', NOW());
+    ('148_storage_folders.sql', NOW()),
+    ('149_venue_stages.sql', NOW());

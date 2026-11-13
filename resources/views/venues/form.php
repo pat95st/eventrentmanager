@@ -7,6 +7,7 @@
 /** @var \App\Application\Rental\Query\VenueRentalEntry[] $pastRentals */
 /** @var \App\Domain\Venue\PowerConnection[] $powerConnections */
 /** @var bool $needsDistributorWithRcd */
+/** @var \App\Domain\Venue\Stage[] $stages */
 /** @var \App\Domain\Warehouse\Warehouse[] $warehouses */
 /** @var string $companyAddress */
 
@@ -17,6 +18,12 @@ use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
+// Meterangaben ohne überflüssige Nachkommanullen: 8.0 → "8", 8.5 → "8,5".
+$formatMeters = static function (float $meters): string {
+    $text = number_format($meters, 2, ',', '');
+
+    return str_contains($text, ',') ? rtrim(rtrim($text, '0'), ',') : $text;
+};
 ?>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -281,6 +288,67 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
             <div class="sm:col-span-2">
                 <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('venues.power.add')) ?></button>
             </div>
+        </form>
+    </div>
+
+    <div id="buehnen" class="mt-6 scroll-mt-20 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('venues.stages.title')) ?></h2>
+        <p class="mb-3 mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('venues.stages.intro')) ?></p>
+
+        <?php if ($stages === []): ?>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('venues.stages.empty')) ?></p>
+        <?php else: ?>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                <?php foreach ($stages as $stage): ?>
+                    <div class="py-3">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div class="min-w-0 text-sm">
+                                <span class="font-medium text-slate-800 dark:text-slate-200"><?= e($stage->name) ?></span>
+                                <span class="text-slate-500 dark:text-slate-400">
+                                    · <?= e(t('venues.stages.summary_dimensions', ['width' => $formatMeters($stage->widthM), 'depth' => $formatMeters($stage->depthM), 'area' => $formatMeters($stage->areaSquareMeters())])) ?>
+                                    · <?= e(t('venues.stages.summary_height', ['height' => $formatMeters($stage->heightM)])) ?>
+                                    · <?= e(t($stage->type->labelKey())) ?>
+                                </span>
+                                <?php if ($powerConnections !== []): ?>
+                                    <ul class="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                        <?php foreach ($powerConnections as $connection): ?>
+                                            <?php $distance = $stage->distanceTo($connection->id); ?>
+                                            <li>
+                                                <?= e($connection->type->value) ?><?php if ($connection->location !== null && $connection->location !== ''): ?> (<?= e($connection->location) ?>)<?php endif; ?>:
+                                                <?php if ($distance !== null): ?>
+                                                    <span class="font-medium text-slate-700 dark:text-slate-300"><?= e(t('venues.stages.distance_value', ['distance' => $formatMeters($distance)])) ?></span>
+                                                <?php else: ?>
+                                                    <span class="text-slate-400 dark:text-slate-500"><?= e(t('venues.stages.distance_unknown')) ?></span>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php endif; ?>
+                            </div>
+                            <div class="flex shrink-0 items-start gap-3 text-xs">
+                                <details class="inline-block">
+                                    <summary class="cursor-pointer font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('venues.stages.edit')) ?></summary>
+                                    <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/buehnen/<?= e($stage->id) ?>" class="mt-2 max-w-md space-y-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+                                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                        <?php require __DIR__ . '/_stage_fields.php'; ?>
+                                        <button type="submit" class="rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('venues.stages.save')) ?></button>
+                                    </form>
+                                </details>
+                                <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/buehnen/<?= e($stage->id) ?>/loeschen" data-confirm="<?= e(t('venues.stages.confirm_delete')) ?>" data-confirm-style="danger">
+                                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('venues.stages.delete')) ?></button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/buehnen" class="mt-4 space-y-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+            <?php $stage = null; require __DIR__ . '/_stage_fields.php'; ?>
+            <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('venues.stages.add')) ?></button>
         </form>
     </div>
 

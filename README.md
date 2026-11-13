@@ -94,6 +94,14 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Elementgrößen: 2 × 1 m, 1 × 1 m, 2 × 0,5 m und 1 × 0,5 m (erweiterbar in
   `App\Domain\Venue\StageElementSize`); gerechnet wird lückenlos im
   0,5-m-Raster, siehe `App\Domain\Venue\StageElementPlanner`.
+  **Riser** (Migration 151): Auf jeder Bühne mit festen Abmessungen lassen
+  sich Riser frei platzieren — je mit optionaler Bezeichnung, Form
+  (Rechteck, Kreis, Halbkreis, Dreieck), den zur Form passenden Maßen
+  (Breite × Tiefe bzw. Durchmesser), Höhe und Drehung. Der Bühnenplan zeigt
+  die Bühne maßstäblich in der Draufsicht (Publikum unten); Riser werden
+  dort per Maus, Finger oder Pfeiltasten verschoben und die Position sofort
+  gespeichert (`public/assets/js/stage-riser-editor.js`). Gespeichert wird
+  der Mittelpunkt des Risers relativ zur linken Kante und zur Hinterkante.
 - **Ordner im Dateiablagesystem** (Migration 148): Für Veranstaltungen und
   Kunden lässt sich per Haken im jeweiligen Formular ein Ordner auf einem
   Ziellaufwerk anlegen (Einstellungen › Ziellaufwerke, dort je Laufwerk

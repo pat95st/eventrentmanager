@@ -384,6 +384,26 @@ CREATE TABLE venue_stage_elements (
         FOREIGN KEY (stage_id) REFERENCES venue_stages (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- Riser (Podeste auf der Bühne), frei auf einer Bühne platziert; Mittelpunkt
+-- relativ zur linken Kante/Hinterkante der Bühne (siehe
+-- database/migrations/151_venue_stage_risers.sql).
+CREATE TABLE venue_stage_risers (
+    id            CHAR(36)          NOT NULL PRIMARY KEY,
+    stage_id      CHAR(36)          NOT NULL,
+    name          VARCHAR(100)      NULL,
+    shape         VARCHAR(12)       NOT NULL,
+    width_m       DECIMAL(5,2)      NOT NULL,
+    depth_m       DECIMAL(5,2)      NULL,
+    height_m      DECIMAL(4,2)      NOT NULL,
+    center_x_m    DECIMAL(5,2)      NOT NULL,
+    center_y_m    DECIMAL(5,2)      NOT NULL,
+    rotation_deg  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at    DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_venue_stage_risers_stage
+        FOREIGN KEY (stage_id) REFERENCES venue_stages (id) ON DELETE CASCADE,
+    INDEX idx_venue_stage_risers_stage (stage_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- ---------------------------------------------------------------------
 -- Lagerorte der Firma (z. B. Hauptlager, Außenlager). Ausgabe und
 -- Rücklieferung einer Vermietung können jeweils einem Lagerort und einem
@@ -3969,4 +3989,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('145_trusted_devices.sql', NOW()),
     ('148_storage_folders.sql', NOW()),
     ('149_venue_stages.sql', NOW()),
-    ('150_venue_stage_elements.sql', NOW());
+    ('150_venue_stage_elements.sql', NOW()),
+    ('151_venue_stage_risers.sql', NOW());

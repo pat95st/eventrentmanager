@@ -8,6 +8,7 @@
 /** @var \App\Domain\Venue\PowerConnection[] $powerConnections */
 /** @var bool $needsDistributorWithRcd */
 /** @var \App\Domain\Venue\Stage[] $stages */
+/** @var array<string, \App\Domain\Venue\Riser[]> $stageRisers Bühnen-ID => Riser */
 /** @var \App\Domain\Warehouse\Warehouse[] $warehouses */
 /** @var string $companyAddress */
 
@@ -300,7 +301,7 @@ $formatMeters = static function (float $meters): string {
         <?php else: ?>
             <div class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($stages as $stage): ?>
-                    <div class="py-3">
+                    <div id="buehne-<?= e($stage->id) ?>" class="scroll-mt-20 py-3">
                         <div class="flex flex-wrap items-start justify-between gap-2">
                             <div class="min-w-0 text-sm">
                                 <span class="font-medium text-slate-800 dark:text-slate-200"><?= e($stage->name) ?></span>
@@ -356,6 +357,7 @@ $formatMeters = static function (float $meters): string {
                         <?php if ($stage->type === \App\Domain\Venue\StageType::Mobile): ?>
                             <?php require __DIR__ . '/_stage_layouts.php'; ?>
                         <?php endif; ?>
+                        <?php $risers = $stageRisers[$stage->id] ?? []; require __DIR__ . '/_stage_risers.php'; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -440,4 +442,5 @@ $formatMeters = static function (float $meters): string {
     });
   })();
 </script>
+<script src="/assets/js/stage-riser-editor.js?v=<?= (string) (@filemtime(dirname(__DIR__, 3) . '/public/assets/js/stage-riser-editor.js') ?: 1) ?>" defer></script>
 <?php require __DIR__ . '/../_map_modal.php'; /* Karten-Modal */ ?>

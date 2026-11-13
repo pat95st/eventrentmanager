@@ -9,6 +9,7 @@ use App\Domain\Venue\Stage;
 use App\Domain\Venue\StageBuildMode;
 use App\Domain\Venue\StageElementSize;
 use App\Domain\Venue\StageType;
+use App\Shared\MeterInput;
 
 /**
  * Gemeinsame Validierung für Add-/UpdateVenueStageHandler. Längen werden in
@@ -80,19 +81,19 @@ trait ValidatesVenueStageInput
                 $errors['elementStock'] = 'Bitte angeben, wie viele Bühnenelemente welcher Größe vorhanden sind.';
             }
         } else {
-            $widthM = self::parseMeters($width);
+            $widthM = MeterInput::parse($width);
             if ($widthM === null || $widthM <= 0.0 || $widthM > Stage::MAX_DIMENSION_M) {
                 $errors['width'] = 'Bitte eine gültige Breite in Metern angeben (größer als 0, z. B. 8 oder 8,5).';
             }
 
-            $depthM = self::parseMeters($depth);
+            $depthM = MeterInput::parse($depth);
             if ($depthM === null || $depthM <= 0.0 || $depthM > Stage::MAX_DIMENSION_M) {
                 $errors['depth'] = 'Bitte eine gültige Tiefe in Metern angeben (größer als 0, z. B. 6 oder 6,5).';
             }
         }
 
         // 0 ist zulässig: ebenerdige Spielfläche ohne Podest.
-        $heightM = self::parseMeters($height);
+        $heightM = MeterInput::parse($height);
         if ($heightM === null || $heightM > Stage::MAX_DIMENSION_M) {
             $errors['height'] = 'Bitte eine gültige Bühnenhöhe in Metern angeben (z. B. 1 oder 0,8; 0 für ebenerdig).';
         }
@@ -112,7 +113,7 @@ trait ValidatesVenueStageInput
 
                 continue;
             }
-            $distance = self::parseMeters((string) $raw);
+            $distance = MeterInput::parse((string) $raw);
             if ($distance === null || $distance > Stage::MAX_DISTANCE_M) {
                 $errors['powerDistances'] = 'Bitte die Entfernungen zu den Stromanschlüssen als Meterangabe eintragen (z. B. 15 oder 12,5).';
 
@@ -134,19 +135,5 @@ trait ValidatesVenueStageInput
             'powerDistances' => $distances,
             'elementStock' => $stock,
         ]];
-    }
-
-    /** "8,5", "8.5", "8,50 m" → 8.5; null bei leerer, negativer oder sonst ungültiger Eingabe. */
-    private static function parseMeters(string $value): ?float
-    {
-        $value = str_replace([' ', "\u{00A0}"], '', trim($value));
-        $value = (string) preg_replace('/m$/i', '', $value);
-        $value = str_replace(',', '.', $value);
-
-        if (preg_match('/^\d{1,4}(\.\d{1,2})?$/', $value) !== 1) {
-            return null;
-        }
-
-        return (float) $value;
     }
 }

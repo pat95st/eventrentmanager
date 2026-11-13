@@ -1932,7 +1932,7 @@ return [
 
     // --- Ziellaufwerke (externe Speicherziele für automatische Dokument-Pushs) ---
     'settings.document_storage.targets.title' => 'Ziellaufwerke',
-    'settings.document_storage.targets.subtitle' => 'Externe Speicherziele (WebDAV/Nextcloud, FTPS, SFTP, SCP, S3) verbinden, auf die fertige Dokumente automatisch geschoben werden können.',
+    'settings.document_storage.targets.subtitle' => 'Externe Speicherziele (Nextcloud, ownCloud, WebDAV, FTPS, SFTP, SCP, S3) verbinden, auf die fertige Dokumente automatisch geschoben und in denen Ordner für Veranstaltungen und Kunden angelegt werden können.',
     'settings.document_storage.targets.empty' => 'Noch keine Ziellaufwerke verbunden.',
     'settings.document_storage.targets.new' => 'Neues Ziellaufwerk',
     'settings.document_storage.targets.edit' => 'Ziellaufwerk bearbeiten',

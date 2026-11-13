@@ -195,6 +195,7 @@ final class CustomerController
         try {
             $id = $this->commands->dispatch($command);
             $this->saveDryHire((string) $id, $request);
+            \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, (string) $id, $request);
 
             // AJAX-Fall: das "+ Neuer Kunde"-Modal auf den Rechnungs-/
             // Angebots-/Auftragsbestätigungs-Formularen legt den Kunden per
@@ -262,8 +263,11 @@ final class CustomerController
         );
 
         try {
+            $folderPathBefore = \App\Infrastructure\Http\StorageFolderForm::expectedPath(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, $id);
             $this->commands->dispatch($command);
             $this->saveDryHire($id, $request);
+            \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, $id, $request);
+            \App\Infrastructure\Http\StorageFolderForm::askAboutRename(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, $id, $folderPathBefore);
             Flash::success(t('customers.flash.updated'));
             Response::redirect('/kunden');
         } catch (ValidationException $e) {
@@ -279,8 +283,10 @@ final class CustomerController
         $id = $request->param('id');
 
         try {
+            $folderToDelete = \App\Infrastructure\Http\StorageFolderForm::folderToDelete(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, $id, $request);
             $this->commands->dispatch(new DeleteCustomer($id));
             Flash::success(t('customers.flash.deleted'));
+            \App\Infrastructure\Http\StorageFolderForm::deleteFolder($folderToDelete);
         } catch (NotFoundException $e) {
             Flash::error($e->getMessage());
         }

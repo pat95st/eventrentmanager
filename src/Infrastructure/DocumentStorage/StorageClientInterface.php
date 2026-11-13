@@ -29,4 +29,31 @@ interface StorageClientInterface
      * @throws StorageUploadException Bei einem fehlgeschlagenen Verbindungs-/Upload-Versuch.
      */
     public function testConnection(): string;
+
+    /**
+     * Legt einen Ordner samt fehlender Zwischenebenen an (Veranstaltungs-/
+     * Kundenordner, Migration 148). Existiert er bereits, ist das kein Fehler.
+     *
+     * @param string $remotePath Ordnerpfad relativ zum base_path/Bucket des Ziellaufwerks.
+     * @throws StorageUploadException Wenn der Ordner nicht angelegt werden konnte.
+     */
+    public function createDirectory(string $remotePath): void;
+
+    /**
+     * Benennt einen Ordner um bzw. verschiebt ihn; fehlende Zwischenebenen
+     * des Ziels werden angelegt. Ein bereits vorhandenes Ziel wird NICHT
+     * überschrieben.
+     *
+     * @throws StorageUploadException Auch, wenn das Protokoll das nicht unterstützt
+     *         (siehe StorageProtocol::supportsFolderRename()).
+     */
+    public function moveDirectory(string $fromPath, string $toPath): void;
+
+    /**
+     * Löscht einen Ordner samt Inhalt. Ein bereits fehlender Ordner ist kein Fehler.
+     *
+     * @throws StorageUploadException Auch, wenn das Protokoll das nicht unterstützt
+     *         (siehe StorageProtocol::supportsFolderDelete()).
+     */
+    public function deleteDirectory(string $remotePath): void;
 }

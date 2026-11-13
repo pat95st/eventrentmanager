@@ -882,6 +882,63 @@ $canDocuments = $canRentals;
         <?= e($flashError) ?>
       </div>
     <?php endif; ?>
+    <?php
+    // Frisch erzeugtes Freigabe-Passwort eines Ordners (Migration 148): wird
+    // genau einmal angezeigt und ist danach nirgends mehr abrufbar.
+    $storageFolderPassword = $currentUser !== null ? \App\Infrastructure\Http\StorageFolderForm::consumeOneTimePassword() : null;
+    ?>
+    <?php if ($storageFolderPassword !== null): ?>
+      <div class="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+        <p class="font-medium">Passwort für die Freigabe des Ordners „<?= e($storageFolderPassword['folder']) ?>“</p>
+        <p class="mt-2">
+          <code id="storage-folder-password" class="select-all rounded bg-white px-2 py-1 font-mono text-base text-slate-900 dark:bg-slate-900 dark:text-slate-100"><?= e($storageFolderPassword['password']) ?></code>
+          <button type="button" class="ml-2 rounded-md border border-amber-400 px-2 py-1 text-xs font-medium hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900/40"
+                  onclick="var b=this;navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('storage-folder-password').textContent).then(function(){b.textContent='Kopiert';});">Kopieren</button>
+        </p>
+        <p class="mt-2 text-xs">Dieses Passwort wird nur jetzt angezeigt und nicht gespeichert. Ein neues lässt sich jederzeit beim Bearbeiten erzeugen.</p>
+        <?php if ($storageFolderPassword['nativeMailShare']): ?>
+          <p class="mt-1 text-xs">Hinweis: Je nach Einstellung Ihrer Nextcloud („Passwörter per E-Mail senden“ unter Verwaltung › Teilen) schickt Nextcloud dem Kunden das Passwort bereits selbst per E-Mail.</p>
+        <?php endif; ?>
+        <div id="storage-folder-password-question" class="mt-3 border-t border-amber-200 pt-3 dark:border-amber-800">
+          <?php if ($storageFolderPassword['options'] === []): ?>
+            <p class="text-xs">Für diesen Kunden ist kein Versandweg hinterlegt (E-Mail-Adresse, Telegram oder Signal) – bitte das Passwort selbst weitergeben.</p>
+          <?php else: ?>
+            <p class="font-medium">Soll das Passwort an den Kunden geschickt werden?</p>
+            <form method="post" action="/ablageordner/passwort-senden" class="mt-2 flex flex-wrap items-center gap-2">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+              <?php foreach ($storageFolderPassword['options'] as $deliveryValue => $deliveryLabel): ?>
+                <button type="submit" name="delivery" value="<?= e($deliveryValue) ?>" class="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">Per <?= e($deliveryLabel) ?></button>
+              <?php endforeach; ?>
+              <button type="button" class="rounded-md border border-amber-400 px-3 py-1.5 text-xs font-medium hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900/40"
+                      onclick="document.getElementById('storage-folder-password-question').innerHTML='&lt;p class=&quot;text-xs&quot;&gt;Das Passwort wird nicht verschickt.&lt;/p&gt;';">Nicht senden</button>
+            </form>
+            <p class="mt-2 text-xs">Ohne Auswahl wird nichts verschickt.</p>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+    <?php
+    // Rückfrage nach dem Umbenennen einer Veranstaltung/eines Kunden: soll
+    // der Ordner im Dateiablagesystem mit umbenannt werden?
+    $storageFolderRename = $currentUser !== null ? \App\Infrastructure\Http\StorageFolderForm::pendingRenameQuestion() : null;
+    ?>
+    <?php if ($storageFolderRename !== null): ?>
+      <div id="storage-folder-rename-question" class="mb-6 rounded-md border border-brand-300 bg-brand-50 px-4 py-3 text-sm text-slate-800 dark:border-brand-700 dark:bg-brand-950/40 dark:text-slate-200">
+        <p class="font-medium">Soll auch der Ordner im Dateiablagesystem umbenannt werden?</p>
+        <p class="mt-2 text-xs">
+          Bisher<?= $storageFolderRename['targetName'] !== '' ? ' (auf „' . e($storageFolderRename['targetName']) . '“)' : '' ?>:
+          <span class="font-mono break-all"><?= e($storageFolderRename['from']) ?></span><br>
+          Neu: <span class="font-mono break-all"><?= e($storageFolderRename['to']) ?></span>
+        </p>
+        <form method="post" action="/ablageordner/umbenennen" class="mt-3 flex flex-wrap items-center gap-2">
+          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+          <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">Ordner umbenennen</button>
+          <button type="button" class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                  onclick="document.getElementById('storage-folder-rename-question').remove();">Bisherigen Namen behalten</button>
+        </form>
+        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Eine bestehende Freigabe bleibt beim Umbenennen erhalten.</p>
+      </div>
+    <?php endif; ?>
 
     <?= $content ?>
     <?php if ($settingsGroupKey !== null): ?>
@@ -1083,6 +1140,7 @@ $canDocuments = $canRentals;
       var iconEl = document.getElementById('global-confirm-icon');
       var DEFAULT_TITLE = titleEl.textContent;
       var DEFAULT_OK = okBtn.textContent;
+      var DEFAULT_CANCEL = cancelBtn.textContent;
 
       // window.confirmModal(message, style, options): options.okLabel benennt
       // den Bestätigen-Button nach der eigentlichen Aktion (z. B.
@@ -1090,6 +1148,8 @@ $canDocuments = $canRentals;
       // („Veranstaltung löschen?“). Ohne Angabe: „Bitte bestätigen“/„Bestätigen“.
       window.confirmModal = function (message, style, options) {
         var okLabel = options && options.okLabel ? String(options.okLabel) : '';
+        // options.cancelLabel: für Ja/Nein-Fragen, bei denen „Abbrechen“ missverständlich wäre.
+        cancelBtn.textContent = options && options.cancelLabel ? String(options.cancelLabel) : DEFAULT_CANCEL;
         return new Promise(function (resolve) {
           messageEl.textContent = message;
           titleEl.textContent = okLabel !== '' ? okLabel + '?' : DEFAULT_TITLE;
@@ -1189,6 +1249,33 @@ $canDocuments = $canRentals;
         var okLabel = form.getAttribute('data-confirm-ok') || (submitterText.length > 0 && submitterText.length <= 40 ? submitterText : '');
 
         window.confirmModal(message, style, { okLabel: okLabel }).then(function (confirmed) {
+          // Ordner im Dateiablagesystem (Migration 148): nach der eigentlichen
+          // Lösch-Bestätigung zusätzlich fragen, ob auch der Ordner gelöscht
+          // werden soll. „Ordner behalten“ (auch Escape) löscht nur den Datensatz.
+          var folderQuestion = confirmed ? form.getAttribute('data-storage-folder-delete') : null;
+          if (folderQuestion) {
+            var askAboutFolder = function () {
+              window.confirmModal(folderQuestion, 'danger', { okLabel: 'Ordner löschen', cancelLabel: 'Ordner behalten' }).then(function (deleteFolder) {
+                var field = form.querySelector('input[name="delete_storage_folder"]');
+                if (!field) {
+                  field = document.createElement('input');
+                  field.type = 'hidden';
+                  field.name = 'delete_storage_folder';
+                  form.appendChild(field);
+                }
+                field.value = deleteFolder ? '1' : '0';
+                form.submit();
+              });
+            };
+            // Der erste Dialog schließt erst nach seiner Ausblend-Animation
+            // (siehe modal-fade.js) — vorher lässt er sich nicht erneut öffnen.
+            if (dialog.open) {
+              dialog.addEventListener('close', function () { setTimeout(askAboutFolder, 0); }, { once: true });
+            } else {
+              askAboutFolder();
+            }
+            return;
+          }
           if (confirmed) {
             // .submit() statt .requestSubmit(), damit KEIN neues
             // "submit"-Ereignis ausgelöst wird (siehe WHATWG-Spezifikation)

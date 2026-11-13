@@ -49,6 +49,9 @@ final class UpdateStorageTargetHandler implements CommandHandlerInterface
             $command->enabled,
         );
 
+        [$folderErrors, $folderData] = $this->validateFolderSettings($data['protocol'], $data['username'], $command->folderSettings);
+        $errors = array_merge($errors, $folderErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -82,6 +85,10 @@ final class UpdateStorageTargetHandler implements CommandHandlerInterface
         $target->s3UsePathStyle = $data['s3UsePathStyle'];
         $target->enabled = $data['enabled'];
         $target->updatedAt = new DateTimeImmutable();
+
+        foreach ($folderData as $property => $value) {
+            $target->{$property} = $value;
+        }
 
         $this->targets->save($target);
 

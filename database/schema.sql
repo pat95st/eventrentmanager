@@ -1961,7 +1961,7 @@ CREATE TABLE message_templates (
 CREATE TABLE document_storage_targets (
     id                       CHAR(36)      NOT NULL PRIMARY KEY,
     name                     VARCHAR(255)  NOT NULL,
-    protocol                 ENUM('webdav', 'ftps', 'sftp', 'scp', 's3') NOT NULL,
+    protocol                 ENUM('webdav', 'ftps', 'sftp', 'scp', 's3', 'nextcloud', 'owncloud') NOT NULL,
     host                     VARCHAR(255)  NULL,
     port                     SMALLINT UNSIGNED NULL,
     username                 VARCHAR(255)  NULL,
@@ -1977,6 +1977,17 @@ CREATE TABLE document_storage_targets (
     s3_region                VARCHAR(64)   NULL DEFAULT 'eu-central-1',
     s3_endpoint              VARCHAR(255)  NULL,
     s3_use_path_style        TINYINT(1)    NOT NULL DEFAULT 0,
+    -- Ordner für Veranstaltungen/Kunden (siehe database/migrations/148_storage_folders.sql).
+    folders_enabled          TINYINT(1)    NOT NULL DEFAULT 0,
+    event_folder_template    VARCHAR(500)  NOT NULL DEFAULT 'Veranstaltungen/{year}/{date} {event_name}',
+    customer_folder_template VARCHAR(500)  NOT NULL DEFAULT 'Kunden/{customer_number} {customer_name}',
+    event_subfolder_template VARCHAR(500)  NOT NULL DEFAULT '{date} {event_name}',
+    share_always_password    TINYINT(1)    NOT NULL DEFAULT 0,
+    share_password_length    TINYINT UNSIGNED NOT NULL DEFAULT 16,
+    share_password_uppercase TINYINT(1)    NOT NULL DEFAULT 1,
+    share_password_lowercase TINYINT(1)    NOT NULL DEFAULT 1,
+    share_password_digits    TINYINT(1)    NOT NULL DEFAULT 1,
+    share_password_symbols   TINYINT(1)    NOT NULL DEFAULT 0,
     enabled                  TINYINT(1)    NOT NULL DEFAULT 1,
     created_at               DATETIME      NOT NULL,
     updated_at               DATETIME      NOT NULL
@@ -2017,6 +2028,34 @@ CREATE TABLE document_storage_upload_log (
 
 CREATE INDEX idx_document_storage_upload_log_document ON document_storage_upload_log (document_type, source_id);
 CREATE INDEX idx_document_storage_upload_log_created_at ON document_storage_upload_log (created_at);
+
+-- Ordner je Veranstaltung/Kunde im externen Dateiablagesystem samt Freigabe
+-- (siehe database/migrations/148_storage_folders.sql).
+CREATE TABLE storage_folders (
+    id                 CHAR(36)     NOT NULL PRIMARY KEY,
+    -- Genau eine der beiden Spalten ist gesetzt (Veranstaltung ODER Kunde).
+    rental_id          CHAR(36)     NULL,
+    customer_id        CHAR(36)     NULL,
+    storage_target_id  CHAR(36)     NOT NULL,
+    -- Aufgelöster Ordnerpfad relativ zum Basis-Pfad des Ziellaufwerks. Wird
+    -- beim Anlegen festgeschrieben und bei späteren Umbenennungen der
+    -- Veranstaltung/des Kunden bewusst nicht mitgezogen.
+    path               VARCHAR(700) NOT NULL,
+    in_customer_folder TINYINT(1)   NOT NULL DEFAULT 0,
+    share_id           VARCHAR(64)  NULL,
+    share_url          VARCHAR(500) NULL,
+    share_permission   ENUM('read', 'edit', 'upload') NULL,
+    share_has_password TINYINT(1)   NOT NULL DEFAULT 0,
+    share_mailed_at    DATETIME     NULL,
+    share_mailed_to    VARCHAR(255) NULL,
+    created_at         DATETIME     NOT NULL,
+    updated_at         DATETIME     NOT NULL,
+    UNIQUE KEY uq_storage_folders_rental (rental_id),
+    UNIQUE KEY uq_storage_folders_customer (customer_id),
+    CONSTRAINT fk_storage_folders_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_storage_folders_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE,
+    CONSTRAINT fk_storage_folders_target FOREIGN KEY (storage_target_id) REFERENCES document_storage_targets (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
 -- Mahnwesen (siehe database/migrations/052_add_dunning.sql für die
@@ -3883,4 +3922,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('142_dry_hire.sql', NOW()),
     ('143_datev_export.sql', NOW()),
     ('144_inventory_number_current_values.sql', NOW()),
-    ('145_trusted_devices.sql', NOW());
+    ('145_trusted_devices.sql', NOW()),
+    ('148_storage_folders.sql', NOW());

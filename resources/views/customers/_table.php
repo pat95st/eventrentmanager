@@ -101,7 +101,7 @@ $canCreateDocuments = \App\Infrastructure\Http\Auth\CurrentUser::get()?->has(\Ap
                                         <?php if ($canCreateDocuments): ?>
                                             <a role="menuitem" href="/veranstaltungen?kunde=<?= e(rawurlencode($customer->id)) ?>" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('customers.quick_actions.show_rentals')) ?></a>
                                         <?php endif; ?>
-                                        <form method="post" action="/kunden/<?= e($customer->id) ?>/loeschen" data-confirm="<?= e(t('customers.confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('customers.quick_actions.delete')) ?>">
+                                        <form method="post" action="/kunden/<?= e($customer->id) ?>/loeschen" data-confirm="<?= e(t('customers.confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('customers.quick_actions.delete')) ?>"<?= \App\Infrastructure\Http\StorageFolderForm::deleteQuestionAttributes(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, $customer->id) ?>>
                                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                             <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
                                         </form>

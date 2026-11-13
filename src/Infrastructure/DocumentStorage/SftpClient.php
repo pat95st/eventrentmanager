@@ -49,6 +49,114 @@ final class SftpClient implements StorageClientInterface
         }
     }
 
+    public function createDirectory(string $remotePath): void
+    {
+        $this->assertExtensionAvailable();
+
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $connection = $this->connect();
+        $sftp = @ssh2_sftp($connection);
+        if ($sftp === false) {
+            throw new StorageUploadException('SFTP-Subsystem konnte auf dem Server nicht initialisiert werden.');
+        }
+
+        $fullPath = $this->fullRemotePath($remotePath);
+        $this->ensureDirectoriesExist($sftp, $fullPath);
+
+        // ssh2_sftp_mkdir() unterscheidet "existiert bereits" nicht von einem
+        // echten Fehler — deshalb anschließend prüfen, ob der Ordner da ist.
+        if (@ssh2_sftp_stat($sftp, $fullPath) === false) {
+            throw new StorageUploadException("SFTP-Ordner konnte nicht angelegt werden: {$fullPath}");
+        }
+    }
+
+    public function moveDirectory(string $fromPath, string $toPath): void
+    {
+        $this->assertExtensionAvailable();
+
+        if (trim($fromPath, '/') === '' || trim($toPath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $sftp = $this->openSftp();
+        $from = $this->fullRemotePath($fromPath);
+        $to = $this->fullRemotePath($toPath);
+
+        if (@ssh2_sftp_stat($sftp, $to) !== false) {
+            throw new StorageUploadException("Der Ordner {$to} existiert bereits.");
+        }
+        $this->ensureDirectoriesExist($sftp, dirname($to));
+
+        if (!@ssh2_sftp_rename($sftp, $from, $to)) {
+            throw new StorageUploadException("SFTP-Ordner konnte nicht umbenannt werden: {$from}");
+        }
+    }
+
+    public function deleteDirectory(string $remotePath): void
+    {
+        $this->assertExtensionAvailable();
+
+        // Niemals den Basis-Pfad selbst löschen.
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $sftp = $this->openSftp();
+        $fullPath = $this->fullRemotePath($remotePath);
+        if (@ssh2_sftp_stat($sftp, $fullPath) === false) {
+            return;
+        }
+
+        $this->deleteRecursively($sftp, $fullPath);
+    }
+
+    /** @return resource */
+    private function openSftp()
+    {
+        $sftp = @ssh2_sftp($this->connect());
+        if ($sftp === false) {
+            throw new StorageUploadException('SFTP-Subsystem konnte auf dem Server nicht initialisiert werden.');
+        }
+
+        return $sftp;
+    }
+
+    /** @param resource $sftp */
+    private function deleteRecursively($sftp, string $directory): void
+    {
+        $handle = @opendir('ssh2.sftp://' . intval($sftp) . $directory);
+        if ($handle === false) {
+            throw new StorageUploadException("SFTP-Ordner konnte nicht gelesen werden: {$directory}");
+        }
+
+        $entries = [];
+        while (($entry = readdir($handle)) !== false) {
+            if ($entry !== '.' && $entry !== '..') {
+                $entries[] = $entry;
+            }
+        }
+        closedir($handle);
+
+        foreach ($entries as $entry) {
+            $path = $directory . '/' . $entry;
+            // lstat: symbolischen Links wird nicht gefolgt, sie werden nur entfernt.
+            $stat = @ssh2_sftp_lstat($sftp, $path);
+            $isDirectory = is_array($stat) && (($stat['mode'] ?? 0) & 0170000) === 0040000;
+            if ($isDirectory) {
+                $this->deleteRecursively($sftp, $path);
+            } elseif (!@ssh2_sftp_unlink($sftp, $path)) {
+                throw new StorageUploadException("SFTP-Datei konnte nicht gelöscht werden: {$path}");
+            }
+        }
+
+        if (!@ssh2_sftp_rmdir($sftp, $directory)) {
+            throw new StorageUploadException("SFTP-Ordner konnte nicht gelöscht werden: {$directory}");
+        }
+    }
+
     public function testConnection(): string
     {
         $this->assertExtensionAvailable();

@@ -8,16 +8,21 @@ use App\Domain\DocumentStorage\DocumentStorageTarget;
 use App\Domain\DocumentStorage\StorageProtocol;
 
 /** Wählt anhand von DocumentStorageTarget::$protocol den passenden Protokoll-Client. */
-final class StorageClientFactory
+final class StorageClientFactory implements StorageClientFactoryInterface
 {
     public function create(DocumentStorageTarget $target): StorageClientInterface
     {
         return match ($target->protocol) {
-            StorageProtocol::WebDav => new WebDavClient($target),
+            StorageProtocol::WebDav, StorageProtocol::Nextcloud, StorageProtocol::OwnCloud => new WebDavClient($target),
             StorageProtocol::Ftps => new FtpsClient($target),
             StorageProtocol::Sftp => new SftpClient($target),
             StorageProtocol::Scp => new ScpClient($target),
             StorageProtocol::S3 => new S3Client($target),
         };
+    }
+
+    public function createShareClient(DocumentStorageTarget $target): ?ShareClientInterface
+    {
+        return $target->protocol->supportsSharing() ? new OcsShareClient($target) : null;
     }
 }

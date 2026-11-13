@@ -1931,7 +1931,7 @@ return [
 
     // --- Storage targets (external storage destinations for automatic document pushes) ---
     'settings.document_storage.targets.title' => 'Storage targets',
-    'settings.document_storage.targets.subtitle' => 'Connect external storage destinations (WebDAV/Nextcloud, FTPS, SFTP, SCP, S3) that finished documents can be pushed to automatically.',
+    'settings.document_storage.targets.subtitle' => 'Connect external storage destinations (Nextcloud, ownCloud, WebDAV, FTPS, SFTP, SCP, S3) that finished documents can be pushed to automatically and in which folders for events and customers can be created.',
     'settings.document_storage.targets.empty' => 'No storage targets connected yet.',
     'settings.document_storage.targets.new' => 'New storage target',
     'settings.document_storage.targets.edit' => 'Edit storage target',

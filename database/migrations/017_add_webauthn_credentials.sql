@@ -5,8 +5,6 @@
 -- App\Infrastructure\WebAuthn\WebAuthnService), webauthn_challenges die
 -- kurzlebigen, genau einmal verwendbaren Challenges für Registrierung und
 -- Anmeldung (siehe App\Domain\Auth\WebauthnChallenge).
-USE materialverleih;
-
 CREATE TABLE webauthn_credentials (
     id                VARCHAR(36)   NOT NULL PRIMARY KEY,
     user_id           VARCHAR(36)   NOT NULL,

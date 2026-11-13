@@ -10,8 +10,6 @@
 -- SmtpSettings::shouldArchive()), wird hier aber bewusst NICHT als NULL
 -- belassen, sondern explizit mit allen Kategorien vorbefüllt, damit die
 -- bestehende Zeile nicht stillschweigend vom NULL-Fallback abhängt.
-USE materialverleih;
-
 ALTER TABLE smtp_settings
     ADD COLUMN archive_categories TEXT NULL AFTER archive_bcc_address;
 

@@ -6,8 +6,6 @@
 -- Ein Dokumenttyp kann mehrfach vorkommen (mehrere Ziellaufwerke gleich-
 -- zeitig für dieselbe Rechnung/dasselbe Angebot/… — z. B. Nextcloud UND
 -- S3-Archiv), daher keine UNIQUE-Beschränkung auf document_type allein.
-USE materialverleih;
-
 CREATE TABLE document_storage_assignments (
     id                CHAR(36)     NOT NULL PRIMARY KEY,
     document_type     ENUM('invoice', 'offer', 'packing_list', 'receipt') NOT NULL,

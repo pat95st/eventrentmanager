@@ -16,8 +16,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/076_add_firmware.sql
 
-USE materialverleih;
-
 ALTER TABLE articles
     ADD COLUMN has_firmware TINYINT(1) NOT NULL DEFAULT 0 AFTER requires_electrical_inspection;
 

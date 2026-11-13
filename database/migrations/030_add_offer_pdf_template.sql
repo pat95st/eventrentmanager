@@ -5,8 +5,6 @@
 -- Schlüssel offer_pdf) — dort geht es um den Text der E-Mail, hier um den
 -- Text im PDF-Anhang. Beide Spalten sind NULL, solange kein Administrator
 -- etwas hinterlegt hat, sodass das PDF unverändert wie bisher aussieht.
-USE materialverleih;
-
 CREATE TABLE offer_pdf_settings (
     id             TINYINT   NOT NULL PRIMARY KEY DEFAULT 1,
     intro_markdown MEDIUMTEXT NULL,

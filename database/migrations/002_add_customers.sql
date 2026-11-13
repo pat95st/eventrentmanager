@@ -6,8 +6,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/002_add_customers.sql
 
-USE materialverleih;
-
 CREATE TABLE customers (
     id              CHAR(36)     NOT NULL PRIMARY KEY,
     type            ENUM('privat', 'geschaeftlich') NOT NULL,

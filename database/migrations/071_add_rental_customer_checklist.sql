@@ -26,8 +26,6 @@
 -- automatischen Versand mit (siehe dortige Änderungen).
 --
 -- Vor dem Ausführen ein Backup der Datenbank anlegen.
-USE materialverleih;
-
 CREATE TABLE rental_customer_checklist_tokens (
     id         CHAR(36)     NOT NULL PRIMARY KEY,
     rental_id  CHAR(36)     NOT NULL,

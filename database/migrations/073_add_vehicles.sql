@@ -10,8 +10,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/073_add_vehicles.sql
 
-USE materialverleih;
-
 -- ---------------------------------------------------------------------
 -- Fahrzeug-Stammdaten. Je Fahrzeug wird die Zuladung (payload_kg) sowie
 -- die Abmessung der Ladefläche als Freitext gespeichert. Anhängekupplung/

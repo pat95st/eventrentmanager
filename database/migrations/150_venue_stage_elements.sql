@@ -7,8 +7,6 @@
 --      Bühne, die über ihren Elementbestand beschrieben ist, stehen die Maße
 --      nicht fest — die baubaren Größen werden bei jeder Anzeige live aus dem
 --      Bestand vorgeschlagen (App\Domain\Venue\StageElementPlanner).
-USE materialverleih;
-
 ALTER TABLE venue_stages
     MODIFY COLUMN width_m DECIMAL(5,2) NULL,
     MODIFY COLUMN depth_m DECIMAL(5,2) NULL;

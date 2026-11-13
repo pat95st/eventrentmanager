@@ -8,8 +8,6 @@
 -- zur aktuellen Session-ID, wird wie bei einem bereits abgemeldeten Benutzer
 -- verfahren). id ist bewusst die PHP-Session-ID selbst (kein separater UUID),
 -- damit der Zusammenhang 1:1 und ohne zusätzliche Zuordnungstabelle bleibt.
-USE materialverleih;
-
 CREATE TABLE user_sessions (
     id            VARCHAR(128) NOT NULL PRIMARY KEY,
     user_id       VARCHAR(36)  NOT NULL,

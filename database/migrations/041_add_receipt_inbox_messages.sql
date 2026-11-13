@@ -12,8 +12,6 @@
 -- Benutzer das im Posteingang explizit auslöst (siehe
 -- App\Application\ReceiptInbox\Command\ConvertReceiptInboxAttachmentToReceipt);
 -- converted_receipt_id bleibt bis dahin NULL.
-USE materialverleih;
-
 CREATE TABLE receipt_inbox_messages (
     id            CHAR(36)     NOT NULL PRIMARY KEY,
     -- VARCHAR(998): RFC 5322 begrenzt eine Kopfzeile (inkl. "Message-ID: ")

@@ -2,8 +2,6 @@
 -- Tabelle für Veranstaltungsorte (mit Adresse + optional geokodierten
 -- Koordinaten für die Kartenanzeige) an und verknüpft sie optional mit
 -- Vermietungen.
-USE materialverleih;
-
 CREATE TABLE venues (
     id              CHAR(36)       NOT NULL PRIMARY KEY,
     name            VARCHAR(255)   NOT NULL,

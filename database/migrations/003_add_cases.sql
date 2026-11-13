@@ -6,8 +6,6 @@
 -- Ausführen z. B. mit:
 --   mysql -u root -p materialverleih < database/migrations/003_add_cases.sql
 
-USE materialverleih;
-
 CREATE TABLE case_items (
     id                  CHAR(36)     NOT NULL PRIMARY KEY,
     name                VARCHAR(255) NOT NULL,

@@ -1,7 +1,5 @@
 -- Migration für bereits bestehende Installationen: legt die Tabelle für
 -- Elektroprüfungen (z. B. DGUV V3) je Inventurnummer an.
-USE materialverleih;
-
 CREATE TABLE electrical_inspections (
     id                      CHAR(36)     NOT NULL PRIMARY KEY,
     inventory_number_id     CHAR(36)     NOT NULL,

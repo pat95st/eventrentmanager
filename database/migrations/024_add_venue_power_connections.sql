@@ -10,8 +10,6 @@
 --   2. caretaker_name/caretaker_phone an venues: optionale Kontaktdaten des
 --      Hausmeisters vor Ort — beide NULLABLE, es besteht ausdrücklich KEINE
 --      Pflicht, sie zu pflegen.
-USE materialverleih;
-
 CREATE TABLE venue_power_connections (
     id                CHAR(36)     NOT NULL PRIMARY KEY,
     venue_id          CHAR(36)     NOT NULL,

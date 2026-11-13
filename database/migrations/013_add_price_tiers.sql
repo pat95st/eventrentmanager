@@ -4,8 +4,6 @@
 -- Definition 100 % (= der hinterlegte Preis pro Einsatztag selbst) und wird
 -- hier nur der Vollständigkeit halber mitgeführt, ist aber nicht über die
 -- Oberfläche änderbar (siehe UpdatePriceTiersHandler).
-USE materialverleih;
-
 CREATE TABLE price_tiers (
     day_count   TINYINT        NOT NULL PRIMARY KEY,
     percentage  DECIMAL(6, 2)  NOT NULL,

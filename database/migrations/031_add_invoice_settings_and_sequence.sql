@@ -9,8 +9,6 @@
 -- fälschlicherweise wiederverwenden), sondern ausschließlich über diese
 -- Singleton-Zeile mit SELECT ... FOR UPDATE innerhalb einer Transaktion
 -- atomar hochgezählt.
-USE materialverleih;
-
 CREATE TABLE invoice_settings (
     id                     TINYINT       NOT NULL PRIMARY KEY DEFAULT 1,
     is_small_business      TINYINT(1)    NOT NULL DEFAULT 0,

@@ -6,7 +6,5 @@
 -- (Versand am Ende eines Imports mit mind. einer neuen Nachricht an alle
 -- aktiven Administratoren mit gesetztem Kontrollkästchen), Formularfeld
 -- unter /profil/darstellung.
-USE materialverleih;
-
 ALTER TABLE users
     ADD COLUMN notify_on_new_receipt_email TINYINT(1) NOT NULL DEFAULT 0 AFTER locale;

@@ -9,8 +9,6 @@
 -- Bearbeiten) analog zu manufacturers/categories, nicht in
 -- mailbox_settings integriert, da es sich um beliebig viele Einträge statt
 -- fester Einstellungen handelt.
-USE materialverleih;
-
 CREATE TABLE receipt_inbox_allowed_senders (
     id          CHAR(36)     NOT NULL PRIMARY KEY,
     email       VARCHAR(255) NOT NULL,

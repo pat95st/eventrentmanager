@@ -2,8 +2,6 @@
 -- (invoices) erhält auch offers die Zubehörpauschale (Snapshot-Prinzip) und
 -- den optionalen Kombirabatt — siehe App\Domain\Settings\PricingSettings /
 -- App\Domain\Pricing\DocumentTotals.
-USE materialverleih;
-
 ALTER TABLE offers
     ADD COLUMN accessory_flat_rate_enabled TINYINT(1)    NOT NULL DEFAULT 1 AFTER note,
     ADD COLUMN accessory_flat_rate_percent DECIMAL(5, 2)  NULL     AFTER accessory_flat_rate_enabled,

@@ -19,8 +19,6 @@
 -- werden. Zugangsdaten (password/private_key/s3_secret_access_key) werden
 -- im Klartext gespeichert, genau wie das SMTP-/Mailbox-Passwort — nur für
 -- Administratoren über die Anwendung erreichbar.
-USE materialverleih;
-
 CREATE TABLE document_storage_targets (
     id                       CHAR(36)      NOT NULL PRIMARY KEY,
     name                     VARCHAR(255)  NOT NULL,

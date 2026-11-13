@@ -2316,23 +2316,10 @@ CREATE TABLE offer_sale_items (
 -- Kommentaren), keine eigenständige Schema-Neuerfindung.
 -- =======================================================================
 
--- --- 031_add_invoice_settings_and_sequence.sql -------------------------
-CREATE TABLE invoice_sequences (
-    id           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
-    next_number  INT UNSIGNED NOT NULL DEFAULT 1,
-    CONSTRAINT chk_invoice_sequences_singleton CHECK (id = 1)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-
-INSERT INTO invoice_sequences (id, next_number) VALUES (1, 1);
-
--- --- 052_add_dunning.sql ------------------------------------------------
-CREATE TABLE dunning_sequences (
-    id           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
-    next_number  INT UNSIGNED NOT NULL DEFAULT 1,
-    CONSTRAINT chk_dunning_sequences_singleton CHECK (id = 1)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
-
-INSERT INTO dunning_sequences (id, next_number) VALUES (1, 1);
+-- (Die früher hier angelegten Tabellen invoice_sequences [031] und
+-- dunning_sequences [052] entfallen: Migration 084 hat sie durch
+-- document_number_sequences ersetzt und gelöscht — eine über Migrationen
+-- gewachsene Installation besitzt sie nicht mehr.)
 
 -- --- 065_add_carddav_credentials.sql ------------------------------------
 CREATE TABLE carddav_credentials (
@@ -3044,3 +3031,852 @@ INSERT INTO cable_type_connectors (cable_type_id, connector_type_id) VALUES
     ('b0000000-0000-0000-0000-000000000003', 'c0000000-0000-0000-0000-000000000008'),
     ('b0000000-0000-0000-0000-000000000004', 'c0000000-0000-0000-0000-000000000009'),
     ('b0000000-0000-0000-0000-000000000004', 'c0000000-0000-0000-0000-000000000010');
+
+-- --- 091_add_pdf_layout_elements.sql ---
+-- Visueller PDF-Vorlagen-Editor (siehe App\Domain\Settings\PdfLayout,
+-- App\Infrastructure\Http\Controllers\PdfLayoutSettingsController).
+--
+-- Bisher ließen sich in den PDF-Vorlagen nur Texte (Einleitung/Schluss)
+-- bearbeiten, nicht aber, AN WELCHER STELLE im Dokument welcher Block
+-- erscheint (Logo, Titel, Adressen, Rechnungsinfo-Block, Einleitungs-/
+-- Schlusstext usw.) — das war Kundenwunsch für diese Erweiterung.
+--
+-- Jede Zeile überschreibt die Position EINES Blocks (`element_key`,
+-- siehe App\Domain\Settings\PdfLayout\PdfLayoutBlueprint::ELEMENTS) für
+-- GENAU einen Dokumenttyp (`document_type`, siehe
+-- App\Domain\Settings\PdfLayout\PdfDocumentType). Fehlt eine Zeile für
+-- einen Block, zeichnet der jeweilige *PdfGenerator ihn weiterhin über
+-- seine bisherige, fest kodierte Logik — bewusst so gewählt, damit
+-- bestehende Installationen ohne Anpassung optisch unverändert bleiben
+-- (keine Notwendigkeit, "perfekte" Default-Koordinaten zu pflegen; die
+-- im Editor angezeigten Default-Boxen sind nur eine Orientierungshilfe
+-- zum Ziehen, keine tatsächlich gerenderten Koordinaten).
+--
+-- Koordinaten sind in Millimetern, Ursprung oben links (wie in einem
+-- Textverarbeitungsprogramm) — nicht im PDF-eigenen pt-Koordinatensystem
+-- (Ursprung unten links), das bleibt Implementierungsdetail der
+-- *PdfGenerator-Klassen (siehe dort MM_TO_PT-Konstante für die Umrechnung).
+CREATE TABLE pdf_layout_elements (
+    document_type VARCHAR(40) NOT NULL,
+    element_key VARCHAR(40) NOT NULL,
+    x_mm DECIMAL(6, 2) NOT NULL,
+    y_mm DECIMAL(6, 2) NOT NULL,
+    width_mm DECIMAL(6, 2) NULL,
+    font_size DECIMAL(5, 2) NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (document_type, element_key)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+
+-- --- 126_background_media.sql ---
+-- Migration 126: Hintergründe überarbeitet
+--  * Darstellung des Oberflächen-Hintergrunds: Deckkraft, Einpassung
+--    (cover = Fläche füllen, contain = ganz anzeigen), Ausschnitt (X/Y in %)
+--    und Zoom (100–300 %). background_image_filename darf seitdem auch ein
+--    kurzes Video (MP4/WebM) sein.
+--  * Eigener Hintergrund für die Anmeldeseite (auch Zwei-Faktor-Abfrage)
+--    mit denselben Darstellungsoptionen.
+ALTER TABLE company_settings
+    ADD COLUMN background_opacity        TINYINT UNSIGNED  NOT NULL DEFAULT 100     AFTER background_image_filename,
+    ADD COLUMN background_fit            VARCHAR(10)       NOT NULL DEFAULT 'cover' AFTER background_opacity,
+    ADD COLUMN background_position_x     TINYINT UNSIGNED  NOT NULL DEFAULT 50      AFTER background_fit,
+    ADD COLUMN background_position_y     TINYINT UNSIGNED  NOT NULL DEFAULT 50      AFTER background_position_x,
+    ADD COLUMN background_zoom           SMALLINT UNSIGNED NOT NULL DEFAULT 100     AFTER background_position_y,
+    ADD COLUMN login_background_filename VARCHAR(255)      NULL                     AFTER background_zoom,
+    ADD COLUMN login_background_opacity    TINYINT UNSIGNED  NOT NULL DEFAULT 100     AFTER login_background_filename,
+    ADD COLUMN login_background_fit        VARCHAR(10)       NOT NULL DEFAULT 'cover' AFTER login_background_opacity,
+    ADD COLUMN login_background_position_x TINYINT UNSIGNED  NOT NULL DEFAULT 50      AFTER login_background_fit,
+    ADD COLUMN login_background_position_y TINYINT UNSIGNED  NOT NULL DEFAULT 50      AFTER login_background_position_x,
+    ADD COLUMN login_background_zoom       SMALLINT UNSIGNED NOT NULL DEFAULT 100     AFTER login_background_position_y;
+
+-- --- 127_security_settings.sql ---
+-- Migration 127: Sicherheits-Einstellungen (Singleton-Zeile), zunächst die
+-- automatische Abmeldung nach Inaktivität (Session-Timeout) in Minuten.
+-- Nur Administratoren können den Wert unter Einstellungen › Sicherheit ändern.
+-- Standard 120 Minuten.
+
+CREATE TABLE security_settings (
+    id                      TINYINT           NOT NULL PRIMARY KEY DEFAULT 1,
+    session_timeout_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 120,
+    CONSTRAINT chk_security_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO security_settings (id, session_timeout_minutes) VALUES (1, 120);
+
+-- --- 128_half_rack.sql ---
+-- Migration 128: 9,5-Zoll-Rackeinbaugeräte (Nutzerwunsch).
+--  * articles.rack_width: Einbaubreite eines Rackeinbaugeräts (is_19_inch = 1):
+--    '19' = volle 19-Zoll-Breite, '9.5' = halbe Breite (9,5 Zoll).
+--  * rack_slots.side: bei einem 9,5-Zoll-Gerät in einem 19-Zoll-Rack die
+--    belegte Hälfte ('left' | 'right'); NULL = ganze Rackbreite (19-Zoll-Gerät
+--    in 19-Zoll-Rack, 9,5-Zoll-Gerät in 9,5-Zoll-Rack). So passen zwei
+--    9,5-Zoll-Geräte nebeneinander in ein 19-Zoll-Rack.
+-- 9,5-Zoll-Racks gibt es bereits seit Migration 115 (racks.width).
+ALTER TABLE articles
+    ADD COLUMN rack_width VARCHAR(5) NOT NULL DEFAULT '19' AFTER is_19_inch;
+
+ALTER TABLE rack_slots
+    ADD COLUMN side VARCHAR(5) NULL AFTER start_unit;
+
+-- --- 129_cable_rules_fuses.sql ---
+-- Migration 129 (Nutzerwunsch):
+--  1. Stromverteiler: Schmelzsicherungen (Neozed/Diazed) als weiteres
+--     Schutzorgan, drei einzelne 1-polige LS/Sicherungen je Phase, Phase an
+--     einphasigen Schutzorganen und an einphasigen Abgängen hinter
+--     dreiphasiger Absicherung.
+--  2. Stromanschlüsse von Veranstaltungsorten: Absicherung per LS-Schalter
+--     (bisher) oder Neozed/Diazed.
+--     Hintergründe (Oberfläche/Anmeldung): Unschärfe einstellbar.
+--  3. Leitungen: feste Regeln für bestehende Leitungs-Artikel nachziehen
+--     (Hersteller "Generisch", immer Zubehör, nicht einzeln vermietbar, kein
+--     Einkaufs-/Tagespreis, keine Firmware, kein Rackeinbau, keine
+--     Abmessungen, Elektroprüfung nach Leitungstyp, keine Schutzklasse).
+
+-- 1. Stromverteiler
+ALTER TABLE power_distributor_devices
+    ADD COLUMN fuse_system  VARCHAR(10) NULL AFTER characteristic,              -- neozed | diazed (nur device_type = fuse)
+    ADD COLUMN three_single TINYINT(1)  NOT NULL DEFAULT 0 AFTER fuse_system,   -- 3 einzelne 1-polige Geräte (je Phase)
+    ADD COLUMN phase        VARCHAR(2)  NULL AFTER three_single;                -- L1 | L2 | L3 bei einphasigen Schutzorganen
+
+ALTER TABLE power_distributor_outlets
+    ADD COLUMN phase VARCHAR(2) NULL AFTER device_id;                           -- L1 | L2 | L3 bei dreiphasiger Absicherung
+
+-- 2. Veranstaltungsorte
+ALTER TABLE venue_power_connections
+    ADD COLUMN fuse_type VARCHAR(10) NOT NULL DEFAULT 'mcb' AFTER breaker_rating; -- mcb | neozed | diazed
+
+-- 2b. Hintergründe: Unschärfe in Pixeln (0–20)
+ALTER TABLE company_settings
+    ADD COLUMN background_blur       TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER background_zoom,
+    ADD COLUMN login_background_blur TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER login_background_zoom;
+
+-- 3. Leitungen (Kategorie mit is_cable = 1)
+UPDATE articles a
+JOIN article_cables ac ON ac.article_id = a.id
+JOIN cable_types ct ON ct.id = ac.cable_type_id
+SET a.requires_electrical_inspection = ct.requires_electrical_inspection,
+    a.protection_class = NULL
+WHERE a.is_bundle = 0;
+
+UPDATE articles a
+JOIN categories c ON c.id = a.category_id AND c.is_cable = 1
+SET a.dimensions = NULL,
+    a.purchase_price = NULL,
+    a.is_19_inch = 0, a.rack_width = '19', a.height_units = NULL, a.install_depth_cm = NULL,
+    a.has_firmware = 0,
+    a.is_billable = 0, a.daily_rental_price = NULL,
+    a.is_rentable_individually = 0,
+    a.protection_class = NULL
+WHERE a.is_bundle = 0;
+
+-- Hersteller "Generisch": IGNORE überspringt Leitungen, deren Präfix es bei
+-- "Generisch" schon gibt (Präfix je Hersteller eindeutig) – diese beim
+-- nächsten Bearbeiten mit neuem Präfix speichern.
+UPDATE IGNORE articles a
+JOIN categories c ON c.id = a.category_id AND c.is_cable = 1
+JOIN (SELECT id FROM manufacturers WHERE is_generic = 1 ORDER BY name LIMIT 1) g
+SET a.manufacturer_id = g.id
+WHERE a.is_bundle = 0 AND (a.manufacturer_id IS NULL OR a.manufacturer_id <> g.id);
+
+UPDATE cable_types SET protection_class = NULL;
+
+-- --- 130_rental_blocking_company_holidays.sql ---
+-- Migration 130 (Nutzerwunsch):
+--  1. Veranstaltungen können den Zeitraum für andere Vermietungen sperren
+--     ("exklusiv", Checkbox im Veranstaltungsformular).
+--  2. Betriebsurlaub (Einstellungen › Firma › Betriebsurlaub): Veranstaltungen,
+--     die in einen Betriebsurlaub fallen, brauchen eine Abholung vor und eine
+--     Rückgabe nach dem Urlaub.
+
+ALTER TABLE rentals
+    ADD COLUMN blocks_other_rentals TINYINT(1) NOT NULL DEFAULT 0 AFTER deployment_days;
+
+CREATE TABLE company_holidays (
+    id         CHAR(36)     NOT NULL PRIMARY KEY,
+    start_date DATE         NOT NULL,
+    end_date   DATE         NOT NULL,
+    note       VARCHAR(255) NULL,
+    created_at DATETIME     NOT NULL,
+    updated_at DATETIME     NOT NULL,
+    KEY idx_company_holidays_dates (start_date, end_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --- 131_account_ledger.sql ---
+-- Migration 131 (Nutzerwunsch): Kontoführung je Bankverbindung.
+--  - Anfangsbestand je Konto (Betrag und ab welchem Datum er gilt)
+--  - Buchungen: Zahlungseingänge/-ausgänge ohne Beleg, abgebuchte Belege,
+--    Rechnungszahlungen und aus dem Zahlungsabgleich (MT940/CAMT.053)
+--    übernommene Umsätze. amount ist vorzeichenbehaftet (+ Eingang, − Ausgang).
+
+ALTER TABLE bank_accounts
+    ADD COLUMN opening_balance      DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER is_default,
+    ADD COLUMN opening_balance_date DATE          NULL AFTER opening_balance;
+
+CREATE TABLE account_transactions (
+    id              CHAR(36)      NOT NULL PRIMARY KEY,
+    bank_account_id CHAR(36)      NOT NULL,
+    booking_date    DATE          NOT NULL,
+    amount          DECIMAL(12,2) NOT NULL,
+    kind            VARCHAR(20)   NOT NULL,           -- manual | receipt | invoice | import
+    description     VARCHAR(255)  NOT NULL,
+    counterparty    VARCHAR(255)  NULL,
+    receipt_id      CHAR(36)      NULL,
+    invoice_id      CHAR(36)      NULL,
+    import_hash     CHAR(64)      NULL,               -- verhindert doppelte Übernahme aus dem Zahlungsabgleich
+    created_at      DATETIME      NOT NULL,
+    updated_at      DATETIME      NOT NULL,
+    KEY idx_account_transactions_account_date (bank_account_id, booking_date),
+    KEY idx_account_transactions_receipt (receipt_id),
+    KEY idx_account_transactions_invoice (invoice_id),
+    UNIQUE KEY uq_account_transactions_import (bank_account_id, import_hash),
+    CONSTRAINT fk_account_transactions_account FOREIGN KEY (bank_account_id) REFERENCES bank_accounts (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 132_bank_account_ledger_enabled.sql ---
+-- Migration 132 (Nutzerwunsch): Kontoführung je Firmenkonto in
+-- Einstellungen › Bankverbindungen einschaltbar. Konten, für die bereits
+-- Buchungen oder ein Anfangsbestand erfasst wurden, bleiben eingeschaltet.
+
+ALTER TABLE bank_accounts
+    ADD COLUMN ledger_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER is_default;
+
+UPDATE bank_accounts
+SET ledger_enabled = 1
+WHERE opening_balance <> 0
+   OR opening_balance_date IS NOT NULL
+   OR id IN (SELECT DISTINCT bank_account_id FROM account_transactions);
+
+-- --- 133_tax_company_data.sql ---
+-- Migration 133 (Nutzerwunsch): Steuer- und Firmendaten für Unternehmen,
+-- die regulär Umsatzsteuer abführen (Finanzamt, Rechtsform, Handelsregister,
+-- Geschäftsführung), und ein anpassbarer Hinweistext zur
+-- Umsatzsteuerbefreiung auf Dokumenten (leer = Standardtext nach § 19 UStG).
+
+ALTER TABLE invoice_settings
+    ADD COLUMN tax_office          VARCHAR(150) NULL AFTER vat_id,
+    ADD COLUMN legal_form          VARCHAR(100) NULL AFTER tax_office,
+    ADD COLUMN register_court      VARCHAR(150) NULL AFTER legal_form,
+    ADD COLUMN register_number     VARCHAR(100) NULL AFTER register_court,
+    ADD COLUMN managing_directors  VARCHAR(255) NULL AFTER register_number,
+    ADD COLUMN small_business_note VARCHAR(500) NULL AFTER managing_directors;
+
+-- --- 134_technicians_trades.sql ---
+-- Migration 134 (Nutzerwunsch): Recht "Techniker", Gewerke und
+-- Techniker-Einsatzplanung je Veranstaltung.
+--  - trades: Gewerke (Einstellungen › Lager & Veranstaltungen › Techniker & Gewerke)
+--  - technician_profiles: je Techniker-Benutzer, ob er direkt verplant werden
+--    kann oder erst zustimmen muss, sowie Messenger-Kontakt (Mobilnummer für
+--    WhatsApp/Signal, Telegram-Chat-ID)
+--  - rental_trades: an einer Veranstaltung benötigte Gewerke
+--  - rental_technicians: Techniker einer Veranstaltung mit Status
+--    (requested | confirmed | declined | assigned), bedienten Gewerken und
+--    Erinnerungszähler
+--  - technician_settings: wann unbeantwortete Anfragen erneut erinnert werden
+
+CREATE TABLE trades (
+    id         CHAR(36)     NOT NULL PRIMARY KEY,
+    name       VARCHAR(100) NOT NULL,
+    sort_order INT          NOT NULL DEFAULT 0,
+    created_at DATETIME     NOT NULL,
+    updated_at DATETIME     NOT NULL,
+    UNIQUE KEY uq_trades_name (name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE technician_profiles (
+    user_id               CHAR(36)     NOT NULL PRIMARY KEY,
+    requires_confirmation TINYINT(1)   NOT NULL DEFAULT 1,
+    phone                 VARCHAR(50)  NULL,
+    telegram_chat_id      VARCHAR(100) NULL,
+    updated_at            DATETIME     NOT NULL,
+    CONSTRAINT fk_technician_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_trades (
+    rental_id CHAR(36) NOT NULL,
+    trade_id  CHAR(36) NOT NULL,
+    PRIMARY KEY (rental_id, trade_id),
+    CONSTRAINT fk_rental_trades_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_trades_trade FOREIGN KEY (trade_id) REFERENCES trades (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_technicians (
+    id               CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id        CHAR(36)     NOT NULL,
+    user_id          CHAR(36)     NOT NULL,
+    status           VARCHAR(20)  NOT NULL,
+    trade_ids        VARCHAR(1000) NULL,
+    note             VARCHAR(500) NULL,
+    requested_at     DATETIME     NOT NULL,
+    responded_at     DATETIME     NULL,
+    reminder_count   INT          NOT NULL DEFAULT 0,
+    last_notified_at DATETIME     NULL,
+    created_at       DATETIME     NOT NULL,
+    updated_at       DATETIME     NOT NULL,
+    UNIQUE KEY uq_rental_technicians (rental_id, user_id),
+    KEY idx_rental_technicians_user (user_id, status),
+    KEY idx_rental_technicians_status (status),
+    CONSTRAINT fk_rental_technicians_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_technicians_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE technician_settings (
+    id             TINYINT      NOT NULL PRIMARY KEY,
+    reminder_hours VARCHAR(100) NOT NULL DEFAULT '24,72',
+    updated_at     DATETIME     NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO technician_settings (id, reminder_hours, updated_at) VALUES (1, '24,72', NOW());
+
+-- --- 135_event_audio.sql ---
+-- Migration 135 (Nutzerwunsch): Veranstaltungs-Audio
+--  - rental_audio_files: Jingles und weitere Audio-Dateien je Veranstaltung
+--    (WAV/FLAC/AAC/MP3); minute_programs.jingle_audio_file_id wählt je
+--    Minutenprogramm den Jingle
+--  - audio_players: Abspielgeräte (Raspberry Pi am Mischpult) mit Geräte-Token
+--  - rental_audio_settings: zugeordnetes Abspielgerät + Gong-Vorgabe je Veranstaltung
+--  - rental_organizer_logins: zeitlich begrenzbare Veranstalter-Zugänge zur Live-Oberfläche
+--  - rental_playback_requests: Warteschlange (Jingle, Audio, Text-Durchsage,
+--    Mikrofon-Aufnahme, Stopp), die der Pi abholt
+--  - audio_settings: Gong-Datei, Sprachausgabe (Sprache/Stimme/Tempo), Upload-Limit
+
+CREATE TABLE rental_audio_files (
+    id                CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id         CHAR(36)     NOT NULL,
+    kind              VARCHAR(20)  NOT NULL,
+    title             VARCHAR(160) NOT NULL,
+    description       VARCHAR(500) NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename   VARCHAR(255) NOT NULL,
+    mime_type         VARCHAR(100) NOT NULL,
+    size_bytes        INT UNSIGNED NOT NULL DEFAULT 0,
+    sort_order        INT          NOT NULL DEFAULT 0,
+    created_at        DATETIME     NOT NULL,
+    KEY idx_rental_audio_files_rental (rental_id, kind, sort_order),
+    CONSTRAINT fk_rental_audio_files_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+ALTER TABLE minute_programs
+    ADD COLUMN jingle_audio_file_id CHAR(36) NULL AFTER jingle_before;
+
+CREATE TABLE audio_players (
+    id             CHAR(36)     NOT NULL PRIMARY KEY,
+    name           VARCHAR(120) NOT NULL,
+    token_hash     CHAR(64)     NOT NULL,
+    token_hint     VARCHAR(20)  NOT NULL,
+    enabled        TINYINT(1)   NOT NULL DEFAULT 1,
+    last_seen_at   DATETIME     NULL,
+    last_ip        VARCHAR(45)  NULL,
+    player_version VARCHAR(60)  NULL,
+    now_playing    VARCHAR(255) NULL,
+    created_at     DATETIME     NOT NULL,
+    UNIQUE KEY uq_audio_players_token (token_hash)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_audio_settings (
+    rental_id        CHAR(36)   NOT NULL PRIMARY KEY,
+    player_id        CHAR(36)   NULL,
+    gong_by_default  TINYINT(1) NOT NULL DEFAULT 1,
+    updated_at       DATETIME   NOT NULL,
+    KEY idx_rental_audio_settings_player (player_id),
+    CONSTRAINT fk_rental_audio_settings_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_audio_settings_player FOREIGN KEY (player_id) REFERENCES audio_players (id) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_organizer_logins (
+    id              CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id       CHAR(36)     NOT NULL,
+    label           VARCHAR(120) NOT NULL,
+    username        VARCHAR(80)  NOT NULL,
+    password_hash   VARCHAR(255) NOT NULL,
+    valid_from      DATETIME     NULL,
+    valid_until     DATETIME     NULL,
+    enabled         TINYINT(1)   NOT NULL DEFAULT 1,
+    failed_attempts INT          NOT NULL DEFAULT 0,
+    locked_until    DATETIME     NULL,
+    last_login_at   DATETIME     NULL,
+    created_at      DATETIME     NOT NULL,
+    UNIQUE KEY uq_rental_organizer_logins_username (username),
+    KEY idx_rental_organizer_logins_rental (rental_id),
+    CONSTRAINT fk_rental_organizer_logins_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_playback_requests (
+    id                        CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id                 CHAR(36)     NOT NULL,
+    kind                      VARCHAR(20)  NOT NULL,
+    audio_file_id             CHAR(36)     NULL,
+    label                     VARCHAR(160) NULL,
+    text                      TEXT         NULL,
+    recording_stored_filename VARCHAR(255) NULL,
+    recording_mime_type       VARCHAR(100) NULL,
+    with_gong                 TINYINT(1)   NOT NULL DEFAULT 0,
+    status                    VARCHAR(20)  NOT NULL DEFAULT 'queued',
+    requested_by_type         VARCHAR(20)  NOT NULL,
+    requested_by_id           CHAR(36)     NULL,
+    requested_by_name         VARCHAR(160) NOT NULL,
+    player_id                 CHAR(36)     NULL,
+    error                     VARCHAR(500) NULL,
+    created_at                DATETIME     NOT NULL,
+    started_at                DATETIME     NULL,
+    finished_at               DATETIME     NULL,
+    KEY idx_rental_playback_requests_queue (rental_id, status, created_at),
+    CONSTRAINT fk_rental_playback_requests_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE audio_settings (
+    id                     TINYINT      NOT NULL PRIMARY KEY,
+    gong_original_filename VARCHAR(255) NULL,
+    gong_stored_filename   VARCHAR(255) NULL,
+    gong_mime_type         VARCHAR(100) NULL,
+    tts_language           VARCHAR(20)  NOT NULL DEFAULT 'de-DE',
+    tts_voice              VARCHAR(100) NULL,
+    tts_rate               DECIMAL(3,2) NOT NULL DEFAULT 1.00,
+    max_upload_mb          INT          NOT NULL DEFAULT 50,
+    queue_expiry_minutes   INT          NOT NULL DEFAULT 10,
+    updated_at             DATETIME     NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO audio_settings (id, tts_language, tts_rate, max_upload_mb, queue_expiry_minutes, updated_at)
+VALUES (1, 'de-DE', 1.00, 50, 10, NOW());
+
+-- --- 136_scheduled_playbacks.sql ---
+-- Migration 136: zeitlich geplante Audio-Einspieler (Jingles / Audio-Dateien)
+--  - scheduled_playbacks: geplante Wiedergaben je Veranstaltung; zur Startzeit
+--    legt der Server daraus einen normalen Abspielauftrag an (beim Abruf durch
+--    das Abspielgerät bzw. die Live-Oberfläche, kein Cronjob nötig)
+--  - rental_organizer_logins.can_schedule: Veranstalter-Zugang darf planen
+--    (inkl. eigener Audio-Uploads); muss beim Anlegen bewusst erlaubt werden
+
+ALTER TABLE rental_organizer_logins
+    ADD COLUMN can_schedule TINYINT(1) NOT NULL DEFAULT 0 AFTER enabled;
+
+CREATE TABLE IF NOT EXISTS scheduled_playbacks (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    rental_id CHAR(36) NOT NULL,
+    audio_file_id CHAR(36) NOT NULL,
+    play_at DATETIME NOT NULL,
+    note VARCHAR(255) NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    playback_request_id CHAR(36) NULL,
+    created_by_type VARCHAR(20) NOT NULL,
+    created_by_id CHAR(36) NULL,
+    created_by_name VARCHAR(160) NOT NULL,
+    created_at DATETIME NOT NULL,
+    triggered_at DATETIME NULL,
+    KEY idx_scheduled_playbacks_due (rental_id, status, play_at),
+    CONSTRAINT fk_scheduled_playbacks_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_scheduled_playbacks_file FOREIGN KEY (audio_file_id) REFERENCES rental_audio_files (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --- 137_rental_audio_logo.sql ---
+-- Migration 137: eigenes Logo je Veranstaltung für die Live-Oberfläche
+-- (Audio-Dashboard). Wird nur Veranstalter-Zugängen angezeigt; Techniker
+-- und Admins sehen immer das Firmenlogo.
+ALTER TABLE rental_audio_settings
+    ADD COLUMN logo_filename VARCHAR(255) NULL AFTER gong_by_default;
+
+-- --- 138_audio_upload_language.sql ---
+-- Migration 138: Upload-Recht für Veranstalter-Zugänge und Sprache der Durchsagen
+--  - rental_organizer_logins.can_upload: darf eigene Sounddateien hochladen
+--    (Techniker/Admins dürfen das immer)
+--  - rental_audio_settings.tts_language: feste Sprache für getippte Durchsagen
+--    dieser Veranstaltung; NULL = Sprache wird in der Live-Oberfläche gewählt
+--  - rental_playback_requests.language: Sprache je Durchsage (an das Abspielgerät)
+ALTER TABLE rental_organizer_logins
+    ADD COLUMN can_upload TINYINT(1) NOT NULL DEFAULT 0 AFTER can_schedule;
+ALTER TABLE rental_audio_settings
+    ADD COLUMN tts_language VARCHAR(10) NULL AFTER logo_filename;
+ALTER TABLE rental_playback_requests
+    ADD COLUMN language VARCHAR(10) NULL AFTER text;
+
+-- --- 139_recurring_playbacks.sql ---
+-- Migration 139: zyklische Einspieler (z. B. alle 10 Minuten, jede Stunde)
+-- Ein geplanter Einspieler mit repeat_interval_minutes ist eine Serie: nach
+-- jeder Wiedergabe rückt play_at um das Intervall vor, bis repeat_until bzw.
+-- repeat_max erreicht ist (spätestens zum Ende des Veranstaltungszeitraums).
+ALTER TABLE scheduled_playbacks
+    ADD COLUMN repeat_interval_minutes INT NULL AFTER note,
+    ADD COLUMN repeat_until DATETIME NULL AFTER repeat_interval_minutes,
+    ADD COLUMN repeat_max INT NULL AFTER repeat_until,
+    ADD COLUMN repeat_count INT NOT NULL DEFAULT 0 AFTER repeat_max;
+
+-- --- 140_multilingual_announcements.sql ---
+-- Migration 140: mehrsprachige Durchsagen und Übersetzer
+--  - rental_audio_settings.tts_language: jetzt Liste (kommagetrennt), z. B.
+--    "de-DE,en-GB"; leer = Sprache wird in der Live-Oberfläche gewählt
+--  - audio_settings: Übersetzer (none | openai | deepl), DeepL-Schlüssel,
+--    OpenAI-Modell (der OpenAI-Schlüssel kommt aus den KI-Werbebildern)
+ALTER TABLE rental_audio_settings
+    MODIFY COLUMN tts_language VARCHAR(255) NULL;
+ALTER TABLE audio_settings
+    ADD COLUMN translator_provider VARCHAR(10) NOT NULL DEFAULT 'none' AFTER queue_expiry_minutes,
+    ADD COLUMN deepl_api_key VARCHAR(255) NULL AFTER translator_provider,
+    ADD COLUMN openai_translation_model VARCHAR(60) NOT NULL DEFAULT 'gpt-4o-mini' AFTER deepl_api_key;
+
+-- --- 141_audio_player_pairing.sql ---
+-- Migration 141: Abspielgerät per 6-stelligem Code koppeln
+--  - audio_pairing_codes: kurzlebige Kopplungs-Codes je Veranstaltung. Der Code
+--    wird in der Veranstaltung unter "Audio & Durchsagen" erzeugt und am
+--    Abspielgerät (AutoEventPlay) eingegeben. Das Gerät meldet sich damit an
+--    POST /api/player/v1/pair, erhält seinen Geräte-Token und wird der
+--    Veranstaltung zugeordnet.
+--  - audio_pairing_failures: Fehlversuche je IP (Schutz gegen Durchprobieren)
+
+CREATE TABLE audio_pairing_codes (
+    id              CHAR(36)     NOT NULL PRIMARY KEY,
+    rental_id       CHAR(36)     NOT NULL,
+    code            CHAR(6)      NOT NULL,
+    created_by_name VARCHAR(160) NOT NULL,
+    created_at      DATETIME     NOT NULL,
+    expires_at      DATETIME     NOT NULL,
+    used_at         DATETIME     NULL,
+    player_id       CHAR(36)     NULL,
+    KEY idx_audio_pairing_codes_code (code, expires_at),
+    KEY idx_audio_pairing_codes_rental (rental_id),
+    CONSTRAINT fk_audio_pairing_codes_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE audio_pairing_failures (
+    id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    ip           VARCHAR(45)     NOT NULL,
+    attempted_at DATETIME        NOT NULL,
+    KEY idx_audio_pairing_failures_ip (ip, attempted_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 142_dry_hire.sql ---
+-- Migration 141: Dry-Hire-Preise
+--  - article_dry_hire_prices: Dry-Hire-Tagesmietsatz je Artikel (zusätzlich
+--    zum normalen Tagesmietsatz); ohne Eintrag gilt der normale Preis
+--  - customer_dry_hire: Kunden, die Dry-Hire-Preise bekommen
+--  - dry_hire_tiers: Staffel „ab Tag X kostet jeder weitere Tag P % des
+--    Dry-Hire-Tagesmietsatzes“ – gilt für beliebig lange Mietdauer
+--  - document_dry_hire: ob ein Angebot/AB/Rechnung mit Dry-Hire-Preisen
+--    erstellt wurde (Checkbox im Formular)
+CREATE TABLE IF NOT EXISTS article_dry_hire_prices (
+    article_id CHAR(36) NOT NULL PRIMARY KEY,
+    daily_price DECIMAL(10,2) NOT NULL,
+    updated_at DATETIME NOT NULL,
+    CONSTRAINT fk_dry_hire_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS customer_dry_hire (
+    customer_id CHAR(36) NOT NULL PRIMARY KEY,
+    created_at DATETIME NOT NULL,
+    CONSTRAINT fk_dry_hire_customer FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS dry_hire_tiers (
+    from_day INT NOT NULL PRIMARY KEY,
+    percentage DECIMAL(6,2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO dry_hire_tiers (from_day, percentage) VALUES (1, 100.00), (2, 50.00), (8, 25.00);
+
+CREATE TABLE IF NOT EXISTS document_dry_hire (
+    document_type VARCHAR(30) NOT NULL,
+    document_id CHAR(36) NOT NULL,
+    enabled TINYINT(1) NOT NULL,
+    PRIMARY KEY (document_type, document_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --- 143_datev_export.sql ---
+-- Migration 143 (Nutzerwunsch): DATEV-Export für den Steuerberater
+--  - datev_settings: Einstellungen (Einstellungen → Integrationen → DATEV),
+--    Singleton-Zeile wie integration_base_settings. Kontenfelder NULL =
+--    Vorschlagskonto des gewählten Kontenrahmens (SKR 03/04).
+--  - datev_exports: Protokoll erzeugter/versendeter Exporte; verhindert
+--    außerdem, dass der automatische Versand (bin/send-datev-export.php)
+--    denselben Zeitraum mehrfach verschickt.
+CREATE TABLE IF NOT EXISTS datev_settings (
+    id                          TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    enabled                     TINYINT(1)   NOT NULL DEFAULT 0,
+    consultant_number           INT UNSIGNED NULL,
+    client_number               INT UNSIGNED NULL,
+    chart_of_accounts           CHAR(2)      NOT NULL DEFAULT '03',
+    account_length              TINYINT      NOT NULL DEFAULT 4,
+    fiscal_year_start_month     TINYINT      NOT NULL DEFAULT 1,
+    debtor_mode                 VARCHAR(20)  NOT NULL DEFAULT 'collective',
+    debtor_account              INT UNSIGNED NULL,
+    creditor_account            INT UNSIGNED NULL,
+    account_revenue_19          INT UNSIGNED NULL,
+    account_revenue_7           INT UNSIGNED NULL,
+    account_revenue_tax_free    INT UNSIGNED NULL,
+    account_revenue_small_business INT UNSIGNED NULL,
+    account_expense_goods       INT UNSIGNED NULL,
+    account_expense_tools       INT UNSIGNED NULL,
+    account_expense_vehicle     INT UNSIGNED NULL,
+    account_expense_other       INT UNSIGNED NULL,
+    receipt_tax_key             VARCHAR(4)   NULL,
+    include_receipts            TINYINT(1)   NOT NULL DEFAULT 1,
+    include_documents           TINYINT(1)   NOT NULL DEFAULT 1,
+    advisor_email               VARCHAR(255) NULL,
+    auto_send_enabled           TINYINT(1)   NOT NULL DEFAULT 0,
+    export_interval             VARCHAR(20)  NOT NULL DEFAULT 'monthly',
+    send_day                    TINYINT      NOT NULL DEFAULT 5,
+    updated_at                  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_datev_settings_singleton CHECK (id = 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO datev_settings (id) VALUES (1);
+
+CREATE TABLE IF NOT EXISTS datev_exports (
+    id              CHAR(36)     NOT NULL PRIMARY KEY,
+    period_from     DATE         NOT NULL,
+    period_to       DATE         NOT NULL,
+    export_trigger  VARCHAR(20)  NOT NULL,
+    recipient       VARCHAR(255) NULL,
+    booking_count   INT          NOT NULL DEFAULT 0,
+    document_count  INT          NOT NULL DEFAULT 0,
+    created_at      DATETIME     NOT NULL,
+    INDEX idx_datev_exports_period (period_from, period_to),
+    INDEX idx_datev_exports_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --- 144_inventory_number_current_values.sql ---
+-- Migration 144: Zeitwerte für die Versicherungsliste einer Veranstaltung
+--  - inventory_numbers.current_value*: geschätzter Zeitwert direkt an der
+--    Inventarnummer (händisch im Inventarnummern-Formular gepflegt oder per KI
+--    geschätzt, siehe current_value_source/current_value_note)
+--  - article_fixed_current_values: fester Zeitwert je Artikel, gilt für alle
+--    Exemplare ohne eigenen Zeitwert (z. B. XLR-Kabel)
+--  - insurance_export_settings: zuletzt gewählte Spalten des
+--    Versicherungslisten-Exports (CSV/PDF)
+-- Idempotent geschrieben; übernimmt außerdem Werte aus der Vorab-Version
+-- dieser Funktion (eigene Tabelle inventory_number_current_values).
+
+ALTER TABLE inventory_numbers
+    ADD COLUMN IF NOT EXISTS current_value            DECIMAL(10,2) NULL AFTER purchase_price,
+    ADD COLUMN IF NOT EXISTS current_value_source     VARCHAR(10)   NULL AFTER current_value,
+    ADD COLUMN IF NOT EXISTS current_value_note       VARCHAR(500)  NULL AFTER current_value_source,
+    ADD COLUMN IF NOT EXISTS current_value_updated_at DATETIME      NULL AFTER current_value_note;
+
+CREATE TABLE IF NOT EXISTS article_fixed_current_values (
+    article_id    CHAR(36)      NOT NULL PRIMARY KEY,
+    current_value DECIMAL(10,2) NOT NULL,
+    updated_at    DATETIME      NOT NULL,
+    CONSTRAINT fk_article_fixed_current_value_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS insurance_export_settings (
+    id      TINYINT      NOT NULL PRIMARY KEY,
+    fields  VARCHAR(255) NOT NULL,
+    CONSTRAINT chk_insurance_export_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO insurance_export_settings (id, fields)
+VALUES (1, 'category,manufacturer_model,inventory_number,acquisition_year,current_value,purchase_price');
+
+-- Vorab-Version: Werte aus der früheren eigenen Tabelle übernehmen und diese entfernen.
+CREATE TABLE IF NOT EXISTS inventory_number_current_values (
+    inventory_number_id CHAR(36)      NOT NULL PRIMARY KEY,
+    current_value       DECIMAL(10,2) NOT NULL,
+    source              VARCHAR(10)   NOT NULL DEFAULT 'manual',
+    note                VARCHAR(500)  NULL,
+    updated_at          DATETIME      NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+UPDATE inventory_numbers i
+    JOIN inventory_number_current_values v ON v.inventory_number_id = i.id
+SET i.current_value = v.current_value,
+    i.current_value_source = v.source,
+    i.current_value_note = v.note,
+    i.current_value_updated_at = v.updated_at
+WHERE i.current_value IS NULL;
+
+DROP TABLE inventory_number_current_values;
+
+-- --- 145_trusted_devices.sql ---
+-- Migration 145: "Dem Gerät für die nächsten 10 Tage vertrauen"
+--  - trusted_devices: Geräte (Browser), auf denen ein Benutzer nach
+--    erfolgreicher Zwei-Faktor-Anmeldung den Haken "Dem Gerät vertrauen"
+--    gesetzt hat. Bis expires_at entfällt dort die Abfrage des zweiten
+--    Faktors (Passwort bleibt immer Pflicht).
+--  - Im Browser liegt nur ein Cookie "selector:validator". Gespeichert wird
+--    hier der selector im Klartext (zum Nachschlagen) und vom validator nur
+--    der SHA-256-Hash — ein Datenbank-Leck allein reicht also nicht, um
+--    einem Gerät "vertrauen" zu lassen.
+--  - Alle Einträge eines Benutzers werden gelöscht, sobald er sein Passwort
+--    oder seinen zweiten Faktor ändert (bzw. ein Administrator das tut),
+--    sowie manuell über Profil › Sicherheit.
+
+CREATE TABLE trusted_devices (
+    id            CHAR(36)     NOT NULL PRIMARY KEY,
+    user_id       VARCHAR(36)  NOT NULL,
+    selector      CHAR(24)     NOT NULL,
+    token_hash    CHAR(64)     NOT NULL,
+    user_agent    TEXT         NULL,
+    ip_address    VARCHAR(45)  NULL,
+    created_at    DATETIME     NOT NULL,
+    expires_at    DATETIME     NOT NULL,
+    UNIQUE KEY uq_trusted_devices_selector (selector),
+    KEY idx_trusted_devices_user (user_id, expires_at),
+    CONSTRAINT fk_trusted_devices_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =======================================================================
+-- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
+--
+-- Die folgende Liste nennt jede Migration aus database/migrations/, deren
+-- Wirkung in diesem schema.sql bereits enthalten ist. Der Web-Installer
+-- (public/install.php, applyFreshSchema()) spielt nach diesem Snapshot
+-- über den MigrationRunner alle Migrationen ein, die hier NICHT stehen;
+-- dasselbe gilt für "mysql < database/schema.sql" gefolgt von
+-- "php bin/migrate.php". Ein veralteter Snapshot führt damit nicht mehr
+-- zu einer unvollständigen Neuinstallation.
+--
+-- Beim Hinzufügen einer Migration: ihren Inhalt oben als eigenen
+-- "-- --- NNN_name.sql ---"-Abschnitt anhängen UND ihren Dateinamen hier
+-- eintragen (tests/unit/Infrastructure/Migrations/SchemaSnapshotTest
+-- schlägt sonst fehl). Niemals eine Migration eintragen, deren Inhalt
+-- oben fehlt.
+--
+-- Tabellendefinition identisch zu MigrationRunner::ensureMigrationsTable().
+-- =======================================================================
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    migration  VARCHAR(255) NOT NULL PRIMARY KEY,
+    applied_at DATETIME     NOT NULL
+);
+
+INSERT INTO schema_migrations (migration, applied_at) VALUES
+    ('001_add_prefixes.sql', NOW()),
+    ('002_add_customers.sql', NOW()),
+    ('003_add_cases.sql', NOW()),
+    ('004_add_suppliers.sql', NOW()),
+    ('005_add_rentals.sql', NOW()),
+    ('006_add_prices_and_customer_number.sql', NOW()),
+    ('007_add_accessories_and_returns.sql', NOW()),
+    ('008_add_users_and_auth.sql', NOW()),
+    ('009_add_electrical_inspection_flag.sql', NOW()),
+    ('010_add_electrical_inspections.sql', NOW()),
+    ('011_add_venues.sql', NOW()),
+    ('012_add_billing_fields.sql', NOW()),
+    ('013_add_price_tiers.sql', NOW()),
+    ('014_make_event_location_nullable.sql', NOW()),
+    ('015_add_company_settings.sql', NOW()),
+    ('016_add_legal_settings.sql', NOW()),
+    ('017_add_webauthn_credentials.sql', NOW()),
+    ('018_add_user_default_page_size.sql', NOW()),
+    ('019_add_user_locale.sql', NOW()),
+    ('020_add_label_printers.sql', NOW()),
+    ('021_add_offers.sql', NOW()),
+    ('022_add_company_logo_options.sql', NOW()),
+    ('023_add_user_names_password_setup_and_two_factor_enforcement.sql', NOW()),
+    ('024_add_venue_power_connections.sql', NOW()),
+    ('025_add_user_sessions.sql', NOW()),
+    ('026_add_company_brand_name.sql', NOW()),
+    ('027_add_smtp_reply_to_and_archive_bcc.sql', NOW()),
+    ('028_add_email_templates.sql', NOW()),
+    ('029_add_smtp_archive_categories.sql', NOW()),
+    ('030_add_offer_pdf_template.sql', NOW()),
+    ('031_add_invoice_settings_and_sequence.sql', NOW()),
+    ('032_add_invoice_pdf_template.sql', NOW()),
+    ('033_add_invoices.sql', NOW()),
+    ('034_add_invoice_email_template.sql', NOW()),
+    ('035_add_receipts.sql', NOW()),
+    ('036_add_inventory_number_receipt.sql', NOW()),
+    ('037_add_pricing_settings_and_invoice_discounts.sql', NOW()),
+    ('038_add_offer_accessory_flat_rate_and_discount.sql', NOW()),
+    ('039_add_mailbox_settings.sql', NOW()),
+    ('040_add_receipt_inbox_allowed_senders.sql', NOW()),
+    ('041_add_receipt_inbox_messages.sql', NOW()),
+    ('042_add_user_notify_on_new_receipt_email.sql', NOW()),
+    ('043_add_push_settings_and_subscriptions.sql', NOW()),
+    ('044_add_document_storage_targets.sql', NOW()),
+    ('045_add_document_storage_assignments.sql', NOW()),
+    ('046_add_document_storage_upload_log.sql', NOW()),
+    ('047_add_rma_kind_and_worked_hours.sql', NOW()),
+    ('048_add_rma_receipts.sql', NOW()),
+    ('049_add_labor_time_articles.sql', NOW()),
+    ('050_add_offer_labor_items.sql', NOW()),
+    ('051_add_invoice_labor_items.sql', NOW()),
+    ('052_add_dunning.sql', NOW()),
+    ('053_add_dunning_notice_document_type.sql', NOW()),
+    ('054_add_article_active_flag.sql', NOW()),
+    ('055_add_warehouses.sql', NOW()),
+    ('056_widen_price_tiers_day_count.sql', NOW()),
+    ('057_add_company_background_image.sql', NOW()),
+    ('058_add_rma_package_photos.sql', NOW()),
+    ('059_add_article_channel_listings.sql', NOW()),
+    ('060_add_integration_settings.sql', NOW()),
+    ('061_add_api_tokens.sql', NOW()),
+    ('062_add_calendars.sql', NOW()),
+    ('063_add_caldav_signing_settings.sql', NOW()),
+    ('064_convert_pdf_settings_to_rich_html.sql', NOW()),
+    ('065_add_carddav_credentials.sql', NOW()),
+    ('066_add_pdf_design_settings.sql', NOW()),
+    ('067_add_rental_reminders.sql', NOW()),
+    ('068_add_overage_settings.sql', NOW()),
+    ('069_add_inventory_number_storage_location.sql', NOW()),
+    ('070_add_article_19_inch_fields.sql', NOW()),
+    ('071_add_rental_customer_checklist.sql', NOW()),
+    ('072_add_inventory_number_sales.sql', NOW()),
+    ('073_add_vehicles.sql', NOW()),
+    ('074_add_vouchers.sql', NOW()),
+    ('075_add_impersonations.sql', NOW()),
+    ('076_add_firmware.sql', NOW()),
+    ('077_add_messaging.sql', NOW()),
+    ('078_add_purchase_orders_and_sale_stock.sql', NOW()),
+    ('081_add_minute_programs.sql', NOW()),
+    ('082_add_rental_terms_and_id_check.sql', NOW()),
+    ('083_add_notice_documents.sql', NOW()),
+    ('084_add_document_numbering_and_order_confirmations.sql', NOW()),
+    ('085_add_offer_invoice_free_text_items.sql', NOW()),
+    ('086_add_invoice_due_reminders.sql', NOW()),
+    ('087_add_article_pre_issue_checks.sql', NOW()),
+    ('088_add_ai_ad_images.sql', NOW()),
+    ('089_backfill_missing_pricing_settings_row.sql', NOW()),
+    ('090_add_dashboard_widgets.sql', NOW()),
+    ('091_add_pdf_layout_elements.sql', NOW()),
+    ('092_add_closing_text.sql', NOW()),
+    ('093_vehicle_load_area_dimensions.sql', NOW()),
+    ('094_invoice_flatrate_logistics_rental_link_templates.sql', NOW()),
+    ('095_customer_number.sql', NOW()),
+    ('096_protection_class_and_inspection_measurements.sql', NOW()),
+    ('097_labor_item_user.sql', NOW()),
+    ('098_pricing_rounding.sql', NOW()),
+    ('099_voucher_customer_restriction.sql', NOW()),
+    ('100_customer_contacts.sql', NOW()),
+    ('101_labor_time_daily_rate.sql', NOW()),
+    ('102_optional_document_period.sql', NOW()),
+    ('103_offer_order_confirmation_rental_link.sql', NOW()),
+    ('104_contact_address_and_document_link.sql', NOW()),
+    ('105_bank_accounts.sql', NOW()),
+    ('106_payment_methods.sql', NOW()),
+    ('107_article_bundles.sql', NOW()),
+    ('108_company_contact.sql', NOW()),
+    ('109_article_document_fields.sql', NOW()),
+    ('110_pdf_currency_display.sql', NOW()),
+    ('111_bundle_alternatives.sql', NOW()),
+    ('112_company_favicon.sql', NOW()),
+    ('113_article_sets.sql', NOW()),
+    ('114_case_images_notice.sql', NOW()),
+    ('115_racks.sql', NOW()),
+    ('116_pdf_fonts.sql', NOW()),
+    ('117_power_distributors.sql', NOW()),
+    ('118_power_distributor_category.sql', NOW()),
+    ('119_generic_manufacturer.sql', NOW()),
+    ('120_case_rack_numbering.sql', NOW()),
+    ('121_invoice_corrections.sql', NOW()),
+    ('122_invoice_correction_email.sql', NOW()),
+    ('123_invoice_correction_document_storage.sql', NOW()),
+    ('124_rack_exemplars_case_numbers.sql', NOW()),
+    ('125_cables.sql', NOW()),
+    ('126_background_media.sql', NOW()),
+    ('127_security_settings.sql', NOW()),
+    ('128_half_rack.sql', NOW()),
+    ('129_cable_rules_fuses.sql', NOW()),
+    ('130_rental_blocking_company_holidays.sql', NOW()),
+    ('131_account_ledger.sql', NOW()),
+    ('132_bank_account_ledger_enabled.sql', NOW()),
+    ('133_tax_company_data.sql', NOW()),
+    ('134_technicians_trades.sql', NOW()),
+    ('135_event_audio.sql', NOW()),
+    ('136_scheduled_playbacks.sql', NOW()),
+    ('137_rental_audio_logo.sql', NOW()),
+    ('138_audio_upload_language.sql', NOW()),
+    ('139_recurring_playbacks.sql', NOW()),
+    ('140_multilingual_announcements.sql', NOW()),
+    ('141_audio_player_pairing.sql', NOW()),
+    ('142_dry_hire.sql', NOW()),
+    ('143_datev_export.sql', NOW()),
+    ('144_inventory_number_current_values.sql', NOW()),
+    ('145_trusted_devices.sql', NOW());

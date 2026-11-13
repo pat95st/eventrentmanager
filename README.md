@@ -268,6 +268,11 @@ den Installer):**
 
    (Das Skript legt die Datenbank `materialverleih` selbst an.)
 
+   `schema.sql` vermerkt in `schema_migrations`, welche Migrationen es
+   bereits enthält. Sobald `storage/database.yaml` eingerichtet ist (Schritt
+   weiter unten), zieht `php bin/migrate.php` alle neueren Migrationen nach,
+   falls der Snapshot einmal hinter `database/migrations/` zurückliegt.
+
    **Bestehende Installation aktualisieren:** Wer die Software bereits im
    Einsatz hat (vor Einführung der Hersteller-/Artikel-Präfixe für
    Inventurnummern), führt stattdessen die Migration aus, statt die

@@ -60,6 +60,28 @@ final class Request
         return array_values(array_filter(array_map(static fn ($v) => is_scalar($v) ? (string) $v : null, $value), static fn ($v) => $v !== null));
     }
 
+    /**
+     * Für Feldgruppen mit eigenem Schlüssel (name="feld[schluessel]").
+     *
+     * @return array<string, string> leeres Array, falls nichts übermittelt wurde
+     */
+    public function inputMap(string $key): array
+    {
+        $value = $this->post[$key] ?? null;
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($value as $entryKey => $entryValue) {
+            if (is_scalar($entryValue)) {
+                $map[(string) $entryKey] = (string) $entryValue;
+            }
+        }
+
+        return $map;
+    }
+
     public function param(string $key): string
     {
         return $this->routeParams[$key] ?? '';

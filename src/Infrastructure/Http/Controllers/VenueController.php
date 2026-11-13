@@ -7,22 +7,32 @@ namespace App\Infrastructure\Http\Controllers;
 use App\Application\Command\CommandBus;
 use App\Application\Query\QueryBus;
 use App\Application\Rental\Query\ListRentalsForVenue;
+use App\Application\Venue\Command\AddStageRiser;
 use App\Application\Venue\Command\AddVenuePowerConnection;
+use App\Application\Venue\Command\AddVenueStage;
 use App\Application\Venue\Command\CreateVenue;
+use App\Application\Venue\Command\DeleteStageRiser;
 use App\Application\Venue\Command\DeleteVenue;
+use App\Application\Venue\Command\MoveStageRiser;
+use App\Application\Venue\Command\UpdateStageRiser;
 use App\Application\Venue\Command\DeleteVenuePowerConnection;
+use App\Application\Venue\Command\DeleteVenueStage;
 use App\Application\Venue\Command\UpdateVenue;
 use App\Application\Venue\Command\UpdateVenuePowerConnection;
+use App\Application\Venue\Command\UpdateVenueStage;
 use App\Application\Settings\Query\GetCompanySettings;
 use App\Application\Venue\Query\GetVenue;
 use App\Application\Venue\Query\GetVenuesNeedDistributorFlags;
 use App\Application\Venue\Query\ListVenuePowerConnections;
+use App\Application\Venue\Query\ListVenueStageRisers;
+use App\Application\Venue\Query\ListVenueStages;
 use App\Application\Venue\Query\ListVenues;
 use App\Application\Warehouse\Query\ListWarehouses;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Venue\PowerConnection;
+use App\Domain\Venue\Stage;
 use App\Domain\Venue\Venue;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
@@ -155,7 +165,9 @@ final class VenueController
 
         $powerConnections = $this->queries->ask(new ListVenuePowerConnections($venue->id));
 
-        $this->renderForm($venue, [], [], $venue->id, $upcomingRentals, $pastRentals, $powerConnections);
+        $stages = $this->queries->ask(new ListVenueStages($venue->id));
+
+        $this->renderForm($venue, [], [], $venue->id, $upcomingRentals, $pastRentals, $powerConnections, $stages);
     }
 
     /** Baut die einzeilige Firmenadresse (für den Google-Maps-Routen-Button) aus den Firmeneinstellungen. */
@@ -192,7 +204,8 @@ final class VenueController
         } catch (ValidationException $e) {
             $venue = $this->queries->ask(new GetVenue($id));
             $powerConnections = $this->queries->ask(new ListVenuePowerConnections($id));
-            $this->renderForm($venue, $e->errors(), $this->oldFromCommand($command), $id, powerConnections: $powerConnections);
+            $stages = $this->queries->ask(new ListVenueStages($id));
+            $this->renderForm($venue, $e->errors(), $this->oldFromCommand($command), $id, powerConnections: $powerConnections, stages: $stages);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }
@@ -283,12 +296,190 @@ final class VenueController
         Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten');
     }
 
+    public function addStage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        $command = new AddVenueStage(
+            venueId: $venueId,
+            name: $request->input('name', '') ?? '',
+            width: $request->input('width', '') ?? '',
+            depth: $request->input('depth', '') ?? '',
+            height: $request->input('height', '') ?? '',
+            type: $request->input('type', '') ?? '',
+            powerDistances: $request->inputMap('distances'),
+            buildMode: $request->input('build_mode', '') ?? '',
+            elementStock: $request->inputMap('elements'),
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success(t('venues.stages.flash.added'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehnen');
+    }
+
+    public function updateStage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        $command = new UpdateVenueStage(
+            id: $request->param('stageId'),
+            venueId: $venueId,
+            name: $request->input('name', '') ?? '',
+            width: $request->input('width', '') ?? '',
+            depth: $request->input('depth', '') ?? '',
+            height: $request->input('height', '') ?? '',
+            type: $request->input('type', '') ?? '',
+            powerDistances: $request->inputMap('distances'),
+            buildMode: $request->input('build_mode', '') ?? '',
+            elementStock: $request->inputMap('elements'),
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success(t('venues.stages.flash.updated'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehnen');
+    }
+
+    public function deleteStage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        try {
+            $this->commands->dispatch(new DeleteVenueStage($request->param('stageId'), $venueId));
+            Flash::success(t('venues.stages.flash.deleted'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehnen');
+    }
+
+    public function addRiser(Request $request): void
+    {
+        $venueId = $request->param('id');
+        $stageId = $request->param('stageId');
+
+        $command = new AddStageRiser(
+            venueId: $venueId,
+            stageId: $stageId,
+            name: $request->input('name', '') ?? '',
+            shape: $request->input('shape', '') ?? '',
+            width: $request->input('width', '') ?? '',
+            depth: $request->input('depth', '') ?? '',
+            height: $request->input('height', '') ?? '',
+            centerX: $request->input('center_x', '') ?? '',
+            centerY: $request->input('center_y', '') ?? '',
+            rotation: $request->input('rotation', '') ?? '',
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success(t('venues.risers.flash.added'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehne-' . $stageId);
+    }
+
+    public function updateRiser(Request $request): void
+    {
+        $venueId = $request->param('id');
+        $stageId = $request->param('stageId');
+
+        $command = new UpdateStageRiser(
+            id: $request->param('riserId'),
+            venueId: $venueId,
+            stageId: $stageId,
+            name: $request->input('name', '') ?? '',
+            shape: $request->input('shape', '') ?? '',
+            width: $request->input('width', '') ?? '',
+            depth: $request->input('depth', '') ?? '',
+            height: $request->input('height', '') ?? '',
+            centerX: $request->input('center_x', '') ?? '',
+            centerY: $request->input('center_y', '') ?? '',
+            rotation: $request->input('rotation', '') ?? '',
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success(t('venues.risers.flash.updated'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehne-' . $stageId);
+    }
+
+    /**
+     * Drag-and-drop im Bühnenplan (public/assets/js/stage-riser-editor.js):
+     * speichert nur die neue Position und antwortet als JSON.
+     */
+    public function moveRiser(Request $request): void
+    {
+        try {
+            $position = $this->commands->dispatch(new MoveStageRiser(
+                id: $request->param('riserId'),
+                venueId: $request->param('id'),
+                stageId: $request->param('stageId'),
+                centerX: $request->input('center_x', '') ?? '',
+                centerY: $request->input('center_y', '') ?? '',
+            ));
+            Response::json(['ok' => true, 'x' => $position['x'], 'y' => $position['y']]);
+        } catch (ValidationException $e) {
+            Response::json(['error' => implode(' ', $e->errors())], 422);
+        } catch (NotFoundException $e) {
+            Response::json(['error' => $e->getMessage()], 404);
+        }
+    }
+
+    public function deleteRiser(Request $request): void
+    {
+        $venueId = $request->param('id');
+        $stageId = $request->param('stageId');
+
+        try {
+            $this->commands->dispatch(new DeleteStageRiser($request->param('riserId'), $venueId, $stageId));
+            Flash::success(t('venues.risers.flash.deleted'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#buehne-' . $stageId);
+    }
+
     /**
      * @param array<string, string> $errors
      * @param array<string, mixed> $old
      * @param \App\Application\Rental\Query\VenueRentalEntry[] $upcomingRentals
      * @param \App\Application\Rental\Query\VenueRentalEntry[] $pastRentals
      * @param PowerConnection[] $powerConnections
+     * @param Stage[] $stages
      */
     private function renderForm(
         ?Venue $venue,
@@ -298,6 +489,7 @@ final class VenueController
         array $upcomingRentals = [],
         array $pastRentals = [],
         array $powerConnections = [],
+        array $stages = [],
     ): void {
         echo View::page('venues/form', [
             'venue' => $venue,
@@ -307,6 +499,9 @@ final class VenueController
             'upcomingRentals' => $upcomingRentals,
             'pastRentals' => $pastRentals,
             'powerConnections' => $powerConnections,
+            'stages' => $stages,
+            // Riser je Bühne — eine Abfrage für alle Bühnen des Veranstaltungsorts.
+            'stageRisers' => $venue !== null && $stages !== [] ? $this->queries->ask(new ListVenueStageRisers($venue->id)) : [],
             'needsDistributorWithRcd' => PowerConnection::anyNeedsDistributorWithRcd($powerConnections),
             'warehouses' => $this->queries->ask(new ListWarehouses())->items,
             'companyAddress' => $this->companyAddress(),

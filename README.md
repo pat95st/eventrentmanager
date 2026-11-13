@@ -77,6 +77,31 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Straße/Hausnummer, Adresszusatz, PLZ, Ort, Telefon, E-Mail-Adresse.
   Liste mit Freitextsuche (Name/Firma/Ort/E-Mail) sowie separater
   Anlegen-/Bearbeiten-Formularseite.
+- **Bühnen je Veranstaltungsort** (Migration 149): Auf der Bearbeiten-Seite
+  eines Veranstaltungsorts lassen sich beliebig viele Bühnen hinterlegen —
+  je mit Name, Breite × Tiefe, Bühnenhöhe (alle Maße in Metern, 0 =
+  ebenerdig) und Bauart (fest installiert oder mobil). Zu jedem
+  Stromanschluss des Veranstaltungsorts kann pro Bühne die Entfernung in
+  Metern eingetragen werden (leer = nicht erfasst). Diese Daten sind die
+  Grundlage für Bühnenpläne an Veranstaltungen.
+  **Mobile Bühnen aus Bühnenelementen** (Migration 150): Eine mobile Bühne
+  wird entweder über ihre Abmessungen angegeben — dann wird berechnet, wie
+  viele Bühnenelemente welcher Größe dafür nötig sind (Varianten „möglichst
+  wenige Elemente“, „nur 2 × 1 m“, „nur 1 × 1 m“) — oder über den vorhandenen
+  Bestand an Elementen; dann werden die daraus baubaren Bühnengrößen
+  vorgeschlagen (je Bühnentiefe die breiteste, mit verwendeten und übrigen
+  Elementen). Jeder Vorschlag zeigt eine maßstäbliche Draufsicht. Unterstützte
+  Elementgrößen: 2 × 1 m, 1 × 1 m, 2 × 0,5 m und 1 × 0,5 m (erweiterbar in
+  `App\Domain\Venue\StageElementSize`); gerechnet wird lückenlos im
+  0,5-m-Raster, siehe `App\Domain\Venue\StageElementPlanner`.
+  **Riser** (Migration 151): Auf jeder Bühne mit festen Abmessungen lassen
+  sich Riser frei platzieren — je mit optionaler Bezeichnung, Form
+  (Rechteck, Kreis, Halbkreis, Dreieck), den zur Form passenden Maßen
+  (Breite × Tiefe bzw. Durchmesser), Höhe und Drehung. Der Bühnenplan zeigt
+  die Bühne maßstäblich in der Draufsicht (Publikum unten); Riser werden
+  dort per Maus, Finger oder Pfeiltasten verschoben und die Position sofort
+  gespeichert (`public/assets/js/stage-riser-editor.js`). Gespeichert wird
+  der Mittelpunkt des Risers relativ zur linken Kante und zur Hinterkante.
 - **Ordner im Dateiablagesystem** (Migration 148): Für Veranstaltungen und
   Kunden lässt sich per Haken im jeweiligen Formular ein Ordner auf einem
   Ziellaufwerk anlegen (Einstellungen › Ziellaufwerke, dort je Laufwerk

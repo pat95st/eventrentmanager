@@ -16,12 +16,13 @@ use PDOException;
  * nachträglichen Einspielen neuer Migrationen nach einem Update) wendet nur
  * die noch fehlenden Dateien an.
  *
- * Bewusst KEIN Rückgriff auf database/schema.sql als Abkürzung für neue
- * Installationen: schema.sql wird im Projekt nicht zuverlässig synchron zu
- * database/migrations/ gepflegt, siehe README. Die Migrationsdateien selbst
- * sind die einzige verlässliche, vollständige Quelle des aktuellen Schemas.
+ * Die Basistabellen selbst stehen nur in database/schema.sql (die Migrationen
+ * sind rein inkrementell). schema.sql vermerkt in schema_migrations, welche
+ * Migrationen es bereits enthält; alles Neuere spielt dieser Runner ein. Ein
+ * veralteter Snapshot führt so nicht zu einer unvollständigen Neuinstallation.
  *
- * Genutzt vom Web-Installer (public/install.php) für frische Installationen
+ * Genutzt vom Web-Installer (public/install.php) im Anschluss an schema.sql
+ * bzw. für teilweise eingerichtete Datenbanken
  * und von bin/migrate.php für das Nachziehen neuer Migrationen bei
  * bestehenden Installationen nach einem Update.
  */

@@ -50,10 +50,22 @@ class Acceptance extends Module
         ]);
 
         // ProfileController::changePassword() leitet nach Erfolg auf '/'
-        // weiter, DashboardController::index() leitet von dort sofort
-        // weiter auf '/artikel' (siehe dort) — PhpBrowser folgt beiden
-        // Redirects automatisch, die Anmeldung endet also auf '/artikel'.
-        $browser->seeCurrentUrlEquals('/artikel');
+        // weiter, die Startseite (Dashboard) — dort endet die Anmeldung.
+        $browser->seeCurrentUrlEquals('/');
+    }
+
+    /**
+     * Prüft einen Header der zuletzt empfangenen HTTP-Antwort. PhpBrowser
+     * selbst bringt dafür keine Methode mit (seeHttpHeader() gibt es nur im
+     * REST-Modul), CalDavProfileCest braucht sie für den Content-Type des
+     * .mobileconfig-Downloads.
+     */
+    public function seeHttpHeader(string $name, string $expected): void
+    {
+        $actual = $this->phpBrowser()->client->getInternalResponse()->getHeader($name);
+
+        $this->assertIsString($actual, "Antwort enthält keinen Header \"{$name}\".");
+        $this->assertStringContainsString($expected, $actual);
     }
 
     private function phpBrowser(): PhpBrowser

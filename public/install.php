@@ -70,31 +70,33 @@ function databaseIsEmpty(\PDO $pdo): bool
 }
 
 /**
- * Richtet eine wirklich leere Datenbank in EINEM Rutsch über database/schema.sql
- * ein, statt alle ~90 Migrationsdateien einzeln nacheinander per MigrationRunner
- * abzuspielen.
+ * Richtet eine wirklich leere Datenbank über database/schema.sql ein und
+ * zieht anschließend über den MigrationRunner alle Migrationen nach, die der
+ * Snapshot noch nicht enthält.
  *
- * Grund: database/migrations/ enthält ausschließlich INKREMENTELLE
- * ALTER-TABLE-Migrationen für bereits bestehende Installationen (z. B. fügt
- * 001_add_prefixes.sql eine Spalte zu einer bereits vorhandenen
- * "manufacturers"-Tabelle hinzu) — die ursprünglichen CREATE-TABLE-
- * Anweisungen für die Basistabellen selbst sind NICHT Teil der
- * Migrationshistorie, sondern nur in schema.sql enthalten. Auf einer
- * wirklich leeren Datenbank würde bereits die allererste Migration mit
+ * Warum nicht einfach alle Migrationsdateien nacheinander abspielen:
+ * database/migrations/ enthält ausschließlich INKREMENTELLE Migrationen für
+ * bereits bestehende Installationen (z. B. fügt 001_add_prefixes.sql eine
+ * Spalte zu einer bereits vorhandenen "manufacturers"-Tabelle hinzu) — die
+ * ursprünglichen CREATE-TABLE-Anweisungen für die Basistabellen sind NICHT
+ * Teil der Migrationshistorie, sondern nur in schema.sql enthalten. Auf
+ * einer wirklich leeren Datenbank würde bereits die allererste Migration mit
  * "Table ... doesn't exist" fehlschlagen.
  *
- * database/schema.sql wird deshalb als vollständiger, aktueller
- * Schema-Snapshot gepflegt (zuletzt abgeglichen gegen alle Migrationen bis
- * einschließlich 088_add_ai_ad_images.sql) und hier direkt eingespielt.
- * Damit ein anschließendes "php bin/migrate.php" (oder ein erneuter
- * Installationslauf) die soeben eingespielten Migrationen nicht fälschlich
- * ein zweites Mal anwendet (würde z. B. mit "Duplicate column" fehlschlagen),
- * werden alle zum Zeitpunkt dieses Laufs vorhandenen Migrationsdateien direkt
- * im Anschluss als bereits angewendet in schema_migrations vermerkt.
+ * Welchen Stand der Snapshot hat, steht NICHT hier, sondern im Snapshot
+ * selbst: schema.sql legt am Ende die Tabelle schema_migrations an und trägt
+ * dort genau die Migrationen ein, deren Wirkung es bereits enthält (zuletzt
+ * abgeglichen gegen alle Migrationen bis einschließlich
+ * 145_trusted_devices.sql). Alles, was dort nicht steht, wendet der
+ * MigrationRunner im Anschluss regulär an. Früher wurden hier pauschal ALLE
+ * vorhandenen Migrationsdateien als angewendet vermerkt — war der Snapshot
+ * veraltet, fehlten einer Neuinstallation dadurch dauerhaft Tabellen, weil
+ * auch ein späteres "php bin/migrate.php" sie nicht mehr nachzog.
  *
  * @return array<int, array{file: string, status: string}> im selben Format
  *         wie MigrationRunner::applyAll(), zur einheitlichen Anzeige in
  *         Schritt 2 des Assistenten.
+ * @throws MigrationFailedException wenn eine nachzuziehende Migration scheitert.
  */
 function applyFreshSchema(\PDO $pdo): array
 {
@@ -103,15 +105,11 @@ function applyFreshSchema(\PDO $pdo): array
         throw new \RuntimeException('database/schema.sql konnte nicht gelesen werden.');
     }
 
-    // "CREATE DATABASE ...;" und "USE ...;" entfernen: die PDO-Verbindung
-    // zeigt über Connection::fromConfig() bereits auf die vom Administrator
-    // im Formular angegebene Datenbank, deren Name vom hier hartkodierten
-    // "materialverleih" abweichen kann (z. B. eine Testdatenbank wie
-    // "materialtest") — ein erneutes CREATE DATABASE/USE würde entweder an
-    // fehlenden Rechten scheitern (typisch bei Hosting-Angeboten) oder
-    // versehentlich in die falsche Datenbank schreiben. Exakt dasselbe
-    // Vorgehen wie bereits in MigrationRunner::applyOne() für "USE"-Zeilen
-    // in einzelnen Migrationsdateien.
+    // Etwaige "CREATE DATABASE ...;"- und "USE ...;"-Anweisungen entfernen.
+    // schema.sql enthält sie inzwischen nicht mehr; der Filter bleibt als
+    // Absicherung, damit eine (z. B. lokal angepasste) Datei nie in eine
+    // andere als die vom Administrator im Formular angegebene Datenbank
+    // schreibt, auf die die PDO-Verbindung bereits zeigt.
     $schemaSql = (string) preg_replace('/CREATE\s+DATABASE.*?;/si', '', $schemaSql);
     $schemaSql = (string) preg_replace('/^\s*USE\s+`?\w+`?\s*;\s*$/mi', '', $schemaSql);
 
@@ -121,19 +119,24 @@ function applyFreshSchema(\PDO $pdo): array
     $pdo->exec($schemaSql);
 
     $runner = new MigrationRunner($pdo, MIGRATIONS_DIR);
-    // Legt bei Bedarf die schema_migrations-Tabelle an (siehe
-    // MigrationRunner::ensureMigrationsTable(), privat, daher indirekt über
-    // einen beliebigen öffentlichen Methodenaufruf angestoßen).
-    $runner->appliedMigrations();
 
-    $appliedAt = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
-    $insert = $pdo->prepare('INSERT INTO schema_migrations (migration, applied_at) VALUES (:migration, :applied_at)');
+    // Der Snapshot muss seinen eigenen Stand in schema_migrations vermerkt
+    // haben. Fehlt das (beschädigte/gekürzte schema.sql), würde applyAll()
+    // bei Migration 001 beginnen und mit einer irreführenden
+    // "Duplicate column"-Meldung abbrechen — lieber hier klar scheitern.
+    $inSnapshot = $runner->appliedMigrations();
+    if ($inSnapshot === []) {
+        throw new \RuntimeException(
+            'database/schema.sql vermerkt keinen Migrationsstand in schema_migrations — die Datei ist unvollständig.'
+        );
+    }
 
+    // Alles nachziehen, was neuer ist als der Snapshot. Zur Anzeige gelten
+    // auch die bereits im Snapshot enthaltenen Migrationen als in diesem
+    // Lauf eingespielt.
     $log = [];
-    foreach ($runner->migrationFiles() as $file) {
-        $basename = basename($file);
-        $insert->execute(['migration' => $basename, 'applied_at' => $appliedAt]);
-        $log[] = ['file' => $basename, 'status' => 'applied'];
+    foreach ($runner->applyAll() as $entry) {
+        $log[] = ['file' => $entry['file'], 'status' => 'applied'];
     }
 
     return $log;

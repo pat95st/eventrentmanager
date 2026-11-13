@@ -34,6 +34,7 @@ final class CategoryController
             // Kategorie "Stromverteiler" ist nicht löschbar (Migration 118).
             'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             'cableCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
+            'digitalStageboxCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             'categories' => $categories,
             'editingCategory' => null,
             'errors' => [],
@@ -60,6 +61,7 @@ final class CategoryController
             // Kategorie "Stromverteiler" ist nicht löschbar (Migration 118).
             'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             'cableCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
+            'digitalStageboxCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             'categories' => $categories,
             'editingCategory' => $editingCategory,
             'errors' => [],
@@ -129,6 +131,7 @@ final class CategoryController
             // Kategorie "Stromverteiler" ist nicht löschbar (Migration 118).
             'powerDistributorCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             'cableCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
+            'digitalStageboxCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             'categories' => $categories,
             'editingCategory' => $editingCategory,
             'errors' => $errors,

@@ -32,6 +32,13 @@ $cable ??= null;
 $cableCategoryId ??= null;
 $cableSettings ??= null;
 $isCable = $cableCategoryId !== null && $val('category_id', $article?->categoryId) === $cableCategoryId;
+// Digitale Stagebox (Migration 152): Kategorie "Digitale Stagebox" gewählt.
+/** @var \App\Application\DigitalStagebox\Query\ArticleDigitalStageboxDetail|null $digitalStagebox */
+$digitalStagebox ??= null;
+$digitalStageboxCategoryId ??= null;
+/** @var \App\Application\DigitalStagebox\Query\DigitalStageboxSettings|null $digitalStageboxSettings */
+$digitalStageboxSettings ??= null;
+$isDigitalStagebox = $digitalStageboxCategoryId !== null && $val('category_id', $article?->categoryId) === $digitalStageboxCategoryId;
 $protectionClassValue = $val('protection_class', $article?->protectionClass?->value ?? ($isPowerDistributor ? 'I' : null));
 // Neue Artikel sind standardmäßig abrechenbar; nur wer bewusst das Häkchen
 // entfernt (z. B. für Zubehör wie Kabel), bekommt is_billable = false.
@@ -280,6 +287,90 @@ $bundleComponentRows ??= [];
             <?php endforeach; ?>
         </div>
     </div>
+    <?php endif; ?>
+
+    <!-- Digitale Stagebox (Migration 152): erscheint bei Kategorie "Digitale Stagebox" -->
+    <?php if ($digitalStageboxCategoryId !== null && $digitalStageboxSettings !== null): ?>
+    <?php
+        $sbSaved = $digitalStagebox?->stagebox;
+        $sbProtocol = $val('stagebox_protocol_id', $sbSaved?->protocolId);
+        $sbCount = fn (string $field, ?int $saved) => (string) (array_key_exists($field, $old) ? ($old[$field] ?? '') : ($saved !== null ? (string) $saved : ''));
+        $sbErr = fn (string $key) => isset($errors[$key]) ? '<p class="mt-1 text-xs text-red-600 dark:text-red-400">' . e($errors[$key]) . '</p>' : '';
+        $sbInput = fn (string $key) => 'mt-1 w-full rounded-md border ' . (isset($errors[$key]) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700') . ' px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500';
+        $sbGroups = [
+            'inputs' => ['Analoge Eingänge', 'Anzahl je Buchsenart – XLR und Kombibuchsen lassen sich beliebig kombinieren.', [
+                'stagebox_inputs_xlr' => ['XLR', $sbSaved?->inputsXlr],
+                'stagebox_inputs_combo' => ['Kombibuchse (XLR/Klinke)', $sbSaved?->inputsCombo],
+            ]],
+            'outputs' => ['Ausgänge', 'Anzahl je Ausgangsart – analoge und AES/EBU-Ausgänge lassen sich beliebig kombinieren.', [
+                'stagebox_outputs_analog' => ['Analog', $sbSaved?->outputsAnalog],
+                'stagebox_outputs_aes' => ['AES/EBU', $sbSaved?->outputsAes],
+            ]],
+        ];
+    ?>
+    <div id="digital_stagebox_section" class="rounded-md border border-emerald-300 bg-emerald-50/40 p-4 dark:border-emerald-700 dark:bg-emerald-950/20 <?= $isDigitalStagebox ? '' : 'hidden' ?>"
+         data-digital-stagebox-category="<?= e($digitalStageboxCategoryId) ?>">
+        <input type="hidden" name="digital_stagebox_section" value="1">
+        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Digitale Stagebox</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Digitales Protokoll sowie Anzahl der Ein- und Ausgänge erfassen. Leere Felder zählen als 0. Digitale Protokolle pflegst du unter <a href="/einstellungen/digitale-protokolle" class="underline">Einstellungen › Digitale Protokolle</a>.</p>
+        <?php if ($digitalStageboxSettings->protocols === []): ?>
+            <p class="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">Es sind noch keine digitalen Protokolle angelegt.</p>
+        <?php endif; ?>
+        <div class="mt-4 max-w-sm">
+            <label for="stagebox_protocol_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Digitales Protokoll *</label>
+            <select id="stagebox_protocol_id" name="stagebox_protocol_id" class="<?= $sbInput('stagebox_protocol_id') ?>">
+                <option value="">Bitte wählen…</option>
+                <?php foreach ($digitalStageboxSettings->protocols as $protocolOption): ?>
+                    <option value="<?= e($protocolOption->id) ?>" <?= $sbProtocol === $protocolOption->id ? 'selected' : '' ?>><?= e($protocolOption->name) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?= $sbErr('stagebox_protocol_id') ?>
+        </div>
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <?php foreach ($sbGroups as $sbGroupKey => [$sbLegend, $sbHint, $sbFields]): ?>
+                <fieldset data-stagebox-group="<?= e($sbGroupKey) ?>">
+                    <legend class="text-xs font-semibold text-slate-700 dark:text-slate-300"><?= e($sbLegend) ?> <span class="font-normal text-slate-500 dark:text-slate-400">· gesamt <span data-stagebox-total>0</span></span></legend>
+                    <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"><?= e($sbHint) ?></p>
+                    <div class="mt-2 grid grid-cols-2 gap-3">
+                        <?php foreach ($sbFields as $sbField => [$sbLabel, $sbSavedCount]): ?>
+                            <div>
+                                <label for="<?= $sbField ?>" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e($sbLabel) ?></label>
+                                <input type="number" min="0" max="<?= \App\Domain\DigitalStagebox\ArticleDigitalStagebox::MAX_PER_TYPE ?>" step="1" inputmode="numeric" placeholder="0"
+                                       id="<?= $sbField ?>" name="<?= $sbField ?>" value="<?= e($sbCount($sbField, $sbSavedCount)) ?>" data-stagebox-count
+                                       class="<?= $sbInput($sbField) ?>">
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php foreach (array_keys($sbFields) as $sbField): ?><?= $sbErr($sbField) ?><?php endforeach; ?>
+                </fieldset>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var section = document.getElementById('digital_stagebox_section');
+            var category = document.getElementById('category_id');
+            if (!section) { return; }
+            var stageboxCategory = section.getAttribute('data-digital-stagebox-category');
+            function syncVisibility() {
+                section.classList.toggle('hidden', !(category && stageboxCategory && category.value === stageboxCategory));
+            }
+            function syncTotals() {
+                section.querySelectorAll('[data-stagebox-group]').forEach(function (group) {
+                    var total = 0;
+                    group.querySelectorAll('[data-stagebox-count]').forEach(function (input) {
+                        var value = parseInt(input.value, 10);
+                        if (!isNaN(value) && value > 0) { total += value; }
+                    });
+                    group.querySelector('[data-stagebox-total]').textContent = total;
+                });
+            }
+            if (category) { category.addEventListener('change', syncVisibility); }
+            section.addEventListener('input', syncTotals);
+            syncVisibility();
+            syncTotals();
+        })();
+    </script>
     <?php endif; ?>
 
     <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-3 <?= $is19Inch ? '' : 'hidden' ?>">

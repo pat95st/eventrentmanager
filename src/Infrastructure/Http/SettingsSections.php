@@ -97,11 +97,12 @@ final class SettingsSections
             ],
             'operations' => [
                 'label' => 'Lager & Veranstaltungen',
-                'desc' => 'Techniker, Gewerke, Veranstaltungs-Audio, Leitungen, Etikettendruck und Kalender',
+                'desc' => 'Techniker, Gewerke, Veranstaltungs-Audio, Leitungen, digitale Protokolle, Etikettendruck und Kalender',
                 'pages' => [
                     $page('settings-techniker', '/einstellungen/techniker', 'Techniker & Gewerke', 'Gewerke und Erinnerungen bei offenen Techniker-Anfragen'),
                     $page('settings-veranstaltungs-audio', '/einstellungen/veranstaltungs-audio', 'Veranstaltungs-Audio', 'Abspielgeräte (Raspberry Pi), Gong und Sprachausgabe für Durchsagen'),
                     $page('settings-leitungen', '/einstellungen/leitungen', 'Leitungen', 'Leitungstypen und Steckverbinder'),
+                    $page('settings-digitale-protokolle', '/einstellungen/digitale-protokolle', 'Digitale Protokolle', 'Protokolle für digitale Stageboxen (Dante, AES50, MADI, …)'),
                     $page('settings-etikettendrucker', '/einstellungen/etikettendrucker', t('nav.label_printers'), 'Drucker für Inventur-Etiketten'),
                     $page('settings-kalender', '/einstellungen/kalender', t('nav.calendar_settings'), 'Kalender-Abos (CalDAV/ICS)'),
                 ],

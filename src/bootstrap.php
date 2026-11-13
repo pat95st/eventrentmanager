@@ -434,6 +434,7 @@ $caseItemRepository = new MariadbCaseItemRepository($pdo);
 $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
 $powerDistributorRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPowerDistributorRepository($pdo);
 $cableRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCableRepository($pdo); // Leitungen (Migration 125)
+$digitalStageboxRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDigitalStageboxRepository($pdo); // Digitale Stageboxen (Migration 152)
 $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepository($pdo);
 // Schriftarten je Bereich für alle PDFs (Migration 116), erst beim ersten PDF geladen.
 \App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
@@ -660,8 +661,8 @@ $commandBus->register(\App\Application\LaborTime\Command\CreateLaborTimeArticle:
 $commandBus->register(\App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, new UpdateLaborTimeArticleHandler($laborTimeArticleRepository));
 $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle::class, new DeleteLaborTimeArticleHandler($laborTimeArticleRepository));
 
-$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
-$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository));
+$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository));
+$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository));
 // Leitungen (Migration 125)
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
 // Techniker & Gewerke (Migration 134)
@@ -731,6 +732,10 @@ $queryBus->register(\App\Application\CompanyHoliday\Query\ListCompanyHolidays::c
 foreach ([\App\Application\Cable\Command\SaveCableType::class, \App\Application\Cable\Command\DeleteCableType::class, \App\Application\Cable\Command\SaveConnectorType::class, \App\Application\Cable\Command\DeleteConnectorType::class] as $cableCommand) {
     $commandBus->register($cableCommand, $cableSettingsHandler);
 }
+// Digitale Protokolle (Migration 152)
+$digitalProtocolSettingsHandler = new \App\Application\DigitalStagebox\Command\DigitalProtocolSettingsHandler($digitalStageboxRepository);
+$commandBus->register(\App\Application\DigitalStagebox\Command\SaveDigitalProtocol::class, $digitalProtocolSettingsHandler);
+$commandBus->register(\App\Application\DigitalStagebox\Command\DeleteDigitalProtocol::class, $digitalProtocolSettingsHandler);
 $commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository, $articleSetRepository));
 $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, new \App\Application\Article\Command\SetArticleActiveHandler($articleRepository));
 $commandBus->register(\App\Application\Article\Command\AddArticleImage::class, new AddArticleImageHandler($articleRepository, $fileStorage));
@@ -1259,6 +1264,11 @@ $queryBus->register(\App\Application\Category\Query\GetCableCategoryId::class, n
 $cableQueryHandler = new \App\Application\Cable\Query\CableQueryHandler($cableRepository);
 $queryBus->register(\App\Application\Cable\Query\GetCableSettings::class, $cableQueryHandler);
 $queryBus->register(\App\Application\Cable\Query\GetArticleCable::class, $cableQueryHandler);
+// Digitale Stageboxen (Migration 152)
+$queryBus->register(\App\Application\Category\Query\GetDigitalStageboxCategoryId::class, new \App\Application\Category\Query\GetDigitalStageboxCategoryIdHandler($categoryRepository));
+$digitalStageboxQueryHandler = new \App\Application\DigitalStagebox\Query\DigitalStageboxQueryHandler($digitalStageboxRepository);
+$queryBus->register(\App\Application\DigitalStagebox\Query\GetDigitalStageboxSettings::class, $digitalStageboxQueryHandler);
+$queryBus->register(\App\Application\DigitalStagebox\Query\GetArticleDigitalStagebox::class, $digitalStageboxQueryHandler);
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFolders::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFoldersHandler($closingTextTemplateFolderRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplates::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplatesHandler($closingTextTemplateRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));
@@ -1552,6 +1562,7 @@ $reportingController = new \App\Infrastructure\Http\Controllers\ReportingControl
 $statisticsController = new \App\Infrastructure\Http\Controllers\StatisticsController($queryBus);
 $categoryController = new CategoryController($commandBus, $queryBus);
 $cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
+$digitalProtocolSettingsController = new \App\Infrastructure\Http\Controllers\DigitalProtocolSettingsController($commandBus, $queryBus);
 $companyHolidayController = new \App\Infrastructure\Http\Controllers\CompanyHolidayController($commandBus, $queryBus);
 $accountController = new \App\Infrastructure\Http\Controllers\AccountController($commandBus, $queryBus, $bankAccountRepository, $receiptRepository, $invoiceRepository, $supplierRepository);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
@@ -2445,6 +2456,11 @@ $router->post('/einstellungen/leitungen/typen/{id}/loeschen', $auth->guard(Permi
 $router->post('/einstellungen/leitungen/steckverbinder', $auth->guard(Permission::Administration, [$cableSettingsController, 'createConnector']));
 $router->post('/einstellungen/leitungen/steckverbinder/{id}', $auth->guard(Permission::Administration, [$cableSettingsController, 'saveConnector']));
 $router->post('/einstellungen/leitungen/steckverbinder/{id}/loeschen', $auth->guard(Permission::Administration, [$cableSettingsController, 'deleteConnector']));
+// Digitale Protokolle für digitale Stageboxen (Migration 152)
+$router->get('/einstellungen/digitale-protokolle', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'edit']));
+$router->post('/einstellungen/digitale-protokolle', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'create']));
+$router->post('/einstellungen/digitale-protokolle/{id}', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'save']));
+$router->post('/einstellungen/digitale-protokolle/{id}/loeschen', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'delete']));
 $router->get('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'edit']));
 $router->post('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'update']));
 $router->get('/einstellungen/dry-hire-staffel', $auth->guard(Permission::Administration, [$dryHireSettingsController, 'edit']));

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Http\Controllers;
 
+use App\Application\Dashboard\DashboardTileCatalog;
 use App\Application\OrderConfirmation\Query\ListOrderConfirmations;
 use App\Application\Offer\Query\ListOffers;
 use App\Application\Purchase\Query\ListPurchaseOrders;
@@ -11,9 +12,8 @@ use App\Application\Query\QueryBus;
 use App\Application\Reporting\Query\GetIncomeExpenseOverview;
 use App\Application\Rma\Query\ListRmas;
 use App\Application\Statistics\Query\GetStatistic;
-use App\Application\Statistics\Query\StatisticChart;
-use App\Application\Statistics\StatisticKey;
 use App\Domain\Customer\CustomerRepositoryInterface;
+use App\Domain\Dashboard\DashboardLayout;
 use App\Domain\Dashboard\DashboardWidget;
 use App\Domain\Invoice\InvoiceRepositoryInterface;
 use App\Domain\Offer\OfferStatus;
@@ -30,9 +30,9 @@ use DateTimeImmutable;
 use function App\Infrastructure\Http\t;
 
 /**
- * Startseite ("/"): konfigurierbares Dashboard aus einzelnen, unabhängig
- * ein-/ausblendbaren Bereichen (siehe App\Domain\Dashboard\DashboardWidget
- * und /profil/dashboard für die Auswahl durch den Benutzer). Jeder Bereich
+ * Startseite ("/"): Dashboard aus Kacheln, die jeder Benutzer unter
+ * /profil/dashboard selbst anordnet (siehe App\Application\Dashboard\
+ * DashboardTileCatalog und App\Domain\Dashboard\DashboardLayout). Jeder Bereich
  * wird hier bewusst über die bereits bestehenden, fachlichen Queries/
  * Repository-Methoden der jeweiligen Module zusammengestellt (kein neuer
  * SQL-Code), analog zum Muster in anderen Controllern, die mehrere Quellen
@@ -55,46 +55,43 @@ final class DashboardController
     public function index(Request $request): void
     {
         $user = CurrentUser::get();
-        $widgets = $user?->enabledDashboardWidgets() ?? [];
+        $tiles = $user !== null ? DashboardTileCatalog::permittedFor($user) : [];
+        $layout = $user !== null ? DashboardTileCatalog::layoutFor($user) : DashboardLayout::fromZones([]);
 
+        // Daten je Kachel. layoutFor() liefert nur Kacheln, die der Benutzer
+        // sehen darf – für alle anderen wird hier gar nichts abgefragt.
+        $zones = [];
         $sections = [];
-        foreach ($widgets as $widget) {
-            $sections[$widget->value] = $this->buildSection($widget);
+        $charts = [];
+        $schedule = [];
+        foreach ($layout->zones() as $zone => $keys) {
+            $zones[$zone] = [];
+            foreach ($keys as $key) {
+                $tile = $tiles[$key];
+                if ($tile->statistic !== null) {
+                    // Eine fehlerhafte Statistik soll die Startseite nicht unbrauchbar machen.
+                    try {
+                        $charts[$key] = $this->queries->ask(new GetStatistic($tile->statistic));
+                    } catch (\Throwable $e) {
+                        error_log('Dashboard-Statistik ' . $tile->statistic->value . ': ' . $e->getMessage());
+
+                        continue;
+                    }
+                } elseif ($tile->widget === DashboardWidget::UpcomingRentals) {
+                    $schedule = $this->warehouseSchedule();
+                } elseif ($tile->widget !== null) {
+                    $sections[$key] = $this->buildSection($tile->widget);
+                }
+                $zones[$zone][] = $tile;
+            }
         }
 
         echo View::page('dashboard/index', [
-            'widgets' => $widgets,
+            'zones' => $zones,
             'sections' => $sections,
-            'schedule' => in_array(DashboardWidget::UpcomingRentals, $widgets, true) ? $this->warehouseSchedule() : [],
-            'statistics' => $this->statistics(),
+            'charts' => $charts,
+            'schedule' => $schedule,
         ], activeNav: 'dashboard', title: t('dashboard.title'));
-    }
-
-    /**
-     * Diagramm-Karten für alle Statistiken, die der Benutzer sehen darf. Eine
-     * fehlerhafte Statistik soll das Dashboard nicht unbrauchbar machen.
-     *
-     * @return list<StatisticChart>
-     */
-    private function statistics(): array
-    {
-        $user = CurrentUser::get();
-        if ($user === null) {
-            return [];
-        }
-        $charts = [];
-        foreach (StatisticKey::cases() as $key) {
-            if (!$user->has($key->requiredPermission())) {
-                continue;
-            }
-            try {
-                $charts[] = $this->queries->ask(new GetStatistic($key));
-            } catch (\Throwable $e) {
-                error_log('Dashboard-Statistik ' . $key->value . ': ' . $e->getMessage());
-            }
-        }
-
-        return $charts;
     }
 
     /**
@@ -107,7 +104,7 @@ final class DashboardController
     private function buildSection(DashboardWidget $widget): array
     {
         return match ($widget) {
-            DashboardWidget::UpcomingRentals => $this->upcomingRentals(),
+            DashboardWidget::UpcomingRentals => throw new \LogicException('Der Lagerplan wird über warehouseSchedule() aufgebaut.'),
             DashboardWidget::OpenOffers => $this->openOffers(),
             DashboardWidget::OpenOrderConfirmations => $this->openOrderConfirmations(),
             DashboardWidget::UnpaidInvoices => $this->unpaidInvoices(),
@@ -117,25 +114,6 @@ final class DashboardController
             DashboardWidget::OpenRma => $this->openRma(),
             DashboardWidget::IncomeExpense => $this->incomeExpense(),
         };
-    }
-
-    private function upcomingRentals(): array
-    {
-        $from = new DateTimeImmutable('today');
-        $to = $from->modify('+14 days');
-        $rentals = $this->rentals->findOverlapping($from, $to);
-
-        $items = [];
-        foreach (array_slice($rentals, 0, self::MAX_ITEMS_PER_WIDGET) as $rental) {
-            $items[] = [
-                'label' => $rental->eventName,
-                'sub' => $rental->startDate->format('d.m.Y') . ' – ' . $rental->endDate->format('d.m.Y')
-                    . ($rental->eventLocation !== null && $rental->eventLocation !== '' ? ' · ' . $rental->eventLocation : ''),
-                'href' => '/veranstaltungen/' . $rental->id,
-            ];
-        }
-
-        return ['count' => count($rentals), 'items' => $items, 'href' => '/veranstaltungen'];
     }
 
     /**

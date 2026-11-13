@@ -129,6 +129,18 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Exemplare (gleicher Artikel, gleiches Anschaffungsjahr, gleicher Preis)
   werden dabei nur einmal angefragt. Der Anschaffungspreis ist der abweichende
   Einkaufspreis der Inventarnummer, sonst der des Artikels.
+- **Startseite anordnen** (Profil › Dashboard, `/profil/dashboard`, Migration
+  147): Jeder Benutzer ordnet die Bereiche seiner Startseite selbst an –
+  Hauptbereich (breite Spalte), Seitenleiste, untere Reihe oder ausgeblendet –
+  per Ziehen oder über Auswahlfeld und Pfeile. Auch die Statistik-Diagramme
+  sind einzeln verschieb- und ausblendbar. Die Anordnung gilt nur für den
+  jeweiligen Benutzer. **Vorlagen** legt ein Administrator unter
+  Einstellungen › System & Integrationen › Dashboard-Vorlagen
+  (`/einstellungen/dashboard-vorlagen`) an; Benutzer übernehmen sie als Kopie
+  und können sie weiter anpassen. **Rechte:** Jeder Bereich verlangt ein Recht
+  (siehe `App\Application\Dashboard\DashboardTileCatalog`). Ohne dieses Recht
+  erscheint er weder auf der Startseite noch im Editor noch in einer Vorlage –
+  weder eine eigene Anordnung noch eine Vorlage schaltet Bereiche frei.
 - **Umsatzziele** (Einstellungen › Firma & Steuern › Umsatzziele,
   `/einstellungen/umsatzziele`, Migration 146): frei benennbare Umsatzziele
   und -grenzen, z. B. „Liebhabereigrenze“ oder „Kleinunternehmergrenze“. Jedes

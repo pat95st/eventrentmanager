@@ -303,6 +303,8 @@ final class VenueController
             height: $request->input('height', '') ?? '',
             type: $request->input('type', '') ?? '',
             powerDistances: $request->inputMap('distances'),
+            buildMode: $request->input('build_mode', '') ?? '',
+            elementStock: $request->inputMap('elements'),
         );
 
         try {
@@ -332,6 +334,8 @@ final class VenueController
             height: $request->input('height', '') ?? '',
             type: $request->input('type', '') ?? '',
             powerDistances: $request->inputMap('distances'),
+            buildMode: $request->input('build_mode', '') ?? '',
+            elementStock: $request->inputMap('elements'),
         );
 
         try {

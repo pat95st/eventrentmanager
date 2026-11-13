@@ -6,21 +6,29 @@ namespace App\Application\Venue\Command;
 
 use App\Domain\Venue\PowerConnection;
 use App\Domain\Venue\Stage;
+use App\Domain\Venue\StageBuildMode;
+use App\Domain\Venue\StageElementSize;
 use App\Domain\Venue\StageType;
 
 /**
  * Gemeinsame Validierung für Add-/UpdateVenueStageHandler. Längen werden in
  * Metern mit höchstens zwei Nachkommastellen (= Zentimeter) erwartet, Komma
  * oder Punkt als Dezimaltrennzeichen.
+ *
+ * Mobile Bühnen können statt über Maße über ihren Bestand an Bühnenelementen
+ * beschrieben werden (StageBuildMode::Elements): dann entfallen Breite/Tiefe, und
+ * mindestens ein Element muss angegeben sein. In allen anderen Fällen wird
+ * ein mitgeschickter Elementbestand verworfen.
  */
 trait ValidatesVenueStageInput
 {
     /**
      * @param array<string, string> $powerDistances Stromanschluss-ID => Roh-Eingabe
      * @param PowerConnection[] $venueConnections Stromanschlüsse des Veranstaltungsorts der Bühne
+     * @param array<string, string> $elementStock Elementgröße => Roh-Eingabe der Anzahl
      * @return array{0: array<string, string>, 1: array{
-     *     name: string, width: float, depth: float, height: float, type: StageType,
-     *     powerDistances: array<string, float>
+     *     name: string, width: float|null, depth: float|null, height: float, type: StageType,
+     *     powerDistances: array<string, float>, elementStock: array<string, int>
      * }|null} Fehler und — nur wenn fehlerfrei — die bereinigten Werte
      */
     private function validateVenueStageInput(
@@ -31,6 +39,8 @@ trait ValidatesVenueStageInput
         string $type,
         array $powerDistances,
         array $venueConnections,
+        string $buildMode = StageBuildMode::Dimensions->value,
+        array $elementStock = [],
     ): array {
         $errors = [];
 
@@ -41,25 +51,50 @@ trait ValidatesVenueStageInput
             $errors['name'] = 'Der Name der Bühne darf höchstens 150 Zeichen lang sein.';
         }
 
-        $widthM = self::parseMeters($width);
-        if ($widthM === null || $widthM <= 0.0 || $widthM > Stage::MAX_DIMENSION_M) {
-            $errors['width'] = 'Bitte eine gültige Breite in Metern angeben (größer als 0, z. B. 8 oder 8,5).';
+        $typeEnum = StageType::tryFrom($type);
+        if ($typeEnum === null) {
+            $errors['type'] = 'Bitte auswählen, ob die Bühne fest installiert oder mobil ist.';
         }
 
-        $depthM = self::parseMeters($depth);
-        if ($depthM === null || $depthM <= 0.0 || $depthM > Stage::MAX_DIMENSION_M) {
-            $errors['depth'] = 'Bitte eine gültige Tiefe in Metern angeben (größer als 0, z. B. 6 oder 6,5).';
+        $fromElements = $typeEnum === StageType::Mobile && $buildMode === StageBuildMode::Elements->value;
+
+        $widthM = null;
+        $depthM = null;
+        $stock = [];
+        if ($fromElements) {
+            foreach (StageElementSize::all() as $size) {
+                $raw = trim((string) ($elementStock[$size->value] ?? ''));
+                if ($raw === '') {
+                    continue;
+                }
+                if (preg_match('/^\d{1,4}$/', $raw) !== 1 || (int) $raw > Stage::MAX_ELEMENTS_PER_SIZE) {
+                    $errors['elementStock'] = 'Bitte die Anzahl der Bühnenelemente als ganze Zahl angeben (höchstens ' . Stage::MAX_ELEMENTS_PER_SIZE . ' je Größe).';
+
+                    continue;
+                }
+                if ((int) $raw > 0) {
+                    $stock[$size->value] = (int) $raw;
+                }
+            }
+            if ($stock === [] && !isset($errors['elementStock'])) {
+                $errors['elementStock'] = 'Bitte angeben, wie viele Bühnenelemente welcher Größe vorhanden sind.';
+            }
+        } else {
+            $widthM = self::parseMeters($width);
+            if ($widthM === null || $widthM <= 0.0 || $widthM > Stage::MAX_DIMENSION_M) {
+                $errors['width'] = 'Bitte eine gültige Breite in Metern angeben (größer als 0, z. B. 8 oder 8,5).';
+            }
+
+            $depthM = self::parseMeters($depth);
+            if ($depthM === null || $depthM <= 0.0 || $depthM > Stage::MAX_DIMENSION_M) {
+                $errors['depth'] = 'Bitte eine gültige Tiefe in Metern angeben (größer als 0, z. B. 6 oder 6,5).';
+            }
         }
 
         // 0 ist zulässig: ebenerdige Spielfläche ohne Podest.
         $heightM = self::parseMeters($height);
         if ($heightM === null || $heightM > Stage::MAX_DIMENSION_M) {
             $errors['height'] = 'Bitte eine gültige Bühnenhöhe in Metern angeben (z. B. 1 oder 0,8; 0 für ebenerdig).';
-        }
-
-        $typeEnum = StageType::tryFrom($type);
-        if ($typeEnum === null) {
-            $errors['type'] = 'Bitte auswählen, ob die Bühne fest installiert oder mobil ist.';
         }
 
         $knownConnectionIds = [];
@@ -86,7 +121,7 @@ trait ValidatesVenueStageInput
             $distances[(string) $connectionId] = $distance;
         }
 
-        if ($errors !== [] || $widthM === null || $depthM === null || $heightM === null || $typeEnum === null) {
+        if ($errors !== [] || $heightM === null || $typeEnum === null) {
             return [$errors, null];
         }
 
@@ -97,6 +132,7 @@ trait ValidatesVenueStageInput
             'height' => $heightM,
             'type' => $typeEnum,
             'powerDistances' => $distances,
+            'elementStock' => $stock,
         ]];
     }
 

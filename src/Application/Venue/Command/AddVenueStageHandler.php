@@ -42,6 +42,8 @@ final class AddVenueStageHandler implements CommandHandlerInterface
             $command->type,
             $command->powerDistances,
             $this->connections->findByVenue($command->venueId),
+            $command->buildMode,
+            $command->elementStock,
         );
 
         if ($data === null) {
@@ -58,6 +60,7 @@ final class AddVenueStageHandler implements CommandHandlerInterface
             type: $data['type'],
             powerDistances: $data['powerDistances'],
             createdAt: new DateTimeImmutable(),
+            elementStock: $data['elementStock'],
         );
 
         $this->stages->save($stage);

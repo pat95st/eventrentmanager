@@ -84,6 +84,16 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Stromanschluss des Veranstaltungsorts kann pro Bühne die Entfernung in
   Metern eingetragen werden (leer = nicht erfasst). Diese Daten sind die
   Grundlage für Bühnenpläne an Veranstaltungen.
+  **Mobile Bühnen aus Bühnenelementen** (Migration 150): Eine mobile Bühne
+  wird entweder über ihre Abmessungen angegeben — dann wird berechnet, wie
+  viele Bühnenelemente welcher Größe dafür nötig sind (Varianten „möglichst
+  wenige Elemente“, „nur 2 × 1 m“, „nur 1 × 1 m“) — oder über den vorhandenen
+  Bestand an Elementen; dann werden die daraus baubaren Bühnengrößen
+  vorgeschlagen (je Bühnentiefe die breiteste, mit verwendeten und übrigen
+  Elementen). Jeder Vorschlag zeigt eine maßstäbliche Draufsicht. Unterstützte
+  Elementgrößen: 2 × 1 m, 1 × 1 m, 2 × 0,5 m und 1 × 0,5 m (erweiterbar in
+  `App\Domain\Venue\StageElementSize`); gerechnet wird lückenlos im
+  0,5-m-Raster, siehe `App\Domain\Venue\StageElementPlanner`.
 - **Ordner im Dateiablagesystem** (Migration 148): Für Veranstaltungen und
   Kunden lässt sich per Haken im jeweiligen Formular ein Ordner auf einem
   Ziellaufwerk anlegen (Einstellungen › Ziellaufwerke, dort je Laufwerk

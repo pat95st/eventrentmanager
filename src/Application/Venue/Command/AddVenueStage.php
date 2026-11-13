@@ -12,6 +12,9 @@ final class AddVenueStage implements CommandInterface
      * Längen als Roh-Eingabe in Metern ("8,5" oder "8.5").
      *
      * @param array<string, string> $powerDistances Stromanschluss-ID => Entfernung in Metern (leer = nicht erfasst)
+     * @param string $buildMode nur für mobile Bühnen, Wert von StageBuildMode: "dimensions" (Maße vorgeben)
+     *                          oder "elements" (vorhandene Bühnenelemente angeben, Maße entfallen)
+     * @param array<string, string> $elementStock Elementgröße (StageElementSize->value) => vorhandene Anzahl
      */
     public function __construct(
         public readonly string $venueId,
@@ -21,6 +24,8 @@ final class AddVenueStage implements CommandInterface
         public readonly string $height,
         public readonly string $type,
         public readonly array $powerDistances = [],
+        public readonly string $buildMode = 'dimensions',
+        public readonly array $elementStock = [],
     ) {
     }
 }

@@ -113,6 +113,56 @@ final class VenueStageHandlersTest extends Unit
         $this->assertArrayHasKey('powerDistances', $errors);
     }
 
+    public function testMobileStageFromElementStockHasNoFixedDimensions(): void
+    {
+        $id = $this->add->handle(new AddVenueStage(
+            venueId: 'venue-1',
+            name: 'Podestbühne',
+            width: '',
+            depth: '',
+            height: '0,6',
+            type: 'mobile',
+            buildMode: 'elements',
+            elementStock: ['2x1' => '12', '1x1' => '4', '2x0.5' => '', '1x0.5' => '0'],
+        ));
+
+        $stage = $this->stages->findById($id);
+        $this->assertNull($stage?->widthM);
+        $this->assertNull($stage?->areaSquareMeters());
+        $this->assertSame(true, $stage?->isDefinedByElementStock());
+        $this->assertSame(['2x1' => 12, '1x1' => 4], $stage?->elementStock);
+        $this->assertSame(28.0, $stage?->buildSuggestions()[0]->areaSquareMeters());
+    }
+
+    public function testElementStockNeedsAtLeastOneValidQuantity(): void
+    {
+        $empty = $this->errorsOf(fn () => $this->add->handle(new AddVenueStage('venue-1', 'Leer', '', '', '1', 'mobile', [], 'elements', [])));
+        $this->assertSame(['elementStock'], array_keys($empty));
+
+        $invalid = $this->errorsOf(fn () => $this->add->handle(new AddVenueStage('venue-1', 'Zu viel', '', '', '1', 'mobile', [], 'elements', ['2x1' => '201'])));
+        $this->assertSame(['elementStock'], array_keys($invalid));
+    }
+
+    public function testElementStockIsIgnoredForFixedStagesAndFixedDimensions(): void
+    {
+        // Fest installiert: "elements" gibt es nicht, Maße bleiben Pflicht.
+        $errors = $this->errorsOf(fn () => $this->add->handle(new AddVenueStage('venue-1', 'Fest', '', '', '1', 'fixed', [], 'elements', ['2x1' => '4'])));
+        $this->assertSame(['width', 'depth'], array_keys($errors));
+
+        $id = $this->add->handle(new AddVenueStage('venue-1', 'Mobil 6x4', '6', '4', '1', 'mobile', [], 'dimensions', ['2x1' => '4']));
+        $stage = $this->stages->findById($id);
+        $this->assertSame([], $stage?->elementStock);
+        $this->assertSame(['2x1' => 12], $stage?->buildSuggestions()[0]->counts());
+
+        // Wechsel auf Elementbestand verwirft die Maße, Wechsel zurück den Bestand.
+        $this->update->handle(new UpdateVenueStage($id, 'venue-1', 'Mobil', '6', '4', '1', 'mobile', [], 'elements', ['1x1' => '9']));
+        $this->assertNull($this->stages->findById($id)?->widthM);
+        $this->update->handle(new UpdateVenueStage($id, 'venue-1', 'Fest', '5', '3', '1', 'fixed', [], 'elements', ['1x1' => '9']));
+        $this->assertSame(5.0, $this->stages->findById($id)?->widthM);
+        $this->assertSame([], $this->stages->findById($id)?->elementStock);
+        $this->assertSame([], $this->stages->findById($id)?->buildSuggestions());
+    }
+
     public function testAddingToUnknownVenueFails(): void
     {
         $this->expectException(NotFoundException::class);

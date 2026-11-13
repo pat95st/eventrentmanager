@@ -350,8 +350,10 @@ CREATE TABLE venue_stages (
     id          CHAR(36)      NOT NULL PRIMARY KEY,
     venue_id    CHAR(36)      NOT NULL,
     name        VARCHAR(150)  NOT NULL,
-    width_m     DECIMAL(5,2)  NOT NULL,
-    depth_m     DECIMAL(5,2)  NOT NULL,
+    -- NULL bei mobilen Bühnen, die über ihren Elementbestand beschrieben
+    -- sind (venue_stage_elements, Migration 150).
+    width_m     DECIMAL(5,2)  NULL,
+    depth_m     DECIMAL(5,2)  NULL,
     height_m    DECIMAL(5,2)  NOT NULL,
     stage_type  VARCHAR(10)   NOT NULL, -- fixed | mobile
     created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -369,6 +371,17 @@ CREATE TABLE venue_stage_power_distances (
         FOREIGN KEY (stage_id) REFERENCES venue_stages (id) ON DELETE CASCADE,
     CONSTRAINT fk_venue_stage_power_distances_connection
         FOREIGN KEY (power_connection_id) REFERENCES venue_power_connections (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Elementbestand mobiler Bühnen je Standardgröße (siehe
+-- database/migrations/150_venue_stage_elements.sql).
+CREATE TABLE venue_stage_elements (
+    stage_id      CHAR(36)          NOT NULL,
+    element_size  VARCHAR(10)       NOT NULL, -- 2x1 | 1x1 | 2x0.5 | 1x0.5
+    quantity      SMALLINT UNSIGNED NOT NULL,
+    PRIMARY KEY (stage_id, element_size),
+    CONSTRAINT fk_venue_stage_elements_stage
+        FOREIGN KEY (stage_id) REFERENCES venue_stages (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -3955,4 +3968,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('144_inventory_number_current_values.sql', NOW()),
     ('145_trusted_devices.sql', NOW()),
     ('148_storage_folders.sql', NOW()),
-    ('149_venue_stages.sql', NOW());
+    ('149_venue_stages.sql', NOW()),
+    ('150_venue_stage_elements.sql', NOW());

@@ -305,10 +305,23 @@ $formatMeters = static function (float $meters): string {
                             <div class="min-w-0 text-sm">
                                 <span class="font-medium text-slate-800 dark:text-slate-200"><?= e($stage->name) ?></span>
                                 <span class="text-slate-500 dark:text-slate-400">
-                                    · <?= e(t('venues.stages.summary_dimensions', ['width' => $formatMeters($stage->widthM), 'depth' => $formatMeters($stage->depthM), 'area' => $formatMeters($stage->areaSquareMeters())])) ?>
+                                    <?php if ($stage->widthM !== null && $stage->depthM !== null): ?>
+                                        · <?= e(t('venues.stages.summary_dimensions', ['width' => $formatMeters($stage->widthM), 'depth' => $formatMeters($stage->depthM), 'area' => $formatMeters((float) $stage->areaSquareMeters())])) ?>
+                                    <?php else: ?>
+                                        · <?= e(t('venues.stages.summary_from_elements')) ?>
+                                    <?php endif; ?>
                                     · <?= e(t('venues.stages.summary_height', ['height' => $formatMeters($stage->heightM)])) ?>
                                     · <?= e(t($stage->type->labelKey())) ?>
                                 </span>
+                                <?php if ($stage->isDefinedByElementStock()): ?>
+                                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        <?= e(t('venues.stages.summary_stock')) ?>:
+                                        <span class="font-medium text-slate-700 dark:text-slate-300"><?= e(implode(', ', array_map(
+                                            static fn (\App\Domain\Venue\StageElementSize $size): string => $stage->elementStock[$size->value] . ' × ' . $size->label(),
+                                            array_filter(\App\Domain\Venue\StageElementSize::all(), static fn ($size) => ($stage->elementStock[$size->value] ?? 0) > 0)
+                                        ))) ?></span>
+                                    </p>
+                                <?php endif; ?>
                                 <?php if ($powerConnections !== []): ?>
                                     <ul class="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-400">
                                         <?php foreach ($powerConnections as $connection): ?>
@@ -340,6 +353,9 @@ $formatMeters = static function (float $meters): string {
                                 </form>
                             </div>
                         </div>
+                        <?php if ($stage->type === \App\Domain\Venue\StageType::Mobile): ?>
+                            <?php require __DIR__ . '/_stage_layouts.php'; ?>
+                        <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -398,4 +414,30 @@ $formatMeters = static function (float $meters): string {
         </div>
     </div>
 <?php endif; ?>
+<script>
+  // Bühnenformulare: Felder passend zu Bauart und Art der Angabe ein-/ausblenden
+  // (siehe venues/_stage_fields.php). Breite/Tiefe sind nur Pflicht, solange sie sichtbar sind.
+  (function () {
+    document.querySelectorAll('[data-stage-form]').forEach(function (form) {
+      function sync() {
+        var type = form.querySelector('[data-stage-type]:checked');
+        var mode = form.querySelector('[data-stage-build-mode]:checked');
+        var isMobile = !!type && type.value === 'mobile';
+        var fromElements = isMobile && !!mode && mode.value === 'elements';
+
+        form.querySelectorAll('[data-stage-mobile-only]').forEach(function (el) { el.classList.toggle('hidden', !isMobile); });
+        form.querySelectorAll('[data-stage-elements]').forEach(function (el) { el.classList.toggle('hidden', !fromElements); });
+        form.querySelectorAll('[data-stage-dimensions]').forEach(function (el) {
+          el.classList.toggle('hidden', fromElements);
+          el.querySelectorAll('input').forEach(function (input) { input.required = !fromElements; });
+        });
+      }
+
+      form.querySelectorAll('[data-stage-type], [data-stage-build-mode]').forEach(function (radio) {
+        radio.addEventListener('change', sync);
+      });
+      sync();
+    });
+  })();
+</script>
 <?php require __DIR__ . '/../_map_modal.php'; /* Karten-Modal */ ?>

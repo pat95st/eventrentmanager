@@ -34,14 +34,14 @@ final class MariadbVenueStageRepository implements VenueStageRepositoryInterface
                 'id' => $stage->id,
                 'venue_id' => $stage->venueId,
                 'name' => $stage->name,
-                'width_m' => self::decimal($stage->widthM),
-                'depth_m' => self::decimal($stage->depthM),
+                'width_m' => $stage->widthM !== null ? self::decimal($stage->widthM) : null,
+                'depth_m' => $stage->depthM !== null ? self::decimal($stage->depthM) : null,
                 'height_m' => self::decimal($stage->heightM),
                 'stage_type' => $stage->type->value,
                 'created_at' => $stage->createdAt->format('Y-m-d H:i:s'),
                 'name2' => $stage->name,
-                'width_m2' => self::decimal($stage->widthM),
-                'depth_m2' => self::decimal($stage->depthM),
+                'width_m2' => $stage->widthM !== null ? self::decimal($stage->widthM) : null,
+                'depth_m2' => $stage->depthM !== null ? self::decimal($stage->depthM) : null,
                 'height_m2' => self::decimal($stage->heightM),
                 'stage_type2' => $stage->type->value,
             ]);
@@ -59,6 +59,18 @@ final class MariadbVenueStageRepository implements VenueStageRepositoryInterface
                     'power_connection_id' => $connectionId,
                     'distance_m' => self::decimal($distance),
                 ]);
+            }
+
+            $this->pdo->prepare('DELETE FROM venue_stage_elements WHERE stage_id = :stage_id')
+                ->execute(['stage_id' => $stage->id]);
+
+            $insertElement = $this->pdo->prepare(
+                'INSERT INTO venue_stage_elements (stage_id, element_size, quantity) VALUES (:stage_id, :element_size, :quantity)'
+            );
+            foreach ($stage->elementStock as $elementSize => $quantity) {
+                if ($quantity > 0) {
+                    $insertElement->execute(['stage_id' => $stage->id, 'element_size' => $elementSize, 'quantity' => $quantity]);
+                }
             }
 
             if ($ownTransaction) {
@@ -97,7 +109,7 @@ final class MariadbVenueStageRepository implements VenueStageRepositoryInterface
     }
 
     /**
-     * Lädt die Entfernungen aller übergebenen Bühnen in EINER Abfrage (kein N+1).
+     * Lädt Entfernungen und Elementbestand aller übergebenen Bühnen in je EINER Abfrage (kein N+1).
      *
      * @param array<int, array<string, mixed>> $rows
      * @return list<Stage>
@@ -119,18 +131,28 @@ final class MariadbVenueStageRepository implements VenueStageRepositoryInterface
             $distances[(string) $distanceRow['stage_id']][(string) $distanceRow['power_connection_id']] = (float) $distanceRow['distance_m'];
         }
 
+        $elements = [];
+        $stmt = $this->pdo->prepare(
+            "SELECT stage_id, element_size, quantity FROM venue_stage_elements WHERE stage_id IN ({$placeholders})"
+        );
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll() as $elementRow) {
+            $elements[(string) $elementRow['stage_id']][(string) $elementRow['element_size']] = (int) $elementRow['quantity'];
+        }
+
         $stages = [];
         foreach ($rows as $row) {
             $stages[] = new Stage(
                 id: (string) $row['id'],
                 venueId: (string) $row['venue_id'],
                 name: (string) $row['name'],
-                widthM: (float) $row['width_m'],
-                depthM: (float) $row['depth_m'],
+                widthM: $row['width_m'] !== null ? (float) $row['width_m'] : null,
+                depthM: $row['depth_m'] !== null ? (float) $row['depth_m'] : null,
                 heightM: (float) $row['height_m'],
                 type: StageType::from((string) $row['stage_type']),
                 powerDistances: $distances[(string) $row['id']] ?? [],
                 createdAt: new DateTimeImmutable((string) $row['created_at']),
+                elementStock: $elements[(string) $row['id']] ?? [],
             );
         }
 

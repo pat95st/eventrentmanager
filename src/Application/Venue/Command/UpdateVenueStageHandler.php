@@ -38,6 +38,8 @@ final class UpdateVenueStageHandler implements CommandHandlerInterface
             $command->type,
             $command->powerDistances,
             $this->connections->findByVenue($stage->venueId),
+            $command->buildMode,
+            $command->elementStock,
         );
 
         if ($data === null) {
@@ -50,6 +52,7 @@ final class UpdateVenueStageHandler implements CommandHandlerInterface
         $stage->heightM = $data['height'];
         $stage->type = $data['type'];
         $stage->powerDistances = $data['powerDistances'];
+        $stage->elementStock = $data['elementStock'];
 
         $this->stages->save($stage);
 

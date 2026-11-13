@@ -102,6 +102,43 @@ final class FtpsClient implements StorageClientInterface
         }
     }
 
+    /**
+     * Ruft das Verzeichnis selbst auf (URL mit abschließendem "/"): curl
+     * wechselt Ebene für Ebene hinein und legt dank
+     * CURLOPT_FTP_CREATE_MISSING_DIRS jede fehlende per MKD an.
+     */
+    public function createDirectory(string $remotePath): void
+    {
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $ch = curl_init();
+        if ($ch === false) {
+            throw new StorageUploadException('curl konnte nicht initialisiert werden.');
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->buildUrl($remotePath) . '/',
+            CURLOPT_USE_SSL => CURLUSESSL_ALL,
+            CURLOPT_FTP_CREATE_MISSING_DIRS => CURLFTP_CREATE_DIR,
+            CURLOPT_DIRLISTONLY => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => self::TIMEOUT_SECONDS,
+            CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
+            CURLOPT_USERPWD => $this->target->username . ':' . ($this->target->password ?? ''),
+        ]);
+
+        $ok = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($ok === false || $errno !== 0) {
+            throw new StorageUploadException("FTPS-Ordner konnte nicht angelegt werden: {$error}");
+        }
+    }
+
     private function deleteFile(string $remotePath): bool
     {
         $ch = curl_init();

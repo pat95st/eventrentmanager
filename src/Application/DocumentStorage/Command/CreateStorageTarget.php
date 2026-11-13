@@ -27,6 +27,11 @@ final class CreateStorageTarget implements CommandInterface
         public readonly string $s3Endpoint,
         public readonly bool $s3UsePathStyle,
         public readonly bool $enabled,
+        // Migration 148: Ordner für Veranstaltungen/Kunden und Freigabe-
+        // Passwörter, als Rohwerte aus dem Formular (siehe
+        // ValidatesStorageTargetInput::validateFolderSettings()).
+        /** @var array<string, mixed> */
+        public readonly array $folderSettings = [],
     ) {
     }
 }

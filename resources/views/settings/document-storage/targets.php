@@ -5,6 +5,8 @@
 /** @var array<string, mixed> $old */
 /** @var \App\Domain\DocumentStorage\StorageProtocol[] $protocols */
 
+use App\Domain\DocumentStorage\FolderPathTemplate;
+use App\Domain\DocumentStorage\SharePasswordPolicy;
 use App\Domain\DocumentStorage\StorageProtocol;
 
 use function App\Infrastructure\Http\e;
@@ -108,7 +110,7 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
             </div>
 
             <!-- WebDAV / FTPS / SFTP / SCP: Host+Port -->
-            <div data-protocol-group="webdav,ftps,sftp,scp" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div data-protocol-group="webdav,nextcloud,owncloud,ftps,sftp,scp" class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div class="sm:col-span-2">
                     <label for="host" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.host')) ?></label>
                     <input type="text" id="host" name="host" placeholder="z. B. cloud.beispiel.de"
@@ -126,11 +128,12 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
             </div>
 
             <!-- WebDAV / FTPS: Benutzername + Passwort -->
-            <div data-protocol-group="webdav,ftps" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div data-protocol-group="webdav,nextcloud,owncloud,ftps" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                     <label for="username" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.username')) ?></label>
                     <input type="text" id="username" name="username" value="<?= e($old['username'] ?? $editing?->username ?? '') ?>"
                            class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                    <?php if (isset($errors['username'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['username']) ?></p><?php endif; ?>
                 </div>
                 <div>
                     <label for="password" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.password')) ?></label>
@@ -169,16 +172,17 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
             </div>
 
             <!-- WebDAV / FTPS / SFTP / SCP: Basis-Pfad -->
-            <div data-protocol-group="webdav,ftps,sftp,scp">
+            <div data-protocol-group="webdav,nextcloud,owncloud,ftps,sftp,scp">
                 <label for="base_path" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.base_path')) ?></label>
                 <input type="text" id="base_path" name="base_path" placeholder="/remote.php/dav/files/benutzername/"
                        value="<?= e($old['base_path'] ?? $editing?->basePath ?? '') ?>"
                        class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
-                <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.base_path_hint')) ?></p>
+                <p data-protocol-group="webdav,ftps,sftp,scp" class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.base_path_hint')) ?></p>
+                <p data-protocol-group="nextcloud,owncloud" class="mt-1 text-xs text-slate-400 dark:text-slate-500">Optionaler Unterordner in den Dateien des Benutzers, z. B. „Verleih“. Die WebDAV-Adresse (/remote.php/dav/files/&lt;Benutzer&gt;/) wird automatisch ergänzt. Läuft die Cloud in einem Unterverzeichnis, dieses beim Host mit angeben (z. B. „example.org/cloud“). Als Passwort am besten ein App-Passwort verwenden.</p>
             </div>
 
             <!-- WebDAV: HTTPS + Zertifikat -->
-            <div data-protocol-group="webdav" class="space-y-2">
+            <div data-protocol-group="webdav,nextcloud,owncloud" class="space-y-2">
                 <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input type="checkbox" name="webdav_use_https" value="1" <?= (bool) ($old['webdav_use_https'] ?? $editing?->webdavUseHttps ?? true) ? 'checked' : '' ?>
                            class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
@@ -231,6 +235,82 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
                 <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.s3_endpoint_hint')) ?></p>
             </div>
 
+            <?php
+            // Ordner für Veranstaltungen/Kunden (Migration 148)
+            $fv = static fn (string $key, mixed $fallback) => array_key_exists($key, $old) ? $old[$key] : $fallback;
+            $foldersEnabled = (bool) $fv('folders_enabled', $editing?->foldersEnabled ?? false);
+            $monoInput = 'mt-1 w-full rounded-md border px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500';
+            $templateFields = [
+                'event_folder_template' => ['eventFolderTemplate', 'Veranstaltungsordner', $editing?->eventFolderTemplate ?? FolderPathTemplate::DEFAULT_EVENT],
+                'customer_folder_template' => ['customerFolderTemplate', 'Kundenordner', $editing?->customerFolderTemplate ?? FolderPathTemplate::DEFAULT_CUSTOMER],
+                'event_subfolder_template' => ['eventSubfolderTemplate', 'Veranstaltung als Unterordner des Kundenordners', $editing?->eventSubfolderTemplate ?? FolderPathTemplate::DEFAULT_EVENT_SUBFOLDER],
+            ];
+            ?>
+            <fieldset class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-800">
+                <legend class="px-1 text-xs font-semibold text-slate-600 dark:text-slate-400">Ordner für Veranstaltungen &amp; Kunden</legend>
+                <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" name="folders_enabled" value="1" data-folders-enabled <?= $foldersEnabled ? 'checked' : '' ?>
+                           class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+                    <span>Dieses Ziellaufwerk für Ordner anbieten
+                        <span class="block text-xs text-slate-400 dark:text-slate-500">Bei Veranstaltungen und Kunden lässt sich dann per Haken ein Ordner anlegen.</span>
+                    </span>
+                </label>
+                <div data-folders-details class="space-y-3">
+                    <?php foreach ($templateFields as $inputName => [$errorKey, $label, $current]): ?>
+                        <div>
+                            <label for="<?= e($inputName) ?>" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e($label) ?></label>
+                            <input type="text" id="<?= e($inputName) ?>" name="<?= e($inputName) ?>" maxlength="500"
+                                   value="<?= e((string) $fv($inputName, $current)) ?>"
+                                   class="<?= $monoInput ?> <?= isset($errors[$errorKey]) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?>">
+                            <?php if (isset($errors[$errorKey])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors[$errorKey]) ?></p><?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                    <p class="text-xs text-slate-400 dark:text-slate-500">
+                        Pfad relativ zum Basis-Pfad, „/“ trennt Ordnerebenen. Platzhalter für Veranstaltungen:
+                        <?= e(implode(', ', array_keys(FolderPathTemplate::EVENT_PLACEHOLDERS))) ?>.
+                        Für Kundenordner: <?= e(implode(', ', array_keys(FolderPathTemplate::CUSTOMER_PLACEHOLDERS))) ?>.
+                        Ein einmal angelegter Ordner behält seinen Namen, auch wenn Veranstaltung oder Kunde später umbenannt werden.
+                    </p>
+                    <p data-protocol-group="scp" class="text-xs text-amber-600 dark:text-amber-400">SCP legt Ordner per SSH-Befehl „mkdir“ an – das Konto braucht dafür Shell-Zugriff. Ohne Shell bitte SFTP verwenden.</p>
+
+                    <div data-protocol-group="nextcloud,owncloud" class="space-y-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+                        <p class="text-xs font-semibold text-slate-600 dark:text-slate-400">Freigabe an den Kunden</p>
+                        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                            <input type="checkbox" name="share_always_password" value="1" <?= (bool) $fv('share_always_password', $editing?->shareAlwaysPassword ?? false) ? 'checked' : '' ?>
+                                   class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+                            <span>Freigaben immer mit Passwort anlegen
+                                <span class="block text-xs text-slate-400 dark:text-slate-500">Das Passwort wird automatisch erzeugt und beim Anlegen einmalig angezeigt.</span>
+                            </span>
+                        </label>
+                        <div>
+                            <label for="share_password_length" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Passwortlänge</label>
+                            <input type="number" id="share_password_length" name="share_password_length"
+                                   min="<?= SharePasswordPolicy::MIN_LENGTH ?>" max="<?= SharePasswordPolicy::MAX_LENGTH ?>"
+                                   value="<?= e((string) $fv('share_password_length', $editing?->sharePasswordLength ?? SharePasswordPolicy::DEFAULT_LENGTH)) ?>"
+                                   class="mt-1 w-24 rounded-md border <?= isset($errors['sharePasswordLength']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            <?php if (isset($errors['sharePasswordLength'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['sharePasswordLength']) ?></p><?php endif; ?>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-xs font-medium text-slate-600 dark:text-slate-400">Zeichenarten</p>
+                            <?php foreach ([
+                                'share_password_uppercase' => ['Großbuchstaben', $editing?->sharePasswordUppercase ?? true],
+                                'share_password_lowercase' => ['Kleinbuchstaben', $editing?->sharePasswordLowercase ?? true],
+                                'share_password_digits' => ['Ziffern', $editing?->sharePasswordDigits ?? true],
+                                'share_password_symbols' => ['Sonderzeichen', $editing?->sharePasswordSymbols ?? false],
+                            ] as $inputName => [$label, $current]): ?>
+                                <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                                    <input type="checkbox" name="<?= e($inputName) ?>" value="1" <?= (bool) $fv($inputName, $current) ? 'checked' : '' ?>
+                                           class="rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+                                    <?= e($label) ?>
+                                </label>
+                            <?php endforeach; ?>
+                            <?php if (isset($errors['sharePasswordClasses'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['sharePasswordClasses']) ?></p><?php endif; ?>
+                            <p class="text-xs text-slate-400 dark:text-slate-500">Jede gewählte Zeichenart kommt mindestens einmal vor. Leicht verwechselbare Zeichen (0/O, 1/l/I) werden nicht verwendet. Verlangt die Cloud selbst strengere Passwörter, lehnt sie die Freigabe mit einer Fehlermeldung ab.</p>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
             <div>
                 <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                     <input type="checkbox" name="enabled" value="1" <?= (bool) ($old['enabled'] ?? $editing?->enabled ?? true) ? 'checked' : '' ?>
@@ -262,9 +342,27 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
             var allowed = el.getAttribute('data-protocol-group').split(',');
             el.style.display = allowed.indexOf(protocol) !== -1 ? '' : 'none';
         });
+        // Felder ausgeblendeter Gruppen nicht mitschicken: Benutzername und
+        // Passwort gibt es je Protokollgruppe einmal mit demselben Namen —
+        // sonst überschreibt das leere, unsichtbare Feld das ausgefüllte.
+        document.querySelectorAll('[data-protocol-group] input, [data-protocol-group] select, [data-protocol-group] textarea').forEach(function (field) {
+            var hidden = false;
+            for (var group = field.closest('[data-protocol-group]'); group; group = group.parentElement ? group.parentElement.closest('[data-protocol-group]') : null) {
+                if (group.getAttribute('data-protocol-group').split(',').indexOf(protocol) === -1) { hidden = true; break; }
+            }
+            field.disabled = hidden;
+        });
     }
 
     select.addEventListener('change', applyVisibility);
     applyVisibility();
+
+    var foldersEnabled = document.querySelector('[data-folders-enabled]');
+    var foldersDetails = document.querySelector('[data-folders-details]');
+    if (foldersEnabled && foldersDetails) {
+        var applyFolders = function () { foldersDetails.hidden = !foldersEnabled.checked; };
+        foldersEnabled.addEventListener('change', applyFolders);
+        applyFolders();
+    }
 })();
 </script>

@@ -882,6 +882,22 @@ $canDocuments = $canRentals;
         <?= e($flashError) ?>
       </div>
     <?php endif; ?>
+    <?php
+    // Frisch erzeugtes Freigabe-Passwort eines Ordners (Migration 148): wird
+    // genau einmal angezeigt und ist danach nirgends mehr abrufbar.
+    $storageFolderPassword = $currentUser !== null ? \App\Infrastructure\Http\StorageFolderForm::consumeOneTimePassword() : null;
+    ?>
+    <?php if ($storageFolderPassword !== null): ?>
+      <div class="mb-6 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+        <p class="font-medium">Passwort für die Freigabe des Ordners „<?= e($storageFolderPassword['folder']) ?>“</p>
+        <p class="mt-2">
+          <code id="storage-folder-password" class="select-all rounded bg-white px-2 py-1 font-mono text-base text-slate-900 dark:bg-slate-900 dark:text-slate-100"><?= e($storageFolderPassword['password']) ?></code>
+          <button type="button" class="ml-2 rounded-md border border-amber-400 px-2 py-1 text-xs font-medium hover:bg-amber-100 dark:border-amber-600 dark:hover:bg-amber-900/40"
+                  onclick="var b=this;navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('storage-folder-password').textContent).then(function(){b.textContent='Kopiert';});">Kopieren</button>
+        </p>
+        <p class="mt-2 text-xs">Dieses Passwort wird nur jetzt angezeigt und nicht gespeichert. Bitte notieren und dem Kunden getrennt vom Link mitteilen – in der E-Mail an den Kunden steht es nicht. Ein neues Passwort lässt sich jederzeit beim Bearbeiten erzeugen.</p>
+      </div>
+    <?php endif; ?>
 
     <?= $content ?>
     <?php if ($settingsGroupKey !== null): ?>

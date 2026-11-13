@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\DocumentStorage\Command;
 
+use App\Domain\DocumentStorage\FolderPathTemplate;
+use App\Domain\DocumentStorage\SharePasswordPolicy;
 use App\Domain\DocumentStorage\StorageProtocol;
 
 /** Gemeinsame Validierung für Create-/UpdateStorageTargetHandler. */
@@ -96,5 +98,68 @@ trait ValidatesStorageTargetInput
             's3UsePathStyle' => $s3UsePathStyle,
             'enabled' => $enabled,
         ]];
+    }
+
+    /**
+     * Ordner für Veranstaltungen/Kunden (Migration 148): Vorlagen und – nur
+     * Nextcloud/ownCloud – die Regeln für Freigabe-Passwörter.
+     *
+     * @param array<string, mixed> $input Rohwerte aus dem Formular
+     * @return array{0: array<string, string>, 1: array<string, mixed>} Fehler sowie
+     *         Property-Name von DocumentStorageTarget => Wert
+     */
+    private function validateFolderSettings(?StorageProtocol $protocol, ?string $username, array $input): array
+    {
+        $errors = [];
+
+        if ($protocol !== null && $protocol->supportsSharing() && ($username === null || $username === '')) {
+            $errors['username'] = 'Bitte den Benutzernamen angeben — er ist Teil der WebDAV-Adresse.';
+        }
+
+        $foldersEnabled = (bool) ($input['foldersEnabled'] ?? false);
+
+        $templates = [
+            'eventFolderTemplate' => [FolderPathTemplate::DEFAULT_EVENT, FolderPathTemplate::EVENT_PLACEHOLDERS],
+            'customerFolderTemplate' => [FolderPathTemplate::DEFAULT_CUSTOMER, FolderPathTemplate::CUSTOMER_PLACEHOLDERS],
+            'eventSubfolderTemplate' => [FolderPathTemplate::DEFAULT_EVENT_SUBFOLDER, FolderPathTemplate::EVENT_PLACEHOLDERS],
+        ];
+        $data = ['foldersEnabled' => $foldersEnabled];
+        foreach ($templates as $field => [$default, $placeholders]) {
+            $value = trim((string) ($input[$field] ?? ''));
+            if ($value === '') {
+                $value = $default;
+            }
+            if ($foldersEnabled) {
+                $error = FolderPathTemplate::validationError($value, $placeholders);
+                if ($error !== null) {
+                    $errors[$field] = $error;
+                }
+            }
+            $data[$field] = mb_substr($value, 0, 500);
+        }
+
+        $lengthInput = trim((string) ($input['sharePasswordLength'] ?? ''));
+        $policy = new SharePasswordPolicy(
+            $lengthInput === '' ? SharePasswordPolicy::DEFAULT_LENGTH : (int) $lengthInput,
+            (bool) ($input['sharePasswordUppercase'] ?? true),
+            (bool) ($input['sharePasswordLowercase'] ?? true),
+            (bool) ($input['sharePasswordDigits'] ?? true),
+            (bool) ($input['sharePasswordSymbols'] ?? false),
+        );
+        if ($protocol !== null && $protocol->supportsSharing()) {
+            $errors = array_merge($errors, $policy->validate());
+        } elseif ($policy->validate() !== []) {
+            // Für andere Protokolle bedeutungslos — nichts Ungültiges speichern.
+            $policy = new SharePasswordPolicy();
+        }
+
+        $data['shareAlwaysPassword'] = (bool) ($input['shareAlwaysPassword'] ?? false);
+        $data['sharePasswordLength'] = $policy->length;
+        $data['sharePasswordUppercase'] = $policy->uppercase;
+        $data['sharePasswordLowercase'] = $policy->lowercase;
+        $data['sharePasswordDigits'] = $policy->digits;
+        $data['sharePasswordSymbols'] = $policy->symbols;
+
+        return [$errors, $data];
     }
 }

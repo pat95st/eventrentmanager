@@ -77,6 +77,24 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Straße/Hausnummer, Adresszusatz, PLZ, Ort, Telefon, E-Mail-Adresse.
   Liste mit Freitextsuche (Name/Firma/Ort/E-Mail) sowie separater
   Anlegen-/Bearbeiten-Formularseite.
+- **Ordner im Dateiablagesystem** (Migration 148): Für Veranstaltungen und
+  Kunden lässt sich per Haken im jeweiligen Formular ein Ordner auf einem
+  Ziellaufwerk anlegen (Einstellungen › Ziellaufwerke, dort je Laufwerk
+  „für Ordner anbieten“ aktivieren). Namensregeln und Pfade sind je
+  Ziellaufwerk als Vorlagen mit Platzhaltern einstellbar (Veranstaltungs-
+  ordner, Kundenordner, Veranstaltung als Unterordner des Kundenordners).
+  Hat der Kunde einen Ordner, kann die Veranstaltung als dessen Unterordner
+  angelegt werden. Bei den Protokollen **Nextcloud** und **ownCloud** kann
+  der Ordner zusätzlich per Freigabe-Link mit dem Kunden geteilt werden
+  (Berechtigung je Veranstaltung/Kunde wählbar: ansehen, bearbeiten, nur
+  hochladen); der Link geht über die E-Mail-Vorlage „Ordner-Freigabe“ an
+  die E-Mail-Adresse des Kunden. Je Ziellaufwerk lässt sich festlegen, dass
+  Freigaben immer ein automatisch erzeugtes Passwort bekommen, und nach
+  welcher Richtlinie (Länge, Zeichenarten). Das Passwort wird nur einmalig
+  nach dem Speichern angezeigt, nicht gespeichert und nicht per E-Mail
+  verschickt; beim Bearbeiten lässt sich ein neues erzeugen. Ein angelegter
+  Ordner behält seinen Pfad bei späteren Umbenennungen; wird der Haken
+  entfernt, wird nur die Freigabe aufgehoben, der Ordner bleibt bestehen.
 - **Cases** (Menüpunkt „Cases“, im Untermenü von „Artikel“): ein Case ist
   ein Transport-/Flightcase-Modell, das funktional wie ein Artikel behandelt
   wird — mit Hersteller (aus derselben Herstellerliste wie Artikel), eigenem

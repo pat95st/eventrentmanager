@@ -74,6 +74,7 @@ final class DocumentStorageSettingsController
             s3Endpoint: $request->input('s3_endpoint', '') ?? '',
             s3UsePathStyle: $request->input('s3_use_path_style') === '1',
             enabled: $request->input('enabled') === '1',
+            folderSettings: $this->folderSettingsFromRequest($request),
         );
 
         try {
@@ -123,6 +124,7 @@ final class DocumentStorageSettingsController
             s3Endpoint: $request->input('s3_endpoint', '') ?? '',
             s3UsePathStyle: $request->input('s3_use_path_style') === '1',
             enabled: $request->input('enabled') === '1',
+            folderSettings: $this->folderSettingsFromRequest($request),
         );
 
         try {
@@ -213,6 +215,27 @@ final class DocumentStorageSettingsController
         Response::redirect('/einstellungen/speicherziele/zuordnungen');
     }
 
+    /**
+     * Ordner für Veranstaltungen/Kunden und Freigabe-Passwörter (Migration 148).
+     *
+     * @return array<string, mixed>
+     */
+    private function folderSettingsFromRequest(Request $request): array
+    {
+        return [
+            'foldersEnabled' => $request->input('folders_enabled') === '1',
+            'eventFolderTemplate' => $request->input('event_folder_template', '') ?? '',
+            'customerFolderTemplate' => $request->input('customer_folder_template', '') ?? '',
+            'eventSubfolderTemplate' => $request->input('event_subfolder_template', '') ?? '',
+            'shareAlwaysPassword' => $request->input('share_always_password') === '1',
+            'sharePasswordLength' => $request->input('share_password_length', '') ?? '',
+            'sharePasswordUppercase' => $request->input('share_password_uppercase') === '1',
+            'sharePasswordLowercase' => $request->input('share_password_lowercase') === '1',
+            'sharePasswordDigits' => $request->input('share_password_digits') === '1',
+            'sharePasswordSymbols' => $request->input('share_password_symbols') === '1',
+        ];
+    }
+
     /** @param DocumentStorageTarget[] $targets */
     private function findInList(array $targets, string $id): ?DocumentStorageTarget
     {
@@ -287,6 +310,16 @@ final class DocumentStorageSettingsController
             's3_endpoint' => $command->s3Endpoint,
             's3_use_path_style' => $command->s3UsePathStyle,
             'enabled' => $command->enabled,
+            'folders_enabled' => $command->folderSettings['foldersEnabled'] ?? false,
+            'event_folder_template' => $command->folderSettings['eventFolderTemplate'] ?? '',
+            'customer_folder_template' => $command->folderSettings['customerFolderTemplate'] ?? '',
+            'event_subfolder_template' => $command->folderSettings['eventSubfolderTemplate'] ?? '',
+            'share_always_password' => $command->folderSettings['shareAlwaysPassword'] ?? false,
+            'share_password_length' => $command->folderSettings['sharePasswordLength'] ?? '',
+            'share_password_uppercase' => $command->folderSettings['sharePasswordUppercase'] ?? true,
+            'share_password_lowercase' => $command->folderSettings['sharePasswordLowercase'] ?? true,
+            'share_password_digits' => $command->folderSettings['sharePasswordDigits'] ?? true,
+            'share_password_symbols' => $command->folderSettings['sharePasswordSymbols'] ?? false,
         ];
     }
 }

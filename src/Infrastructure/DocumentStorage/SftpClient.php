@@ -49,6 +49,30 @@ final class SftpClient implements StorageClientInterface
         }
     }
 
+    public function createDirectory(string $remotePath): void
+    {
+        $this->assertExtensionAvailable();
+
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $connection = $this->connect();
+        $sftp = @ssh2_sftp($connection);
+        if ($sftp === false) {
+            throw new StorageUploadException('SFTP-Subsystem konnte auf dem Server nicht initialisiert werden.');
+        }
+
+        $fullPath = $this->fullRemotePath($remotePath);
+        $this->ensureDirectoriesExist($sftp, $fullPath);
+
+        // ssh2_sftp_mkdir() unterscheidet "existiert bereits" nicht von einem
+        // echten Fehler — deshalb anschließend prüfen, ob der Ordner da ist.
+        if (@ssh2_sftp_stat($sftp, $fullPath) === false) {
+            throw new StorageUploadException("SFTP-Ordner konnte nicht angelegt werden: {$fullPath}");
+        }
+    }
+
     public function testConnection(): string
     {
         $this->assertExtensionAvailable();

@@ -10,8 +10,8 @@ use App\Domain\DocumentStorage\DocumentStorageTarget;
  * Handgeschriebener WebDAV-Client über curl (PUT für den Upload, MKCOL für
  * fehlende Zwischenverzeichnisse, DELETE für den Verbindungstest) — analog
  * im Stil zu App\Infrastructure\Mail\SmtpMailer (kein Composer-Paket
- * verfügbar). Nextcloud-kompatibel: base_path typischerweise
- * "/remote.php/dav/files/{username}/...".
+ * verfügbar). Bedient auch die Protokolle "nextcloud"/"owncloud", bei denen
+ * der WebDAV-Pfad automatisch ergänzt wird (siehe WebDavEndpoint).
  *
  * TLS-Verifikation bleibt IMMER aktiv, außer der Administrator hat für
  * dieses Ziellaufwerk explizit "Selbstsigniertes Zertifikat erlauben"
@@ -56,6 +56,45 @@ final class WebDavClient implements StorageClientInterface
         return 'Verbindung erfolgreich — Testdatei wurde hochgeladen und wieder entfernt.';
     }
 
+    public function createDirectory(string $remotePath): void
+    {
+        $segments = array_values(array_filter(explode('/', $remotePath), static fn (string $segment) => $segment !== ''));
+        if ($segments === []) {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        // Bei Nextcloud/ownCloud ist der Basis-Pfad ein Ordner in den Dateien
+        // des Benutzers und wird bei Bedarf gleich mit angelegt. Beim
+        // allgemeinen WebDAV-Protokoll ist er Teil der Server-Adresse.
+        $withBasePath = $this->target->protocol->supportsSharing();
+        $currentPath = '';
+        if ($withBasePath) {
+            foreach (explode('/', (string) $this->target->basePath) as $segment) {
+                if ($segment !== '') {
+                    $currentPath .= '/' . $segment;
+                    $this->request('MKCOL', WebDavEndpoint::fileUrl($this->target, $currentPath, false), null);
+                }
+            }
+        }
+
+        $response = null;
+        foreach ($segments as $segment) {
+            $currentPath .= '/' . $segment;
+            $response = $this->request('MKCOL', WebDavEndpoint::fileUrl($this->target, $currentPath, !$withBasePath), null);
+        }
+
+        // Maßgeblich ist nur die letzte Ebene: 201 = angelegt, 405 = existiert bereits.
+        if ($response['errno'] !== 0) {
+            throw new StorageUploadException("Ordner konnte nicht angelegt werden: {$response['error']}");
+        }
+        if ($response['httpCode'] === 401 || $response['httpCode'] === 403) {
+            throw new StorageUploadException("Der Server hat das Anlegen des Ordners abgelehnt (HTTP {$response['httpCode']}) — bitte Zugangsdaten und Schreibrechte prüfen.");
+        }
+        if (!in_array($response['httpCode'], [200, 201, 204, 405], true)) {
+            throw new StorageUploadException("Ordner \"{$remotePath}\" konnte nicht angelegt werden (HTTP {$response['httpCode']}).");
+        }
+    }
+
     /**
      * Legt fehlende Zwischenverzeichnisse rekursiv per MKCOL an (WebDAV
      * verlangt, dass jeder Pfadteil einzeln existiert, ein PUT auf ein
@@ -71,32 +110,16 @@ final class WebDavClient implements StorageClientInterface
         $currentPath = '';
         foreach ($segments as $segment) {
             $currentPath .= '/' . $segment;
-            $response = $this->request('MKCOL', $this->buildUrl(ltrim($currentPath, '/')), null);
-
             // 201 = angelegt, 405 = existiert bereits — beides in Ordnung.
             // Andere Fehler werden erst beim eigentlichen PUT sichtbar, um
             // hier nicht zu streng zu sein (manche Server melden abweichende Codes).
+            $this->request('MKCOL', $this->buildUrl(ltrim($currentPath, '/')), null);
         }
     }
 
     private function buildUrl(string $remotePath): string
     {
-        $scheme = $this->target->webdavUseHttps ? 'https' : 'http';
-        $host = (string) $this->target->host;
-        $port = $this->target->port;
-        $hostPart = $host . ($port !== null ? ':' . $port : '');
-
-        $basePath = trim((string) $this->target->basePath, '/');
-        $path = trim($remotePath, '/');
-
-        $fullPath = implode('/', array_filter([$basePath, $path], static fn (string $part) => $part !== ''));
-
-        // Jedes Pfadsegment einzeln URL-kodieren, damit Schrägstriche als
-        // Trenner erhalten bleiben (Leerzeichen/Sonderzeichen in Datei-
-        // /Ordnernamen sind bei generierten Dokumentnamen sonst problematisch).
-        $encodedSegments = array_map('rawurlencode', explode('/', $fullPath));
-
-        return $scheme . '://' . $hostPart . '/' . implode('/', $encodedSegments);
+        return WebDavEndpoint::fileUrl($this->target, $remotePath);
     }
 
     /** @return array{errno: int, error: string, httpCode: int, body: string} */

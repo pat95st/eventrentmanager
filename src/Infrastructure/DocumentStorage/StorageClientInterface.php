@@ -29,4 +29,13 @@ interface StorageClientInterface
      * @throws StorageUploadException Bei einem fehlgeschlagenen Verbindungs-/Upload-Versuch.
      */
     public function testConnection(): string;
+
+    /**
+     * Legt einen Ordner samt fehlender Zwischenebenen an (Veranstaltungs-/
+     * Kundenordner, Migration 148). Existiert er bereits, ist das kein Fehler.
+     *
+     * @param string $remotePath Ordnerpfad relativ zum base_path/Bucket des Ziellaufwerks.
+     * @throws StorageUploadException Wenn der Ordner nicht angelegt werden konnte.
+     */
+    public function createDirectory(string $remotePath): void;
 }

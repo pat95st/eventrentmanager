@@ -39,6 +39,38 @@ final class DocumentStorageTarget
         public bool $enabled,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Migration 148: Ordner für Veranstaltungen/Kunden. Alle Felder mit
+        // Standardwert, damit bestehende new DocumentStorageTarget(...)-
+        // Aufrufstellen unverändert bleiben.
+        public bool $foldersEnabled = false,
+        public string $eventFolderTemplate = FolderPathTemplate::DEFAULT_EVENT,
+        public string $customerFolderTemplate = FolderPathTemplate::DEFAULT_CUSTOMER,
+        public string $eventSubfolderTemplate = FolderPathTemplate::DEFAULT_EVENT_SUBFOLDER,
+        // Nur Nextcloud/ownCloud: Freigaben immer mit Passwort anlegen und
+        // nach welcher Richtlinie es erzeugt wird.
+        public bool $shareAlwaysPassword = false,
+        public int $sharePasswordLength = SharePasswordPolicy::DEFAULT_LENGTH,
+        public bool $sharePasswordUppercase = true,
+        public bool $sharePasswordLowercase = true,
+        public bool $sharePasswordDigits = true,
+        public bool $sharePasswordSymbols = false,
     ) {
+    }
+
+    public function sharePasswordPolicy(): SharePasswordPolicy
+    {
+        return new SharePasswordPolicy(
+            $this->sharePasswordLength,
+            $this->sharePasswordUppercase,
+            $this->sharePasswordLowercase,
+            $this->sharePasswordDigits,
+            $this->sharePasswordSymbols,
+        );
+    }
+
+    /** Steht dieses Ziellaufwerk für neue Veranstaltungs-/Kundenordner zur Auswahl? */
+    public function offersFolders(): bool
+    {
+        return $this->enabled && $this->foldersEnabled;
     }
 }

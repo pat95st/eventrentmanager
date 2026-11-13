@@ -23,11 +23,15 @@ final class MariadbDocumentStorageTargetRepository implements DocumentStorageTar
                 id, name, protocol, host, port, username, password, private_key, private_key_passphrase,
                 base_path, webdav_use_https, webdav_allow_self_signed,
                 s3_access_key_id, s3_secret_access_key, s3_bucket, s3_region, s3_endpoint, s3_use_path_style,
+                folders_enabled, event_folder_template, customer_folder_template, event_subfolder_template,
+                share_always_password, share_password_length, share_password_uppercase, share_password_lowercase, share_password_digits, share_password_symbols,
                 enabled, created_at, updated_at
              ) VALUES (
                 :id, :name, :protocol, :host, :port, :username, :password, :private_key, :private_key_passphrase,
                 :base_path, :webdav_use_https, :webdav_allow_self_signed,
                 :s3_access_key_id, :s3_secret_access_key, :s3_bucket, :s3_region, :s3_endpoint, :s3_use_path_style,
+                :folders_enabled, :event_folder_template, :customer_folder_template, :event_subfolder_template,
+                :share_always_password, :share_password_length, :share_password_uppercase, :share_password_lowercase, :share_password_digits, :share_password_symbols,
                 :enabled, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
@@ -37,7 +41,18 @@ final class MariadbDocumentStorageTargetRepository implements DocumentStorageTar
                 webdav_use_https = VALUES(webdav_use_https), webdav_allow_self_signed = VALUES(webdav_allow_self_signed),
                 s3_access_key_id = VALUES(s3_access_key_id), s3_secret_access_key = VALUES(s3_secret_access_key),
                 s3_bucket = VALUES(s3_bucket), s3_region = VALUES(s3_region), s3_endpoint = VALUES(s3_endpoint),
-                s3_use_path_style = VALUES(s3_use_path_style), enabled = VALUES(enabled), updated_at = VALUES(updated_at)'
+                s3_use_path_style = VALUES(s3_use_path_style),
+                folders_enabled = VALUES(folders_enabled),
+                event_folder_template = VALUES(event_folder_template),
+                customer_folder_template = VALUES(customer_folder_template),
+                event_subfolder_template = VALUES(event_subfolder_template),
+                share_always_password = VALUES(share_always_password),
+                share_password_length = VALUES(share_password_length),
+                share_password_uppercase = VALUES(share_password_uppercase),
+                share_password_lowercase = VALUES(share_password_lowercase),
+                share_password_digits = VALUES(share_password_digits),
+                share_password_symbols = VALUES(share_password_symbols),
+                enabled = VALUES(enabled), updated_at = VALUES(updated_at)'
         );
 
         $stmt->execute([
@@ -59,6 +74,16 @@ final class MariadbDocumentStorageTargetRepository implements DocumentStorageTar
             's3_region' => $target->s3Region,
             's3_endpoint' => $target->s3Endpoint,
             's3_use_path_style' => $target->s3UsePathStyle ? 1 : 0,
+            'folders_enabled' => $target->foldersEnabled ? 1 : 0,
+            'event_folder_template' => $target->eventFolderTemplate,
+            'customer_folder_template' => $target->customerFolderTemplate,
+            'event_subfolder_template' => $target->eventSubfolderTemplate,
+            'share_always_password' => $target->shareAlwaysPassword ? 1 : 0,
+            'share_password_length' => $target->sharePasswordLength,
+            'share_password_uppercase' => $target->sharePasswordUppercase ? 1 : 0,
+            'share_password_lowercase' => $target->sharePasswordLowercase ? 1 : 0,
+            'share_password_digits' => $target->sharePasswordDigits ? 1 : 0,
+            'share_password_symbols' => $target->sharePasswordSymbols ? 1 : 0,
             'enabled' => $target->enabled ? 1 : 0,
             'created_at' => $target->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $target->updatedAt->format('Y-m-d H:i:s'),
@@ -111,6 +136,16 @@ final class MariadbDocumentStorageTargetRepository implements DocumentStorageTar
             enabled: (bool) $row['enabled'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            foldersEnabled: (bool) $row['folders_enabled'],
+            eventFolderTemplate: $row['event_folder_template'],
+            customerFolderTemplate: $row['customer_folder_template'],
+            eventSubfolderTemplate: $row['event_subfolder_template'],
+            shareAlwaysPassword: (bool) $row['share_always_password'],
+            sharePasswordLength: (int) $row['share_password_length'],
+            sharePasswordUppercase: (bool) $row['share_password_uppercase'],
+            sharePasswordLowercase: (bool) $row['share_password_lowercase'],
+            sharePasswordDigits: (bool) $row['share_password_digits'],
+            sharePasswordSymbols: (bool) $row['share_password_symbols'],
         );
     }
 }

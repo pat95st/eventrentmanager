@@ -45,6 +45,9 @@ final class CreateStorageTargetHandler implements CommandHandlerInterface
             $command->enabled,
         );
 
+        [$folderErrors, $folderData] = $this->validateFolderSettings($data['protocol'], $data['username'], $command->folderSettings);
+        $errors = array_merge($errors, $folderErrors);
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -73,6 +76,10 @@ final class CreateStorageTargetHandler implements CommandHandlerInterface
             createdAt: $now,
             updatedAt: $now,
         );
+
+        foreach ($folderData as $property => $value) {
+            $target->{$property} = $value;
+        }
 
         $this->targets->save($target);
 

@@ -582,6 +582,8 @@ $documentStorageTargetRepository = new \App\Infrastructure\Persistence\Pdo\Maria
 $documentStorageAssignmentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageAssignmentRepository($pdo);
 $documentStorageUploadLogRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageUploadLogRepository($pdo);
 $documentStorageClientFactory = new \App\Infrastructure\DocumentStorage\StorageClientFactory();
+// Ordner für Veranstaltungen/Kunden (Migration 148)
+$storageFolderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbStorageFolderRepository($pdo);
 $documentStoragePusher = new \App\Infrastructure\DocumentStorage\DocumentStoragePusher(
     $documentStorageAssignmentRepository,
     $documentStorageTargetRepository,
@@ -1187,6 +1189,16 @@ $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageTarg
 $commandBus->register(\App\Application\DocumentStorage\Command\TestStorageConnection::class, new \App\Application\DocumentStorage\Command\TestStorageConnectionHandler($documentStorageTargetRepository, $documentStorageClientFactory));
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageAssignment::class, new \App\Application\DocumentStorage\Command\CreateStorageAssignmentHandler($documentStorageAssignmentRepository, $documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageAssignment::class, new \App\Application\DocumentStorage\Command\DeleteStorageAssignmentHandler($documentStorageAssignmentRepository));
+// Ordner für Veranstaltungen/Kunden samt Freigabe (Migration 148)
+$commandBus->register(\App\Application\DocumentStorage\Command\SyncStorageFolder::class, new \App\Application\DocumentStorage\Command\SyncStorageFolderHandler(
+    $storageFolderRepository,
+    $documentStorageTargetRepository,
+    $rentalRepository,
+    $customerRepository,
+    $documentStorageClientFactory,
+    new \App\Application\DocumentStorage\EmailStorageFolderShareNotifier($mailer, $emailTemplateRenderer),
+));
+\App\Infrastructure\Http\StorageFolderForm::configure($commandBus, $storageFolderRepository, $documentStorageTargetRepository);
 
 $commandBus->register(\App\Application\Settings\Command\UpdateIntegrationBaseSettings::class, new \App\Application\Settings\Command\UpdateIntegrationBaseSettingsHandler($integrationBaseSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateGoogleMerchantSettings::class, new \App\Application\Settings\Command\UpdateGoogleMerchantSettingsHandler($googleMerchantSettingsRepository));

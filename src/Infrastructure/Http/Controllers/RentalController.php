@@ -310,6 +310,7 @@ final class RentalController
         try {
             $rentalId = $this->commands->dispatch($command);
             Flash::success(t('rentals.flash.created'));
+            \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, (string) $rentalId, $request);
             Response::redirect('/veranstaltungen/' . $rentalId);
         } catch (ValidationException $e) {
             $this->renderForm(null, $e->errors(), $this->oldFromCommand($command));
@@ -799,6 +800,7 @@ final class RentalController
         try {
             $this->commands->dispatch($command);
             Flash::success(t('rentals.flash.updated'));
+            \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $id, $request);
             Response::redirect('/veranstaltungen/' . $id);
         } catch (ValidationException $e) {
             $detail = $this->queries->ask(new GetRental($id));

@@ -47,6 +47,38 @@ final class ScpClient implements StorageClientInterface
         }
     }
 
+    /**
+     * SCP selbst kann keine Verzeichnisse anlegen — der Ordner wird deshalb
+     * über dieselbe SSH-Verbindung per "mkdir -p" erzeugt. Das setzt voraus,
+     * dass das Konto Shell-Befehle ausführen darf (bei reinen SCP-/SFTP-
+     * Konten ohne Shell bitte SFTP als Protokoll verwenden).
+     */
+    public function createDirectory(string $remotePath): void
+    {
+        $this->assertExtensionAvailable();
+
+        if (trim($remotePath, '/') === '') {
+            throw new StorageUploadException('Es wurde kein Ordnerpfad angegeben.');
+        }
+
+        $connection = $this->connect();
+        $fullPath = $this->fullRemotePath($remotePath);
+
+        $stream = @ssh2_exec($connection, 'mkdir -p -- ' . escapeshellarg($fullPath) . ' && echo MV_OK');
+        if ($stream === false) {
+            throw new StorageUploadException('Ordner konnte nicht angelegt werden: Das SSH-Konto erlaubt keine Shell-Befehle (für Ordner bitte SFTP verwenden).');
+        }
+
+        stream_set_blocking($stream, true);
+        stream_set_timeout($stream, 20);
+        $output = (string) stream_get_contents($stream);
+        fclose($stream);
+
+        if (!str_contains($output, 'MV_OK')) {
+            throw new StorageUploadException("Ordner {$fullPath} konnte per SSH nicht angelegt werden.");
+        }
+    }
+
     public function testConnection(): string
     {
         $this->assertExtensionAvailable();

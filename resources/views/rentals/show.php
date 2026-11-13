@@ -59,6 +59,20 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
         · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>
         · <?= $rental->deploymentDays ?> <?= $rental->deploymentDays === 1 ? e(t('rentals.show.deployment_day')) : e(t('rentals.show.deployment_days_plural')) ?>
     </p>
+    <?php
+    // Ordner im Dateiablagesystem (Migration 148)
+    $storageFolderInfo = \App\Infrastructure\Http\StorageFolderForm::folderInfo(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $rental->id);
+    ?>
+    <?php if ($storageFolderInfo !== null): ?>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Ordner<?= $storageFolderInfo['targetName'] !== '' ? ' auf „' . e($storageFolderInfo['targetName']) . '“' : '' ?>:
+            <span class="font-mono text-xs break-all"><?= e($storageFolderInfo['folder']->path) ?></span>
+            <?php if ($storageFolderInfo['folder']->isShared()): ?>
+                · <a href="<?= e($storageFolderInfo['folder']->shareUrl) ?>" target="_blank" rel="noopener" class="text-brand-700 underline dark:text-brand-400">Freigabe-Link</a>
+                (<?= e($storageFolderInfo['folder']->sharePermission?->label() ?? '') ?><?= $storageFolderInfo['folder']->shareHasPassword ? ', mit Passwort' : ', ohne Passwort' ?>)
+            <?php endif; ?>
+        </p>
+    <?php endif; ?>
 
     <div class="mt-4 flex flex-wrap items-center gap-2">
         <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">

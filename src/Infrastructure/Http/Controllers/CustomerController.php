@@ -195,6 +195,7 @@ final class CustomerController
         try {
             $id = $this->commands->dispatch($command);
             $this->saveDryHire((string) $id, $request);
+            \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, (string) $id, $request);
 
             // AJAX-Fall: das "+ Neuer Kunde"-Modal auf den Rechnungs-/
             // Angebots-/Auftragsbestätigungs-Formularen legt den Kunden per
@@ -264,6 +265,7 @@ final class CustomerController
         try {
             $this->commands->dispatch($command);
             $this->saveDryHire($id, $request);
+            \App\Infrastructure\Http\StorageFolderForm::sync(\App\Domain\DocumentStorage\StorageFolderOwnerType::Customer, $id, $request);
             Flash::success(t('customers.flash.updated'));
             Response::redirect('/kunden');
         } catch (ValidationException $e) {

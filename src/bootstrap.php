@@ -866,7 +866,17 @@ $commandBus->register(\App\Application\User\Command\EnableTotp::class, new Enabl
 $commandBus->register(\App\Application\User\Command\EnableEmailOtp::class, new EnableEmailOtpHandler($userRepository, $trustedDeviceRepository));
 $commandBus->register(\App\Application\User\Command\DisableTwoFactor::class, new DisableTwoFactorHandler($userRepository, $trustedDeviceRepository));
 $commandBus->register(\App\Application\User\Command\UpdateDefaultPageSize::class, new UpdateDefaultPageSizeHandler($userRepository));
-$commandBus->register(\App\Application\User\Command\UpdateDashboardWidgets::class, new \App\Application\User\Command\UpdateDashboardWidgetsHandler($userRepository));
+// Anordnung der Startseite je Benutzer und Vorlagen dafür (Migration 147)
+$dashboardTemplateRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDashboardTemplateRepository($pdo);
+$dashboardLayoutCommandHandler = new \App\Application\Dashboard\DashboardLayoutCommandHandler($userRepository, $dashboardTemplateRepository);
+$commandBus->register(\App\Application\Dashboard\UpdateDashboardLayout::class, $dashboardLayoutCommandHandler);
+$commandBus->register(\App\Application\Dashboard\ApplyDashboardTemplate::class, $dashboardLayoutCommandHandler);
+$commandBus->register(\App\Application\Dashboard\ResetDashboardLayout::class, $dashboardLayoutCommandHandler);
+$dashboardTemplateCommandHandler = new \App\Application\Dashboard\DashboardTemplateCommandHandler($dashboardTemplateRepository);
+$commandBus->register(\App\Application\Dashboard\SaveDashboardTemplate::class, $dashboardTemplateCommandHandler);
+$commandBus->register(\App\Application\Dashboard\DeleteDashboardTemplate::class, $dashboardTemplateCommandHandler);
+$dashboardSettingsController = new \App\Infrastructure\Http\Controllers\DashboardSettingsController($commandBus, $dashboardTemplateRepository);
+$dashboardTemplateController = new \App\Infrastructure\Http\Controllers\DashboardTemplateController($commandBus, $dashboardTemplateRepository);
 $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new UpdateLocaleHandler($userRepository));
 
 $commandBus->register(\App\Application\Auth\Command\AuthenticatePassword::class, new AuthenticatePasswordHandler($userRepository));
@@ -1760,8 +1770,10 @@ $router->post('/profil/sicherheit/deaktivieren', $auth->guard(null, [$profileCon
 $router->post('/profil/sicherheit/vertraute-geraete/widerrufen', $auth->guard(null, [$profileController, 'revokeTrustedDevices']));
 $router->get('/profil/darstellung', $auth->guard(null, [$profileController, 'showDisplaySettings']));
 $router->post('/profil/darstellung', $auth->guard(null, [$profileController, 'updateDisplaySettings']));
-$router->get('/profil/dashboard', $auth->guard(null, [$profileController, 'showDashboardSettings']));
-$router->post('/profil/dashboard', $auth->guard(null, [$profileController, 'updateDashboardSettings']));
+$router->get('/profil/dashboard', $auth->guard(null, [$dashboardSettingsController, 'show']));
+$router->post('/profil/dashboard', $auth->guard(null, [$dashboardSettingsController, 'update']));
+$router->post('/profil/dashboard/zuruecksetzen', $auth->guard(null, [$dashboardSettingsController, 'reset']));
+$router->post('/profil/dashboard/vorlage/{id}', $auth->guard(null, [$dashboardSettingsController, 'applyTemplate']));
 $router->post('/profil/push-abo', $auth->guard(null, [$profileController, 'storePushSubscription']));
 $router->post('/profil/push-abo/{id}/loeschen', $auth->guard(null, [$profileController, 'deletePushSubscription']));
 
@@ -2533,6 +2545,13 @@ $router->post('/einstellungen/speicherziele/{id}/loeschen', $auth->guard(Permiss
 $router->post('/einstellungen/speicherziele/{id}/testen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'testConnection']));
 
 // Backup-Export/-Import (nur Administration) — siehe BackupSettingsController.
+$router->get('/einstellungen/dashboard-vorlagen', $auth->guard(Permission::Administration, [$dashboardTemplateController, 'index']));
+$router->get('/einstellungen/dashboard-vorlagen/neu', $auth->guard(Permission::Administration, [$dashboardTemplateController, 'create']));
+$router->post('/einstellungen/dashboard-vorlagen', $auth->guard(Permission::Administration, [$dashboardTemplateController, 'store']));
+$router->get('/einstellungen/dashboard-vorlagen/{id}/bearbeiten', $auth->guard(Permission::Administration, [$dashboardTemplateController, 'edit']));
+$router->post('/einstellungen/dashboard-vorlagen/{id}', $auth->guard(Permission::Administration, [$dashboardTemplateController, 'update']));
+$router->post('/einstellungen/dashboard-vorlagen/{id}/loeschen', $auth->guard(Permission::Administration, [$dashboardTemplateController, 'destroy']));
+
 $router->get('/einstellungen/sicherung', $auth->guard(Permission::Administration, [$backupSettingsController, 'index']));
 $router->post('/einstellungen/sicherung/export', $auth->guard(Permission::Administration, [$backupSettingsController, 'export']));
 $router->post('/einstellungen/sicherung/import', $auth->guard(Permission::Administration, [$backupSettingsController, 'import']));

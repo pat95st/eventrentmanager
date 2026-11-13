@@ -7,16 +7,16 @@ namespace App\Domain\Dashboard;
 use App\Domain\User\Permission;
 
 /**
- * Ein einzelner, optional ein-/ausblendbarer Bereich auf der Startseite
- * (siehe App\Infrastructure\Http\Controllers\DashboardController sowie
- * /profil/dashboard für die Auswahl durch den Benutzer). Jeder Bereich
- * verlangt eines der bestehenden Rechte (siehe requiredPermission()) —
- * ohne dieses Recht wird er NIE angezeigt, unabhängig von der
- * Benutzereinstellung (siehe User::$dashboardWidgets).
+ * Ein Bereich der Startseite mit Daten aus einem der Module (Zähler, kurze
+ * Liste oder Kennzahl; die Statistik-Diagramme kommen aus StatisticKey).
+ * Jeder Bereich verlangt eines der bestehenden Rechte (siehe
+ * requiredPermission()) – ohne dieses Recht wird er NIE angezeigt, egal was
+ * der Benutzer gespeichert hat. Anordnung und Rechteprüfung der Startseite:
+ * App\Application\Dashboard\DashboardTileCatalog.
  *
- * Neue Bereiche werden hier als weiterer case ergänzt und tauchen dann
- * automatisch (sofern berechtigt) als Standard an — siehe
- * User::enabledDashboardWidgets() für die "NULL = alle" Fallback-Logik.
+ * Ein neuer Bereich wird hier als weiterer case ergänzt. Benutzer ohne
+ * eigene Anordnung sehen ihn sofort, alle anderen finden ihn unter
+ * /profil/dashboard bei „Ausgeblendet“.
  */
 enum DashboardWidget: string
 {

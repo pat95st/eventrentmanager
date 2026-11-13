@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\User;
 
-use App\Domain\Dashboard\DashboardWidget;
+use App\Domain\Dashboard\DashboardLayout;
 use DateTimeImmutable;
 
 final class User
@@ -52,38 +52,17 @@ final class User
         // ImportReceiptEmailsHandler::notifyAdministrators()), einstellbar
         // unter /profil/darstellung.
         public bool $notifyOnNewReceiptEmail = false,
-        // Explizit vom Benutzer unter /profil/dashboard ausgewählte
-        // Dashboard-Bereiche (Schlüssel von DashboardWidget). NULL
-        // bedeutet "noch nicht angepasst" — siehe enabledDashboardWidgets()
-        // für die daraus resultierende "alle berechtigten Bereiche"-
-        // Standardauswahl. Ein (ggf. leeres) Array bedeutet "explizit
-        // konfiguriert", auch wenn der Benutzer dabei ALLE abgewählt hat.
+        // Frühere Auswahl der Dashboard-Bereiche (Schlüssel von
+        // DashboardWidget, Migration 090). Wird nur noch gelesen, solange
+        // $dashboardLayout NULL ist: NULL = alle Bereiche, ein (ggf. leeres)
+        // Array = nur diese (siehe DashboardTileCatalog::defaultLayout()).
         public ?array $dashboardWidgets = null,
+        // Eigene Anordnung der Startseite (Migration 147), gespeichert unter
+        // /profil/dashboard. NULL = Standardanordnung. Was davon tatsächlich
+        // angezeigt wird, entscheidet App\Application\Dashboard\
+        // DashboardTileCatalog::layoutFor() anhand der Rechte.
+        public ?DashboardLayout $dashboardLayout = null,
     ) {
-    }
-
-    /**
-     * Die für DIESEN Benutzer tatsächlich anzuzeigenden Dashboard-Bereiche:
-     * seine explizite Auswahl (sofern vorhanden), andernfalls alle Bereiche
-     * — in beiden Fällen zusätzlich auf die Bereiche eingeschränkt, für die
-     * er das jeweils nötige Recht besitzt (siehe DashboardWidget::
-     * requiredPermission()). Ein fehlendes Recht blendet einen Bereich IMMER
-     * aus, unabhängig von der gespeicherten Auswahl.
-     *
-     * @return DashboardWidget[]
-     */
-    public function enabledDashboardWidgets(): array
-    {
-        if ($this->dashboardWidgets === null) {
-            $selected = DashboardWidget::all();
-        } else {
-            $selected = array_values(array_filter(array_map(
-                static fn (string $value) => DashboardWidget::tryFrom($value),
-                $this->dashboardWidgets,
-            )));
-        }
-
-        return array_values(array_filter($selected, fn (DashboardWidget $widget) => $this->has($widget->requiredPermission())));
     }
 
     /**

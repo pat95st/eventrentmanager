@@ -28,4 +28,7 @@ interface CategoryRepositoryInterface
 
     /** ID der Kategorie "Leitungen" (Migration 125, categories.is_cable), falls vorhanden. */
     public function findCableCategoryId(): ?string;
+
+    /** ID der Kategorie "Digitale Stagebox" (Migration 152, categories.is_digital_stagebox), falls vorhanden. */
+    public function findDigitalStageboxCategoryId(): ?string;
 }

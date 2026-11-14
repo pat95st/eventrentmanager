@@ -39,6 +39,9 @@ use function App\Infrastructure\Http\t;
                 <?php if ($hasCableCategory ?? false): ?>
                     <a role="menuitem" href="/artikel/neu?leitung=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Leitung</a>
                 <?php endif; ?>
+                <?php if ($hasDigitalStageboxCategory ?? false): ?>
+                    <a role="menuitem" href="/artikel/neu?stagebox=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Digitale Stagebox</a>
+                <?php endif; ?>
             </div>
         </details>
     </div>

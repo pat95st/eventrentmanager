@@ -33,6 +33,8 @@ final class CreateArticleHandler implements CommandHandlerInterface
         // Stromverteiler (Migration 117)
         private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
         private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
+        // Digitale Stageboxen (Migration 152)
+        private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
     ) {
     }
 
@@ -96,6 +98,18 @@ final class CreateArticleHandler implements CommandHandlerInterface
             $articleName = \App\Application\Cable\CableBuilder::suggestName($cableType, $cable, $this->cables->findConnectorById($cable->connectorAId), $this->cables->findConnectorById($cable->connectorBId));
         }
 
+        // Digitale Stagebox (Migration 152): Artikel der Kategorie "Digitale Stagebox"
+        // haben ein digitales Protokoll sowie Ein- und Ausgänge.
+        $stagebox = null;
+        $stageboxCategoryId = $this->digitalStageboxes !== null ? $this->categories->findDigitalStageboxCategoryId() : null;
+        if (!$command->isBundle && $stageboxCategoryId !== null && $command->categoryId === $stageboxCategoryId) {
+            [$stageboxErrors, $stagebox] = (new \App\Application\DigitalStagebox\DigitalStageboxBuilder($this->digitalStageboxes))->build(
+                $articleId,
+                $command->digitalStagebox ?? new \App\Application\DigitalStagebox\DigitalStageboxInput(null, null, null, null, null),
+            );
+            $errors = array_merge($errors, $stageboxErrors);
+        }
+
         if ($isCableArticle) {
             unset($errors['protectionClass']); // Leitungen haben keine Schutzklasse
             if ($command->manufacturerId === '') {
@@ -151,6 +165,9 @@ final class CreateArticleHandler implements CommandHandlerInterface
         }
         if ($cable !== null && $this->cables !== null) {
             $this->cables->saveArticleCable($cable);
+        }
+        if ($stagebox !== null && $this->digitalStageboxes !== null) {
+            $this->digitalStageboxes->saveArticleStagebox($stagebox);
         }
 
         return $article->id;

@@ -4503,6 +4503,23 @@ ALTER TABLE article_ad_images
     ADD CONSTRAINT fk_article_ad_images_source_ad_image
         FOREIGN KEY (source_ad_image_id) REFERENCES article_ad_images (id) ON DELETE SET NULL;
 
+-- --- 165_no_strobe.sql ---
+-- Migration 165: "No strobe" flag.
+--
+--  Events (rentals) and individual minute program items can be marked so
+--  that no strobe lighting may be used (e.g. because of photosensitive
+--  guests or venue rules). The flag on a template item is copied to and
+--  from minute program items like the notes.
+
+ALTER TABLE rentals
+    ADD COLUMN no_strobe TINYINT(1) NOT NULL DEFAULT 0 AFTER blocks_other_rentals;
+
+ALTER TABLE minute_program_items
+    ADD COLUMN no_strobe TINYINT(1) NOT NULL DEFAULT 0 AFTER note_stage;
+
+ALTER TABLE minute_program_template_items
+    ADD COLUMN no_strobe TINYINT(1) NOT NULL DEFAULT 0 AFTER note_stage;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4689,4 +4706,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('161_onboarding_tour.sql', NOW()),
     ('162_ai_ad_image_model.sql', NOW()),
     ('163_online_payments.sql', NOW()),
-    ('164_ai_ad_image_refinement.sql', NOW());
+    ('164_ai_ad_image_refinement.sql', NOW()),
+    ('165_no_strobe.sql', NOW());

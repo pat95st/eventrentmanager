@@ -68,7 +68,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
   "apiVersion": 1,
   "serverTime": "2026-11-15T20:12:00+01:00",
   "revision": "bd7c8561a5b09953",
-  "event": { "name": "Firmengala 2026" },
+  "event": { "name": "Firmengala 2026", "noStrobe": false },
   "program": {
     "id": "…", "name": "Abendprogramm", "room": "Großer Saal",
     "plannedStart": "2026-11-15T20:00:00+01:00",
@@ -91,6 +91,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
   "current": {
     "id": "…", "position": 2, "name": "Begrüßung", "description": "…",
     "notes": { "general": "…", "sound": "HH 1", "light": "…", "video": null, "stage": null },
+    "noStrobe": true,
     "durationSeconds": 300,
     "startsAt": "2026-11-15T20:11:00+01:00",
     "endsAt": "2026-11-15T20:16:00+01:00",
@@ -103,6 +104,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
     {
       "id": "…", "position": 1, "name": "Einlass", "description": null,
       "notes": { "general": null, "sound": "…", "light": "…", "video": null, "stage": null },
+      "noStrobe": false,
       "durationMinutes": 10,
       "status": "done",
       "plannedStart": "…", "plannedEnd": "…",
@@ -132,6 +134,8 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
 | `items[].currentStart` | Plan + gesetzter Verzug. |
 | `items[].projectedStart` | Tatsächlicher Beginn (falls gestartet), sonst voraussichtlicher Beginn inkl. laufender Überziehung. |
 | `notes` | Hinweise je Gewerk: `general`, `sound`, `light`, `video`, `stage` (jeweils `null`, wenn leer). |
+| `event.noStrobe` | `true`: Bei der gesamten Veranstaltung darf kein Stroboskop-Licht eingesetzt werden. |
+| `noStrobe` (bei `current`, `next`, `items[]`) | `true`: Bei diesem Programmpunkt darf kein Stroboskop-Licht eingesetzt werden. Gilt zusätzlich zu `event.noStrobe` – ein Display sollte den Hinweis zeigen, wenn eines der beiden `true` ist. |
 
 Alle Zeitangaben sind ISO 8601 mit Zeitzonen-Offset. Innerhalb von `apiVersion` 1 kommen nur neue Felder hinzu; Clients müssen unbekannte Felder ignorieren.
 

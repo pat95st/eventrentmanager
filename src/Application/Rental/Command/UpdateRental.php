@@ -23,6 +23,8 @@ final class UpdateRental implements CommandInterface
         public readonly string $pickupAt = '',
         public readonly string $returnAt = '',
         public readonly bool $holidayConfirmed = false,
+        // Migration 165: no strobe lighting may be used at this event.
+        public readonly bool $noStrobe = false,
     ) {
     }
 }

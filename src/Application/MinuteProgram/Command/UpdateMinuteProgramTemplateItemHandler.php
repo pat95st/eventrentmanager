@@ -38,6 +38,7 @@ final class UpdateMinuteProgramTemplateItemHandler implements CommandHandlerInte
         $item->noteVideo = self::normalize($command->noteVideo);
         $item->noteStage = self::normalize($command->noteStage);
         $item->durationMinutes = $command->durationMinutes !== null ? max(0, $command->durationMinutes) : null;
+        $item->noStrobe = $command->noStrobe;
 
         $this->items->save($item);
 

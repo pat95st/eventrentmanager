@@ -49,6 +49,8 @@ final class Rental
         public ?string $termsSignatureFile = null,
         // Migration 130: Zeitraum für andere Vermietungen sperren ("exklusiv").
         public bool $blocksOtherRentals = false,
+        // Migration 165: no strobe lighting may be used at this event.
+        public bool $noStrobe = false,
     ) {
     }
 

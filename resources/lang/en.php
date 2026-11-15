@@ -406,6 +406,7 @@ return [
     'articles.show.ad_images_generate' => 'Generate ad image',
     'articles.show.ad_images_generating_hint' => 'Generation usually takes 10 to 60 seconds.',
     'articles.show.ad_images_download' => 'Download',
+    'articles.show.ad_images_delete' => 'Delete',
     'articles.show.ad_images_confirm_delete' => 'Delete this ad image?',
     'articles.show.ad_images_flash_generated' => 'Ad image was generated.',
     'articles.show.ad_images_flash_deleted' => 'Ad image was deleted.',

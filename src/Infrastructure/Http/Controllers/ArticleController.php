@@ -476,6 +476,7 @@ final class ArticleController
             $articleId = $this->commands->dispatch($command);
             $this->saveDryHirePrice((string) $articleId, $request);
             $this->saveFixedCurrentValue((string) $articleId, $request);
+            $this->saveNetworkSettings((string) $articleId, $request);
             $duplicateOf = $this->nullIfEmpty($request->input('duplicate_of'));
             if ($duplicateOf !== null) {
                 $this->copyArticleExtras($duplicateOf, (string) $articleId);
@@ -491,7 +492,7 @@ final class ArticleController
                 } catch (NotFoundException) {
                 }
             }
-            $this->renderForm($source, $e->errors(), $this->oldFromCommand($command));
+            $this->renderForm($source, $e->errors(), $this->oldFromCommand($command) + $this->networkOld($request));
         }
     }
 
@@ -569,6 +570,10 @@ final class ArticleController
             'mixingConsole' => $detail->article->isBundle ? null : $this->articleMixingConsole($detail->article->id),
             'compatibleConsoles' => $detail->article->isBundle ? [] : $this->compatibleConsoles($detail->article->id),
             'editInventoryId' => $editInventoryId,
+            // Networks (migration 155): interfaces, assigned addresses and the address forms
+            'networkOverview' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($id)),
+            'networkAddForm' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\Network\Query\GetInventoryNumberNetworkForm($id)),
+            'networkEditForm' => $detail->article->isBundle || $editInventoryId === null ? null : $this->queries->ask(new \App\Application\Network\Query\GetInventoryNumberNetworkForm($id, $editInventoryId)),
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
             'suppliers' => $suppliers,
@@ -678,11 +683,12 @@ final class ArticleController
             $this->commands->dispatch($command);
             $this->saveDryHirePrice($id, $request);
             $this->saveFixedCurrentValue($id, $request);
+            $this->saveNetworkSettings($id, $request);
             Flash::success(t('articles.flash.updated'));
             Response::redirect('/artikel/' . $id);
         } catch (ValidationException $e) {
             $detail = $this->queries->ask(new GetArticle($id));
-            $this->renderForm($detail->article, $e->errors(), $this->oldFromCommand($command), $id);
+            $this->renderForm($detail->article, $e->errors(), $this->oldFromCommand($command) + $this->networkOld($request), $id);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }
@@ -699,6 +705,36 @@ final class ArticleController
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
         }
+    }
+
+    /** Network interface of the article (migration 155) – only if the section was part of the form. */
+    private function saveNetworkSettings(string $articleId, Request $request): void
+    {
+        if ($request->input('network_section') !== '1') {
+            return;
+        }
+        try {
+            $this->commands->dispatch(new \App\Application\Network\Command\SaveArticleNetworkSettings(
+                $articleId,
+                $request->input('has_network_interface') !== null,
+                $request->input('requires_dhcp') !== null,
+            ));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        }
+    }
+
+    /** @return array<string, bool> network checkboxes for re-rendering the form after validation errors */
+    private function networkOld(Request $request): array
+    {
+        if ($request->input('network_section') !== '1') {
+            return [];
+        }
+
+        return [
+            'has_network_interface' => $request->input('has_network_interface') !== null,
+            'requires_dhcp' => $request->input('requires_dhcp') !== null,
+        ];
     }
 
     /** Fester Zeitwert für die Versicherungsliste (Migration 144) – nur wenn das Feld im Formular war. */
@@ -888,7 +924,7 @@ final class ArticleController
         $installedFirmwareVersionId = $this->nullIfEmpty($request->input('installed_firmware_version_id'));
 
         try {
-            $this->commands->dispatch(new AddInventoryNumber($articleId, $acquisitionDate, $supplierId, $receiptId, $purchasePriceOverride, $storageLocation, $installedFirmwareVersionId));
+            $this->commands->dispatch(new AddInventoryNumber($articleId, $acquisitionDate, $supplierId, $receiptId, $purchasePriceOverride, $storageLocation, $installedFirmwareVersionId, $this->networkInterfacesFromRequest($request)));
             Flash::success('Inventurnummer wurde angelegt.');
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
@@ -923,6 +959,7 @@ final class ArticleController
                 $installedFirmwareVersionId,
                 currentValue: $request->input('current_value'),
                 updateCurrentValue: $request->input('current_value_section') === '1',
+                networkInterfaces: $this->networkInterfacesFromRequest($request),
             ));
             Flash::success('Inventurnummer wurde aktualisiert.');
         } catch (ValidationException $e) {
@@ -937,6 +974,27 @@ final class ArticleController
         }
 
         Response::redirect('/artikel/' . $articleId);
+    }
+
+    /**
+     * Network rows of the inventory number form (migration 155):
+     * network[<interface key>][network_id|ipv4|ipv6|mac]; null if the form has no network section.
+     *
+     * @return array<string, array<string, string>>|null
+     */
+    private function networkInterfacesFromRequest(Request $request): ?array
+    {
+        if ($request->input('network_section') !== '1') {
+            return null;
+        }
+        $rows = [];
+        foreach (is_array($request->post['network'] ?? null) ? $request->post['network'] : [] as $key => $row) {
+            if (is_string($key) && is_array($row)) {
+                $rows[$key] = array_map(static fn ($value) => is_string($value) ? $value : '', $row);
+            }
+        }
+
+        return $rows;
     }
 
     public function deleteInventoryNumber(Request $request): void
@@ -1298,6 +1356,8 @@ final class ArticleController
             'mixingConsole' => $article !== null && !$article->isBundle ? $this->articleMixingConsole($article->id) : null,
             'mixingConsoleCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()),
             'mixingConsoleFormData' => $this->mixingConsoleFormData(),
+            // Networks (migration 155): network interface of the article
+            'networkOverview' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($article->id)) : null,
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 

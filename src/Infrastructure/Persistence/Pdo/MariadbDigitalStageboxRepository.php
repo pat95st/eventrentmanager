@@ -33,10 +33,10 @@ final class MariadbDigitalStageboxRepository implements DigitalStageboxRepositor
     public function saveProtocol(DigitalProtocol $protocol): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO digital_protocols (id, name, sort_order) VALUES (:id, :name, :sort_order)
-             ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order)'
+            'INSERT INTO digital_protocols (id, name, sort_order, is_ip_based) VALUES (:id, :name, :sort_order, :is_ip_based)
+             ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_ip_based = VALUES(is_ip_based)'
         );
-        $stmt->execute(['id' => $protocol->id, 'name' => $protocol->name, 'sort_order' => $protocol->sortOrder]);
+        $stmt->execute(['id' => $protocol->id, 'name' => $protocol->name, 'sort_order' => $protocol->sortOrder, 'is_ip_based' => $protocol->isIpBased ? 1 : 0]);
     }
 
     public function deleteProtocol(string $id): void
@@ -103,6 +103,6 @@ final class MariadbDigitalStageboxRepository implements DigitalStageboxRepositor
 
     private function hydrateProtocol(array $row): DigitalProtocol
     {
-        return new DigitalProtocol($row['id'], $row['name'], (int) $row['sort_order']);
+        return new DigitalProtocol($row['id'], $row['name'], (int) $row['sort_order'], (bool) ($row['is_ip_based'] ?? false));
     }
 }

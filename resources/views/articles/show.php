@@ -13,6 +13,12 @@ $mixingConsole ??= null;
 /** @var \App\Domain\MixingConsole\CompatibleConsole[] $compatibleConsoles Pulte, die diese Stagebox als kompatibel führen */
 $compatibleConsoles ??= [];
 /** @var string|null $editInventoryId */
+/** @var \App\Application\Network\Query\ArticleNetworkOverview|null $networkOverview Netzwerke (Migration 155) */
+$networkOverview ??= null;
+/** @var \App\Application\Network\NetworkInterfaceForm|null $networkAddForm */
+$networkAddForm ??= null;
+/** @var \App\Application\Network\NetworkInterfaceForm|null $networkEditForm */
+$networkEditForm ??= null;
 /** @var string|null $editAccessoryId */
 /** @var string|null $editPreIssueCheckId */
 /** @var \App\Domain\Supplier\Supplier[] $suppliers */
@@ -123,6 +129,11 @@ $availabilityStatusMeta = [
             <?php if ($mixingConsole !== null): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-700">
                     Tonmischpult · <?= e($mixingConsole->console->summary()) ?>
+                </span>
+            <?php endif; ?>
+            <?php if ($networkOverview?->settings?->hasNetworkInterface): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-800 ring-1 ring-inset ring-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-700">
+                    Netzwerkschnittstelle<?= $networkOverview->settings->requiresDhcp ? ' · benötigt DHCP' : '' ?>
                 </span>
             <?php endif; ?>
             <?php if ($article->hasFirmware): ?>
@@ -764,6 +775,9 @@ $availabilityStatusMeta = [
                                         </select>
                                     </div>
                                 <?php endif; ?>
+                                <?php if ($networkEditForm !== null && !$networkEditForm->isEmpty()): ?>
+                                    <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkEditForm, 'formId' => 'inv-edit']) ?>
+                                <?php endif; ?>
                                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
                                 <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
                             </form>
@@ -808,6 +822,9 @@ $availabilityStatusMeta = [
                                             <?php endif; ?>
                                         <?php endif; ?>
                                     </p>
+                                    <?php if ($networkOverview !== null && $networkOverview->assignmentsFor($inv->id) !== []): ?>
+                                        <?= \App\Infrastructure\Http\View::render('networks/_assignment-list', ['assignments' => $networkOverview->assignmentsFor($inv->id), 'networks' => $networkOverview->networks]) ?>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="flex items-center gap-3">
                                     <a href="/inventurnummern/<?= e($inv->id) ?>/rma" class="inline-flex items-center gap-1 rounded-full <?= $entry->openRmaCount > 0 ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700' ?> px-2.5 py-1 text-xs font-medium hover:opacity-80">
@@ -888,6 +905,9 @@ $availabilityStatusMeta = [
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                    <?php endif; ?>
+                    <?php if ($networkAddForm !== null && !$networkAddForm->isEmpty()): ?>
+                        <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkAddForm, 'formId' => 'inv-new']) ?>
                     <?php endif; ?>
                     <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                         <?= e(t('articles.show.add')) ?>
@@ -1258,3 +1278,4 @@ $availabilityStatusMeta = [
     });
 })();
 </script>
+<script src="/assets/js/network-fields.js"></script>

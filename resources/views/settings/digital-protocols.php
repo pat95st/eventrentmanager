@@ -15,6 +15,8 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
         Digitale Audioprotokolle für Artikel der Kategorien „Digitale Stagebox“ und „Tonmischpult“. Jede digitale Stagebox bekommt im Artikelformular
         eines dieser Protokolle zugeordnet; digitale Tonmischpulte nutzen sie für ihre Schnittstellen und Erweiterungskarten.
         Protokolle, die von Stageboxen oder Mischpulten verwendet werden, lassen sich umbenennen, aber nicht löschen.
+        Bei IP-basierten Protokollen (z. B. Dante) wird für die Schnittstelle je Inventarnummer eine IP-Adresse aus einem
+        <a href="/einstellungen/netzwerke" class="text-brand-700 underline dark:text-brand-400">Netzwerk</a> erfasst.
     </p>
 </div>
 
@@ -33,6 +35,9 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
                         <input id="protocol-<?= e($protocol->id) ?>" name="name" required maxlength="100" value="<?= e($protocol->name) ?>" class="<?= $input ?>">
                     </div>
                     <input name="sort_order" type="number" value="<?= e((string) $protocol->sortOrder) ?>" class="<?= $input ?>" style="width:5.5rem" aria-label="Reihenfolge">
+                    <label class="flex items-center gap-1.5 pb-2 text-xs text-slate-600 dark:text-slate-400" title="Schnittstellen mit diesem Protokoll bekommen je Inventarnummer eine IP-Adresse">
+                        <input type="checkbox" name="is_ip_based" value="1" <?= $protocol->isIpBased ? 'checked' : '' ?>> IP-basiert
+                    </label>
                     <button type="submit" class="<?= $btn ?>">Speichern</button>
                 </form>
                 <span class="text-xs text-slate-500 dark:text-slate-400" style="min-width:5.5rem"><?= $used ?> Stagebox<?= $used === 1 ? '' : 'en' ?><?php if ($usedByConsoles > 0): ?> · <?= $usedByConsoles ?> Mischpult<?= $usedByConsoles === 1 ? '' : 'e' ?><?php endif; ?></span>
@@ -58,6 +63,9 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
                 <label class="block text-xs font-medium text-slate-600 dark:text-slate-400" for="protocol_sort_new">Reihenfolge</label>
                 <input id="protocol_sort_new" name="sort_order" type="number" class="<?= $input ?>" style="width:5.5rem">
             </div>
+            <label class="flex items-center gap-1.5 pb-2 text-sm text-slate-600 dark:text-slate-400">
+                <input type="checkbox" name="is_ip_based" value="1"> IP-basiertes Protokoll (z. B. Dante, SoundGrid)
+            </label>
         </div>
         <div class="mt-4 text-right">
             <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Protokoll anlegen</button>

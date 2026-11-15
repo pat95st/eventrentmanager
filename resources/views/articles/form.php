@@ -59,6 +59,15 @@ $is19Inch = array_key_exists('is_19_inch', $old)
 $rackWidthValue = array_key_exists('rack_width', $old) && $old['rack_width'] !== null
     ? (string) $old['rack_width']
     : ($article?->rackWidth->value ?? \App\Domain\Rack\RackWidth::Full->value);
+// Networks (migration 155): network interface of the article (not for cables).
+/** @var \App\Application\Network\Query\ArticleNetworkOverview|null $networkOverview */
+$networkOverview ??= null;
+$hasNetworkInterface = array_key_exists('has_network_interface', $old)
+    ? (bool) $old['has_network_interface']
+    : ($networkOverview?->settings?->hasNetworkInterface ?? false);
+$requiresDhcp = array_key_exists('requires_dhcp', $old)
+    ? (bool) $old['requires_dhcp']
+    : ($networkOverview?->settings?->requiresDhcp ?? false);
 $hasFirmware = array_key_exists('has_firmware', $old)
     ? (bool) $old['has_firmware']
     : ($article?->hasFirmware ?? false);
@@ -440,6 +449,39 @@ $bundleComponentRows ??= [];
                 <?= e(t('articles.form.has_firmware_hint')) ?>
             </p>
         </div>
+
+        <div id="network_section" class="<?= $isCable ? 'hidden' : '' ?>" data-cable-category="<?= e($cableCategoryId) ?>">
+            <input type="hidden" name="network_section" value="1">
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" id="has_network_interface" name="has_network_interface" value="1" <?= $hasNetworkInterface ? 'checked' : '' ?>>
+                Netzwerkschnittstelle
+            </label>
+            <label id="requires_dhcp_label" class="mt-1 ml-6 flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 <?= $hasNetworkInterface ? '' : 'hidden' ?>">
+                <input type="checkbox" name="requires_dhcp" value="1" <?= $requiresDhcp ? 'checked' : '' ?>>
+                benötigt zwingend einen DHCP-Server
+            </label>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                Beim Anlegen von Inventarnummern werden dann IP- und MAC-Adresse erfasst (Netzwerke unter Einstellungen › Netzwerke).
+                IP-basierte Audioprotokolle (z. B. Dante) von Stageboxen und Mischpulten bekommen automatisch eigene Adressen.
+            </p>
+        </div>
+        <script>
+            (function () {
+                var section = document.getElementById('network_section');
+                var category = document.getElementById('category_id');
+                var checkbox = document.getElementById('has_network_interface');
+                var dhcp = document.getElementById('requires_dhcp_label');
+                if (!section) { return; }
+                var cableCategory = section.getAttribute('data-cable-category');
+                function sync() {
+                    section.classList.toggle('hidden', !!(category && cableCategory && category.value === cableCategory));
+                    dhcp.classList.toggle('hidden', !checkbox.checked);
+                }
+                if (category) { category.addEventListener('change', sync); }
+                checkbox.addEventListener('change', sync);
+                sync();
+            })();
+        </script>
 
         <div>
             <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">

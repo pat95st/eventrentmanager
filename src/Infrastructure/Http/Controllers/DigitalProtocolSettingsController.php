@@ -41,6 +41,7 @@ final class DigitalProtocolSettingsController
             id: null,
             name: $request->input('name', '') ?? '',
             sortOrder: $request->input('sort_order'),
+            isIpBased: $request->input('is_ip_based') !== null,
         )), 'Das digitale Protokoll wurde angelegt.');
     }
 
@@ -50,6 +51,7 @@ final class DigitalProtocolSettingsController
             id: $request->param('id'),
             name: $request->input('name', '') ?? '',
             sortOrder: $request->input('sort_order'),
+            isIpBased: $request->input('is_ip_based') !== null,
         )), 'Das digitale Protokoll wurde gespeichert.');
     }
 

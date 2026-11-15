@@ -436,6 +436,10 @@ $powerDistributorRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPow
 $cableRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCableRepository($pdo); // Leitungen (Migration 125)
 $digitalStageboxRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDigitalStageboxRepository($pdo); // Digitale Stageboxen (Migration 152)
 $mixingConsoleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMixingConsoleRepository($pdo); // Tonmischpulte (Migration 154)
+// Networks and IP addresses (migration 155)
+$networkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNetworkRepository($pdo);
+$networkInterfaceResolver = new \App\Application\Network\NetworkInterfaceResolver($networkRepository, $categoryRepository, $digitalStageboxRepository, $mixingConsoleRepository);
+$inventoryNumberNetworkService = new \App\Application\Network\InventoryNumberNetworkService($networkRepository, $networkInterfaceResolver);
 $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepository($pdo);
 // Schriftarten je Bereich für alle PDFs (Migration 116), erst beim ersten PDF geladen.
 \App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
@@ -744,8 +748,18 @@ $commandBus->register(\App\Application\Article\Command\SetArticleActive::class, 
 $commandBus->register(\App\Application\Article\Command\AddArticleImage::class, new AddArticleImageHandler($articleRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\DeleteArticleImage::class, new DeleteArticleImageHandler($articleRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\SetArticleDocumentImage::class, new \App\Application\Article\Command\SetArticleDocumentImageHandler($articleRepository));
-$commandBus->register(\App\Application\Article\Command\AddInventoryNumber::class, new AddInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $manufacturerRepository, $supplierRepository, $receiptRepository, $firmwareVersionRepository));
-$commandBus->register(\App\Application\Article\Command\UpdateInventoryNumber::class, new UpdateInventoryNumberHandler($inventoryNumberRepository, $supplierRepository, $receiptRepository, $articleRepository, $firmwareVersionRepository));
+$commandBus->register(\App\Application\Article\Command\AddInventoryNumber::class, new AddInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $manufacturerRepository, $supplierRepository, $receiptRepository, $firmwareVersionRepository, $inventoryNumberNetworkService));
+$commandBus->register(\App\Application\Article\Command\UpdateInventoryNumber::class, new UpdateInventoryNumberHandler($inventoryNumberRepository, $supplierRepository, $receiptRepository, $articleRepository, $firmwareVersionRepository, $inventoryNumberNetworkService));
+// Networks (migration 155)
+$networkSettingsHandler = new \App\Application\Network\Command\NetworkSettingsHandler($networkRepository, $categoryRepository);
+foreach ([\App\Application\Network\Command\SaveNetwork::class, \App\Application\Network\Command\DeleteNetwork::class, \App\Application\Network\Command\SaveNetworkCategoryRange::class, \App\Application\Network\Command\DeleteNetworkCategoryRange::class] as $networkCommand) {
+    $commandBus->register($networkCommand, $networkSettingsHandler);
+}
+$commandBus->register(\App\Application\Network\Command\SaveArticleNetworkSettings::class, new \App\Application\Network\Command\SaveArticleNetworkSettingsHandler($networkRepository, $articleRepository, $networkInterfaceResolver));
+$networkQueryHandler = new \App\Application\Network\Query\NetworkQueryHandler($networkRepository, $categoryRepository, $articleRepository, $inventoryNumberRepository, $inventoryNumberNetworkService);
+foreach ([\App\Application\Network\Query\GetNetworkSettings::class, \App\Application\Network\Query\GetNetworkDetail::class, \App\Application\Network\Query\GetInventoryNumberNetworkForm::class, \App\Application\Network\Query\GetArticleNetworkOverview::class] as $networkQuery) {
+    $queryBus->register($networkQuery, $networkQueryHandler);
+}
 $commandBus->register(\App\Application\Article\Command\AddFirmwareVersion::class, new \App\Application\Article\Command\AddFirmwareVersionHandler($firmwareVersionRepository, $articleRepository));
 $commandBus->register(\App\Application\Article\Command\DeleteFirmwareVersion::class, new \App\Application\Article\Command\DeleteFirmwareVersionHandler($firmwareVersionRepository, $inventoryNumberRepository));
 $commandBus->register(\App\Application\Article\Command\DeleteInventoryNumber::class, new DeleteInventoryNumberHandler($inventoryNumberRepository, $rmaRepository, $saleRepository));
@@ -1574,6 +1588,7 @@ $statisticsController = new \App\Infrastructure\Http\Controllers\StatisticsContr
 $categoryController = new CategoryController($commandBus, $queryBus);
 $cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
 $digitalProtocolSettingsController = new \App\Infrastructure\Http\Controllers\DigitalProtocolSettingsController($commandBus, $queryBus);
+$networkSettingsController = new \App\Infrastructure\Http\Controllers\NetworkSettingsController($commandBus, $queryBus);
 $companyHolidayController = new \App\Infrastructure\Http\Controllers\CompanyHolidayController($commandBus, $queryBus);
 $accountController = new \App\Infrastructure\Http\Controllers\AccountController($commandBus, $queryBus, $bankAccountRepository, $receiptRepository, $invoiceRepository, $supplierRepository);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
@@ -2472,6 +2487,14 @@ $router->get('/einstellungen/digitale-protokolle', $auth->guard(Permission::Admi
 $router->post('/einstellungen/digitale-protokolle', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'create']));
 $router->post('/einstellungen/digitale-protokolle/{id}', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'save']));
 $router->post('/einstellungen/digitale-protokolle/{id}/loeschen', $auth->guard(Permission::Administration, [$digitalProtocolSettingsController, 'delete']));
+// Networks (migration 155)
+$router->get('/einstellungen/netzwerke', $auth->guard(Permission::Administration, [$networkSettingsController, 'index']));
+$router->post('/einstellungen/netzwerke', $auth->guard(Permission::Administration, [$networkSettingsController, 'create']));
+$router->get('/einstellungen/netzwerke/{id}', $auth->guard(Permission::Administration, [$networkSettingsController, 'show']));
+$router->post('/einstellungen/netzwerke/{id}', $auth->guard(Permission::Administration, [$networkSettingsController, 'save']));
+$router->post('/einstellungen/netzwerke/{id}/loeschen', $auth->guard(Permission::Administration, [$networkSettingsController, 'delete']));
+$router->post('/einstellungen/netzwerke/{id}/kategorien', $auth->guard(Permission::Administration, [$networkSettingsController, 'saveRange']));
+$router->post('/einstellungen/netzwerke/{id}/kategorien/{categoryId}/loeschen', $auth->guard(Permission::Administration, [$networkSettingsController, 'deleteRange']));
 $router->get('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'edit']));
 $router->post('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'update']));
 $router->get('/einstellungen/dry-hire-staffel', $auth->guard(Permission::Administration, [$dryHireSettingsController, 'edit']));

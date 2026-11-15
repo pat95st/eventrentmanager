@@ -11,6 +11,8 @@ final class DigitalProtocol
         public readonly string $id,
         public string $name,
         public int $sortOrder = 0,
+        // Migration 155: IP-based protocol (e.g. Dante)? Interfaces using it get an IP address per inventory number.
+        public bool $isIpBased = false,
     ) {
     }
 }

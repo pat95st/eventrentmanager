@@ -11,6 +11,8 @@
 /** @var \App\Domain\Customer\Customer[] $customers */
 /** @var array<string, string> $saleErrors */
 /** @var \App\Domain\Depreciation\DepreciationSchedule|null $depreciation */
+/** @var \App\Application\Network\Query\ArticleNetworkOverview|null $networkOverview Netzwerke (Migration 155) */
+$networkOverview ??= null;
 
 use App\Domain\Article\ArticleDisplayName;
 use function App\Infrastructure\Http\e;
@@ -109,6 +111,23 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                 <?php endif; ?>
             </dl>
         </div>
+
+        <?php if ($networkOverview !== null && ($networkOverview->hasInterfaces() || $networkOverview->assignmentsFor($inv->id) !== [])): ?>
+            <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Netzwerk</h2>
+                    <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Adressen bearbeiten</a>
+                </div>
+                <?php if ($networkOverview->settings?->requiresDhcp): ?>
+                    <p class="mb-2 text-xs text-amber-700 dark:text-amber-400">Gerät benötigt zwingend einen DHCP-Server – IP-Adresse als DHCP-Reservierung einrichten.</p>
+                <?php endif; ?>
+                <?php if ($networkOverview->assignmentsFor($inv->id) === []): ?>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">Noch keine Adressen erfasst.</p>
+                <?php else: ?>
+                    <?= \App\Infrastructure\Http\View::render('networks/_assignment-list', ['assignments' => $networkOverview->assignmentsFor($inv->id), 'networks' => $networkOverview->networks, 'compact' => false]) ?>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <?php $depreciation = $depreciation ?? null; ?>
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

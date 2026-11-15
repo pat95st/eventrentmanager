@@ -77,6 +77,8 @@ final class InventoryNumberController
             'customers' => $customers,
             'saleErrors' => [],
             'depreciation' => $this->queries->ask(new \App\Application\Depreciation\GetInventoryNumberDepreciation($id)),
+            // Networks (migration 155): IP and MAC addresses
+            'networkOverview' => $context->article->isBundle ? null : $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($context->article->id)),
         ], activeNav: 'articles', title: 'Inventurnummer: ' . $context->inventoryNumber->number);
     }
 

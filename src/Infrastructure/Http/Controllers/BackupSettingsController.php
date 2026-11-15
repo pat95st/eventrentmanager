@@ -6,13 +6,24 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Backup\Command\ExportBackup;
 use App\Application\Backup\Command\ImportBackup;
+use App\Application\Backup\Command\RunAutomaticBackup;
+use App\Application\Backup\Command\UpdateBackupSettings;
+use App\Application\Backup\Query\GetBackupSettings;
+use App\Application\Backup\Query\ListBackupRuns;
 use App\Application\Command\CommandBus;
+use App\Application\DocumentStorage\Query\ListStorageTargets;
+use App\Application\Query\QueryBus;
+use App\Domain\Backup\BackupRun;
+use App\Domain\Backup\BackupRunStatus;
+use App\Domain\Backup\BackupRunTrigger;
+use App\Domain\Backup\BackupSettings;
 use App\Domain\Exception\ValidationException;
 use App\Infrastructure\Backup\BackupArchiveException;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
+use App\Shared\ProjectPaths;
 use RuntimeException;
 
 use function App\Infrastructure\Http\t;
@@ -25,21 +36,83 @@ use function App\Infrastructure\Http\t;
  * Web-Installer (public/install.php, Schritt "Wiederherstellen") nutzt
  * dieselben Infrastruktur-Klassen, kann aber mangels bootstrap.php nicht
  * über diesen Controller laufen.
+ *
+ * Additionally manages the automatic backup to the document storage targets
+ * (settings, "run now" and the crontab line for bin/run-automatic-backup.php,
+ * see RunAutomaticBackupHandler).
  */
 final class BackupSettingsController
 {
     public function __construct(
         private readonly CommandBus $commands,
         private readonly string $tempDirectory,
+        private readonly QueryBus $queries,
     ) {
     }
 
     public function index(Request $request): void
     {
-        echo View::page('settings/backup', [
-            'errors' => [],
-            'old' => [],
-        ], activeNav: 'settings-sicherung', title: t('settings.backup.title'));
+        $this->render([], []);
+    }
+
+    /** Saves the automatic backup settings (storage targets, path template, schedule). */
+    public function saveAutomatic(Request $request): void
+    {
+        $targetIds = $request->inputArray('backup_storage_targets');
+
+        $old = [
+            'backup_enabled' => $request->input('backup_enabled') !== null ? '1' : '',
+            'backup_storage_targets' => $targetIds,
+            'backup_target_path' => (string) ($request->input('backup_target_path', '') ?? ''),
+            'backup_interval' => (string) ($request->input('backup_interval', '') ?? ''),
+            'backup_run_time' => (string) ($request->input('backup_run_time', '') ?? ''),
+            'backup_weekday' => (string) ($request->input('backup_weekday', '') ?? ''),
+            'backup_month_day' => (string) ($request->input('backup_month_day', '') ?? ''),
+        ];
+
+        try {
+            $this->commands->dispatch(new UpdateBackupSettings(
+                enabled: $old['backup_enabled'] === '1',
+                storageTargetIds: $targetIds,
+                targetPath: $old['backup_target_path'],
+                interval: $old['backup_interval'],
+                runTime: $old['backup_run_time'],
+                weekday: $old['backup_weekday'],
+                monthDay: $old['backup_month_day'],
+            ));
+        } catch (ValidationException $e) {
+            $this->render($e->errors(), $old);
+
+            return;
+        }
+
+        Flash::success(t('settings.backup.automatic.flash.saved'));
+        Response::redirect('/einstellungen/sicherung');
+    }
+
+    /** Runs the automatic backup immediately (same as the cron script), e.g. to test the storage targets. */
+    public function runNow(Request $request): void
+    {
+        @set_time_limit(0);
+
+        $run = $this->commands->dispatch(new RunAutomaticBackup(BackupRunTrigger::Manual));
+        assert($run instanceof BackupRun);
+
+        $message = sprintf(t('settings.backup.automatic.flash.run_result'), $run->status->label());
+        if ($run->message !== null) {
+            $message .= ' ' . $run->message;
+        }
+        foreach ($run->targetResults as $result) {
+            if (!$result['success']) {
+                $message .= ' ' . $result['targetName'] . ': ' . $result['message'];
+            }
+        }
+
+        match ($run->status) {
+            BackupRunStatus::Success => Flash::success($message),
+            default => Flash::error($message),
+        };
+        Response::redirect('/einstellungen/sicherung');
     }
 
     /** Erzeugt die Backup-ZIP und liefert sie direkt als Download aus (siehe Response::downloadFile()). */
@@ -48,7 +121,7 @@ final class BackupSettingsController
         try {
             /** @var array{absolutePath: string, downloadName: string} $result */
             $result = $this->commands->dispatch(new ExportBackup());
-        } catch (BackupArchiveException|RuntimeException $e) {
+        } catch (BackupArchiveException | RuntimeException $e) {
             Flash::error(t('settings.backup.flash.export_failed') . ' ' . $e->getMessage());
             Response::redirect('/einstellungen/sicherung');
 
@@ -106,7 +179,7 @@ final class BackupSettingsController
             Response::redirect('/einstellungen/sicherung');
         } catch (ValidationException $e) {
             $this->renderWithError($e->errors(), $confirmationText);
-        } catch (BackupArchiveException|RuntimeException $e) {
+        } catch (BackupArchiveException | RuntimeException $e) {
             $this->renderWithError(['backup_zip' => $e->getMessage()], $confirmationText);
         } finally {
             @unlink($stagedZipPath);
@@ -137,9 +210,45 @@ final class BackupSettingsController
     /** @param array<string, string> $errors */
     private function renderWithError(array $errors, string $confirmationText): void
     {
+        $this->render($errors, ['confirmation_text' => $confirmationText]);
+    }
+
+    /**
+     * @param array<string, string> $errors
+     * @param array<string, mixed> $old
+     */
+    private function render(array $errors, array $old): void
+    {
+        /** @var BackupSettings $settings */
+        $settings = $this->queries->ask(new GetBackupSettings());
+
         echo View::page('settings/backup', [
             'errors' => $errors,
-            'old' => ['confirmation_text' => $confirmationText],
+            'old' => $old,
+            'settings' => $settings,
+            'storageTargets' => $this->queries->ask(new ListStorageTargets()),
+            'runs' => $this->queries->ask(new ListBackupRuns(10)),
+            'cronLine' => self::crontabLine($settings),
+            'serverTime' => date('H:i T'),
         ], activeNav: 'settings-sicherung', title: t('settings.backup.title'));
+    }
+
+    /** The complete crontab line for bin/run-automatic-backup.php according to the saved schedule. */
+    public static function crontabLine(BackupSettings $settings): string
+    {
+        $logDirectory = ProjectPaths::rootDirectory() . '/storage/logs';
+        // The shell redirect in the cron line fails if the directory is missing.
+        if (!is_dir($logDirectory)) {
+            @mkdir($logDirectory, 0775, true);
+        }
+
+        return $settings->cronSchedule()
+            . ' /usr/bin/php ' . self::shellPath(ProjectPaths::automaticBackupScriptPath())
+            . ' >> ' . self::shellPath($logDirectory . '/automatic-backup.log') . ' 2>&1';
+    }
+
+    private static function shellPath(string $path): string
+    {
+        return preg_match('#^[A-Za-z0-9_./-]+$#', $path) === 1 ? $path : escapeshellarg($path);
     }
 }

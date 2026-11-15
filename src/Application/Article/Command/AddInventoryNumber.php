@@ -16,6 +16,8 @@ final class AddInventoryNumber implements CommandInterface
         public readonly ?string $purchasePriceOverride = null,
         public readonly ?string $storageLocation = null,
         public readonly ?string $installedFirmwareVersionId = null,
+        // Migration 155: network[<interface key>][network_id|ipv4|ipv6|mac]; null = not part of the form.
+        public readonly ?array $networkInterfaces = null,
     ) {
     }
 }

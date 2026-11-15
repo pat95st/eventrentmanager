@@ -35,6 +35,8 @@ final class AddInventoryNumberHandler implements CommandHandlerInterface
         private readonly SupplierRepositoryInterface $suppliers,
         private readonly ReceiptRepositoryInterface $receipts,
         private readonly FirmwareVersionRepositoryInterface $firmwareVersions,
+        // Migration 155: IP/MAC addresses of the interfaces.
+        private readonly ?\App\Application\Network\InventoryNumberNetworkService $network = null,
     ) {
     }
 
@@ -74,6 +76,11 @@ final class AddInventoryNumberHandler implements CommandHandlerInterface
         if ($storageLocation !== null && mb_strlen($storageLocation) > 255) {
             throw new ValidationException(['storageLocation' => 'Der Lagerort darf höchstens 255 Zeichen lang sein.']);
         }
+
+        // Validate addresses before anything is saved.
+        $networkAssignments = $this->network !== null && $command->networkInterfaces !== null
+            ? $this->network->validate($article, null, $command->networkInterfaces)
+            : null;
 
         $manufacturer = $this->manufacturers->findById(($article->manufacturerId ?? ''));
         if ($manufacturer === null) {
@@ -137,6 +144,9 @@ final class AddInventoryNumberHandler implements CommandHandlerInterface
         );
 
         $this->inventoryNumbers->save($inventoryNumber);
+        if ($networkAssignments !== null && $this->network !== null) {
+            $this->network->save($inventoryNumber->id, $networkAssignments);
+        }
 
         return $inventoryNumber->id;
     }

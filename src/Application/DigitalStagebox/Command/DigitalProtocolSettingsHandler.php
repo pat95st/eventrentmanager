@@ -50,7 +50,7 @@ final class DigitalProtocolSettingsHandler implements CommandHandlerInterface
             throw new ValidationException(['name' => 'Dieses digitale Protokoll gibt es bereits.']);
         }
 
-        $protocol = new DigitalProtocol($existing?->id ?? Uuid::v4(), $name, self::sort($command->sortOrder, $existing?->sortOrder));
+        $protocol = new DigitalProtocol($existing?->id ?? Uuid::v4(), $name, self::sort($command->sortOrder, $existing?->sortOrder), $command->isIpBased);
         $this->stageboxes->saveProtocol($protocol);
 
         return $protocol->id;

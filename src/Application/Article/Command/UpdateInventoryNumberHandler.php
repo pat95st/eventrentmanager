@@ -25,6 +25,8 @@ final class UpdateInventoryNumberHandler implements CommandHandlerInterface
         private readonly ReceiptRepositoryInterface $receipts,
         private readonly ArticleRepositoryInterface $articles,
         private readonly FirmwareVersionRepositoryInterface $firmwareVersions,
+        // Migration 155: IP/MAC addresses of the interfaces.
+        private readonly ?\App\Application\Network\InventoryNumberNetworkService $network = null,
     ) {
     }
 
@@ -64,6 +66,10 @@ final class UpdateInventoryNumberHandler implements CommandHandlerInterface
             throw new ValidationException(['storageLocation' => 'Der Lagerort darf höchstens 255 Zeichen lang sein.']);
         }
 
+        $networkAssignments = $this->network !== null && $command->networkInterfaces !== null
+            ? $this->network->validate($article, $inventoryNumber->id, $command->networkInterfaces)
+            : null;
+
         if ($command->updateCurrentValue) {
             try {
                 $currentValue = CurrentValueResolver::normalizeAmount($command->currentValue);
@@ -94,6 +100,9 @@ final class UpdateInventoryNumberHandler implements CommandHandlerInterface
         $inventoryNumber->updatedAt = new DateTimeImmutable();
 
         $this->inventoryNumbers->save($inventoryNumber);
+        if ($networkAssignments !== null && $this->network !== null) {
+            $this->network->save($inventoryNumber->id, $networkAssignments);
+        }
 
         return null;
     }

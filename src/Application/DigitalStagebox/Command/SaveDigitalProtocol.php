@@ -13,6 +13,7 @@ final class SaveDigitalProtocol implements CommandInterface
         public readonly ?string $id,
         public readonly string $name,
         public readonly ?string $sortOrder = null,
+        public readonly bool $isIpBased = false,
     ) {
     }
 }

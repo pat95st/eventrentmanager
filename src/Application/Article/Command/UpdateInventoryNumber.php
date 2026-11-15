@@ -21,6 +21,8 @@ final class UpdateInventoryNumber implements CommandInterface
         // übernommen; leer löscht ihn.
         public readonly ?string $currentValue = null,
         public readonly bool $updateCurrentValue = false,
+        // Migration 155: network[<interface key>][network_id|ipv4|ipv6|mac]; null = leave unchanged.
+        public readonly ?array $networkInterfaces = null,
     ) {
     }
 }

@@ -17,6 +17,7 @@ use App\Application\Article\Command\DeleteArticleImage;
 use App\Application\Article\Command\SetArticleDocumentImage;
 use App\Application\Article\Command\DeleteArticlePreIssueCheck;
 use App\Application\Article\Command\GenerateArticleAdImage;
+use App\Application\Article\Command\RefineArticleAdImage;
 use App\Application\NoticeDocument\Command\RemoveNoticeDocumentFromArticle;
 use App\Application\NoticeDocument\Command\UploadNoticeDocument;
 use App\Application\Article\Command\DeleteFirmwareVersion;
@@ -1204,9 +1205,11 @@ final class ArticleController
         $sourceArticleImageId = $request->input('source_article_image_id');
         $additionalInstructions = $request->input('additional_instructions');
         $count = (int) ($request->input('count', '1') ?? '1');
+        $includeArticleName = $request->input('include_article_name') === '1';
+        $includeProperties = $request->input('include_properties') === '1';
 
         try {
-            $ids = $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions, $count));
+            $ids = $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions, $count, $includeArticleName, $includeProperties));
             $generated = is_array($ids) ? count($ids) : 1;
             Flash::success($generated === 1
                 ? t('articles.show.ad_images_flash_generated')
@@ -1217,6 +1220,28 @@ final class ArticleController
             Response::notFound($e->getMessage());
 
             return;
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function refineAdImage(Request $request): void
+    {
+        $imageId = $request->param('id');
+        $articleId = $request->input('article_id', '') ?? '';
+        $instructions = $request->input('instructions', '') ?? '';
+        $count = (int) ($request->input('count', '1') ?? '1');
+
+        try {
+            $ids = $this->commands->dispatch(new RefineArticleAdImage($imageId, $instructions, $count));
+            $generated = is_array($ids) ? count($ids) : 1;
+            Flash::success($generated === 1
+                ? t('articles.show.ad_images_flash_refined')
+                : t('articles.show.ad_images_flash_refined_many', ['count' => (string) $generated]));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
         }
 
         Response::redirect('/artikel/' . $articleId);

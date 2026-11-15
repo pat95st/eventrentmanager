@@ -26,6 +26,8 @@ final class ArticleAdImage
         public readonly string $prompt, // der tatsächlich an OpenAI gesendete Prompt, zur Nachvollziehbarkeit
         public readonly ?string $sourceArticleImageId, // ID des als Referenzbild genutzten ArticleImage, falls vorhanden
         public readonly DateTimeImmutable $createdAt,
+        // ID of the ad image this one was refined from (see RefineArticleAdImageHandler), if any.
+        public readonly ?string $sourceAdImageId = null,
     ) {
     }
 }

@@ -839,6 +839,12 @@ $commandBus->register(\App\Application\Article\Command\GenerateArticleAdImage::c
     $aiAdImageSettingsRepository,
     $openAiImageClient,
 ));
+$commandBus->register(\App\Application\Article\Command\RefineArticleAdImage::class, new \App\Application\Article\Command\RefineArticleAdImageHandler(
+    $articleAdImageRepository,
+    $fileStorage,
+    $aiAdImageSettingsRepository,
+    $openAiImageClient,
+));
 $commandBus->register(\App\Application\Article\Command\DeleteArticleAdImage::class, new \App\Application\Article\Command\DeleteArticleAdImageHandler($articleAdImageRepository, $fileStorage));
 $commandBus->register(\App\Application\Article\Command\SetArticleChannelEnabled::class, new \App\Application\Article\Command\SetArticleChannelEnabledHandler($articleRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleChannelUrlBuilder));
 $commandBus->register(\App\Application\Article\Command\SyncArticleChannel::class, new \App\Application\Article\Command\SyncArticleChannelHandler($articleRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleChannelUrlBuilder));
@@ -2082,6 +2088,7 @@ $router->post('/artikel/{id}/vor-ausgabe-checks', $auth->guard(Permission::Artik
 $router->post('/vor-ausgabe-checks/{id}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'updatePreIssueCheck']));
 $router->post('/vor-ausgabe-checks/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deletePreIssueCheck']));
 $router->post('/artikel/{id}/werbebilder', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'generateAdImage']));
+$router->post('/werbebilder/{id}/ueberarbeiten', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'refineAdImage']));
 $router->post('/werbebilder/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'deleteAdImage']));
 $router->get('/artikel-werbebilder/{id}/{filename}', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'showAdImage']));
 $router->post('/artikel/{id}/hinweisdokumente', $auth->guard(Permission::Artikelverwaltung, [$articleController, 'uploadNoticeDocument']));

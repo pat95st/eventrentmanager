@@ -1,4 +1,4 @@
--- Migration 164: Whether haze/fog machines may be used at a venue.
+-- Migration 165: Whether haze/fog machines may be used at a venue.
 --
 --  - venues.fog_policy: 'allowed', 'not_allowed' or 'on_request' (fog only
 --    after consultation, the fire alarm system is temporarily disabled).

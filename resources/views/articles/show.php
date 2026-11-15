@@ -504,9 +504,14 @@ $availabilityStatusMeta = [
                                 <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
                             </button>
                         </div>
-                        <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?></p>
-                        <div class="flex items-center justify-between gap-2" data-row-actions="off">
+                        <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?><?php if ($adImage->sourceAdImageId !== null): ?> · <?= e(t('articles.show.ad_images_refined_badge')) ?><?php endif; ?></p>
+                        <div class="flex flex-wrap items-center gap-x-2" data-row-actions="off">
                             <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                            <button type="button" data-ad-image-refine
+                                    data-action="/werbebilder/<?= e($adImage->id) ?>/ueberarbeiten"
+                                    data-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>"
+                                    data-format="<?= e($adImage->format->label()) ?>"
+                                    class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_refine')) ?></button>
                             <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
@@ -564,6 +569,16 @@ $availabilityStatusMeta = [
                     <input id="ad_image_instructions" type="text" name="additional_instructions" placeholder="<?= e(t('articles.show.ad_images_additional_instructions_placeholder')) ?>"
                            class="mt-1 w-full disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 </div>
+                <div class="space-y-1 pb-1">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <input type="checkbox" name="include_article_name" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
+                        <?= e(t('articles.show.ad_images_include_name')) ?>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300" title="<?= e(t('articles.show.ad_images_include_properties_hint')) ?>">
+                        <input type="checkbox" name="include_properties" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
+                        <?= e(t('articles.show.ad_images_include_properties')) ?>
+                    </label>
+                </div>
                 <div>
                     <button type="submit" data-ad-image-submit
                             class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:border-brand-300 disabled:bg-brand-50 disabled:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:disabled:border-brand-800 dark:disabled:bg-brand-950 dark:disabled:text-brand-300">
@@ -578,6 +593,85 @@ $availabilityStatusMeta = [
                     <span data-ad-image-elapsed class="ml-1 tabular-nums text-slate-400 dark:text-slate-500"></span>
                 </p>
             </form>
+
+            <dialog data-ad-image-refine-dialog aria-labelledby="ad_image_refine_title" class="modal-panel w-full max-w-lg rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+                <form method="post" action="" data-ad-image-refine-form class="space-y-3 p-4">
+                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                    <h3 id="ad_image_refine_title" class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('articles.show.ad_images_refine_title')) ?></h3>
+                    <div class="flex gap-3">
+                        <img data-ad-image-refine-preview src="" alt="" class="h-24 w-24 shrink-0 rounded-md object-cover ring-1 ring-slate-200 dark:ring-slate-700">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            <span data-ad-image-refine-format class="block font-medium text-slate-700 dark:text-slate-300"></span>
+                            <?= e(t('articles.show.ad_images_refine_hint')) ?>
+                        </p>
+                    </div>
+                    <div>
+                        <label for="ad_image_refine_instructions" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_instructions')) ?></label>
+                        <textarea id="ad_image_refine_instructions" name="instructions" rows="3" required maxlength="<?= \App\Application\Article\Command\RefineArticleAdImageHandler::MAX_INSTRUCTIONS_LENGTH ?>"
+                                  placeholder="<?= e(t('articles.show.ad_images_refine_instructions_placeholder')) ?>"
+                                  class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"></textarea>
+                    </div>
+                    <div>
+                        <label for="ad_image_refine_count" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_count')) ?></label>
+                        <select id="ad_image_refine_count" name="count" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900">
+                            <?php for ($n = 1; $n <= \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_COUNT; $n++): ?>
+                                <option value="<?= $n ?>"><?= $n ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <p class="text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" data-ad-image-refine-cancel
+                                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <?= e(t('common.cancel')) ?>
+                        </button>
+                        <button type="submit" data-ad-image-refine-submit
+                                class="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
+                            <span data-ad-image-refine-label><?= e(t('articles.show.ad_images_refine_submit')) ?></span>
+                            <span data-ad-image-refine-busy class="hidden"><?= e(t('articles.show.ad_images_refining')) ?></span>
+                        </button>
+                    </div>
+                </form>
+            </dialog>
+            <script>
+            (function () {
+                var dialog = document.querySelector('[data-ad-image-refine-dialog]');
+                if (!dialog) return;
+                var form = dialog.querySelector('[data-ad-image-refine-form]');
+                var submit = form.querySelector('[data-ad-image-refine-submit]');
+                var instructions = form.querySelector('[name="instructions"]');
+
+                function setBusy(busy) {
+                    submit.disabled = busy;
+                    submit.toggleAttribute('aria-busy', busy);
+                    form.querySelector('[data-ad-image-refine-label]').classList.toggle('hidden', busy);
+                    form.querySelector('[data-ad-image-refine-busy]').classList.toggle('hidden', !busy);
+                }
+
+                document.querySelectorAll('[data-ad-image-refine]').forEach(function (trigger) {
+                    trigger.addEventListener('click', function () {
+                        form.action = trigger.dataset.action;
+                        dialog.querySelector('[data-ad-image-refine-preview]').src = trigger.dataset.src;
+                        dialog.querySelector('[data-ad-image-refine-format]').textContent = trigger.dataset.format;
+                        setBusy(false);
+                        dialog.showModal();
+                        instructions.focus();
+                    });
+                });
+                dialog.querySelector('[data-ad-image-refine-cancel]').addEventListener('click', function () { dialog.close(); });
+                // Keep the dialog open while the request runs (it takes a while).
+                dialog.addEventListener('cancel', function (event) { if (submit.disabled) event.preventDefault(); });
+                form.addEventListener('submit', function (event) {
+                    if (event.defaultPrevented || submit.disabled) return;
+                    // Disable only after the browser has collected the form data.
+                    setTimeout(function () { setBusy(true); }, 0);
+                });
+                window.addEventListener('pageshow', function (event) {
+                    if (event.persisted) { setBusy(false); dialog.close(); }
+                });
+            })();
+            </script>
 
             <template data-ad-image-tile>
                 <div class="w-32 space-y-1" data-ad-image-placeholder>
@@ -635,7 +729,7 @@ $availabilityStatusMeta = [
                         toggle('[data-ad-image-label]', false);
                         toggle('[data-ad-image-busy-label]', true);
                         toggle('[data-ad-image-hint]', false);
-                        form.querySelectorAll('select, input[type="text"]').forEach(function (field) { field.disabled = true; });
+                        form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = true; });
 
                         form.querySelector('[data-ad-image-status-text]').textContent =
                             n === 1 ? form.dataset.statusOne : fill(form.dataset.statusMany, n);
@@ -674,7 +768,7 @@ $availabilityStatusMeta = [
                     toggle('[data-ad-image-busy-label]', false);
                     toggle('[data-ad-image-hint]', true);
                     status.classList.add('hidden');
-                    form.querySelectorAll('select, input[type="text"]').forEach(function (field) { field.disabled = false; });
+                    form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = false; });
                     gallery.querySelectorAll('[data-ad-image-placeholder]').forEach(function (tile) { tile.remove(); });
                     if (emptyText && !gallery.children.length) {
                         emptyText.classList.remove('hidden');

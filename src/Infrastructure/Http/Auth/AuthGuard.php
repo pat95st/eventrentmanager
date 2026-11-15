@@ -208,6 +208,62 @@ final class AuthGuard
         };
     }
 
+    /**
+     * Wraps a public handler (e.g. imprint/privacy pages) so that a visitor
+     * with a valid session is recognised and the layout renders the regular
+     * navigation. Guests are never redirected; an invalid, revoked or
+     * timed-out session simply renders the page anonymously.
+     */
+    public function optional(callable $handler): callable
+    {
+        return function (Request $request) use ($handler): void {
+            CurrentUser::set(null);
+            ImpersonationContext::set(null);
+
+            Session::ensureStarted();
+            $this->resolveOptionalUser();
+
+            $handler($request);
+        };
+    }
+
+    private function resolveOptionalUser(): void
+    {
+        $userId = Session::userId();
+        if ($userId === null) {
+            return;
+        }
+
+        $user = $this->users->findById($userId);
+        if ($user === null || !$user->isActive) {
+            return;
+        }
+
+        $sessionId = session_id();
+        $currentSession = $sessionId !== false && $sessionId !== '' ? $this->sessions->findById($sessionId) : null;
+        if ($currentSession === null || SessionTimeout::remaining($currentSession->lastSeenAt) <= 0) {
+            return;
+        }
+
+        // Viewing a page counts as activity, consistent with guard(); this also
+        // keeps the client-side session-timeout warning in sync.
+        $this->sessions->upsert(new UserSession(
+            id: $currentSession->id,
+            userId: $currentSession->userId,
+            userAgent: $_SERVER['HTTP_USER_AGENT'] ?? $currentSession->userAgent,
+            ipAddress: $_SERVER['REMOTE_ADDR'] ?? $currentSession->ipAddress,
+            createdAt: $currentSession->createdAt,
+            lastSeenAt: new DateTimeImmutable(),
+        ));
+
+        CurrentUser::set($user);
+        Locale::setFromUser($user);
+
+        if (Session::isImpersonating()) {
+            ImpersonationContext::set($this->users->findById(Session::impersonatorUserId() ?? ''));
+        }
+    }
+
     /** Ohne eigenes Recht geschützte Pfade, die Nur-Techniker nutzen dürfen. */
     private static function technicianMayUse(string $path): bool
     {

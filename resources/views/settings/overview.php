@@ -49,7 +49,8 @@ use function App\Infrastructure\Http\e;
         'konto': 'bankverbindungen', 'mail': 'e-mail smtp', 'agb': 'vermietbedingungen rechtliches',
         'urlaub': 'betriebsurlaub', 'mahnung': 'mahnwesen', 'schrift': 'schriften', 'font': 'schriften', 'farbe': 'akzentfarbe pdf-design',
         'backup': 'sicherung export', 'whatsapp': 'messenger integrationen', 'drucker': 'etikettendrucker', 'kabel': 'leitungen',
-        'stagebox': 'digitale protokolle', 'mischpult': 'digitale protokolle', 'pult': 'digitale protokolle', 'dante': 'digitale protokolle', 'madi': 'digitale protokolle' };
+        'stagebox': 'digitale protokolle', 'mischpult': 'digitale protokolle', 'pult': 'digitale protokolle', 'dante': 'digitale protokolle', 'madi': 'digitale protokolle',
+        'netzwerk': 'netzwerke', 'ip': 'netzwerke', 'vlan': 'netzwerke', 'subnetz': 'netzwerke', 'dhcp': 'netzwerke', 'techniker': 'techniker gewerke' };
     function run() {
         var term = input.value.trim().toLowerCase();
         var terms = term === '' ? [] : [term].concat((SYNONYMS[term] || '').split(' ').filter(Boolean));

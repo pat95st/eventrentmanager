@@ -29,7 +29,8 @@ final class MariadbVenueRepository implements VenueRepositoryInterface
              ON DUPLICATE KEY UPDATE
                 name = :name2, street = :street2, postal_code = :postal_code2, city = :city2,
                 country = :country2, notes = :notes2, caretaker_name = :caretaker_name2,
-                caretaker_phone = :caretaker_phone2, fog_policy = :fog_policy2, latitude = :latitude2, longitude = :longitude2,
+                caretaker_phone = :caretaker_phone2, fog_policy = :fog_policy2,
+                latitude = :latitude2, longitude = :longitude2,
                 updated_at = :updated_at2'
         );
 

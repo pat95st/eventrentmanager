@@ -18,6 +18,7 @@ final class Venue
         public ?string $notes,
         public ?string $caretakerName,  // Hausmeister vor Ort, optional
         public ?string $caretakerPhone, // Telefonnummer des Hausmeisters, optional
+        public ?FogPolicy $fogPolicy,   // whether fog/haze is possible; null = not specified
         public ?float $latitude,   // per Geokodierung (OpenStreetMap Nominatim) ermittelt; kann fehlen
         public ?float $longitude,
         public readonly DateTimeImmutable $createdAt,

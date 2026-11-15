@@ -220,7 +220,7 @@ final class VenueStageHandlersTest extends Unit
     {
         $now = new DateTimeImmutable('2026-01-01 12:00:00');
 
-        return new Venue($id, 'Halle ' . $id, 'Hauptstr. 1', '12345', 'Teststadt', null, null, null, null, null, null, $now, $now);
+        return new Venue($id, 'Halle ' . $id, 'Hauptstr. 1', '12345', 'Teststadt', null, null, null, null, null, null, null, $now, $now);
     }
 
     private function connection(string $id, string $venueId): PowerConnection

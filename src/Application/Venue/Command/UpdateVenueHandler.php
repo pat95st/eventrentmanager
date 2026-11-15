@@ -40,6 +40,7 @@ final class UpdateVenueHandler implements CommandHandlerInterface
             $command->notes,
             $command->caretakerName,
             $command->caretakerPhone,
+            $command->fogPolicy,
         );
 
         if ($errors !== []) {
@@ -70,6 +71,7 @@ final class UpdateVenueHandler implements CommandHandlerInterface
         $venue->notes = $data['notes'];
         $venue->caretakerName = $data['caretakerName'];
         $venue->caretakerPhone = $data['caretakerPhone'];
+        $venue->fogPolicy = $data['fogPolicy'];
         $venue->updatedAt = new DateTimeImmutable();
 
         $this->venues->save($venue);

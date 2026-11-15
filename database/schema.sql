@@ -4503,6 +4503,16 @@ ALTER TABLE article_ad_images
     ADD CONSTRAINT fk_article_ad_images_source_ad_image
         FOREIGN KEY (source_ad_image_id) REFERENCES article_ad_images (id) ON DELETE SET NULL;
 
+-- --- 165_venue_fog_policy.sql ---
+-- Migration 165: Whether haze/fog machines may be used at a venue.
+--
+--  - venues.fog_policy: 'allowed', 'not_allowed' or 'on_request' (fog only
+--    after consultation, the fire alarm system is temporarily disabled).
+--    NULL = not specified (default for all existing venues).
+
+ALTER TABLE venues
+    ADD COLUMN fog_policy VARCHAR(20) NULL AFTER caretaker_phone;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4689,4 +4699,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('161_onboarding_tour.sql', NOW()),
     ('162_ai_ad_image_model.sql', NOW()),
     ('163_online_payments.sql', NOW()),
-    ('164_ai_ad_image_refinement.sql', NOW());
+    ('164_ai_ad_image_refinement.sql', NOW()),
+    ('165_venue_fog_policy.sql', NOW());

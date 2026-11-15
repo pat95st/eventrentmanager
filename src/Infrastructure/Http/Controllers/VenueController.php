@@ -132,6 +132,7 @@ final class VenueController
             notes: $this->nullIfEmpty($request->input('notes')),
             caretakerName: $this->nullIfEmpty($request->input('caretaker_name')),
             caretakerPhone: $this->nullIfEmpty($request->input('caretaker_phone')),
+            fogPolicy: $this->nullIfEmpty($request->input('fog_policy')),
         );
 
         try {
@@ -195,6 +196,7 @@ final class VenueController
             notes: $this->nullIfEmpty($request->input('notes')),
             caretakerName: $this->nullIfEmpty($request->input('caretaker_name')),
             caretakerPhone: $this->nullIfEmpty($request->input('caretaker_phone')),
+            fogPolicy: $this->nullIfEmpty($request->input('fog_policy')),
         );
 
         try {
@@ -520,6 +522,7 @@ final class VenueController
             'notes' => $command->notes,
             'caretaker_name' => $command->caretakerName,
             'caretaker_phone' => $command->caretakerPhone,
+            'fog_policy' => $command->fogPolicy,
         ];
     }
 

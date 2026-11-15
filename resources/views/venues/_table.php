@@ -44,6 +44,14 @@ use function App\Infrastructure\Http\t;
                             <?php if ($needsDistributorFlags[$venue->id] ?? false): ?>
                                 <span title="<?= e(t('venues.table.distributor_warning')) ?>" class="ml-1 cursor-help text-amber-600 dark:text-amber-400">&#9888;</span>
                             <?php endif; ?>
+                            <?php if ($venue->fogPolicy !== null): ?>
+                                <?php $fogBadgeClass = match ($venue->fogPolicy) {
+                                    \App\Domain\Venue\FogPolicy::Allowed => 'bg-emerald-50 text-emerald-800 ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700',
+                                    \App\Domain\Venue\FogPolicy::NotAllowed => 'bg-red-50 text-red-800 ring-red-300 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-700',
+                                    \App\Domain\Venue\FogPolicy::OnRequest => 'bg-amber-50 text-amber-800 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700',
+                                }; ?>
+                                <span class="mt-1 block w-fit rounded-full px-2 py-0.5 text-xs font-normal ring-1 ring-inset <?= $fogBadgeClass ?>"><?= e(t($venue->fogPolicy->labelKey())) ?></span>
+                            <?php endif; ?>
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
                             <?= e($venue->street) ?>

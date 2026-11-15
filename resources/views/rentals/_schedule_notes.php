@@ -15,7 +15,7 @@ use function App\Infrastructure\Http\t;
 $rentalHolidays ??= [];
 $blockingConflicts ??= [];
 ?>
-<?php if ($rental->noStrobe): /* Migration 165 */ ?>
+<?php if ($rental->noStrobe): /* Migration 166 */ ?>
     <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
         <span class="font-medium"><?= e(t('rentals.show.no_strobe')) ?></span>
         <?= e(t('rentals.show.no_strobe_hint')) ?>

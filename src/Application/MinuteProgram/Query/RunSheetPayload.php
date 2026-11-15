@@ -53,7 +53,7 @@ final class RunSheetPayload
             'revision' => self::revision($detail, $context['eventNoStrobe'] ?? false),
             'event' => [
                 'name' => $context['eventName'] ?? null,
-                // Migration 165: no strobe allowed at the whole event.
+                // Migration 166: no strobe allowed at the whole event.
                 'noStrobe' => $context['eventNoStrobe'] ?? false,
             ],
             'program' => [

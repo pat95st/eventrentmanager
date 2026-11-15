@@ -1,4 +1,4 @@
--- Migration 165: "No strobe" flag.
+-- Migration 166: "No strobe" flag.
 --
 --  Events (rentals) and individual minute program items can be marked so
 --  that no strobe lighting may be used (e.g. because of photosensitive

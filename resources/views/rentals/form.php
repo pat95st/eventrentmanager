@@ -149,7 +149,7 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
     </div>
 
     <?php
-    // No strobe allowed (migration 165)
+    // No strobe allowed (migration 166)
     $noStrobeChecked = array_key_exists('no_strobe', $old) ? (bool) $old['no_strobe'] : ($rental?->noStrobe ?? false);
     ?>
     <div>

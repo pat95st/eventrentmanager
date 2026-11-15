@@ -36,6 +36,7 @@ final class CreateVenueHandler implements CommandHandlerInterface
             $command->notes,
             $command->caretakerName,
             $command->caretakerPhone,
+            $command->fogPolicy,
         );
 
         if ($errors !== []) {
@@ -57,6 +58,7 @@ final class CreateVenueHandler implements CommandHandlerInterface
             notes: $data['notes'],
             caretakerName: $data['caretakerName'],
             caretakerPhone: $data['caretakerPhone'],
+            fogPolicy: $data['fogPolicy'],
             latitude: $coordinates[0] ?? null,
             longitude: $coordinates[1] ?? null,
             createdAt: $now,

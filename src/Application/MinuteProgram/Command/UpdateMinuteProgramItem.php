@@ -18,7 +18,7 @@ final class UpdateMinuteProgramItem implements CommandInterface
         public readonly ?string $noteVideo,
         public readonly ?string $noteStage,
         public readonly ?int $durationMinutes,
-        // Migration 165: no strobe lighting may be used during this item.
+        // Migration 166: no strobe lighting may be used during this item.
         public readonly bool $noStrobe = false,
     ) {
     }

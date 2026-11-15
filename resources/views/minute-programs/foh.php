@@ -320,7 +320,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
     }
     function signed(sec) { return (sec > 0 ? '+' : sec < 0 ? '−' : '±') + dur(sec); }
-    // Migration 165: no strobe during an item or at the whole event.
+    // Migration 166: no strobe during an item or at the whole event.
     function noStrobe(item) { return !!(item && item.noStrobe) || !!(state.event && state.event.noStrobe); }
     function noStrobeBanner(item) { return noStrobe(item) ? '<div class="nostrobe-banner">Kein Strobo</div>' : ''; }
     function itemById(id) { for (var i = 0; i < state.items.length; i++) { if (state.items[i].id === id) { return state.items[i]; } } return null; }

@@ -38,7 +38,7 @@ $program = $detail->program;
     </div>
 </div>
 
-<?php if ($rental->noStrobe): /* Migration 165 */ ?>
+<?php if ($rental->noStrobe): /* Migration 166 */ ?>
 <div class="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
     <?= e(t('minute_programs.show.no_strobe_event')) ?>
 </div>

@@ -32,4 +32,12 @@ final class ProjectPaths
 
         return $path !== false ? $path : self::rootDirectory() . '/bin/import-receipt-emails.php';
     }
+
+    /** Absolute path of the cron script for the automatic backup (see Einstellungen → Sicherung). */
+    public static function automaticBackupScriptPath(): string
+    {
+        $path = realpath(self::rootDirectory() . '/bin/run-automatic-backup.php');
+
+        return $path !== false ? $path : self::rootDirectory() . '/bin/run-automatic-backup.php';
+    }
 }

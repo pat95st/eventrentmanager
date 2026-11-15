@@ -614,6 +614,21 @@ den Installer):**
    Mit `--force` lässt sich der Zeitraum erneut bzw. vor dem Versandtag
    verschicken.
 
+   **Automatische Sicherung per Cronjob (nach Migration 156):** überträgt die
+   vollständige Sicherungs-ZIP regelmäßig auf die ausgewählten Speicherziele
+   der Dokumentablage (Einstellungen → Sicherung → „Automatische Sicherung
+   auf Speicherziele“). Die Seite zeigt die zum gewählten Rhythmus passende,
+   fertige Crontab-Zeile mit den auf diesem Server gültigen Pfaden, z. B.
+   täglich um 03:15:
+
+   ```
+   15 3 * * * /usr/bin/php /pfad/zum/projekt/bin/run-automatic-backup.php >> /pfad/zum/projekt/storage/logs/automatic-backup.log 2>&1
+   ```
+
+   Jeder Lauf wird in `backup_runs` protokolliert und auf der Seite
+   angezeigt. Mit `--force` läuft die Sicherung auch bei deaktivierter
+   Einstellung.
+
    Ein bequemer Weg, offene Migrationen zu finden: die Namen der bereits
    angelegten Tabellen mit `SHOW TABLES;` gegen die obige Liste abgleichen,
    oder einfach alle Dateien ab der zuletzt bekannten Nummer der Reihe nach
@@ -928,6 +943,20 @@ Unter „Einstellungen → Sicherung" (nur für Administratoren):
   Migrationen nach, die zum Zeitpunkt der Sicherung noch nicht existierten —
   eine ältere Sicherung lässt sich damit auch auf einer neueren
   Anwendungsversion wiederherstellen.
+- **Automatische Sicherung auf Speicherziele** (Migration 156): dieselbe
+  ZIP wird per Cronjob `bin/run-automatic-backup.php` erzeugt und auf die
+  ausgewählten Speicherziele der Dokumentablage hochgeladen (WebDAV/Nextcloud,
+  FTPS, SFTP, SCP, S3, Dropbox, OneDrive, Google Drive, Box, lokaler Ordner).
+  Ablagepfad-Vorlage mit `{year}`, `{month}`, `{day}`, `{filename}`
+  (Standard `Sicherungen/{year}/{filename}`). Rhythmus (täglich/wöchentlich/
+  monatlich) und Uhrzeit bestimmen die im Admin-UI angezeigte
+  Crontab-Zeile; geplant wird ausschließlich durch den Cron-Daemon des
+  Servers. Ein fehlschlagendes Speicherziel verhindert nicht den Upload auf
+  die übrigen; jeder Lauf landet in `backup_runs`. „Jetzt sichern“ führt
+  denselben Lauf sofort aus. Grenzen: die ZIP wird für den Upload einmal
+  vollständig in den Speicher gelesen (das Cron-Skript hebt dafür das
+  PHP-Speicherlimit auf), und alte Sicherungen werden auf dem Speicherziel
+  nicht automatisch gelöscht. Zuständig: `RunAutomaticBackupHandler`.
 - Zuständige Klassen: `App\Infrastructure\Backup\BackupArchiveBuilder`
   (Export) und `App\Infrastructure\Backup\BackupArchiveImporter` (Import),
   jeweils über `App\Domain\Backup\DatabaseDumperInterface` bzw.

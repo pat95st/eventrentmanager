@@ -621,6 +621,9 @@ $backupDatabaseRestorer = new \App\Infrastructure\Persistence\Pdo\MariadbDatabas
 $backupArchiveBuilder = new \App\Infrastructure\Backup\BackupArchiveBuilder($backupDatabaseDumper, __DIR__ . '/../storage/uploads', $backupTempDirectory);
 $backupMigrationRunner = new \App\Infrastructure\Migrations\MigrationRunner($pdo, __DIR__ . '/../database/migrations');
 $backupArchiveImporter = new \App\Infrastructure\Backup\BackupArchiveImporter($backupDatabaseRestorer, $backupMigrationRunner, __DIR__ . '/../storage/uploads', $backupTempDirectory);
+// Automatic backup to storage targets (migration 156, bin/run-automatic-backup.php).
+$backupSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbBackupSettingsRepository($pdo);
+$backupRunRepository = new \App\Infrastructure\Persistence\Pdo\MariadbBackupRunRepository($pdo);
 
 // --- Command-Bus ---------------------------------------------------------
 $commandBus = new CommandBus();
@@ -1685,7 +1688,11 @@ $customerChecklistController = new \App\Infrastructure\Http\Controllers\Customer
 // --- Backup-Export/-Import -----------------------------------------------
 $commandBus->register(\App\Application\Backup\Command\ExportBackup::class, new \App\Application\Backup\Command\ExportBackupHandler($backupArchiveBuilder));
 $commandBus->register(\App\Application\Backup\Command\ImportBackup::class, new \App\Application\Backup\Command\ImportBackupHandler($backupArchiveImporter));
-$backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory);
+$commandBus->register(\App\Application\Backup\Command\UpdateBackupSettings::class, new \App\Application\Backup\Command\UpdateBackupSettingsHandler($backupSettingsRepository, $documentStorageTargetRepository));
+$commandBus->register(\App\Application\Backup\Command\RunAutomaticBackup::class, new \App\Application\Backup\Command\RunAutomaticBackupHandler($backupSettingsRepository, $documentStorageTargetRepository, $documentStorageClientFactory, $backupArchiveBuilder, $backupRunRepository));
+$queryBus->register(\App\Application\Backup\Query\GetBackupSettings::class, new \App\Application\Backup\Query\GetBackupSettingsHandler($backupSettingsRepository));
+$queryBus->register(\App\Application\Backup\Query\ListBackupRuns::class, new \App\Application\Backup\Query\ListBackupRunsHandler($backupRunRepository));
+$backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory, $queryBus);
 
 $rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository);
@@ -2657,6 +2664,8 @@ $router->post('/einstellungen/dashboard-vorlagen/{id}/loeschen', $auth->guard(Pe
 $router->get('/einstellungen/sicherung', $auth->guard(Permission::Administration, [$backupSettingsController, 'index']));
 $router->post('/einstellungen/sicherung/export', $auth->guard(Permission::Administration, [$backupSettingsController, 'export']));
 $router->post('/einstellungen/sicherung/import', $auth->guard(Permission::Administration, [$backupSettingsController, 'import']));
+$router->post('/einstellungen/sicherung/automatisch', $auth->guard(Permission::Administration, [$backupSettingsController, 'saveAutomatic']));
+$router->post('/einstellungen/sicherung/automatisch/ausfuehren', $auth->guard(Permission::Administration, [$backupSettingsController, 'runNow']));
 
 // REST-API-Einstellungen (Token-Verwaltung, nur Administration).
 $router->get('/einstellungen/api', $auth->guard(Permission::Administration, [$apiSettingsController, 'edit']));

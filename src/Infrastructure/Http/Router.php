@@ -35,10 +35,13 @@ final class Router
     /**
      * Pfad-Präfixe ohne CSRF-Prüfung: Schnittstelle des Abspielgeräts
      * (Migration 135) – authentifiziert per Bearer-Token statt Session,
-     * ein CSRF-Angriff über den Browser ist dort nicht möglich.
+     * ein CSRF-Angriff über den Browser ist dort nicht möglich. Same for the
+     * run sheet / stage display API (migration 158): authenticated by the
+     * share link token in the path, no session involved.
      */
     private const CSRF_EXEMPT_PREFIXES = [
         '/api/player/',
+        '/api/runsheet/',
     ];
 
     public function get(string $path, callable $handler): void

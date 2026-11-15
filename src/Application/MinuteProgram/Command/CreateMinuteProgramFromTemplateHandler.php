@@ -75,7 +75,7 @@ final class CreateMinuteProgramFromTemplateHandler implements CommandHandlerInte
             jingleBefore: $template->jingleBefore,
             handheldMicCount: $template->handheldMicCount,
             headsetMicCount: $template->headsetMicCount,
-            currentDelayMinutes: 0,
+            currentDelaySeconds: 0,
             createdAt: $now,
             updatedAt: $now,
         );

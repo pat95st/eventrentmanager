@@ -12,7 +12,7 @@ namespace App\Application\MinuteProgram\Query;
  */
 final class CountdownPayload
 {
-    /** @return array{programName: string, room: ?string, delayMinutes: int, nextLabel: ?string, nextAt: ?string, finished: bool} */
+    /** @return array{programName: string, room: ?string, delayMinutes: int, delaySeconds: int, nextLabel: ?string, nextAt: ?string, finished: bool} */
     public static function build(MinuteProgramDetail $detail): array
     {
         $program = $detail->program;
@@ -30,9 +30,10 @@ final class CountdownPayload
             return [
                 'programName' => $program->name,
                 'room' => $program->room,
-                'delayMinutes' => $program->currentDelayMinutes,
+                'delayMinutes' => $program->delayMinutes(),
+                'delaySeconds' => $detail->projectedDelay(),
                 'nextLabel' => $nextItemDetail->item->name,
-                'nextAt' => $nextItemDetail->currentStart->format(DATE_ATOM),
+                'nextAt' => ($nextItemDetail->projectedStart ?? $nextItemDetail->currentStart)->format(DATE_ATOM),
                 'finished' => false,
             ];
         }
@@ -41,7 +42,8 @@ final class CountdownPayload
             return [
                 'programName' => $program->name,
                 'room' => $program->room,
-                'delayMinutes' => $program->currentDelayMinutes,
+                'delayMinutes' => $program->delayMinutes(),
+                'delaySeconds' => $detail->projectedDelay(),
                 'nextLabel' => null,
                 'nextAt' => $program->delayedStartAt()->format(DATE_ATOM),
                 'finished' => false,
@@ -51,7 +53,8 @@ final class CountdownPayload
         return [
             'programName' => $program->name,
             'room' => $program->room,
-            'delayMinutes' => $program->currentDelayMinutes,
+            'delayMinutes' => $program->delayMinutes(),
+            'delaySeconds' => $detail->projectedDelay(),
             'nextLabel' => null,
             'nextAt' => null,
             'finished' => true,

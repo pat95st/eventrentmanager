@@ -2728,10 +2728,10 @@ $router->options('/carddav/addressbooks/{userId}/{bookId}/{contactId}.vcf', [$ca
 $router->get('/carddav/addressbooks/{userId}/{bookId}/{contactId}.vcf', [$cardDavController, 'getContact']);
 
 // Impressum/Datenschutzerklärung: öffentlich, ohne Anmeldung erreichbar
-// (siehe auch Footer-Links in layout.php und AuthGuard::PUBLIC_PATHS, die
-// hier bewusst NICHT geändert werden muss, da diese Routen ohne guard()
-// registriert sind).
-$router->get('/impressum', [$legalPageController, 'imprint']);
-$router->get('/datenschutz', [$legalPageController, 'privacy']);
+// (siehe auch Footer-Links in layout.php). AuthGuard::optional() never
+// redirects guests, but recognises a logged-in user so the layout shows the
+// regular navigation on these pages too.
+$router->get('/impressum', $auth->optional([$legalPageController, 'imprint']));
+$router->get('/datenschutz', $auth->optional([$legalPageController, 'privacy']));
 
 return $router;

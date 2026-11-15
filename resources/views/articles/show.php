@@ -453,7 +453,9 @@ $availabilityStatusMeta = [
                     <?php $isDocumentImage = $article->documentImageId === $image->id; ?>
                     <div class="flex flex-col items-center gap-1">
                     <div class="relative h-24 w-24 overflow-hidden rounded-md <?= $isDocumentImage ? 'ring-2 ring-brand-500' : 'ring-1 ring-slate-200 dark:ring-slate-700' ?>">
-                        <img src="/artikel-bilder/<?= e($image->filePath) ?>" alt="" class="h-full w-full object-cover">
+                        <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-images" data-gallery-src="/artikel-bilder/<?= e($image->filePath) ?>" data-gallery-caption="<?= e($article->name) ?>" aria-label="<?= e(t('gallery.open')) ?>">
+                            <img src="/artikel-bilder/<?= e($image->filePath) ?>" alt="" class="h-full w-full object-cover">
+                        </button>
                         <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
@@ -498,7 +500,9 @@ $availabilityStatusMeta = [
                 <?php foreach ($detail->adImages as $adImage): ?>
                     <div class="w-32 space-y-1">
                         <div class="relative h-32 w-32 overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
-                            <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
+                            <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-ad-images" data-gallery-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" data-gallery-caption="<?= e($adImage->format->label()) ?>" data-gallery-download="/artikel-werbebilder/<?= e($adImage->filePath) ?>" aria-label="<?= e(t('gallery.open')) ?>">
+                                <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
+                            </button>
                             <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
@@ -518,7 +522,7 @@ $availabilityStatusMeta = [
                 . '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25"></circle>'
                 . '<path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>';
             ?>
-            <form method="post" action="/artikel/<?= e($article->id) ?>/werbebilder" data-ad-image-form
+            <form method="post" action="/artikel/<?= e($article->id) ?>/werbebilder" data-ad-image-form data-no-loading-indicator
                   data-label-one="<?= e(t('articles.show.ad_images_generate')) ?>"
                   data-label-many="<?= e(t('articles.show.ad_images_generate_many')) ?>"
                   data-status-one="<?= e(t('articles.show.ad_images_generating_status_one')) ?>"
@@ -616,6 +620,10 @@ $availabilityStatusMeta = [
                     var n = count();
                     var formatLabel = formatSelect.options[formatSelect.selectedIndex].text;
 
+                    // The form opts out of the global loading indicator (it would add a
+                    // second spinner to the button); keep its top progress bar, though.
+                    if (window.loadingIndicator) window.loadingIndicator.start();
+
                     // Disable only after the browser has collected the form data,
                     // otherwise disabled fields would be missing from the request.
                     setTimeout(function () {
@@ -656,6 +664,7 @@ $availabilityStatusMeta = [
                 window.addEventListener('pageshow', function (event) {
                     if (!event.persisted) return;
                     clearInterval(timer);
+                    if (button.disabled && window.loadingIndicator) window.loadingIndicator.stop();
                     button.disabled = false;
                     button.removeAttribute('aria-busy');
                     toggle('[data-ad-image-spinner]', false);
@@ -1425,3 +1434,4 @@ $availabilityStatusMeta = [
 })();
 </script>
 <script src="/assets/js/network-fields.js"></script>
+<?php require __DIR__ . '/../_image_gallery_modal.php'; /* Lightbox for article and ad images */ ?>

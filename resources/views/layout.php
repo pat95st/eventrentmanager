@@ -261,6 +261,7 @@ $canDocuments = $canRentals;
   #mobile-nav { max-height: calc(100vh - 4rem); max-height: calc(100dvh - 4rem); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 </style>
 <script src="/assets/js/modal-fade.js"></script>
+<script src="/assets/js/loading-indicator.js"></script>
 <script src="/assets/js/sortable-tables.js" defer></script>
 <script src="/assets/js/pdf-viewer.js" defer></script>
 <script src="/assets/js/row-actions.js" defer></script>

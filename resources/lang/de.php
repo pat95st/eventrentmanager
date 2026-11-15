@@ -2588,6 +2588,7 @@ return [
     'profile.carddav.flash.deleted' => 'App-Passwort wurde widerrufen.',
 
     'nav.minute_program_templates' => 'Minutenprogramm-Vorlagen',
+    'nav.partners' => 'Partner',
 
     'minute_programs.new' => 'Neues Minutenprogramm',
     'minute_programs.edit' => 'Minutenprogramm bearbeiten',

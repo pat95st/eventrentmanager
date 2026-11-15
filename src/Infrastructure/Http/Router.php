@@ -36,9 +36,12 @@ final class Router
      * Pfad-Präfixe ohne CSRF-Prüfung: Schnittstelle des Abspielgeräts
      * (Migration 135) – authentifiziert per Bearer-Token statt Session,
      * ein CSRF-Angriff über den Browser ist dort nicht möglich.
+     * Same for the federation protocol between partner installations
+     * (migration 157, bearer token or invitation code).
      */
     private const CSRF_EXEMPT_PREFIXES = [
         '/api/player/',
+        '/api/federation/',
     ];
 
     public function get(string $path, callable $handler): void

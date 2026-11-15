@@ -33,10 +33,24 @@ final class OpenAiImageClient
     private const EDITS_URL = 'https://api.openai.com/v1/images/edits';
     private const MODELS_URL = 'https://api.openai.com/v1/models';
     private const TIMEOUT_SECONDS = 120; // Bildgenerierung dauert oft 10-30s, großzügiger Puffer
+    // Extra time per additional image when several are requested in one call.
+    private const TIMEOUT_SECONDS_PER_EXTRA_IMAGE = 60;
 
-    /** @return string Base64-kodierte PNG-Bilddaten */
-    public function generateFromText(string $apiKey, string $model, string $prompt, string $size): string
+    /**
+     * @param int $count number of images to generate (>= 1)
+     * @return list<string> Base64-kodierte PNG-Bilddaten, eines je Bild
+     */
+    public function generateFromText(string $apiKey, string $model, string $prompt, string $size, int $count = 1): array
     {
+        if (!$this->supportsMultipleImagesPerRequest($model) && $count > 1) {
+            $images = [];
+            for ($i = 0; $i < $count; $i++) {
+                $images = [...$images, ...$this->generateFromText($apiKey, $model, $prompt, $size, 1)];
+            }
+
+            return $images;
+        }
+
         $response = HttpJsonRequest::send(
             method: 'POST',
             url: self::GENERATIONS_URL,
@@ -48,17 +62,29 @@ final class OpenAiImageClient
                 'model' => $model,
                 'prompt' => $prompt,
                 'size' => $size,
-                'n' => 1,
+                'n' => $count,
             ],
-            timeoutSeconds: self::TIMEOUT_SECONDS,
+            timeoutSeconds: $this->timeoutFor($count),
         );
 
-        return $this->extractBase64Image($response);
+        return $this->extractBase64Images($response, $count);
     }
 
-    /** @return string Base64-kodierte PNG-Bilddaten */
-    public function generateFromImage(string $apiKey, string $model, string $prompt, string $size, string $referenceImageBytes, string $referenceImageMimeType, string $referenceImageFilename): string
+    /**
+     * @param int $count number of images to generate (>= 1)
+     * @return list<string> Base64-kodierte PNG-Bilddaten, eines je Bild
+     */
+    public function generateFromImage(string $apiKey, string $model, string $prompt, string $size, string $referenceImageBytes, string $referenceImageMimeType, string $referenceImageFilename, int $count = 1): array
     {
+        if (!$this->supportsMultipleImagesPerRequest($model) && $count > 1) {
+            $images = [];
+            for ($i = 0; $i < $count; $i++) {
+                $images = [...$images, ...$this->generateFromImage($apiKey, $model, $prompt, $size, $referenceImageBytes, $referenceImageMimeType, $referenceImageFilename, 1)];
+            }
+
+            return $images;
+        }
+
         $ch = curl_init(self::EDITS_URL);
         if ($ch === false) {
             throw new OpenAiImageException('curl konnte nicht initialisiert werden.');
@@ -68,7 +94,7 @@ final class OpenAiImageClient
             CURLOPT_POST => true,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT => self::TIMEOUT_SECONDS,
+            CURLOPT_TIMEOUT => $this->timeoutFor($count),
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $apiKey,
             ],
@@ -76,7 +102,7 @@ final class OpenAiImageClient
                 'model' => $model,
                 'prompt' => $prompt,
                 'size' => $size,
-                'n' => 1,
+                'n' => $count,
                 // CURLStringFile lädt die Bilddaten direkt aus dem Speicher
                 // als multipart-Datei-Teil hoch, ohne eine Temp-Datei
                 // anlegen zu müssen (seit PHP 8.1).
@@ -96,7 +122,7 @@ final class OpenAiImageClient
 
         $json = json_decode($raw, true);
 
-        return $this->extractBase64Image(['status' => $status, 'json' => is_array($json) ? $json : null, 'raw' => $raw]);
+        return $this->extractBase64Images(['status' => $status, 'json' => is_array($json) ? $json : null, 'raw' => $raw], $count);
     }
 
     /**
@@ -132,19 +158,43 @@ final class OpenAiImageClient
         return $models;
     }
 
-    /** @param array{status: int, json: array<string, mixed>|null, raw: string} $response */
-    private function extractBase64Image(array $response): string
+    /**
+     * dall-e-3 only accepts n=1; for it, several images are requested one
+     * after another instead.
+     */
+    private function supportsMultipleImagesPerRequest(string $model): bool
+    {
+        return !str_starts_with($model, 'dall-e-3');
+    }
+
+    private function timeoutFor(int $count): int
+    {
+        return self::TIMEOUT_SECONDS + self::TIMEOUT_SECONDS_PER_EXTRA_IMAGE * max(0, $count - 1);
+    }
+
+    /**
+     * @param array{status: int, json: array<string, mixed>|null, raw: string} $response
+     * @return list<string>
+     */
+    private function extractBase64Images(array $response, int $expectedCount): array
     {
         if ($response['status'] < 200 || $response['status'] >= 300) {
             $message = $response['json']['error']['message'] ?? $response['raw'];
             throw new OpenAiImageException('OpenAI meldet einen Fehler (HTTP ' . $response['status'] . '): ' . $message);
         }
 
-        $b64 = $response['json']['data'][0]['b64_json'] ?? null;
-        if (!is_string($b64) || $b64 === '') {
+        $images = [];
+        foreach ($response['json']['data'] ?? [] as $entry) {
+            $b64 = is_array($entry) ? ($entry['b64_json'] ?? null) : null;
+            if (is_string($b64) && $b64 !== '') {
+                $images[] = $b64;
+            }
+        }
+        if ($images === []) {
             throw new OpenAiImageException('OpenAI hat keine Bilddaten in der Antwort geliefert.');
         }
 
-        return $b64;
+        // Never store more images than requested, even if the API returns extra.
+        return array_slice($images, 0, $expectedCount);
     }
 }

@@ -406,6 +406,7 @@ return [
     'articles.show.ad_images_generate' => 'Werbebild generieren',
     'articles.show.ad_images_generating_hint' => 'Die Generierung dauert meist 10 bis 60 Sekunden.',
     'articles.show.ad_images_download' => 'Herunterladen',
+    'articles.show.ad_images_delete' => 'Löschen',
     'articles.show.ad_images_confirm_delete' => 'Dieses Werbebild löschen?',
     'articles.show.ad_images_flash_generated' => 'Werbebild wurde generiert.',
     'articles.show.ad_images_flash_deleted' => 'Werbebild wurde gelöscht.',

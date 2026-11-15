@@ -8,7 +8,7 @@ use App\Application\Command\CommandInterface;
 
 /**
  * Saves the simultaneity factor and where each unit is plugged in
- * (migration 157). $rows: unit key ("<article>#<unit>") => target (see
+ * (migration 159). $rows: unit key ("<article>#<unit>") => target (see
  * PowerTargetOptions), phase and optional factor of the unit.
  */
 final class SaveRentalPowerPlan implements CommandInterface

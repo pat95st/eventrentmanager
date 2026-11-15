@@ -11,7 +11,7 @@ use App\Domain\Venue\PowerConnection;
 /**
  * Suggests re-plugging units so that no phase of a venue connection or
  * distributor inlet, no integrated protective device and no outlet is
- * overloaded (migration 157).
+ * overloaded (migration 159).
  *
  * Greedy search: per step, every unit that contributes to an overloaded
  * element is tried on every free outlet with the same connector type (the

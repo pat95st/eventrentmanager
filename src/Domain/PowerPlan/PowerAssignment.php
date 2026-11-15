@@ -6,7 +6,7 @@ namespace App\Domain\PowerPlan;
 
 /**
  * Where one planned unit (article + running number within the planned
- * quantity) is plugged in during an event (migration 157): either an outlet
+ * quantity) is plugged in during an event (migration 159): either an outlet
  * of a planned power distributor unit or a power connection of the venue.
  *
  * $phase selects the phase when it does not follow from the outlet, e.g. a

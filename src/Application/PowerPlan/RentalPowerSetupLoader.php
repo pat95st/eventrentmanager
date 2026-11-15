@@ -17,7 +17,7 @@ use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Venue\VenuePowerConnectionRepositoryInterface;
 
 /**
- * Builds the units of an event's power plan (migration 157) from its planned
+ * Builds the units of an event's power plan (migration 159) from its planned
  * articles: each unit of a power distributor and each unit of a device with
  * input power. Cables and bundles are skipped (bundles are planned via their
  * components); devices without input power are only counted.

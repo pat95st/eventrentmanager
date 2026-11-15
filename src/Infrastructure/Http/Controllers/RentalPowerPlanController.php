@@ -17,7 +17,7 @@ use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
 /**
- * Power planning of an event (migration 157): where each device and power
+ * Power planning of an event (migration 159): where each device and power
  * distributor is plugged in, expected current per phase, overloads of
  * connections, inlets and integrated protective devices, and suggestions
  * for re-plugging.

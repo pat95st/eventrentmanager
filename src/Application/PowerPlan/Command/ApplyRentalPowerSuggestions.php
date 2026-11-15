@@ -7,7 +7,7 @@ namespace App\Application\PowerPlan\Command;
 use App\Application\Command\CommandInterface;
 
 /**
- * Applies re-plugging suggestions (migration 157). The suggestions are
+ * Applies re-plugging suggestions (migration 159). The suggestions are
  * computed again from the saved plan; $keys limits them to these units
  * (null = all suggestions).
  */

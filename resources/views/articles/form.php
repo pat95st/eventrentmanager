@@ -68,7 +68,7 @@ $hasNetworkInterface = array_key_exists('has_network_interface', $old)
 $requiresDhcp = array_key_exists('requires_dhcp', $old)
     ? (bool) $old['requires_dhcp']
     : ($networkOverview?->settings?->requiresDhcp ?? false);
-// Power planning (migration 157): input power in watts (not for cables, power distributors and bundles).
+// Power planning (migration 159): input power in watts (not for cables, power distributors and bundles).
 $inputPowerW ??= null;
 $inputPowerValue = array_key_exists('input_power_w', $old) ? (string) $old['input_power_w'] : ($inputPowerW !== null ? (string) $inputPowerW : '');
 $hasFirmware = array_key_exists('has_firmware', $old)
@@ -282,7 +282,7 @@ $bundleComponentRows ??= [];
                 <select id="cable_type_id" name="cable_type_id" class="<?= $cableInput ?>">
                     <option value="">Bitte wählen…</option>
                     <?php foreach ($cableSettings->types as $cableTypeOption): ?>
-                        <option value="<?= e($cableTypeOption->id) ?>" <?= $cableTypeSelected === $cableTypeOption->id ? 'selected' : '' ?>><?= e($cableTypeOption->name) ?><?= $cableTypeOption->requiresElectricalInspection ? ' (prüfpflichtig)' : '' ?></option>
+                        <option value="<?= e($cableTypeOption->id) ?>" <?= $cableTypeSelected === $cableTypeOption->id ? 'selected' : '' ?>><?= e($cableTypeOption->name) ?><?= $cableTypeOption->requiresInspection() ? ' (prüfpflichtig)' : '' ?></option>
                     <?php endforeach; ?>
                 </select>
                 <?= $cableErr('cable_type_id') ?>
@@ -305,6 +305,18 @@ $bundleComponentRows ??= [];
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php
+            $cableTypeIsMulticore = false;
+            foreach ($cableSettings->types as $cableTypeOption) {
+                $cableTypeIsMulticore = $cableTypeIsMulticore || ($cableTypeOption->id === $cableTypeSelected && $cableTypeOption->isAnalogMulticore);
+            }
+        ?>
+        <?= \App\Infrastructure\Http\View::render('cables/_multicore_fields', [
+            'multicore' => $cable?->cable->multicore,
+            'old' => $old,
+            'errors' => $errors,
+            'visible' => $cableTypeIsMulticore,
+        ]) ?>
     </div>
     <?php endif; ?>
 

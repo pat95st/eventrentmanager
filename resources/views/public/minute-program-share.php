@@ -33,13 +33,16 @@ $canEdit = $link->mode->canEdit();
                     Start <?= e($program->startAt->format('d.m.Y H:i')) ?>
                 </p>
                 <p class="mt-1 text-sm text-slate-500" id="delay-display">
-                    Aktuelle Verzögerung: <span id="delay-value"><?= e((string) $program->currentDelayMinutes) ?></span> min
+                    Aktuelle Verzögerung: <span id="delay-value"><?= e((string) $program->delayMinutes()) ?></span> min
+                </p>
+                <p class="mt-2 text-sm">
+                    <a href="/minutenprogramm/freigabe/<?= e($token) ?>/foh" class="font-medium text-brand-600 hover:underline">Ablauf am FOH öffnen</a>
                 </p>
                 <?php if ($canEdit): ?>
                 <form id="delay-form" class="mt-3 flex items-end gap-2">
                     <div>
                         <label for="current_delay_minutes" class="block text-xs font-medium text-slate-600">Verzögerung (Minuten, auch negativ)</label>
-                        <input type="number" id="current_delay_minutes" name="current_delay_minutes" value="<?= e((string) $program->currentDelayMinutes) ?>"
+                        <input type="number" id="current_delay_minutes" name="current_delay_minutes" value="<?= e((string) $program->delayMinutes()) ?>"
                                class="mt-1 w-28 rounded-md border border-slate-300 px-3 py-2 text-sm">
                     </div>
                     <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Übernehmen</button>

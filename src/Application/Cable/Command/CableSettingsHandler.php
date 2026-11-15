@@ -62,10 +62,12 @@ final class CableSettingsHandler implements CommandHandlerInterface
             id: $existing?->id ?? Uuid::v4(),
             name: $name,
             description: $description,
-            requiresElectricalInspection: $command->requiresElectricalInspection,
+            // Analog multicores never need an electrical inspection (migration 157).
+            requiresElectricalInspection: $command->requiresElectricalInspection && !$command->isAnalogMulticore,
             protectionClass: $protectionClass,
             connectorIds: $connectorIds,
             sortOrder: self::sort($command->sortOrder, $existing?->sortOrder),
+            isAnalogMulticore: $command->isAnalogMulticore,
         );
         $this->cables->saveType($type);
 

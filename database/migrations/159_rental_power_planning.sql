@@ -1,4 +1,4 @@
--- Migration 157: Stromplanung für Veranstaltungen (Nutzerwunsch "mit welcher
+-- Migration 159: Stromplanung für Veranstaltungen (Nutzerwunsch "mit welcher
 -- Stromstärke/Leistung auf welcher Phase rechnen").
 --
 --   1. articles.input_power_w: Eingangsleistung eines Geräts in Watt

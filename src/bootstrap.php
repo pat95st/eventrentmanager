@@ -758,7 +758,7 @@ $networkSettingsHandler = new \App\Application\Network\Command\NetworkSettingsHa
 foreach ([\App\Application\Network\Command\SaveNetwork::class, \App\Application\Network\Command\DeleteNetwork::class, \App\Application\Network\Command\SaveNetworkCategoryRange::class, \App\Application\Network\Command\DeleteNetworkCategoryRange::class] as $networkCommand) {
     $commandBus->register($networkCommand, $networkSettingsHandler);
 }
-// Power planning of events (migration 157)
+// Power planning of events (migration 159)
 $rentalPowerPlanRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalPowerPlanRepository($pdo);
 $rentalPowerSetupLoader = new \App\Application\PowerPlan\RentalPowerSetupLoader($rentalRepository, $rentalItemRepository, $articleRepository, $manufacturerRepository, $categoryRepository, $powerDistributorRepository, $venuePowerConnectionRepository, $rentalPowerPlanRepository);
 $commandBus->register(\App\Application\PowerPlan\Command\SaveRentalPowerPlan::class, new \App\Application\PowerPlan\Command\SaveRentalPowerPlanHandler($rentalPowerSetupLoader, $rentalPowerPlanRepository));
@@ -890,6 +890,9 @@ $commandBus->register(\App\Application\MinuteProgram\Command\CreateMinuteProgram
 $commandBus->register(\App\Application\MinuteProgram\Command\UpdateMinuteProgram::class, new \App\Application\MinuteProgram\Command\UpdateMinuteProgramHandler($minuteProgramRepository));
 $commandBus->register(\App\Application\MinuteProgram\Command\DeleteMinuteProgram::class, new \App\Application\MinuteProgram\Command\DeleteMinuteProgramHandler($minuteProgramRepository, $minuteProgramItemRepository, $minuteProgramShareLinkRepository));
 $commandBus->register(\App\Application\MinuteProgram\Command\SetMinuteProgramDelay::class, new \App\Application\MinuteProgram\Command\SetMinuteProgramDelayHandler($minuteProgramRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\StartMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\StartMinuteProgramItemHandler($minuteProgramRepository, $minuteProgramItemRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\FinishMinuteProgram::class, new \App\Application\MinuteProgram\Command\FinishMinuteProgramHandler($minuteProgramRepository));
+$commandBus->register(\App\Application\MinuteProgram\Command\ResetMinuteProgramLive::class, new \App\Application\MinuteProgram\Command\ResetMinuteProgramLiveHandler($minuteProgramRepository));
 $commandBus->register(\App\Application\MinuteProgram\Command\AddMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\AddMinuteProgramItemHandler($minuteProgramItemRepository, $minuteProgramRepository));
 $commandBus->register(\App\Application\MinuteProgram\Command\UpdateMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\UpdateMinuteProgramItemHandler($minuteProgramItemRepository));
 $commandBus->register(\App\Application\MinuteProgram\Command\DeleteMinuteProgramItem::class, new \App\Application\MinuteProgram\Command\DeleteMinuteProgramItemHandler($minuteProgramItemRepository));
@@ -1710,6 +1713,10 @@ $audioSettingsController = new \App\Infrastructure\Http\Controllers\AudioSetting
 $audioPlayerApiController = new \App\Infrastructure\Http\Controllers\AudioPlayerApiController($commandBus, $audioPlayerRepository, $audioSettingsRepository, $rentalAudioSettingsRepository, $rentalAudioFileRepository, $playbackRequestRepository, $rentalRepository, $fileStorage, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
+// Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API, siehe Migration 158.
+$runSheetActions = new \App\Infrastructure\Http\Controllers\RunSheetActions($commandBus, $rentalRepository, $rentalAudioFileRepository);
+$minuteProgramFohController = new \App\Infrastructure\Http\Controllers\MinuteProgramFohController($queryBus, $runSheetActions, $rentalRepository, $minuteProgramRepository, $minuteProgramShareLinkRepository, $rentalTechnicianRepository);
+$runSheetApiController = new \App\Infrastructure\Http\Controllers\RunSheetApiController($queryBus, $runSheetActions);
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
 $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository, $voucherRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
@@ -2277,7 +2284,7 @@ $router->get('/veranstaltungen/{id}/rma', $auth->guard([Permission::AusgabeRueck
 $router->post('/veranstaltungen/{id}/rma', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalTechnicianController, 'storeRma']));
 $router->post('/veranstaltungen/{id}/rueckgabe', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'returnItem']));
 
-// Power planning: input power, plug assignments, load per phase and re-plugging suggestions (migration 157).
+// Power planning: input power, plug assignments, load per phase and re-plugging suggestions (migration 159).
 $router->get('/veranstaltungen/{id}/strom', $auth->guard(Permission::AusgabeRuecknahme, [$rentalPowerPlanController, 'show']));
 $router->post('/veranstaltungen/{id}/strom', $auth->guard(Permission::AusgabeRuecknahme, [$rentalPowerPlanController, 'save']));
 $router->post('/veranstaltungen/{id}/strom/vorschlaege', $auth->guard(Permission::AusgabeRuecknahme, [$rentalPowerPlanController, 'applySuggestions']));
@@ -2309,6 +2316,12 @@ $router->post('/minutenprogramme/{id}/loeschen', $auth->guard(Permission::Minute
 $router->post('/minutenprogramme/{id}/verzoegerung', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'setDelay']));
 $router->get('/minutenprogramme/{id}/vollbild', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'fullscreen']));
 $router->get('/minutenprogramme/{id}/countdown.json', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'countdown']));
+// Ablauf am FOH (Migration 158): wie die Live-Audio-Oberfläche auch für eingeplante Techniker.
+$fohAccess = [Permission::AusgabeRuecknahme, Permission::Minutenprogramme, Permission::Techniker];
+$router->get('/minutenprogramme/{id}/foh', $auth->guard($fohAccess, [$minuteProgramFohController, 'userPage']));
+$router->get('/minutenprogramme/{id}/foh/status', $auth->guard($fohAccess, [$minuteProgramFohController, 'userStatus']));
+$router->post('/minutenprogramme/{id}/foh/{action}', $auth->guard($fohAccess, [$minuteProgramFohController, 'userAction']));
+$router->post('/minutenprogramme/{id}/foh/{action}/{itemId}', $auth->guard($fohAccess, [$minuteProgramFohController, 'userAction']));
 $router->post('/minutenprogramme/{id}/punkte', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'addItem']));
 $router->post('/minutenprogramm-punkte/{id}', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'updateItem']));
 $router->post('/minutenprogramm-punkte/{id}/loeschen', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'deleteItem']));
@@ -2565,6 +2578,20 @@ $router->get('/minutenprogramm/freigabe/{token}', [$minuteProgramShareController
 $router->get('/minutenprogramm/freigabe/{token}/vollbild', [$minuteProgramShareController, 'fullscreen']);
 $router->get('/minutenprogramm/freigabe/{token}/countdown.json', [$minuteProgramShareController, 'countdown']);
 $router->post('/minutenprogramm/freigabe/{token}/verzoegerung', [$minuteProgramShareController, 'setDelay']);
+$router->get('/minutenprogramm/freigabe/{token}/foh', [$minuteProgramFohController, 'sharePage']);
+$router->get('/minutenprogramm/freigabe/{token}/foh/status', [$minuteProgramFohController, 'shareStatus']);
+$router->post('/minutenprogramm/freigabe/{token}/foh/{action}', [$minuteProgramFohController, 'shareAction']);
+$router->post('/minutenprogramm/freigabe/{token}/foh/{action}/{itemId}', [$minuteProgramFohController, 'shareAction']);
+
+// Stagedisplay-/Ablauf-API (Migration 158), Token = Freigabe-Link, siehe docs/stagedisplay-api.md.
+$router->get('/api/runsheet/v1/{token}', [$runSheetApiController, 'state']);
+$router->post('/api/runsheet/v1/{token}/delay', [$runSheetApiController, 'delay']);
+$router->post('/api/runsheet/v1/{token}/items/{itemId}/start', [$runSheetApiController, 'start']);
+$router->post('/api/runsheet/v1/{token}/finish', [$runSheetApiController, 'finish']);
+$router->post('/api/runsheet/v1/{token}/reset', [$runSheetApiController, 'reset']);
+foreach (['/api/runsheet/v1/{token}', '/api/runsheet/v1/{token}/delay', '/api/runsheet/v1/{token}/items/{itemId}/start', '/api/runsheet/v1/{token}/finish', '/api/runsheet/v1/{token}/reset'] as $runSheetPath) {
+    $router->options($runSheetPath, [$runSheetApiController, 'preflight']);
+}
 
 $router->get('/einstellungen/rechtliches', $auth->guard(Permission::Administration, [$legalSettingsController, 'edit']));
 $router->post('/einstellungen/rechtliches', $auth->guard(Permission::Administration, [$legalSettingsController, 'update']));

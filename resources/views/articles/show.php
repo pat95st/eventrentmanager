@@ -118,7 +118,11 @@ $availabilityStatusMeta = [
             <?php endif; ?>
             <?php if ($cable !== null): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800">
-                    Leitung · <?= e($cable->cable->lengthLabel()) ?>
+                    <?php if ($cable->cable->multicore !== null && ($cable->type?->isAnalogMulticore ?? false)): ?>
+                        Analoges Multicore · <?= e($cable->cable->multicore->channelSummary()) ?> · <?= e($cable->cable->lengthLabel()) ?>
+                    <?php else: ?>
+                        Leitung · <?= e($cable->cable->lengthLabel()) ?>
+                    <?php endif; ?>
                 </span>
             <?php endif; ?>
             <?php if ($digitalStagebox !== null): ?>
@@ -322,6 +326,14 @@ $availabilityStatusMeta = [
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Länge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->cable->lengthLabel()) ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite A</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorA?->name ?? '–') ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite B</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorB?->name ?? '–') ?></dd></div>
+                    <?php if ($cable->cable->multicore !== null && ($cable->type?->isAnalogMulticore ?? false)): ?>
+                        <?php $cableMulticore = $cable->cable->multicore; ?>
+                        <!-- Analog multicore (migration 157) -->
+                        <div><dt class="text-xs text-slate-500 dark:text-slate-400">Sends</dt><dd class="text-slate-800 dark:text-slate-200"><?= e((string) $cableMulticore->sends) ?></dd></div>
+                        <div><dt class="text-xs text-slate-500 dark:text-slate-400">Returns</dt><dd class="text-slate-800 dark:text-slate-200"><?= e((string) $cableMulticore->returns) ?></dd></div>
+                        <div><dt class="text-xs text-slate-500 dark:text-slate-400">Auf Trommel</dt><dd class="text-slate-800 dark:text-slate-200"><?= $cableMulticore->onDrum ? 'ja' : 'nein' ?></dd></div>
+                        <div><dt class="text-xs text-slate-500 dark:text-slate-400">Harting-Steckverbinder</dt><dd class="text-slate-800 dark:text-slate-200"><?= $cableMulticore->hasHarting ? 'ja' : 'nein' ?></dd></div>
+                    <?php endif; ?>
                 </dl>
             </div>
         <?php endif; ?>

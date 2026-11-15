@@ -10,7 +10,7 @@ use App\Domain\Venue\PowerConnection;
 
 /**
  * Computes the expected load per phase of an event's power plan
- * (migration 157).
+ * (migration 159).
  *
  * Model: 230 V per phase, cos φ = 1, so I = P / 230 V. The effective power
  * of a consumer is its input power times the simultaneity factor (of the

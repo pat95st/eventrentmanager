@@ -1,6 +1,6 @@
 <?php
 /**
- * Stromplanung einer Veranstaltung (Migration 157): wo welches Gerät bzw.
+ * Stromplanung einer Veranstaltung (Migration 159): wo welches Gerät bzw.
  * welcher Stromverteiler steckt, erwartete Last je Phase, Überlastungen und
  * Umsteck-Vorschläge.
  *

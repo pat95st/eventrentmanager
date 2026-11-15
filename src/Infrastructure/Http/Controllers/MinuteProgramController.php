@@ -213,7 +213,7 @@ final class MinuteProgramController
         $delay = (int) ($request->input('current_delay_minutes', '0') ?? '0');
 
         try {
-            $this->commands->dispatch(new SetMinuteProgramDelay($id, $delay));
+            $this->commands->dispatch(new SetMinuteProgramDelay($id, $delay * 60));
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
 

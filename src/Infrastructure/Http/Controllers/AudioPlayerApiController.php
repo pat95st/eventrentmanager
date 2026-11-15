@@ -160,7 +160,7 @@ final class AudioPlayerApiController
                 $payload['minute_programs'][] = [
                     'id' => $program->id,
                     'name' => $program->name,
-                    'start_at' => $program->startAt->modify(($program->currentDelayMinutes >= 0 ? '+' : '') . $program->currentDelayMinutes . ' minutes')->format(DATE_ATOM),
+                    'start_at' => $program->delayedStartAt()->format(DATE_ATOM),
                     'jingle_before' => $program->jingleBefore,
                     'jingle_file_id' => $program->jingleBefore ? $program->jingleAudioFileId : null,
                 ];

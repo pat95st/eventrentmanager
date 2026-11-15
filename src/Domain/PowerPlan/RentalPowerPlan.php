@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\PowerPlan;
 
-/** Power plan of an event (migration 157): simultaneity factor and plug assignments. */
+/** Power plan of an event (migration 159): simultaneity factor and plug assignments. */
 final class RentalPowerPlan
 {
     public const DEFAULT_FACTOR = 1.0;

@@ -63,6 +63,7 @@ final class CreateRentalHandler implements CommandHandlerInterface
             pickupAt: $pickupAt,
             returnAt: $returnAt,
             blocksOtherRentals: $command->blocksOtherRentals,
+            noStrobe: $command->noStrobe,
         );
 
         // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)

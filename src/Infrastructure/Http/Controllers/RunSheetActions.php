@@ -50,8 +50,11 @@ final class RunSheetActions
             $jingleTitle = $this->audioFiles?->findById($program->jingleAudioFileId)?->title;
         }
 
+        $rental = $this->rentals->findById($program->rentalId);
+
         return RunSheetPayload::build($detail, [
-            'eventName' => $this->rentals->findById($program->rentalId)?->eventName,
+            'eventName' => $rental?->eventName,
+            'eventNoStrobe' => $rental?->noStrobe ?? false,
             'jingleTitle' => $jingleTitle,
             'canControl' => $canControl,
         ]);

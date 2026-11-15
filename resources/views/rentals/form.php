@@ -148,6 +148,20 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
         <?php if (isset($errors['blocksOtherRentals'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['blocksOtherRentals']) ?></p><?php endif; ?>
     </div>
 
+    <?php
+    // No strobe allowed (migration 166)
+    $noStrobeChecked = array_key_exists('no_strobe', $old) ? (bool) $old['no_strobe'] : ($rental?->noStrobe ?? false);
+    ?>
+    <div>
+        <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" name="no_strobe" value="1" class="mt-0.5" <?= $noStrobeChecked ? 'checked' : '' ?>>
+            <span>
+                <?= e(t('rentals.form.no_strobe')) ?>
+                <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e(t('rentals.form.no_strobe_hint')) ?></span>
+            </span>
+        </label>
+    </div>
+
     <input type="hidden" name="holiday_confirmed" value="" data-holiday-confirmed>
     <div id="holiday-section" class="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
          <?= isset($errors['holiday']) || isset($errors['pickupAt']) || isset($errors['returnAt']) ? '' : 'hidden' ?>>

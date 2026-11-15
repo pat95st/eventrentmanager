@@ -134,6 +134,8 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .it .nm .pos { color: var(--muted); font-weight: 600; margin-right: 4px; }
     .it .badge { display: inline-block; font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: 2px; }
     .badge.now { background: var(--accent); color: var(--accent-ink); border: 0; } .badge.nx { background: var(--info); color: #0b1020; }
+    .badge.nostrobe { background: var(--stop); color: #fff; }
+    .nostrobe-banner { display: inline-block; margin-top: 10px; background: var(--stop); color: #fff; font-weight: 800; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; border-radius: 8px; padding: 5px 10px; }
     .it .ds { font-size: .82rem; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
     .it .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
     .it .notes { grid-column: 2 / 4; margin-top: 6px; gap: 6px; }
@@ -318,6 +320,9 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
     }
     function signed(sec) { return (sec > 0 ? '+' : sec < 0 ? '−' : '±') + dur(sec); }
+    // Migration 166: no strobe during an item or at the whole event.
+    function noStrobe(item) { return !!(item && item.noStrobe) || !!(state.event && state.event.noStrobe); }
+    function noStrobeBanner(item) { return noStrobe(item) ? '<div class="nostrobe-banner">Kein Strobo</div>' : ''; }
     function itemById(id) { for (var i = 0; i < state.items.length; i++) { if (state.items[i].id === id) { return state.items[i]; } } return null; }
 
     function notesHtml(notes) {
@@ -407,6 +412,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
                 $('now-pos').textContent = '#' + c.position + ' / ' + state.items.length;
                 body.innerHTML = '<p class="item-title">' + esc(c.name) + '</p>'
                     + (c.description ? '<p class="item-desc">' + esc(c.description) + '</p>' : '')
+                    + noStrobeBanner(c)
                     + '<div class="timer-row"><div><div id="now-big" class="big num"></div><div class="meta" id="now-big-l"></div></div>'
                     + (hasEnd ? '<div class="meta">Läuft seit <b class="num" id="now-el"></b><br>Dauer <b>' + dur(c.durationSeconds) + '</b></div>' : '')
                     + '<div class="meta">' + (c.actualStart ? 'gestartet <b class="num">' + hms(ts(c.actualStart)) + '</b>' : 'Beginn lt. Uhr <b class="num">' + hm(c.startsAt) + '</b>')
@@ -445,6 +451,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
                 $('next-pos').textContent = '#' + n.position;
                 body.innerHTML = '<p class="item-title">' + esc(n.name) + '</p>'
                     + (n.description ? '<p class="item-desc">' + esc(n.description) + '</p>' : '')
+                    + noStrobeBanner(n)
                     + '<div class="timer-row"><div><div id="next-big" class="big num"></div><div class="meta" id="next-big-l"></div></div>'
                     + '<div class="meta">Start voraussichtlich <b class="num" id="next-at"></b>' + (it0 ? '<br>geplant <b class="num">' + hm(it0.plannedStart) + '</b>' : '')
                     + (n.durationSeconds ? '<br>Dauer <b>' + dur(n.durationSeconds) + '</b>' : '') + '</div></div>'
@@ -471,7 +478,8 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         if (!state.items.length) { $('list').innerHTML = '<p class="empty">Dieses Minutenprogramm hat noch keine Programmpunkte.</p>'; renderInfo(); return; }
         $('list').innerHTML = state.items.map(function (it) {
             var shifted = hm(it.projectedStart) !== hm(it.plannedStart);
-            var badge = it.status === 'current' ? '<span class="badge now">Jetzt</span>' : it.status === 'next' ? '<span class="badge nx">Next</span>' : '';
+            var badge = (it.status === 'current' ? '<span class="badge now">Jetzt</span>' : it.status === 'next' ? '<span class="badge nx">Next</span>' : '')
+                + (noStrobe(it) ? '<span class="badge nostrobe">Kein Strobo</span>' : '');
             var acts = CAN_CONTROL
                 ? '<div class="acts"><button class="btn sm ' + (it.status === 'next' ? 'go' : '') + '" type="button" data-start="' + esc(it.id) + '">▶ Start</button>'
                   + '<button class="btn sm" type="button" data-timeform="' + esc(it.id) + '" title="Tatsächliche Startzeit eintragen">Zeit…</button></div>'
@@ -492,6 +500,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     function renderInfo() {
         var p = state.program, rows = [
             ['Veranstaltung', state.event.name],
+            ['Kein Strobo', state.event.noStrobe ? 'bei der gesamten Veranstaltung' : null],
             ['Beginn', hm(p.plannedStart) + (hm(p.currentStart) !== hm(p.plannedStart) ? ' (aktuell ' + hm(p.currentStart) + ')' : '')],
             ['Ende geplant', hm(p.plannedEnd)],
             ['Raum', p.room],

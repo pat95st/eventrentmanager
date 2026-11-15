@@ -22,7 +22,7 @@ final class RunSheetPayload
     public const API_VERSION = 1;
 
     /**
-     * @param array{eventName?: ?string, jingleTitle?: ?string, canControl?: bool} $context
+     * @param array{eventName?: ?string, eventNoStrobe?: bool, jingleTitle?: ?string, canControl?: bool} $context
      *
      * @return array<string, mixed>
      */
@@ -50,8 +50,12 @@ final class RunSheetPayload
             'apiVersion' => self::API_VERSION,
             'serverTime' => $now->format(DATE_ATOM),
             // Changes whenever plan or live state change (not with the clock).
-            'revision' => self::revision($detail),
-            'event' => ['name' => $context['eventName'] ?? null],
+            'revision' => self::revision($detail, $context['eventNoStrobe'] ?? false),
+            'event' => [
+                'name' => $context['eventName'] ?? null,
+                // Migration 166: no strobe allowed at the whole event.
+                'noStrobe' => $context['eventNoStrobe'] ?? false,
+            ],
             'program' => [
                 'id' => $program->id,
                 'name' => $program->name,
@@ -97,6 +101,7 @@ final class RunSheetPayload
             'name' => $d->item->name,
             'description' => $d->item->description,
             'notes' => self::notes($d),
+            'noStrobe' => $d->item->noStrobe,
             'durationSeconds' => $duration,
             'startsAt' => self::time($start),
             'endsAt' => self::time($end),
@@ -116,6 +121,7 @@ final class RunSheetPayload
             'name' => $d->item->name,
             'description' => $d->item->description,
             'notes' => self::notes($d),
+            'noStrobe' => $d->item->noStrobe,
             'durationMinutes' => $d->item->durationMinutes,
             'status' => $d->status,
             'plannedStart' => self::time($d->plannedStart),
@@ -139,13 +145,13 @@ final class RunSheetPayload
         ];
     }
 
-    private static function revision(MinuteProgramDetail $detail): string
+    private static function revision(MinuteProgramDetail $detail, bool $eventNoStrobe): string
     {
         $p = $detail->program;
-        $parts = [$p->updatedAt->format(DATE_ATOM), $p->startAt->format(DATE_ATOM), $p->currentDelaySeconds, $p->liveItemId, $p->liveFinishedAt?->format(DATE_ATOM)];
+        $parts = [$p->updatedAt->format(DATE_ATOM), $p->startAt->format(DATE_ATOM), $p->currentDelaySeconds, $p->liveItemId, $p->liveFinishedAt?->format(DATE_ATOM), $eventNoStrobe ? 1 : 0];
         foreach ($detail->items as $d) {
             $i = $d->item;
-            $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, $i->noteSound, $i->noteLight, $i->noteVideo, $i->noteStage]);
+            $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, $i->noteSound, $i->noteLight, $i->noteVideo, $i->noteStage, $i->noStrobe ? 1 : 0]);
         }
 
         return substr(sha1(implode("\n", array_map(static fn ($v): string => (string) $v, $parts))), 0, 16);

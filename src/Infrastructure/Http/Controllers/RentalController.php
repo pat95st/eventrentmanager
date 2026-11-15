@@ -305,6 +305,7 @@ final class RentalController
             pickupAt: $request->input('pickup_at', '') ?? '',
             returnAt: $request->input('return_at', '') ?? '',
             holidayConfirmed: $request->input('holiday_confirmed') === '1',
+            noStrobe: $request->input('no_strobe') !== null,
         );
 
         try {
@@ -797,6 +798,7 @@ final class RentalController
             pickupAt: $request->input('pickup_at', '') ?? '',
             returnAt: $request->input('return_at', '') ?? '',
             holidayConfirmed: $request->input('holiday_confirmed') === '1',
+            noStrobe: $request->input('no_strobe') !== null,
         );
 
         try {
@@ -1308,6 +1310,7 @@ final class RentalController
             'event_location' => $command->eventLocation,
             'deployment_days' => $command->deploymentDays,
             'blocks_other_rentals' => $command->blocksOtherRentals,
+            'no_strobe' => $command->noStrobe,
             'pickup_at' => $command->pickupAt,
             'return_at' => $command->returnAt,
         ];

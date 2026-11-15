@@ -7,7 +7,7 @@ namespace App\Domain\OnlinePayment;
 use DateTimeImmutable;
 
 /**
- * One payment attempt of an invoice at a payment provider (migration 161).
+ * One payment attempt of an invoice at a payment provider (migration 163).
  * Created as 'pending' before the customer is redirected to PayPal/SumUp;
  * $providerReference is set as soon as the provider created the order or
  * checkout. Only a 'completed' payment marks the invoice as paid. The amount

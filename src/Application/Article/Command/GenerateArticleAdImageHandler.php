@@ -96,6 +96,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
 
                 $base64 = $this->openAiImageClient->generateFromImage(
                     apiKey: $settings->openaiApiKey,
+                    model: $settings->effectiveImageModel(),
                     prompt: $prompt,
                     size: $format->openAiSize(),
                     referenceImageBytes: $referenceBytes,
@@ -107,6 +108,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
 
                 $base64 = $this->openAiImageClient->generateFromText(
                     apiKey: $settings->openaiApiKey,
+                    model: $settings->effectiveImageModel(),
                     prompt: $prompt,
                     size: $format->openAiSize(),
                 );

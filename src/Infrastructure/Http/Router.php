@@ -40,7 +40,7 @@ final class Router
      * share link token in the path, no session involved. Same for the
      * federation protocol between partner installations (migration 160,
      * bearer token or invitation code). The payment provider webhooks
-     * (migration 161) are server-to-server calls; they only trigger a status
+     * (migration 163) are server-to-server calls; they only trigger a status
      * lookup at the provider and never trust the request body.
      */
     private const CSRF_EXEMPT_PREFIXES = [

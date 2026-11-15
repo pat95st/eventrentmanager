@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\OnlinePayment;
 
-/** Payment service providers a customer can pay an invoice with (migration 161). */
+/** Payment service providers a customer can pay an invoice with (migration 163). */
 enum OnlinePaymentProvider: string
 {
     case PayPal = 'paypal';

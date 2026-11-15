@@ -175,7 +175,7 @@ final class InvoiceController
             'linkedRental' => $linkedRental,
             'selectedContact' => $selectedContact,
             'invoiceCorrections' => $this->queries->ask(new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrections(invoiceId: $id)),
-            // Online payment (migration 161): public payment link only for
+            // Online payment (migration 163): public payment link only for
             // sent invoices, attempts for sent and paid ones.
             'paymentLink' => $detail->invoice->status === \App\Domain\Invoice\InvoiceStatus::Sent
                 ? $this->paymentLinks?->publicUrlFor($id, \App\Infrastructure\Http\Origin::current())

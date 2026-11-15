@@ -1,6 +1,6 @@
 <?php
 /**
- * Online payment (PayPal/SumUp, migration 161) on the invoice detail page.
+ * Online payment (PayPal/SumUp, migration 163) on the invoice detail page.
  *
  * @var \App\Domain\Invoice\Invoice $invoice
  * @var string|null $paymentLink

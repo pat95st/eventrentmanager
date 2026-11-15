@@ -985,6 +985,7 @@ $commandBus->register(\App\Application\Dashboard\DeleteDashboardTemplate::class,
 $dashboardSettingsController = new \App\Infrastructure\Http\Controllers\DashboardSettingsController($commandBus, $dashboardTemplateRepository);
 $dashboardTemplateController = new \App\Infrastructure\Http\Controllers\DashboardTemplateController($commandBus, $dashboardTemplateRepository);
 $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new UpdateLocaleHandler($userRepository));
+$commandBus->register(\App\Application\User\Command\CompleteOnboardingTour::class, new \App\Application\User\Command\CompleteOnboardingTourHandler($userRepository));
 
 $commandBus->register(\App\Application\Auth\Command\AuthenticatePassword::class, new AuthenticatePasswordHandler($userRepository));
 $commandBus->register(\App\Application\Auth\Command\RequestEmailOtp::class, new RequestEmailOtpHandler($userRepository, $loginChallengeRepository, $mailer, $emailTemplateRenderer));
@@ -1120,7 +1121,7 @@ $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::
 $invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $xRechnungGenerator = new XRechnungGenerator();
 $getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver, setContents: $setContentsResolver);
-// --- Online payment via PayPal / SumUp (migration 161) -------------------
+// --- Online payment via PayPal / SumUp (migration 163) -------------------
 $onlinePaymentSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOnlinePaymentSettingsRepository($pdo);
 $invoicePaymentLinkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoicePaymentLinkRepository($pdo);
 $onlinePaymentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOnlinePaymentRepository($pdo);
@@ -1812,7 +1813,7 @@ $receiptController = new ReceiptController($commandBus, $queryBus, $fileStorage)
 $mailboxSettingsController = new MailboxSettingsController($commandBus, $queryBus);
 $pushSettingsController = new PushSettingsController($commandBus, $queryBus);
 $messagingSettingsController = new \App\Infrastructure\Http\Controllers\MessagingSettingsController($commandBus, $queryBus);
-$aiAdImageSettingsController = new \App\Infrastructure\Http\Controllers\AiAdImageSettingsController($commandBus, $queryBus);
+$aiAdImageSettingsController = new \App\Infrastructure\Http\Controllers\AiAdImageSettingsController($commandBus, $queryBus, $openAiImageClient);
 $messageTemplateSettingsController = new \App\Infrastructure\Http\Controllers\MessageTemplateSettingsController($commandBus, $queryBus);
 $receiptInboxController = new ReceiptInboxController($commandBus, $queryBus, $receiptInboxAttachmentRepository, $fileStorage);
 $calendarController = new CalendarController($queryBus);
@@ -1942,6 +1943,7 @@ $router->post('/profil/sicherheit/deaktivieren', $auth->guard(null, [$profileCon
 $router->post('/profil/sicherheit/vertraute-geraete/widerrufen', $auth->guard(null, [$profileController, 'revokeTrustedDevices']));
 $router->get('/profil/darstellung', $auth->guard(null, [$profileController, 'showDisplaySettings']));
 $router->post('/profil/darstellung', $auth->guard(null, [$profileController, 'updateDisplaySettings']));
+$router->post('/profil/tour/abschliessen', $auth->guard(null, [$profileController, 'completeOnboardingTour']));
 $router->get('/profil/dashboard', $auth->guard(null, [$dashboardSettingsController, 'show']));
 $router->post('/profil/dashboard', $auth->guard(null, [$dashboardSettingsController, 'update']));
 $router->post('/profil/dashboard/zuruecksetzen', $auth->guard(null, [$dashboardSettingsController, 'reset']));
@@ -2671,7 +2673,7 @@ $router->post('/einstellungen/integrationen/datev/export', $auth->guard(Permissi
 $router->get('/produkte/{id}/bild', [$publicProductController, 'image']);
 $router->get('/produkte/{id}', [$publicProductController, 'show']);
 
-// Public invoice payment page (no login), see InvoicePaymentController (migration 161).
+// Public invoice payment page (no login), see InvoicePaymentController (migration 163).
 $router->get('/zahlung/{token}', [$invoicePaymentController, 'show']);
 $router->get('/zahlung/{token}/abbrechen', [$invoicePaymentController, 'cancel']);
 $router->post('/zahlung/{token}/{provider}', [$invoicePaymentController, 'start']);

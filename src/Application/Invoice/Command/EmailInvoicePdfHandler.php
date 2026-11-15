@@ -149,7 +149,7 @@ final class EmailInvoicePdfHandler implements CommandHandlerInterface
     }
 
     /**
-     * Link to the public online payment page (PayPal/SumUp, migration 161),
+     * Link to the public online payment page (PayPal/SumUp, migration 163),
      * only for invoices still awaiting payment and only if online payment is
      * set up (provider + base URL); otherwise empty.
      */

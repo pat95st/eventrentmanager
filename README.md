@@ -321,7 +321,7 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Basis-URL unter *Einstellungen › Integrationen* gesetzt und von der
   anderen Instanz aus erreichbar sein. Protokoll und Details:
   `docs/partner-instanzen-api.md`.
-- **Online-Zahlung per PayPal oder SumUp** (Migration 161): unter
+- **Online-Zahlung per PayPal oder SumUp** (Migration 163): unter
   *Einstellungen › Online-Zahlung* lassen sich PayPal (REST-App: Client-ID +
   Secret, wahlweise Sandbox) und SumUp (API-Schlüssel + Händlercode, Bezahlung
   per Karte/Apple Pay/Google Pay über die SumUp-Bezahlseite) aktivieren. Jede

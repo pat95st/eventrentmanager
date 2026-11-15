@@ -157,6 +157,19 @@ use function App\Infrastructure\Http\t;
 </div>
 </div>
 
+<div id="onboarding-tour-section" class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('tour.settings_card.title')) ?></h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400"><?= e(t('tour.settings_card.hint')) ?></p>
+        </div>
+        <?php /* Starts on the home page, see resources/views/partials/onboarding_tour.php */ ?>
+        <a href="/?tour=start" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+            <?= e(t('tour.settings_card.button')) ?>
+        </a>
+    </div>
+</div>
+
 <div id="push-section" class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
      data-vapid-public-key="<?= e($vapidPublicKey ?? '') ?>"
      data-label-enable="<?= e(t('profile.display.push.enable')) ?>"

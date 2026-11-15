@@ -26,15 +26,17 @@ final class MariadbAiAdImageSettingsRepository implements AiAdImageSettingsRepos
 
         return new AiAdImageSettings(
             openaiApiKey: $row['openai_api_key'],
+            imageModel: $row['image_model'] ?? null,
         );
     }
 
     public function save(AiAdImageSettings $settings): void
     {
-        $stmt = $this->pdo->prepare('UPDATE ai_ad_image_settings SET openai_api_key = :openai_api_key WHERE id = 1');
+        $stmt = $this->pdo->prepare('UPDATE ai_ad_image_settings SET openai_api_key = :openai_api_key, image_model = :image_model WHERE id = 1');
 
         $stmt->execute([
             'openai_api_key' => $settings->openaiApiKey,
+            'image_model' => $settings->imageModel,
         ]);
     }
 }

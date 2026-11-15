@@ -19,7 +19,7 @@ final class MariadbOnlinePaymentSettingsRepository implements OnlinePaymentSetti
     {
         $row = $this->pdo->query('SELECT * FROM online_payment_settings WHERE id = 1')->fetch();
         if ($row === false) {
-            throw new RuntimeException('Online-Zahlungs-Einstellungen wurden nicht gefunden — fehlt Migration 161?');
+            throw new RuntimeException('Online-Zahlungs-Einstellungen wurden nicht gefunden — fehlt Migration 163?');
         }
 
         return new OnlinePaymentSettings(

@@ -18,7 +18,7 @@ use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
-/** Settings > Online-Zahlung: PayPal and SumUp credentials (migration 161). */
+/** Settings > Online-Zahlung: PayPal and SumUp credentials (migration 163). */
 final class OnlinePaymentSettingsController
 {
     public function __construct(

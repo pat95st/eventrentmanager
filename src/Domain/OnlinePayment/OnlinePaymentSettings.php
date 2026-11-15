@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\OnlinePayment;
 
 /**
- * API credentials of the payment providers (migration 161).
+ * API credentials of the payment providers (migration 163).
  *
  * PayPal: REST app credentials (client id + secret) from the PayPal
  * developer dashboard, either for the sandbox or the live environment.

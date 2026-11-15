@@ -1,4 +1,4 @@
--- Migration 161: Online payment of invoices via PayPal and SumUp.
+-- Migration 163: Online payment of invoices via PayPal and SumUp.
 --
 --  - online_payment_settings: singleton (id = 1) holding the API
 --    credentials of both providers and whether each one is offered to

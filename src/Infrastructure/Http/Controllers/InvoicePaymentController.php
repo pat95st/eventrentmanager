@@ -24,7 +24,7 @@ use App\Infrastructure\Http\View;
 
 /**
  * Public (not logged in!) payment page of an invoice, reachable via the
- * secret link /zahlung/{token} from the invoice mail (migration 161), plus
+ * secret link /zahlung/{token} from the invoice mail (migration 163), plus
  * the return/cancel targets of PayPal and SumUp and the SumUp webhook.
  * Slim standalone page without the regular navigation, like
  * CustomerChecklistController.

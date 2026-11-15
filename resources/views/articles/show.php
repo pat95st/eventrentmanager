@@ -12,6 +12,8 @@ $digitalStagebox ??= null;
 $mixingConsole ??= null;
 /** @var \App\Domain\MixingConsole\CompatibleConsole[] $compatibleConsoles Pulte, die diese Stagebox als kompatibel führen */
 $compatibleConsoles ??= [];
+/** @var \App\Domain\AnalogMulticore\ArticleAnalogMulticore|null $analogMulticore Analoges Multicore (Migration 156) */
+$analogMulticore ??= null;
 /** @var string|null $editInventoryId */
 /** @var \App\Application\Network\Query\ArticleNetworkOverview|null $networkOverview Netzwerke (Migration 155) */
 $networkOverview ??= null;
@@ -129,6 +131,11 @@ $availabilityStatusMeta = [
             <?php if ($mixingConsole !== null): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-700">
                     Tonmischpult · <?= e($mixingConsole->console->summary()) ?>
+                </span>
+            <?php endif; ?>
+            <?php if ($analogMulticore !== null): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-inset ring-teal-300 dark:bg-teal-950/40 dark:text-teal-300 dark:ring-teal-700">
+                    Analoges Multicore · <?= e($analogMulticore->summary()) ?>
                 </span>
             <?php endif; ?>
             <?php if ($networkOverview?->settings?->hasNetworkInterface): ?>
@@ -332,6 +339,22 @@ $availabilityStatusMeta = [
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Digitales Protokoll</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($digitalStagebox->protocol?->name ?? '–') ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Analoge Eingänge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($sb->inputsLabel()) ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Ausgänge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($sb->outputsLabel()) ?></dd></div>
+                </dl>
+            </div>
+        <?php endif; ?>
+
+        <!-- Analoges Multicore (Migration 156): Angaben werden im Artikelformular gepflegt -->
+        <?php if ($analogMulticore !== null): ?>
+            <div id="analoges-multicore" class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Analoges Multicore</h2>
+                    <a href="/artikel/<?= e($article->id) ?>/bearbeiten#analog_multicore_section" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                </div>
+                <dl class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Sends</dt><dd class="text-slate-800 dark:text-slate-200"><?= e((string) $analogMulticore->sends) ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Returns</dt><dd class="text-slate-800 dark:text-slate-200"><?= e((string) $analogMulticore->returns) ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Auf Trommel</dt><dd class="text-slate-800 dark:text-slate-200"><?= $analogMulticore->onDrum ? 'ja' : 'nein' ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Harting-Steckverbinder</dt><dd class="text-slate-800 dark:text-slate-200"><?= $analogMulticore->hasHarting ? 'ja' : 'nein' ?></dd></div>
                 </dl>
             </div>
         <?php endif; ?>

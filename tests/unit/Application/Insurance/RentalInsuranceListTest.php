@@ -498,6 +498,11 @@ final class RentalInsuranceListTest extends Unit
             {
                 return null;
             }
+
+            public function findAnalogMulticoreCategoryId(): ?string
+            {
+                return null;
+            }
         };
     }
 }

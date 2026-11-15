@@ -37,6 +37,8 @@ final class CreateArticleHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
         // Mixing consoles (migration 154)
         private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $mixingConsoles = null,
+        // Analog multicores (migration 156)
+        private readonly ?\App\Domain\AnalogMulticore\AnalogMulticoreRepositoryInterface $analogMulticores = null,
     ) {
     }
 
@@ -124,6 +126,17 @@ final class CreateArticleHandler implements CommandHandlerInterface
             $errors = array_merge($errors, $consoleErrors);
         }
 
+        // Analog multicore (migration 156): sends, returns, drum and Harting connector.
+        $multicore = null;
+        $multicoreCategoryId = $this->analogMulticores !== null ? $this->categories->findAnalogMulticoreCategoryId() : null;
+        if (!$command->isBundle && $multicoreCategoryId !== null && $command->categoryId === $multicoreCategoryId) {
+            [$multicoreErrors, $multicore] = (new \App\Application\AnalogMulticore\AnalogMulticoreBuilder())->build(
+                $articleId,
+                $command->analogMulticore ?? new \App\Application\AnalogMulticore\AnalogMulticoreInput(null, null),
+            );
+            $errors = array_merge($errors, $multicoreErrors);
+        }
+
         if ($isCableArticle) {
             unset($errors['protectionClass']); // Leitungen haben keine Schutzklasse
             if ($command->manufacturerId === '') {
@@ -185,6 +198,9 @@ final class CreateArticleHandler implements CommandHandlerInterface
         }
         if ($console !== null && $this->mixingConsoles !== null) {
             $this->mixingConsoles->save($console);
+        }
+        if ($multicore !== null && $this->analogMulticores !== null) {
+            $this->analogMulticores->save($multicore);
         }
 
         return $article->id;

@@ -36,6 +36,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
         // Mixing consoles (migration 154)
         private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $mixingConsoles = null,
+        // Analog multicores (migration 156)
+        private readonly ?\App\Domain\AnalogMulticore\AnalogMulticoreRepositoryInterface $analogMulticores = null,
     ) {
     }
 
@@ -184,6 +186,16 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $errors = array_merge($errors, $consoleErrors);
         }
 
+        // Analog multicore (migration 156). Without the multicore section in the form (null)
+        // stored data stays unchanged.
+        $multicore = null;
+        $multicoreCategoryId = $this->analogMulticores !== null ? $this->categories->findAnalogMulticoreCategoryId() : null;
+        $isMulticore = !$command->isBundle && $multicoreCategoryId !== null && $command->categoryId === $multicoreCategoryId;
+        if ($isMulticore && $command->analogMulticore !== null) {
+            [$multicoreErrors, $multicore] = (new \App\Application\AnalogMulticore\AnalogMulticoreBuilder())->build($article->id, $command->analogMulticore);
+            $errors = array_merge($errors, $multicoreErrors);
+        }
+
         if ($isCableArticle) {
             unset($errors['protectionClass']); // Leitungen haben keine Schutzklasse
             if ($command->manufacturerId === '') {
@@ -258,6 +270,14 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             } elseif ($consoleCategoryId !== null && ($command->isBundle || !$isConsole)) {
                 // Category changed or bundle: no mixing console anymore.
                 $this->mixingConsoles->delete($article->id);
+            }
+        }
+        if ($this->analogMulticores !== null) {
+            if ($multicore !== null) {
+                $this->analogMulticores->save($multicore);
+            } elseif ($multicoreCategoryId !== null && ($command->isBundle || !$isMulticore)) {
+                // Category changed or bundle: no analog multicore anymore.
+                $this->analogMulticores->delete($article->id);
             }
         }
         if ($this->bundleComponents !== null) {

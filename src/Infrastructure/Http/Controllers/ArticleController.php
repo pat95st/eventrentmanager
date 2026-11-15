@@ -352,6 +352,8 @@ final class ArticleController
             'hasDigitalStageboxCategory' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()) !== null,
             // "New article > Mixing console" only with category "Tonmischpult" (migration 154).
             'hasMixingConsoleCategory' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()) !== null,
+            // "New article > Analog multicore" only with category "Analoges Multicore" (migration 156).
+            'hasAnalogMulticoreCategory' => $this->queries->ask(new \App\Application\Category\Query\GetAnalogMulticoreCategoryId()) !== null,
             'articles' => $result->items,
             'manufacturers' => $manufacturers,
             'categories' => $categories,
@@ -388,6 +390,7 @@ final class ArticleController
             $request->query('leitung') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
             $request->query('stagebox') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             $request->query('mischpult') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()),
+            $request->query('multicore') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetAnalogMulticoreCategoryId()),
             default => null,
         };
         $this->renderForm(null, [], $presetCategoryId !== null ? ['category_id' => $presetCategoryId] : []);
@@ -470,6 +473,7 @@ final class ArticleController
             cable: $this->cableFromRequest($request),
             digitalStagebox: $this->digitalStageboxFromRequest($request),
             mixingConsole: $this->mixingConsoleFromRequest($request),
+            analogMulticore: $this->analogMulticoreFromRequest($request),
         );
 
         try {
@@ -569,6 +573,8 @@ final class ArticleController
             // Mixing console (migration 154); for stageboxes the consoles listing them as compatible
             'mixingConsole' => $detail->article->isBundle ? null : $this->articleMixingConsole($detail->article->id),
             'compatibleConsoles' => $detail->article->isBundle ? [] : $this->compatibleConsoles($detail->article->id),
+            // Analog multicore (migration 156)
+            'analogMulticore' => $detail->article->isBundle ? null : $this->articleAnalogMulticore($detail->article->id),
             'editInventoryId' => $editInventoryId,
             // Networks (migration 155): interfaces, assigned addresses and the address forms
             'networkOverview' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($id)),
@@ -677,6 +683,7 @@ final class ArticleController
             cable: $this->cableFromRequest($request),
             digitalStagebox: $this->digitalStageboxFromRequest($request),
             mixingConsole: $this->mixingConsoleFromRequest($request),
+            analogMulticore: $this->analogMulticoreFromRequest($request),
         );
 
         try {
@@ -1356,6 +1363,9 @@ final class ArticleController
             'mixingConsole' => $article !== null && !$article->isBundle ? $this->articleMixingConsole($article->id) : null,
             'mixingConsoleCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()),
             'mixingConsoleFormData' => $this->mixingConsoleFormData(),
+            // Analog multicore (migration 156): sends, returns, drum and Harting connector in the article form.
+            'analogMulticore' => $article !== null && !$article->isBundle ? $this->articleAnalogMulticore($article->id) : null,
+            'analogMulticoreCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetAnalogMulticoreCategoryId()),
             // Networks (migration 155): network interface of the article
             'networkOverview' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($article->id)) : null,
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
@@ -1407,6 +1417,11 @@ final class ArticleController
             'stagebox_outputs_aes' => $command->digitalStagebox?->outputsAes,
             // Mixing console (migration 154)
             'mixing_console' => $command->mixingConsole,
+            // Analog multicore (migration 156)
+            'multicore_sends' => $command->analogMulticore?->sends,
+            'multicore_returns' => $command->analogMulticore?->returns,
+            'multicore_on_drum' => $command->analogMulticore?->onDrum,
+            'multicore_has_harting' => $command->analogMulticore?->hasHarting,
         ];
     }
 
@@ -1468,6 +1483,30 @@ final class ArticleController
             $request->input('stagebox_outputs_analog'),
             $request->input('stagebox_outputs_aes'),
         );
+    }
+
+    /** Analog multicore fields from the article form (migration 156), null without this section. */
+    private function analogMulticoreFromRequest(Request $request): ?\App\Application\AnalogMulticore\AnalogMulticoreInput
+    {
+        if ($request->input('analog_multicore_section') === null) {
+            return null;
+        }
+
+        return new \App\Application\AnalogMulticore\AnalogMulticoreInput(
+            $request->input('multicore_sends'),
+            $request->input('multicore_returns'),
+            $request->input('multicore_on_drum') !== null,
+            $request->input('multicore_has_harting') !== null,
+        );
+    }
+
+    private function articleAnalogMulticore(string $articleId): ?\App\Domain\AnalogMulticore\ArticleAnalogMulticore
+    {
+        try {
+            return $this->queries->ask(new \App\Application\AnalogMulticore\Query\GetArticleAnalogMulticore($articleId));
+        } catch (\PDOException) {
+            return null; // migration 156 not applied yet
+        }
     }
 
     /** Mixing console fields from the article form (migration 154), null without this section. */

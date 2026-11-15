@@ -46,6 +46,11 @@ $mixingConsoleCategoryId ??= null;
 /** @var \App\Application\MixingConsole\Query\MixingConsoleFormData|null $mixingConsoleFormData */
 $mixingConsoleFormData ??= null;
 $isMixingConsole = $mixingConsoleCategoryId !== null && $val('category_id', $article?->categoryId) === $mixingConsoleCategoryId;
+// Analog multicore (migration 156): category "Analoges Multicore" selected.
+/** @var \App\Domain\AnalogMulticore\ArticleAnalogMulticore|null $analogMulticore */
+$analogMulticore ??= null;
+$analogMulticoreCategoryId ??= null;
+$isAnalogMulticore = $analogMulticoreCategoryId !== null && $val('category_id', $article?->categoryId) === $analogMulticoreCategoryId;
 $protectionClassValue = $val('protection_class', $article?->protectionClass?->value ?? ($isPowerDistributor ? 'I' : null));
 // Neue Artikel sind standardmäßig abrechenbar; nur wer bewusst das Häkchen
 // entfernt (z. B. für Zubehör wie Kabel), bekommt is_billable = false.
@@ -406,6 +411,56 @@ $bundleComponentRows ??= [];
             ]) ?>
         </div>
     </div>
+    <?php endif; ?>
+
+    <!-- Analoges Multicore (Migration 156): erscheint bei Kategorie "Analoges Multicore" -->
+    <?php if ($analogMulticoreCategoryId !== null): ?>
+    <?php
+        $mcoCount = fn (string $field, ?int $saved) => (string) (array_key_exists($field, $old) ? ($old[$field] ?? '') : ($saved !== null ? (string) $saved : ''));
+        $mcoFlag = fn (string $field, ?bool $saved) => array_key_exists($field, $old) ? (bool) $old[$field] : (bool) $saved;
+        $mcoErr = fn (string $key) => isset($errors[$key]) ? '<p class="mt-1 text-xs text-red-600 dark:text-red-400">' . e($errors[$key]) . '</p>' : '';
+        $mcoInput = fn (string $key) => 'mt-1 w-full rounded-md border ' . (isset($errors[$key]) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700') . ' px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500';
+    ?>
+    <div id="analog_multicore_section" class="rounded-md border border-teal-300 bg-teal-50/40 p-4 dark:border-teal-700 dark:bg-teal-950/20 <?= $isAnalogMulticore ? '' : 'hidden' ?>"
+         data-analog-multicore-category="<?= e($analogMulticoreCategoryId) ?>">
+        <input type="hidden" name="analog_multicore_section" value="1">
+        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Analoges Multicore</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Anzahl der Sends und Returns erfassen. Leere Felder zählen als 0.</p>
+        <div class="mt-4 grid grid-cols-2 gap-4 sm:max-w-md">
+            <?php foreach (['multicore_sends' => ['Sends', $analogMulticore?->sends], 'multicore_returns' => ['Returns', $analogMulticore?->returns]] as $mcoField => [$mcoLabel, $mcoSaved]): ?>
+                <div>
+                    <label for="<?= $mcoField ?>" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e($mcoLabel) ?></label>
+                    <input type="number" min="0" max="<?= \App\Domain\AnalogMulticore\ArticleAnalogMulticore::MAX_CHANNELS ?>" step="1" inputmode="numeric" placeholder="0"
+                           id="<?= $mcoField ?>" name="<?= $mcoField ?>" value="<?= e($mcoCount($mcoField, $mcoSaved)) ?>"
+                           class="<?= $mcoInput($mcoField) ?>">
+                    <?= $mcoErr($mcoField) ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" name="multicore_on_drum" value="1" <?= $mcoFlag('multicore_on_drum', $analogMulticore?->onDrum) ? 'checked' : '' ?>>
+                Auf Trommel
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" name="multicore_has_harting" value="1" <?= $mcoFlag('multicore_has_harting', $analogMulticore?->hasHarting) ? 'checked' : '' ?>>
+                Mit Harting-Steckverbinder
+            </label>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var section = document.getElementById('analog_multicore_section');
+            var category = document.getElementById('category_id');
+            if (!section) { return; }
+            var multicoreCategory = section.getAttribute('data-analog-multicore-category');
+            function syncVisibility() {
+                section.classList.toggle('hidden', !(category && multicoreCategory && category.value === multicoreCategory));
+            }
+            if (category) { category.addEventListener('change', syncVisibility); }
+            syncVisibility();
+        })();
+    </script>
     <?php endif; ?>
 
     <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-3 <?= $is19Inch ? '' : 'hidden' ?>">

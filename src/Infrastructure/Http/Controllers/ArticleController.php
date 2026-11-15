@@ -1203,10 +1203,14 @@ final class ArticleController
         $format = $request->input('format', '') ?? '';
         $sourceArticleImageId = $request->input('source_article_image_id');
         $additionalInstructions = $request->input('additional_instructions');
+        $count = (int) ($request->input('count', '1') ?? '1');
 
         try {
-            $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions));
-            Flash::success(t('articles.show.ad_images_flash_generated'));
+            $ids = $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions, $count));
+            $generated = is_array($ids) ? count($ids) : 1;
+            Flash::success($generated === 1
+                ? t('articles.show.ad_images_flash_generated')
+                : t('articles.show.ad_images_flash_generated_many', ['count' => (string) $generated]));
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
         } catch (NotFoundException $e) {

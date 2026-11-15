@@ -59,6 +59,9 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
         // Dry-Hire (Migration 142): Dry-Hire-Kunden bekommen Dry-Hire-Preise
         private readonly ?\App\Domain\DryHire\DryHireRepositoryInterface $dryHire = null,
+        // Partner instances (migration 160): events created from a partner's
+        // material request get the agreed partner discount as percentage discount.
+        private readonly ?\App\Domain\Federation\PartnerRentalDiscountLookupInterface $partnerDiscounts = null,
     ) {
     }
 
@@ -116,6 +119,11 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
             logisticsDate1: $rental->pickupAt,
             logisticsDate2: $rental->returnAt,
         );
+        $partnerDiscount = $this->partnerDiscounts?->discountPercentForRental($rental->id);
+        if ($partnerDiscount !== null && $partnerDiscount > 0) {
+            $invoice->discountType = 'percent';
+            $invoice->discountValue = number_format($partnerDiscount, 2, '.', '');
+        }
         $this->invoices->save($invoice);
 
         // Einsatztage der Veranstaltung -> Preisstaffel-Stufe (1..7), analog

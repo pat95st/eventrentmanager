@@ -37,11 +37,14 @@ final class Router
      * (Migration 135) – authentifiziert per Bearer-Token statt Session,
      * ein CSRF-Angriff über den Browser ist dort nicht möglich. Same for the
      * run sheet / stage display API (migration 158): authenticated by the
-     * share link token in the path, no session involved.
+     * share link token in the path, no session involved. Same for the
+     * federation protocol between partner installations (migration 160,
+     * bearer token or invitation code).
      */
     private const CSRF_EXEMPT_PREFIXES = [
         '/api/player/',
         '/api/runsheet/',
+        '/api/federation/',
     ];
 
     public function get(string $path, callable $handler): void

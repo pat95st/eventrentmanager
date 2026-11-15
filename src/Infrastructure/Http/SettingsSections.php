@@ -119,11 +119,12 @@ final class SettingsSections
             ],
             'system' => [
                 'label' => 'System & Integrationen',
-                'desc' => 'Sicherheit, Schnittstellen, Datensicherung',
+                'desc' => 'Sicherheit, Schnittstellen, Partner-Instanzen, Datensicherung',
                 'pages' => [
                     $page('settings-sicherheit', '/einstellungen/sicherheit', 'Sicherheit', 'Automatische Abmeldung'),
                     $page('settings-integrationen', '/einstellungen/integrationen', t('nav.integration_settings'), 'Google, WhatsApp, DATEV und Basis-URL'),
                     $page('settings-api', '/einstellungen/api', t('nav.api_settings'), 'REST-API und Zugriffs-Tokens'),
+                    $page('settings-partner', '/einstellungen/partner', 'Partner-Instanzen', 'Mit anderen Firmen befreunden: Materialpool, Anfragen, Techniker und Rabatte'),
                     $page('settings-ki-werbebilder', '/einstellungen/ki-werbebilder', t('nav.ai_ad_image_settings'), 'KI-Dienst für Werbebilder'),
                     $page('settings-dashboard-vorlagen', '/einstellungen/dashboard-vorlagen', t('nav.dashboard_templates'), 'Vorlagen für die Startseite, die sich Benutzer übernehmen können'),
                     $page('settings-sicherung', '/einstellungen/sicherung', t('nav.backup_settings'), 'Export und Import der Daten'),

@@ -305,6 +305,22 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Wiederherstellung steht alternativ auch direkt im Installations-
   Assistenten zur Verfügung (siehe „Setup" oben). Details siehe Abschnitt
   „Backup / Sicherung" unten.
+- **Partner-Instanzen** (Migration 160): Installationen dieser Software
+  lassen sich miteinander befreunden (*Einstellungen › Partner-Instanzen*).
+  Eine Seite erstellt einen Einladungslink, die andere gibt ihn ein und legt
+  Rabatt und Einstellungen fest, danach bestätigt die einladende Seite.
+  Standard ist der gleiche Rabatt in beide Richtungen; unterschiedliche
+  Rabatte und jede spätere Änderung gelten erst nach Zustimmung beider
+  Seiten. Unter *Veranstaltungen › Partner* (und in der Box „Partner“ auf
+  jeder Veranstaltung) lässt sich der Materialpool eines Partners mit
+  Verfügbarkeit und rabattierten Preisen ansehen und Material anfragen; je
+  Partner ist einstellbar, ob dessen Anfragen automatisch als Veranstaltung
+  eingetragen und zugesagt werden. Techniker des Partners lassen sich mit
+  Gewerk, Anzahl und Wunsch-Techniker anfragen. Rechnungen aus solchen
+  Veranstaltungen übernehmen den Partnerrabatt. Für die Verbindung muss die
+  Basis-URL unter *Einstellungen › Integrationen* gesetzt und von der
+  anderen Instanz aus erreichbar sein. Protokoll und Details:
+  `docs/partner-instanzen-api.md`.
 - **Seitentitel**: jede Funktionsseite setzt einen passenden HTML-`<title>`
   nach dem Schema „(Funktionalität) - Materialverleih Verwaltung“
   (`View::page()`/`resources/views/layout.php`).

@@ -2588,6 +2588,7 @@ return [
     'profile.carddav.flash.deleted' => 'App password was revoked.',
 
     'nav.minute_program_templates' => 'Minute-by-Minute Templates',
+    'nav.partners' => 'Partners',
 
     'minute_programs.new' => 'New Minute-by-Minute Schedule',
     'minute_programs.edit' => 'Edit Minute-by-Minute Schedule',

@@ -596,6 +596,10 @@ $messageSender = new \App\Infrastructure\Messaging\HttpMessageSender($messagingS
 $tradeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTradeRepository($pdo);
 $technicianProfileRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTechnicianProfileRepository($pdo);
 $rentalTechnicianRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalTechnicianRepository($pdo);
+// Partner instances / federation (migration 160)
+$partnerInstanceRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPartnerInstanceRepository($pdo);
+$partnerInvitationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPartnerInvitationRepository($pdo);
+$partnerRequestRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPartnerRequestRepository($pdo);
 $technicianSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTechnicianSettingsRepository($pdo);
 $documentStorageTargetRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageTargetRepository($pdo);
 $documentStorageAssignmentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageAssignmentRepository($pdo);
@@ -770,6 +774,51 @@ $commandBus->register(\App\Application\Network\Command\SaveArticleNetworkSetting
 $networkQueryHandler = new \App\Application\Network\Query\NetworkQueryHandler($networkRepository, $categoryRepository, $articleRepository, $inventoryNumberRepository, $inventoryNumberNetworkService);
 foreach ([\App\Application\Network\Query\GetNetworkSettings::class, \App\Application\Network\Query\GetNetworkDetail::class, \App\Application\Network\Query\GetInventoryNumberNetworkForm::class, \App\Application\Network\Query\GetArticleNetworkOverview::class] as $networkQuery) {
     $queryBus->register($networkQuery, $networkQueryHandler);
+}
+// Partner instances / federation (migration 160)
+$federationClient = new \App\Infrastructure\Federation\HttpFederationClient();
+$localInstance = new \App\Infrastructure\Federation\LocalInstance($companySettingsRepository, $integrationBaseSettingsRepository);
+$partnerRentalGateway = new \App\Application\Federation\DefaultPartnerRentalGateway($commandBus, $queryBus, $articleRepository, $manufacturerRepository, $categoryRepository, $inventoryNumberRepository, $rentalRepository, $customerRepository, $userRepository, $tradeRepository, $rentalTechnicianRepository);
+$incomingPartnerRequestAcceptor = new \App\Application\Federation\IncomingRequestAcceptor($partnerRequestRepository, $partnerInstanceRepository, $partnerRentalGateway);
+$inboundFederationService = new \App\Application\Federation\InboundFederationService($partnerInstanceRepository, $partnerInvitationRepository, $partnerRequestRepository, $partnerRentalGateway, $incomingPartnerRequestAcceptor, $localInstance);
+$partnerCommandHandler = new \App\Application\Federation\Command\PartnerCommandHandler($partnerInstanceRepository, $partnerInvitationRepository, $partnerRequestRepository, $federationClient, $localInstance, $partnerRentalGateway, $incomingPartnerRequestAcceptor);
+$partnerCommands = [
+    \App\Application\Federation\Command\CreatePartnerInvitation::class,
+    \App\Application\Federation\Command\DeletePartnerInvitation::class,
+    \App\Application\Federation\Command\AcceptPartnerInvitation::class,
+    \App\Application\Federation\Command\ConfirmPartner::class,
+    \App\Application\Federation\Command\DeclinePartner::class,
+    \App\Application\Federation\Command\UpdatePartnerSettings::class,
+    \App\Application\Federation\Command\ProposePartnerDiscount::class,
+    \App\Application\Federation\Command\AcceptPartnerDiscount::class,
+    \App\Application\Federation\Command\RejectPartnerDiscount::class,
+    \App\Application\Federation\Command\EndPartnership::class,
+    \App\Application\Federation\Command\DeletePartner::class,
+    \App\Application\Federation\Command\TestPartnerConnection::class,
+    \App\Application\Federation\Command\SendPartnerMaterialRequest::class,
+    \App\Application\Federation\Command\SendPartnerTechnicianRequest::class,
+    \App\Application\Federation\Command\AcceptIncomingPartnerRequest::class,
+    \App\Application\Federation\Command\DeclineIncomingPartnerRequest::class,
+    \App\Application\Federation\Command\CancelOutgoingPartnerRequest::class,
+    \App\Application\Federation\Command\RefreshOutgoingPartnerRequest::class,
+    \App\Application\Federation\Command\ResendPartnerRequestStatus::class,
+];
+foreach ($partnerCommands as $partnerCommand) {
+    $commandBus->register($partnerCommand, $partnerCommandHandler);
+}
+$partnerQueryHandler = new \App\Application\Federation\Query\PartnerQueryHandler($partnerInstanceRepository, $partnerInvitationRepository, $partnerRequestRepository, $federationClient, $localInstance, $partnerRentalGateway, $incomingPartnerRequestAcceptor, $customerRepository);
+$partnerQueries = [
+    \App\Application\Federation\Query\GetPartnerOverview::class,
+    \App\Application\Federation\Query\GetPartner::class,
+    \App\Application\Federation\Query\PreviewPartnerInvitation::class,
+    \App\Application\Federation\Query\ListPartnerRequests::class,
+    \App\Application\Federation\Query\GetPartnerRequest::class,
+    \App\Application\Federation\Query\BrowsePartnerPool::class,
+    \App\Application\Federation\Query\GetPartnerTechnicianOptions::class,
+    \App\Application\Federation\Query\ListPartnerRequestsForRental::class,
+];
+foreach ($partnerQueries as $partnerQuery) {
+    $queryBus->register($partnerQuery, $partnerQueryHandler);
 }
 $commandBus->register(\App\Application\Article\Command\AddFirmwareVersion::class, new \App\Application\Article\Command\AddFirmwareVersionHandler($firmwareVersionRepository, $articleRepository));
 $commandBus->register(\App\Application\Article\Command\DeleteFirmwareVersion::class, new \App\Application\Article\Command\DeleteFirmwareVersionHandler($firmwareVersionRepository, $inventoryNumberRepository));
@@ -1067,7 +1116,7 @@ $commandBus->register(\App\Application\BankImport\Command\ConfirmBankImport::cla
 $commandBus->register(\App\Application\BankImport\Command\CancelBankImport::class, new CancelBankImportHandler($bankImportStaging));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceCancelled::class, new MarkInvoiceCancelledHandler($invoiceRepository));
 $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository));
-$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository, setBookings: $rentalSetBookingRepository, articleSets: $articleSetRepository, dryHire: $dryHireRepository));
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository, setBookings: $rentalSetBookingRepository, articleSets: $articleSetRepository, dryHire: $dryHireRepository, partnerDiscounts: $partnerRequestRepository));
 $invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $xRechnungGenerator = new XRechnungGenerator();
 $getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver, setContents: $setContentsResolver);
@@ -1603,6 +1652,9 @@ $categoryController = new CategoryController($commandBus, $queryBus);
 $cableSettingsController = new \App\Infrastructure\Http\Controllers\CableSettingsController($commandBus, $queryBus);
 $digitalProtocolSettingsController = new \App\Infrastructure\Http\Controllers\DigitalProtocolSettingsController($commandBus, $queryBus);
 $networkSettingsController = new \App\Infrastructure\Http\Controllers\NetworkSettingsController($commandBus, $queryBus);
+$partnerSettingsController = new \App\Infrastructure\Http\Controllers\PartnerSettingsController($commandBus, $queryBus);
+$partnerController = new \App\Infrastructure\Http\Controllers\PartnerController($commandBus, $queryBus);
+$federationApiController = new \App\Infrastructure\Http\Controllers\Api\FederationApiController($inboundFederationService);
 $companyHolidayController = new \App\Infrastructure\Http\Controllers\CompanyHolidayController($commandBus, $queryBus);
 $accountController = new \App\Infrastructure\Http\Controllers\AccountController($commandBus, $queryBus, $bankAccountRepository, $receiptRepository, $invoiceRepository, $supplierRepository);
 $closingTextTemplateController = new \App\Infrastructure\Http\Controllers\ClosingTextTemplateController($commandBus, $queryBus);
@@ -2529,6 +2581,33 @@ $router->post('/einstellungen/netzwerke/{id}', $auth->guard(Permission::Administ
 $router->post('/einstellungen/netzwerke/{id}/loeschen', $auth->guard(Permission::Administration, [$networkSettingsController, 'delete']));
 $router->post('/einstellungen/netzwerke/{id}/kategorien', $auth->guard(Permission::Administration, [$networkSettingsController, 'saveRange']));
 $router->post('/einstellungen/netzwerke/{id}/kategorien/{categoryId}/loeschen', $auth->guard(Permission::Administration, [$networkSettingsController, 'deleteRange']));
+// Partner instances (migration 160)
+$router->get('/einstellungen/partner', $auth->guard(Permission::Administration, [$partnerSettingsController, 'index']));
+$router->post('/einstellungen/partner/einladungen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'createInvitation']));
+$router->post('/einstellungen/partner/einladungen/{id}/loeschen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'deleteInvitation']));
+$router->post('/einstellungen/partner/verbinden', $auth->guard(Permission::Administration, [$partnerSettingsController, 'preview']));
+$router->post('/einstellungen/partner/verbinden/bestaetigen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'connect']));
+$router->get('/einstellungen/partner/{id}', $auth->guard(Permission::Administration, [$partnerSettingsController, 'show']));
+$router->post('/einstellungen/partner/{id}/bestaetigen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'confirm']));
+$router->post('/einstellungen/partner/{id}/ablehnen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'decline']));
+$router->post('/einstellungen/partner/{id}/einstellungen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'saveSettings']));
+$router->post('/einstellungen/partner/{id}/rabatt', $auth->guard(Permission::Administration, [$partnerSettingsController, 'proposeDiscount']));
+$router->post('/einstellungen/partner/{id}/rabatt/annehmen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'acceptDiscount']));
+$router->post('/einstellungen/partner/{id}/rabatt/ablehnen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'rejectDiscount']));
+$router->post('/einstellungen/partner/{id}/beenden', $auth->guard(Permission::Administration, [$partnerSettingsController, 'end']));
+$router->post('/einstellungen/partner/{id}/loeschen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'delete']));
+$router->post('/einstellungen/partner/{id}/testen', $auth->guard(Permission::Administration, [$partnerSettingsController, 'test']));
+$router->get('/partner', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'index']));
+$router->get('/partner/anfragen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'showRequest']));
+$router->post('/partner/anfragen/{id}/zusagen', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'acceptRequest']));
+$router->post('/partner/anfragen/{id}/ablehnen', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'declineRequest']));
+$router->post('/partner/anfragen/{id}/stornieren', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'cancelRequest']));
+$router->post('/partner/anfragen/{id}/aktualisieren', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'refreshRequest']));
+$router->post('/partner/anfragen/{id}/status-senden', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'resendStatus']));
+$router->get('/partner/{id}/materialpool', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'pool']));
+$router->post('/partner/{id}/materialpool', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'sendMaterialRequest']));
+$router->get('/partner/{id}/techniker', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'technicians']));
+$router->post('/partner/{id}/techniker', $auth->guard(Permission::AusgabeRuecknahme, [$partnerController, 'sendTechnicianRequest']));
 $router->get('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'edit']));
 $router->post('/einstellungen/preisstaffelung', $auth->guard(Permission::Administration, [$priceTierSettingsController, 'update']));
 $router->get('/einstellungen/dry-hire-staffel', $auth->guard(Permission::Administration, [$dryHireSettingsController, 'edit']));
@@ -2736,6 +2815,20 @@ $router->post('/einstellungen/kalender/{id}/zugriff', $auth->guard(Permission::A
 $router->get('/api/v1/articles', $apiTokenGuard->guard([$articleApiController, 'index']));
 $router->get('/api/v1/articles/{id}', $apiTokenGuard->guard([$articleApiController, 'show']));
 $router->get('/api/v1/articles/{id}/images/{imageId}', $apiTokenGuard->guard([$articleApiController, 'image']));
+// Federation protocol between partner installations (migration 160): bearer
+// token of the partnership (or the secret invitation code), no session/CSRF.
+$router->get('/api/federation/v1/invitations/{code}', [$federationApiController, 'invitation']);
+$router->post('/api/federation/v1/invitations/{code}/accept', [$federationApiController, 'acceptInvitation']);
+$router->get('/api/federation/v1/partnership', [$federationApiController, 'partnership']);
+$router->post('/api/federation/v1/partnership/confirm', [$federationApiController, 'confirm']);
+$router->post('/api/federation/v1/partnership/discount', [$federationApiController, 'discount']);
+$router->post('/api/federation/v1/partnership/end', [$federationApiController, 'end']);
+$router->get('/api/federation/v1/articles', [$federationApiController, 'articles']);
+$router->get('/api/federation/v1/technicians', [$federationApiController, 'technicians']);
+$router->post('/api/federation/v1/requests', [$federationApiController, 'createRequest']);
+$router->get('/api/federation/v1/requests/{reference}', [$federationApiController, 'requestStatus']);
+$router->post('/api/federation/v1/requests/{reference}/cancel', [$federationApiController, 'cancelRequest']);
+$router->post('/api/federation/v1/requests/{reference}/status', [$federationApiController, 'receiveStatus']);
 
 // CalDAV-Server (RFC 4791) — rein lesend, Basic Auth via CalDavAuthGuard
 // (siehe CalDavController für die vollständige Beschreibung des Ablaufs).

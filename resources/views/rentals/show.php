@@ -383,6 +383,9 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
 </div>
 
 <?php require __DIR__ . '/_technicians.php'; /* Techniker & Gewerke (Migration 134) */ ?>
+<?php if (isset($partnerRequests)): /* Partner instances (migration 160) */ ?>
+<?= \App\Infrastructure\Http\View::render('partners/_rental-box', ['rental' => $rental, 'partnerRequests' => $partnerRequests]) ?>
+<?php endif; ?>
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('rentals.show.planned_items_title')) ?></h2>
 

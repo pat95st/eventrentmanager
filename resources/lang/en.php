@@ -389,7 +389,7 @@ return [
     'articles.show.confirm_delete_pre_issue_check' => 'Delete this pre-issue check?',
 
     'articles.show.ad_images_title' => 'Ad images (AI-generated)',
-    'articles.show.ad_images_hint' => 'Generates social-media ad images (e.g. for Instagram) using OpenAI (gpt-image-1). Prefers an existing article photo as a reference when available. Credentials under {link}.',
+    'articles.show.ad_images_hint' => 'Generates social-media ad images (e.g. for Instagram) using OpenAI image models. Prefers an existing article photo as a reference when available. Credentials under {link}.',
     'articles.show.ad_images_settings_link' => 'Settings > AI Ad Images',
     'articles.show.ad_images_none' => 'No ad images generated yet.',
     'articles.show.ad_images_format' => 'Format',
@@ -2461,12 +2461,16 @@ return [
     'settings.messaging.error.unknown_channel' => 'Unknown messaging channel.',
 
     'settings.ai_ad_images.title' => 'AI Ad Images',
-    'settings.ai_ad_images.subtitle' => 'Credentials for the AI ad-image generator on article pages (uses OpenAI gpt-image-1).',
+    'settings.ai_ad_images.subtitle' => 'Credentials for the AI ad-image generator on article pages (uses OpenAI image models).',
     'settings.ai_ad_images.field.openai_api_key' => 'OpenAI API key',
     'settings.ai_ad_images.field.token_placeholder' => '•••••••• (leave unchanged)',
     'settings.ai_ad_images.field.openai_api_key_configured' => 'An API key is configured. Leave blank to keep it unchanged.',
     'settings.ai_ad_images.field.openai_api_key_hint' => 'Found at platform.openai.com under "API keys".',
-    'settings.ai_ad_images.hint' => 'Anthropic/Claude does not offer image generation — ad images are therefore generated via OpenAI\'s "gpt-image-1" image model. Used in the "Ad images" section on article pages.',
+    'settings.ai_ad_images.hint' => 'Anthropic/Claude does not offer image generation — ad images are therefore generated via an OpenAI image model (selectable above). Used in the "Ad images" section on article pages.',
+    'settings.ai_ad_images.field.image_model' => 'Image model',
+    'settings.ai_ad_images.field.image_model_hint' => 'Leave blank for the default ({default}). Pick a model from the suggestions or enter any other OpenAI model name.',
+    'settings.ai_ad_images.field.image_model_from_api' => 'Available for this API key: {models}.',
+    'settings.ai_ad_images.field.image_model_list_failed' => 'Could not fetch the model list from OpenAI: {error}',
     'settings.ai_ad_images.flash.saved' => 'AI ad-image settings were saved.',
 
     'settings.messaging_templates.title' => 'Messaging templates',

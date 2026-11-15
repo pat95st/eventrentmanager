@@ -11,6 +11,8 @@ final class UpdateAiAdImageSettings implements CommandInterface
     public function __construct(
         // null/leer = API-Key unverändert lassen (siehe Handler) — analog UpdateMessagingSettings::$whatsappAccessToken.
         public readonly ?string $openaiApiKey,
+        // null/empty = use AiAdImageSettings::DEFAULT_IMAGE_MODEL.
+        public readonly ?string $imageModel = null,
     ) {
     }
 }

@@ -7,7 +7,7 @@ namespace App\Domain\Article;
 use DateTimeImmutable;
 
 /**
- * Ein von der KI (OpenAI gpt-image-1) generiertes Werbebild für einen
+ * Ein von der KI (OpenAI-Bildmodell) generiertes Werbebild für einen
  * Artikel (z. B. für Instagram) — siehe
  * App\Application\Article\Command\GenerateArticleAdImageHandler. Anders als
  * ArticleImage (die eigentlichen, hochgeladenen Produktfotos) wird hier

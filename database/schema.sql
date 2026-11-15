@@ -4412,6 +4412,10 @@ CREATE TABLE IF NOT EXISTS partner_requests (
         FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- --- 161_ai_ad_image_model.sql ------------------------------------------
+ALTER TABLE ai_ad_image_settings
+    ADD COLUMN image_model VARCHAR(100) NULL AFTER openai_api_key;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4594,4 +4598,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('157_analog_multicore_cables.sql', NOW()),
     ('158_minute_program_live_tracking.sql', NOW()),
     ('159_rental_power_planning.sql', NOW()),
-    ('160_partner_instances.sql', NOW());
+    ('160_partner_instances.sql', NOW()),
+    ('161_ai_ad_image_model.sql', NOW());

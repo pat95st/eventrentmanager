@@ -17,7 +17,7 @@ $GLOBALS['__mapModalRendered'] = true;
             <h2 id="map-modal-title" class="truncate text-base font-semibold text-slate-900 dark:text-slate-100"></h2>
             <p id="map-modal-address" class="text-xs text-slate-500 dark:text-slate-400"></p>
         </div>
-        <button type="button" data-map-modal-close class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Schließen</button>
+        <button type="button" data-map-modal-close aria-label="Schließen" title="Schließen" class="shrink-0 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">&times;</button>
     </div>
     <iframe id="map-modal-frame" title="Karte" class="block w-full" style="border:0;height:min(65vh,32rem)" loading="lazy"></iframe>
     <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-xs">

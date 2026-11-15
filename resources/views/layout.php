@@ -395,7 +395,7 @@ $canDocuments = $canRentals;
         </svg>
       </button>
 
-      <a href="/" class="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
+      <a href="/" data-tour="home" class="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100">
         <?php if ($companyLogoUrl !== null): ?>
           <img
             src="<?= e($companyLogoUrl) ?>"
@@ -422,6 +422,7 @@ $canDocuments = $canRentals;
         <?php if ($canArticles): ?>
         <div class="group relative">
           <a
+            data-tour="nav-articles"
             href="/artikel"
             class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isArticlesGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
@@ -442,6 +443,7 @@ $canDocuments = $canRentals;
         <?php if ($canContacts): ?>
         <div class="group relative">
           <a
+            data-tour="nav-contacts"
             href="/kunden"
             class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
@@ -462,6 +464,7 @@ $canDocuments = $canRentals;
         <?php if ($canProcurement): ?>
         <div class="group relative">
           <a
+            data-tour="nav-procurement"
             href="/belege"
             class="relative flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
@@ -488,6 +491,7 @@ $canDocuments = $canRentals;
 
         <?php if ($canArticles): ?>
         <a
+          data-tour="nav-sales"
           href="/verkaeufe"
           class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.sales')) ?></a>
@@ -495,6 +499,7 @@ $canDocuments = $canRentals;
 
         <?php if ($canTechnicianRentals): ?>
         <a
+          data-tour="nav-technician-rentals"
           href="/veranstaltungen"
           class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'rentals' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         >Meine Veranstaltungen</a>
@@ -502,6 +507,7 @@ $canDocuments = $canRentals;
 
         <?php if ($canInspections): ?>
         <a
+          data-tour="nav-inspections"
           href="/elektropruefung"
           class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'electrical-inspection' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         >Elektroprüfung</a>
@@ -510,6 +516,7 @@ $canDocuments = $canRentals;
         <?php if ($canDocuments): ?>
         <div class="group relative">
           <a
+            data-tour="nav-documents"
             href="/angebote"
             class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
@@ -530,6 +537,7 @@ $canDocuments = $canRentals;
         <?php if ($canRentals): ?>
         <div class="group relative">
           <a
+            data-tour="nav-rentals"
             href="/veranstaltungen"
             class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isRentalsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
@@ -549,6 +557,7 @@ $canDocuments = $canRentals;
 
         <?php if ($canRentals): ?>
         <a
+          data-tour="nav-vehicles"
           href="/fahrzeuge"
           class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'vehicles' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.vehicles')) ?></a>
@@ -556,6 +565,7 @@ $canDocuments = $canRentals;
 
         <?php if ($isAdmin): ?>
         <a
+          data-tour="nav-vouchers"
           href="/gutscheine"
           class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'vouchers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.vouchers')) ?></a>
@@ -575,6 +585,7 @@ $canDocuments = $canRentals;
            Menüs in Tabellen (siehe JS weiter unten). -->
       <details class="relative ml-auto lg:hidden" data-dropdown>
         <summary
+          data-tour="settings-mobile"
           aria-label="<?= e(t('nav.user_menu')) ?>"
           class="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-md border border-slate-300 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 <?= $activeNav === 'profile' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : '' ?>"
         >
@@ -623,6 +634,7 @@ $canDocuments = $canRentals;
       <div class="ml-auto hidden items-center gap-2 lg:ml-0 lg:flex">
         <a
           href="/profil/darstellung"
+          data-tour="settings"
           aria-label="<?= e(t('nav.settings')) ?>"
           class="rounded-md border border-slate-300 p-2 <?= $activeNav === 'profile' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         >
@@ -635,6 +647,7 @@ $canDocuments = $canRentals;
         <div class="group relative">
           <button
             type="button"
+            data-tour="user-menu"
             aria-label="<?= e(t('nav.user_menu')) ?>"
             class="flex items-center gap-1 rounded-md border border-slate-300 py-1.5 pl-2 pr-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
           >
@@ -1589,5 +1602,6 @@ $canDocuments = $canRentals;
   <script src="/assets/js/dry-hire.js" defer></script>
   <!-- Set-Auswahl in Angebot/AB/Rechnung (Migration 113), siehe public/assets/js/set-picker.js -->
   <script src="/assets/js/set-picker.js" defer></script>
+  <?php /* Onboarding tour after the first login (migration 161) */ require __DIR__ . '/partials/onboarding_tour.php'; ?>
 </body>
 </html>

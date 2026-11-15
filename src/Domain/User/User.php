@@ -62,6 +62,9 @@ final class User
         // angezeigt wird, entscheidet App\Application\Dashboard\
         // DashboardTileCatalog::layoutFor() anhand der Rechte.
         public ?DashboardLayout $dashboardLayout = null,
+        // When the user finished or skipped the onboarding tour (migration
+        // 161). NULL = not seen yet, the layout starts the tour automatically.
+        public ?DateTimeImmutable $onboardingTourCompletedAt = null,
     ) {
     }
 

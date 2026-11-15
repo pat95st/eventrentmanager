@@ -26,6 +26,7 @@ use App\Application\Query\QueryBus;
 use App\Application\Settings\Query\GetCompanySettings;
 use App\Application\Settings\Query\GetPushSettings;
 use App\Application\User\Command\ChangeOwnPassword;
+use App\Application\User\Command\CompleteOnboardingTour;
 use App\Application\User\Command\DisableTwoFactor;
 use App\Application\User\Command\EnableEmailOtp;
 use App\Application\User\Command\EnableTotp;
@@ -264,6 +265,23 @@ final class ProfileController
 
         Flash::success(t('profile.display.flash.saved'));
         Response::redirect('/profil/darstellung');
+    }
+
+    /**
+     * Marks the onboarding tour as finished or skipped (called via fetch()
+     * from public/assets/js/onboarding-tour.js). Not recorded while an
+     * administrator is impersonating someone, so the tour stays pending for
+     * the real user.
+     */
+    public function completeOnboardingTour(Request $request): void
+    {
+        $user = CurrentUser::get();
+
+        if (!Session::isImpersonating()) {
+            $this->commands->dispatch(new CompleteOnboardingTour($user->id));
+        }
+
+        Response::json(['ok' => true]);
     }
 
     /**

@@ -11,7 +11,7 @@ use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
 use DateTimeImmutable;
 
 /**
- * Setzt die aktuelle Verzögerung (in Minuten, auch negativ für "vorgezogen")
+ * Setzt die aktuelle Verzögerung (in Sekunden, auch negativ für "vorgezogen")
  * live während der Veranstaltung. Verändert NICHT den ursprünglichen Plan
  * ($startAt, Dauer der Programmpunkte), nur die berechnete Live-Anzeige
  * (siehe MinuteProgram::delayedStartAt() und MinuteProgramDetailBuilder).
@@ -31,7 +31,7 @@ final class SetMinuteProgramDelayHandler implements CommandHandlerInterface
             throw new NotFoundException("Minutenprogramm \"{$command->minuteProgramId}\" wurde nicht gefunden.");
         }
 
-        $program->currentDelayMinutes = $command->currentDelayMinutes;
+        $program->currentDelaySeconds = MinuteProgramLiveClock::clampDelay($command->delaySeconds);
         $program->updatedAt = new DateTimeImmutable();
 
         $this->programs->save($program);

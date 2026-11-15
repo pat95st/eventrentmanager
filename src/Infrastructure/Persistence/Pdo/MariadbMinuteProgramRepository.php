@@ -20,16 +20,20 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
         $stmt = $this->pdo->prepare(
             'INSERT INTO minute_programs (
                 id, rental_id, name, room, start_at, jingle_before, handheld_mic_count,
-                headset_mic_count, current_delay_minutes, created_at, updated_at, jingle_audio_file_id
+                headset_mic_count, current_delay_minutes, current_delay_seconds, created_at, updated_at,
+                jingle_audio_file_id, live_item_id, live_item_started_at, live_finished_at
              ) VALUES (
                 :id, :rental_id, :name, :room, :start_at, :jingle_before, :handheld_mic_count,
-                :headset_mic_count, :current_delay_minutes, :created_at, :updated_at, :jingle_audio_file_id
+                :headset_mic_count, :current_delay_minutes, :current_delay_seconds, :created_at, :updated_at,
+                :jingle_audio_file_id, :live_item_id, :live_item_started_at, :live_finished_at
              )
              ON DUPLICATE KEY UPDATE
                 name = :name2, room = :room2, start_at = :start_at2, jingle_before = :jingle_before2,
                 handheld_mic_count = :handheld_mic_count2, headset_mic_count = :headset_mic_count2,
-                current_delay_minutes = :current_delay_minutes2, updated_at = :updated_at2,
-                jingle_audio_file_id = :jingle_audio_file_id2'
+                current_delay_minutes = :current_delay_minutes2, current_delay_seconds = :current_delay_seconds2,
+                updated_at = :updated_at2, jingle_audio_file_id = :jingle_audio_file_id2,
+                live_item_id = :live_item_id2, live_item_started_at = :live_item_started_at2,
+                live_finished_at = :live_finished_at2'
         );
 
         $stmt->execute([
@@ -41,7 +45,8 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             'jingle_before' => $program->jingleBefore ? 1 : 0,
             'handheld_mic_count' => $program->handheldMicCount,
             'headset_mic_count' => $program->headsetMicCount,
-            'current_delay_minutes' => $program->currentDelayMinutes,
+            'current_delay_minutes' => $program->delayMinutes(),
+            'current_delay_seconds' => $program->currentDelaySeconds,
             'created_at' => $program->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $program->updatedAt->format('Y-m-d H:i:s'),
             'name2' => $program->name,
@@ -50,10 +55,17 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             'jingle_before2' => $program->jingleBefore ? 1 : 0,
             'handheld_mic_count2' => $program->handheldMicCount,
             'headset_mic_count2' => $program->headsetMicCount,
-            'current_delay_minutes2' => $program->currentDelayMinutes,
+            'current_delay_minutes2' => $program->delayMinutes(),
+            'current_delay_seconds2' => $program->currentDelaySeconds,
             'updated_at2' => $program->updatedAt->format('Y-m-d H:i:s'),
             'jingle_audio_file_id' => $program->jingleAudioFileId,
             'jingle_audio_file_id2' => $program->jingleAudioFileId,
+            'live_item_id' => $program->liveItemId,
+            'live_item_id2' => $program->liveItemId,
+            'live_item_started_at' => $program->liveItemStartedAt?->format('Y-m-d H:i:s'),
+            'live_item_started_at2' => $program->liveItemStartedAt?->format('Y-m-d H:i:s'),
+            'live_finished_at' => $program->liveFinishedAt?->format('Y-m-d H:i:s'),
+            'live_finished_at2' => $program->liveFinishedAt?->format('Y-m-d H:i:s'),
         ]);
     }
 
@@ -91,10 +103,16 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             jingleBefore: (bool) $row['jingle_before'],
             handheldMicCount: (int) $row['handheld_mic_count'],
             headsetMicCount: (int) $row['headset_mic_count'],
-            currentDelayMinutes: (int) $row['current_delay_minutes'],
+            // Before migration 157 only minutes existed.
+            currentDelaySeconds: array_key_exists('current_delay_seconds', $row)
+                ? (int) $row['current_delay_seconds']
+                : (int) $row['current_delay_minutes'] * 60,
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
             jingleAudioFileId: isset($row['jingle_audio_file_id']) && $row['jingle_audio_file_id'] !== null ? (string) $row['jingle_audio_file_id'] : null,
+            liveItemId: isset($row['live_item_id']) ? (string) $row['live_item_id'] : null,
+            liveItemStartedAt: isset($row['live_item_started_at']) ? new DateTimeImmutable((string) $row['live_item_started_at']) : null,
+            liveFinishedAt: isset($row['live_finished_at']) ? new DateTimeImmutable((string) $row['live_finished_at']) : null,
         );
     }
 }

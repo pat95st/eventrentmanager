@@ -4208,6 +4208,25 @@ CREATE TABLE IF NOT EXISTS backup_runs (
     INDEX idx_backup_runs_started (started_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- --- 157_minute_program_live_tracking.sql ---
+-- Migration 157: Live-Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API.
+--
+--  - current_delay_seconds: sekundengenauer Verzug (auch negativ). Ersetzt
+--    fachlich current_delay_minutes; diese Spalte wird weiterhin (gerundet)
+--    mitgeschrieben, damit ältere Auswertungen/Sicherungen lesbar bleiben.
+--  - live_item_id / live_item_started_at: zuletzt per "Start" ausgelöster
+--    Programmpunkt und sein tatsächlicher Beginn. Solange gesetzt, bleibt
+--    dieser Punkt "aktuell", bis der nächste gestartet wird (überzieht er,
+--    wächst der prognostizierte Verzug live mit).
+--  - live_finished_at: Programm am FOH als beendet markiert.
+ALTER TABLE minute_programs
+    ADD COLUMN current_delay_seconds INT          NOT NULL DEFAULT 0 AFTER current_delay_minutes,
+    ADD COLUMN live_item_id          CHAR(36)     NULL AFTER current_delay_seconds,
+    ADD COLUMN live_item_started_at  DATETIME     NULL AFTER live_item_id,
+    ADD COLUMN live_finished_at      DATETIME     NULL AFTER live_item_started_at;
+
+UPDATE minute_programs SET current_delay_seconds = current_delay_minutes * 60;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4386,4 +4405,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('153_cloud_storage_providers.sql', NOW()),
     ('154_mixing_consoles.sql', NOW()),
     ('155_networks.sql', NOW()),
-    ('156_automatic_backups.sql', NOW());
+    ('156_automatic_backups.sql', NOW()),
+    ('157_minute_program_live_tracking.sql', NOW());

@@ -143,17 +143,6 @@ final class MariadbCategoryRepository implements CategoryRepositoryInterface
         return $id !== false && $id !== null && $id !== 0 ? (string) $id : null;
     }
 
-    public function findAnalogMulticoreCategoryId(): ?string
-    {
-        try {
-            $id = $this->pdo->query('SELECT id FROM categories WHERE is_analog_multicore = 1 LIMIT 1')->fetchColumn();
-        } catch (\PDOException) {
-            return null; // migration 156 not applied yet
-        }
-
-        return $id !== false && $id !== null && $id !== 0 ? (string) $id : null;
-    }
-
     public function delete(string $id): void
     {
         $stmt = $this->pdo->prepare('DELETE FROM categories WHERE id = :id');

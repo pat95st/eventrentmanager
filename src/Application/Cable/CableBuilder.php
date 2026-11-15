@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Cable;
 
 use App\Domain\Cable\ArticleCable;
+use App\Domain\Cable\CableMulticore;
 use App\Domain\Cable\CableRepositoryInterface;
 use App\Domain\Cable\CableType;
 use App\Domain\Cable\ConnectorType;
@@ -13,6 +14,8 @@ use App\Domain\Cable\ConnectorType;
  * Prüft die Leitungsangaben eines Artikels (Migration 125): Leitungstyp,
  * Länge (0,1–1000 m) und zwei Steckverbinder, die für diesen Leitungstyp
  * erlaubt sind (Einstellungen › Leitungen).
+ * For analog multicore types (migration 156) also sends and returns
+ * (0–999 each, at least one channel), drum and Harting flags.
  */
 final class CableBuilder
 {
@@ -43,16 +46,63 @@ final class CableBuilder
             }
         }
 
+        $multicore = null;
+        if ($type !== null && $type->isAnalogMulticore) {
+            [$multicoreErrors, $multicore] = self::buildMulticore($input);
+            $errors = array_merge($errors, $multicoreErrors);
+        }
+
         if ($errors !== []) {
             return [$errors, null, $type];
         }
 
-        return [[], new ArticleCable($articleId, $type->id, number_format((float) $raw, 2, '.', ''), (string) $input->connectorAId, (string) $input->connectorBId), $type];
+        return [[], new ArticleCable($articleId, $type->id, number_format((float) $raw, 2, '.', ''), (string) $input->connectorAId, (string) $input->connectorBId, $multicore), $type];
     }
 
-    /** Vorschlag für den Artikelnamen, z. B. "H07RN-F 5G6 10 m CEE 32 A Stecker rot / CEE 32 A Kupplung rot". */
+    /** @return array{0: array<string, string>, 1: ?CableMulticore} */
+    private static function buildMulticore(CableInput $input): array
+    {
+        $errors = [];
+        $counts = [];
+        foreach (['multicore_sends' => [$input->multicoreSends, 'Sends'], 'multicore_returns' => [$input->multicoreReturns, 'Returns']] as $field => [$raw, $label]) {
+            $count = self::count($raw);
+            if ($count === null) {
+                $errors[$field] = 'Bitte die Anzahl der ' . $label . ' als ganze Zahl von 0 bis ' . CableMulticore::MAX_CHANNELS . ' angeben.';
+            }
+            $counts[$field] = $count ?? 0;
+        }
+        if ($errors === [] && array_sum($counts) === 0) {
+            $errors['multicore_sends'] = 'Ein Multicore braucht mindestens einen Send oder Return.';
+        }
+        if ($errors !== []) {
+            return [$errors, null];
+        }
+
+        return [[], new CableMulticore($counts['multicore_sends'], $counts['multicore_returns'], $input->multicoreOnDrum, $input->multicoreHasHarting)];
+    }
+
+    /** Empty = 0; otherwise a whole number 0–999, invalid = null. */
+    private static function count(?string $raw): ?int
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return 0;
+        }
+        if (preg_match('/^\d{1,3}$/', $raw) !== 1) {
+            return null;
+        }
+
+        return (int) $raw <= CableMulticore::MAX_CHANNELS ? (int) $raw : null;
+    }
+
+    /**
+     * Vorschlag für den Artikelnamen, z. B. "H07RN-F 5G6 10 m CEE 32 A Stecker rot / CEE 32 A Kupplung rot";
+     * multicores include sends/returns, e.g. "Analoges Multicore 24/8 30 m Harting-Stecker / Multicore-Anschlusskasten".
+     */
     public static function suggestName(CableType $type, ArticleCable $cable, ?ConnectorType $a, ?ConnectorType $b): string
     {
-        return trim($type->name . ' ' . $cable->lengthLabel() . ' ' . ($a?->name ?? '') . ' / ' . ($b?->name ?? ''));
+        $channels = $cable->multicore !== null ? ' ' . $cable->multicore->channelSummary() : '';
+
+        return trim($type->name . $channels . ' ' . $cable->lengthLabel() . ' ' . ($a?->name ?? '') . ' / ' . ($b?->name ?? ''));
     }
 }

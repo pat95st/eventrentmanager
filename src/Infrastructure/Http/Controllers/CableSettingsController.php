@@ -48,6 +48,7 @@ final class CableSettingsController
             protectionClass: $request->input('protection_class'),
             connectorIds: $request->inputArray('connector_ids'),
             sortOrder: $request->input('sort_order'),
+            isAnalogMulticore: $request->input('is_analog_multicore') !== null,
         )), 'Der Leitungstyp wurde gespeichert.', '#typ-' . $id);
     }
 
@@ -61,6 +62,7 @@ final class CableSettingsController
             protectionClass: $request->input('protection_class'),
             connectorIds: $request->inputArray('connector_ids'),
             sortOrder: $request->input('sort_order'),
+            isAnalogMulticore: $request->input('is_analog_multicore') !== null,
         )), 'Der Leitungstyp wurde angelegt.', '#leitungstypen');
     }
 

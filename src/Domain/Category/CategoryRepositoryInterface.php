@@ -34,7 +34,4 @@ interface CategoryRepositoryInterface
 
     /** ID der Kategorie "Tonmischpult" (Migration 154, categories.is_mixing_console), falls vorhanden. */
     public function findMixingConsoleCategoryId(): ?string;
-
-    /** ID of the category "Analoges Multicore" (migration 156, categories.is_analog_multicore), if present. */
-    public function findAnalogMulticoreCategoryId(): ?string;
 }

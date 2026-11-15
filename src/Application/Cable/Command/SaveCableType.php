@@ -18,6 +18,8 @@ final class SaveCableType implements CommandInterface
         public readonly ?string $protectionClass,
         public readonly array $connectorIds,
         public readonly ?string $sortOrder = null,
+        // Migration 156: cables of this type are analog multicores (never require an electrical inspection).
+        public readonly bool $isAnalogMulticore = false,
     ) {
     }
 }

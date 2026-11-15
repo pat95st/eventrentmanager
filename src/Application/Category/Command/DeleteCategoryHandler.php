@@ -44,10 +44,6 @@ final class DeleteCategoryHandler implements CommandHandlerInterface
             throw new ConflictException('Die Kategorie für Tonmischpulte wird vom System benötigt und kann nicht gelöscht werden (umbenennen ist möglich).');
         }
 
-        if ($this->categories->findAnalogMulticoreCategoryId() === $category->id) {
-            throw new ConflictException('Die Kategorie für analoge Multicores wird vom System benötigt und kann nicht gelöscht werden (umbenennen ist möglich).');
-        }
-
         if ($this->categories->findChildren($command->id) !== []) {
             throw new ConflictException('Diese Kategorie enthält noch Unterkategorien. Bitte zuerst verschieben oder löschen.');
         }

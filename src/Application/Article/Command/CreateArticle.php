@@ -45,9 +45,6 @@ final class CreateArticle implements CommandInterface
         // Mixing console (migration 154): null = form without console section (keep stored data);
         // only stored for category "Tonmischpult", otherwise removed.
         public readonly ?\App\Application\MixingConsole\MixingConsoleInput $mixingConsole = null,
-        // Analog multicore (migration 156): null = form without multicore section (keep stored data);
-        // only stored for category "Analoges Multicore", otherwise removed.
-        public readonly ?\App\Application\AnalogMulticore\AnalogMulticoreInput $analogMulticore = null,
     ) {
     }
 }

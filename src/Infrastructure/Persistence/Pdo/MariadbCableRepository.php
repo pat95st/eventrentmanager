@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Pdo;
 
 use App\Domain\Article\ProtectionClass;
 use App\Domain\Cable\ArticleCable;
+use App\Domain\Cable\CableMulticore;
 use App\Domain\Cable\CableRepositoryInterface;
 use App\Domain\Cable\CableType;
 use App\Domain\Cable\ConnectorType;
@@ -51,10 +52,11 @@ final class MariadbCableRepository implements CableRepositoryInterface
         }
         try {
             $stmt = $this->pdo->prepare(
-                'INSERT INTO cable_types (id, name, description, requires_electrical_inspection, protection_class, sort_order)
-                 VALUES (:id, :name, :description, :requires, :protection_class, :sort_order)
+                'INSERT INTO cable_types (id, name, description, requires_electrical_inspection, is_analog_multicore, protection_class, sort_order)
+                 VALUES (:id, :name, :description, :requires, :is_analog_multicore, :protection_class, :sort_order)
                  ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description),
                     requires_electrical_inspection = VALUES(requires_electrical_inspection),
+                    is_analog_multicore = VALUES(is_analog_multicore),
                     protection_class = VALUES(protection_class), sort_order = VALUES(sort_order)'
             );
             $stmt->execute([
@@ -62,6 +64,7 @@ final class MariadbCableRepository implements CableRepositoryInterface
                 'name' => $type->name,
                 'description' => $type->description,
                 'requires' => $type->requiresElectricalInspection ? 1 : 0,
+                'is_analog_multicore' => $type->isAnalogMulticore ? 1 : 0,
                 'protection_class' => $type->protectionClass?->value,
                 'sort_order' => $type->sortOrder,
             ]);
@@ -147,11 +150,22 @@ final class MariadbCableRepository implements CableRepositoryInterface
 
     public function findByArticle(string $articleId): ?ArticleCable
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM article_cables WHERE article_id = :id');
+        $stmt = $this->pdo->prepare(
+            'SELECT ac.*, m.article_id AS multicore_article_id, m.send_count, m.return_count, m.on_drum, m.has_harting
+             FROM article_cables ac
+             LEFT JOIN article_cable_multicores m ON m.article_id = ac.article_id
+             WHERE ac.article_id = :id'
+        );
         $stmt->execute(['id' => $articleId]);
         $row = $stmt->fetch();
+        if (!$row) {
+            return null;
+        }
+        $multicore = $row['multicore_article_id'] !== null
+            ? new CableMulticore((int) $row['send_count'], (int) $row['return_count'], (bool) $row['on_drum'], (bool) $row['has_harting'])
+            : null;
 
-        return $row ? new ArticleCable($row['article_id'], $row['cable_type_id'], (string) $row['length_m'], $row['connector_a_id'], $row['connector_b_id']) : null;
+        return new ArticleCable($row['article_id'], $row['cable_type_id'], (string) $row['length_m'], $row['connector_a_id'], $row['connector_b_id'], $multicore);
     }
 
     public function saveArticleCable(ArticleCable $cable): void
@@ -168,6 +182,26 @@ final class MariadbCableRepository implements CableRepositoryInterface
             'length_m' => $cable->lengthM,
             'connector_a_id' => $cable->connectorAId,
             'connector_b_id' => $cable->connectorBId,
+        ]);
+
+        // Analog multicore details (migration 156): stored only for multicore cable types.
+        if ($cable->multicore === null) {
+            $this->pdo->prepare('DELETE FROM article_cable_multicores WHERE article_id = :id')->execute(['id' => $cable->articleId]);
+
+            return;
+        }
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO article_cable_multicores (article_id, send_count, return_count, on_drum, has_harting)
+             VALUES (:article_id, :send_count, :return_count, :on_drum, :has_harting)
+             ON DUPLICATE KEY UPDATE send_count = VALUES(send_count), return_count = VALUES(return_count),
+                on_drum = VALUES(on_drum), has_harting = VALUES(has_harting)'
+        );
+        $stmt->execute([
+            'article_id' => $cable->articleId,
+            'send_count' => $cable->multicore->sends,
+            'return_count' => $cable->multicore->returns,
+            'on_drum' => $cable->multicore->onDrum ? 1 : 0,
+            'has_harting' => $cable->multicore->hasHarting ? 1 : 0,
         ]);
     }
 
@@ -187,6 +221,7 @@ final class MariadbCableRepository implements CableRepositoryInterface
             protectionClass: ProtectionClass::tryFrom((string) ($row['protection_class'] ?? '')),
             connectorIds: $connectorIds,
             sortOrder: (int) $row['sort_order'],
+            isAnalogMulticore: (bool) ($row['is_analog_multicore'] ?? false),
         );
     }
 

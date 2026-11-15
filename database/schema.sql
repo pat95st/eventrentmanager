@@ -4160,36 +4160,47 @@ UPDATE digital_protocols SET is_ip_based = 1
 WHERE id IN ('d1000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000005')
    OR name IN ('Dante', 'AES67', 'SoundGrid', 'WSG', 'Ravenna');
 
--- --- 156_analog_multicores.sql ---
--- Migration 156: Analoge Multicore-Kabel als Spezialartikel (Nutzerwunsch,
--- analog zu digitalen Stageboxen/Tonmischpulten). Ein analoges Multicore hat
--- eine Anzahl Sends und Returns, liegt auf einer Trommel oder nicht und hat
--- Harting-Steckverbinder oder nicht.
--- Analoge Multicores haben immer die Kategorie "Analoges Multicore"
--- (categories.is_analog_multicore, umbenennbar, nicht löschbar).
+-- --- 156_analog_multicore_cables.sql ---
+-- Migration 156: Analoge Multicores in der Leitungsverwaltung (Nutzerwunsch).
+-- Ein Leitungstyp kann als "analoges Multicore" markiert werden
+-- (cable_types.is_analog_multicore). Leitungen dieses Typs haben neben
+-- Länge und Steckverbindern (article_cables) die Anzahl Sends und Returns,
+-- liegen auf einer Trommel oder nicht und haben Harting-Steckverbinder oder
+-- nicht (article_cable_multicores). Analoge Multicores brauchen nie eine
+-- Elektroprüfung.
 
-ALTER TABLE categories
-    ADD COLUMN is_analog_multicore TINYINT(1) NOT NULL DEFAULT 0 AFTER is_mixing_console;
+ALTER TABLE cable_types
+    ADD COLUMN is_analog_multicore TINYINT(1) NOT NULL DEFAULT 0 AFTER requires_electrical_inspection;
 
-UPDATE categories SET is_analog_multicore = 1
-WHERE name IN ('Analoges Multicore', 'Analoge Multicores', 'Multicore (analog)', 'Multicores (analog)')
-  AND is_power_distributor = 0 AND is_cable = 0 AND is_digital_stagebox = 0 AND is_mixing_console = 0
-ORDER BY (parent_id IS NOT NULL), created_at
-LIMIT 1;
-
-INSERT INTO categories (id, name, parent_id, is_analog_multicore)
-SELECT UUID(), 'Analoges Multicore', NULL, 1 FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM categories WHERE is_analog_multicore = 1);
-
-CREATE TABLE article_analog_multicores (
-    article_id   CHAR(36)          NOT NULL PRIMARY KEY,
-    send_count   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-    return_count SMALLINT UNSIGNED NOT NULL DEFAULT 0,
-    on_drum      TINYINT(1)        NOT NULL DEFAULT 0, -- auf Kabeltrommel
-    has_harting  TINYINT(1)        NOT NULL DEFAULT 0, -- mit Harting-Steckverbinder
-    CONSTRAINT fk_article_analog_multicores_article
-        FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE
+CREATE TABLE article_cable_multicores (
+    article_id    CHAR(36)          NOT NULL PRIMARY KEY,
+    send_count    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    return_count  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    on_drum       TINYINT(1)        NOT NULL DEFAULT 0, -- auf Kabeltrommel
+    has_harting   TINYINT(1)        NOT NULL DEFAULT 0, -- mit Harting-Steckverbinder
+    CONSTRAINT fk_article_cable_multicores_cable
+        FOREIGN KEY (article_id) REFERENCES article_cables (article_id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Beispiel-Grundausstattung (kann in Einstellungen › Leitungen geändert werden)
+INSERT IGNORE INTO cable_connector_types (id, name, sort_order) VALUES
+    ('c1560000-0000-0000-0000-000000000001', 'Harting-Stecker', 60),
+    ('c1560000-0000-0000-0000-000000000002', 'Harting-Buchse', 61),
+    ('c1560000-0000-0000-0000-000000000003', 'Multicore-Anschlusskasten', 62),
+    ('c1560000-0000-0000-0000-000000000004', 'XLR-Fächerpeitsche', 63);
+
+INSERT IGNORE INTO cable_types (id, name, description, requires_electrical_inspection, is_analog_multicore, sort_order) VALUES
+    ('b1560000-0000-0000-0000-000000000001', 'Analoges Multicore', NULL, 0, 1, 100);
+
+UPDATE cable_types SET is_analog_multicore = 1, requires_electrical_inspection = 0
+WHERE name = 'Analoges Multicore';
+
+INSERT IGNORE INTO cable_type_connectors (cable_type_id, connector_type_id)
+SELECT t.id, c.id
+FROM cable_types t
+JOIN cable_connector_types c
+  ON c.name IN ('Harting-Stecker', 'Harting-Buchse', 'Multicore-Anschlusskasten', 'XLR-Fächerpeitsche', 'XLR male', 'XLR female')
+WHERE t.name = 'Analoges Multicore';
 
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
@@ -4369,4 +4380,4 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('153_cloud_storage_providers.sql', NOW()),
     ('154_mixing_consoles.sql', NOW()),
     ('155_networks.sql', NOW()),
-    ('156_analog_multicores.sql', NOW());
+    ('156_analog_multicore_cables.sql', NOW());

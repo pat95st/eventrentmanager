@@ -436,7 +436,6 @@ $powerDistributorRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPow
 $cableRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCableRepository($pdo); // Leitungen (Migration 125)
 $digitalStageboxRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDigitalStageboxRepository($pdo); // Digitale Stageboxen (Migration 152)
 $mixingConsoleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMixingConsoleRepository($pdo); // Tonmischpulte (Migration 154)
-$analogMulticoreRepository = new \App\Infrastructure\Persistence\Pdo\MariadbAnalogMulticoreRepository($pdo); // Analog multicores (migration 156)
 // Networks and IP addresses (migration 155)
 $networkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNetworkRepository($pdo);
 $networkInterfaceResolver = new \App\Application\Network\NetworkInterfaceResolver($networkRepository, $categoryRepository, $digitalStageboxRepository, $mixingConsoleRepository);
@@ -669,8 +668,8 @@ $commandBus->register(\App\Application\LaborTime\Command\CreateLaborTimeArticle:
 $commandBus->register(\App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, new UpdateLaborTimeArticleHandler($laborTimeArticleRepository));
 $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle::class, new DeleteLaborTimeArticleHandler($laborTimeArticleRepository));
 
-$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository, mixingConsoles: $mixingConsoleRepository, analogMulticores: $analogMulticoreRepository));
-$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository, mixingConsoles: $mixingConsoleRepository, analogMulticores: $analogMulticoreRepository));
+$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository, mixingConsoles: $mixingConsoleRepository));
+$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository, mixingConsoles: $mixingConsoleRepository));
 // Leitungen (Migration 125)
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
 // Techniker & Gewerke (Migration 134)
@@ -1295,9 +1294,6 @@ $mixingConsoleQueryHandler = new \App\Application\MixingConsole\Query\MixingCons
 $queryBus->register(\App\Application\MixingConsole\Query\GetArticleMixingConsole::class, $mixingConsoleQueryHandler);
 $queryBus->register(\App\Application\MixingConsole\Query\GetMixingConsoleFormData::class, $mixingConsoleQueryHandler);
 $queryBus->register(\App\Application\MixingConsole\Query\GetCompatibleConsoles::class, $mixingConsoleQueryHandler);
-// Analog multicores (migration 156)
-$queryBus->register(\App\Application\Category\Query\GetAnalogMulticoreCategoryId::class, new \App\Application\Category\Query\GetAnalogMulticoreCategoryIdHandler($categoryRepository));
-$queryBus->register(\App\Application\AnalogMulticore\Query\GetArticleAnalogMulticore::class, new \App\Application\AnalogMulticore\Query\GetArticleAnalogMulticoreHandler($analogMulticoreRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFolders::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFoldersHandler($closingTextTemplateFolderRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplates::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplatesHandler($closingTextTemplateRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));

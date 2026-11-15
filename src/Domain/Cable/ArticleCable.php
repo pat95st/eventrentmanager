@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Domain\Cable;
 
-/** Leitungsangaben eines Artikels (Migration 125): Typ, Länge, zwei Steckverbinder. */
+/**
+ * Leitungsangaben eines Artikels (Migration 125): Typ, Länge, zwei Steckverbinder.
+ * Analog multicores (migration 156) additionally carry sends/returns, drum and Harting flags.
+ */
 final class ArticleCable
 {
     public function __construct(
@@ -13,6 +16,7 @@ final class ArticleCable
         public string $lengthM, // DECIMAL als String, z. B. "10.00"
         public string $connectorAId,
         public string $connectorBId,
+        public ?CableMulticore $multicore = null,
     ) {
     }
 

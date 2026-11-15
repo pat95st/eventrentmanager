@@ -12,6 +12,11 @@ final class CableInput
         public readonly ?string $length,
         public readonly ?string $connectorAId,
         public readonly ?string $connectorBId,
+        // Analog multicore (migration 156): only evaluated for multicore cable types.
+        public readonly ?string $multicoreSends = null,
+        public readonly ?string $multicoreReturns = null,
+        public readonly bool $multicoreOnDrum = false,
+        public readonly bool $multicoreHasHarting = false,
     ) {
     }
 }

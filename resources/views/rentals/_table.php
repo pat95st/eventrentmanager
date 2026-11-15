@@ -38,7 +38,7 @@ use function App\Infrastructure\Http\t;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($rentals as $entry): ?>
                     <?php $rental = $entry->rental; ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/veranstaltungen/<?= e($rental->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/veranstaltungen/<?= e($rental->id) ?>">
                         <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100"><?= e($rental->eventName) ?></td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($entry->customer->displayName()) ?></td>
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
@@ -47,7 +47,7 @@ use function App\Infrastructure\Http\t;
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $rental->eventLocation !== null ? e($rental->eventLocation) : '–' ?></td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $rental->deploymentDays ?></td>
                         <td class="break-words px-4 py-3 text-right">
-                            <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400" onclick="event.stopPropagation()"><?= e(t('rentals.table.checkout_link')) ?></a>
+                            <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('rentals.table.checkout_link')) ?></a>
                         </td>
                     </tr>
                 <?php endforeach; ?>

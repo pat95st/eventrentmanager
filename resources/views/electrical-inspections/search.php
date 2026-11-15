@@ -57,7 +57,7 @@ use function App\Infrastructure\Http\e;
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($recent as $entry): ?>
                             <?php $inspection = $entry->inspection; $status = $inspection->status(); ?>
-                            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($entry->inventoryNumberId) ?>/elektropruefungen">
                                 <td class="whitespace-nowrap px-4 py-2.5 text-slate-700 dark:text-slate-300"><?= e($inspection->inspectedAt->format('d.m.Y')) ?></td>
                                 <td class="whitespace-nowrap px-4 py-2.5"><a href="/inventurnummern/<?= e($entry->inventoryNumberId) ?>/elektropruefungen" class="font-mono text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($entry->inventoryNumber) ?></a></td>
                                 <td class="px-4 py-2.5 text-slate-700 dark:text-slate-300" style="min-width:12rem"><?= e($entry->articleLabel) ?></td>

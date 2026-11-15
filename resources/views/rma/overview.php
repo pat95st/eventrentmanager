@@ -67,7 +67,7 @@ use function App\Infrastructure\Http\e;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($entries as $entry): ?>
                     <?php $rma = $entry->rma; $status = $rma->status(); ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/inventurnummern/<?= e($entry->inventoryNumber->id) ?>/rma'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($entry->inventoryNumber->id) ?>/rma">
                         <td class="px-4 py-3">
                             <span class="inline-flex items-center rounded-full <?= $status->badgeClasses() ?> px-2.5 py-0.5 text-xs font-medium">
                                 <?= e($status->label()) ?>

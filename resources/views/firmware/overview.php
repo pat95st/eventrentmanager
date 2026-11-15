@@ -40,7 +40,7 @@ use function App\Infrastructure\Http\e;
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($entries as $entry): ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/inventurnummern/<?= e($entry->inventoryNumber->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($entry->inventoryNumber->id) ?>">
                         <td class="px-4 py-3">
                             <span class="font-medium text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($entry->article, $entry->manufacturer)) ?></span>
                         </td>

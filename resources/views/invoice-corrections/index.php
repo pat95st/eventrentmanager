@@ -42,7 +42,7 @@ $money = static fn (float $v): string => number_format($v, 2, ',', '.') . ' €'
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($entries as $entry): ?>
                     <?php $correction = $entry->correction; ?>
-                    <tr class="hover:bg-slate-50">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/rechnungskorrekturen/<?= e($correction->id) ?>">
                         <td class="px-4 py-3"><a href="/rechnungskorrekturen/<?= e($correction->id) ?>" class="font-mono font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($correction->correctionNumber ?? 'Entwurf') ?></a></td>
                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($correction->type->label()) ?></td>
                         <td class="px-4 py-3"><a href="/rechnungen/<?= e($correction->invoiceId) ?>" class="font-mono text-xs text-slate-600 hover:underline dark:text-slate-400"><?= e($entry->invoiceNumber ?? '–') ?></a></td>

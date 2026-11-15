@@ -38,7 +38,7 @@ use function App\Infrastructure\Http\t;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($receipts as $entry): ?>
                     <?php $receipt = $entry->receipt; ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/belege/<?= e($receipt->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/belege/<?= e($receipt->id) ?>">
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                             <?= $receipt->receiptNumber !== null ? e($receipt->receiptNumber) : '–' ?>
                         </td>

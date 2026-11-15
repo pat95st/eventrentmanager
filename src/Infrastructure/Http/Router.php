@@ -39,12 +39,15 @@ final class Router
      * run sheet / stage display API (migration 158): authenticated by the
      * share link token in the path, no session involved. Same for the
      * federation protocol between partner installations (migration 160,
-     * bearer token or invitation code).
+     * bearer token or invitation code). The payment provider webhooks
+     * (migration 163) are server-to-server calls; they only trigger a status
+     * lookup at the provider and never trust the request body.
      */
     private const CSRF_EXEMPT_PREFIXES = [
         '/api/player/',
         '/api/runsheet/',
         '/api/federation/',
+        '/api/payments/',
     ];
 
     public function get(string $path, callable $handler): void

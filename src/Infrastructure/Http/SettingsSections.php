@@ -78,6 +78,7 @@ final class SettingsSections
                     $page('settings-ueberziehung', '/einstellungen/ueberziehung', t('nav.overage_settings'), 'Pauschale bei verspäteter Rückgabe'),
                     $page('settings-gutscheine', '/einstellungen/gutscheine', t('nav.voucher_settings'), 'Gültigkeit von Gutscheinen'),
                     $page('settings-zahlungsarten', '/einstellungen/zahlungsarten', t('nav.payment_methods'), 'Zahlungsarten und Zahlungsziele'),
+                    $page('settings-online-zahlung', '/einstellungen/online-zahlung', 'Online-Zahlung', 'PayPal und SumUp für Rechnungen'),
                     $page('settings-mahnwesen', '/einstellungen/mahnwesen', t('nav.dunning_levels'), 'Mahnstufen, Gebühren, automatischer Versand'),
                     $page('settings-rechnungserinnerungen', '/einstellungen/rechnungserinnerungen', t('nav.invoice_due_reminder_settings'), 'Erinnerung vor Fälligkeit'),
                 ],

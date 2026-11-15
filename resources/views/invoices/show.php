@@ -222,6 +222,7 @@ $rows = $detail->orderedRows();
 </div>
 
 <?= \App\Infrastructure\Http\View::render('invoices/_corrections', ['invoice' => $invoice, 'corrections' => $invoiceCorrections ?? [], 'invoiceGross' => $totals->grossTotal]) ?>
+<?= \App\Infrastructure\Http\View::render('invoices/_online_payment', ['invoice' => $invoice, 'paymentLink' => $paymentLink ?? null, 'onlinePayments' => $onlinePayments ?? []]) ?>
 
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('invoices.show.items_title')) ?></h2>

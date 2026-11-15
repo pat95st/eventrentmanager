@@ -62,6 +62,7 @@ final class InvoiceController
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
         private readonly UserRepositoryInterface $users,
+        private readonly ?\App\Application\OnlinePayment\InvoicePaymentLinkProvider $paymentLinks = null,
     ) {
     }
 
@@ -174,6 +175,14 @@ final class InvoiceController
             'linkedRental' => $linkedRental,
             'selectedContact' => $selectedContact,
             'invoiceCorrections' => $this->queries->ask(new \App\Application\InvoiceCorrection\Query\ListInvoiceCorrections(invoiceId: $id)),
+            // Online payment (migration 163): public payment link only for
+            // sent invoices, attempts for sent and paid ones.
+            'paymentLink' => $detail->invoice->status === \App\Domain\Invoice\InvoiceStatus::Sent
+                ? $this->paymentLinks?->publicUrlFor($id, \App\Infrastructure\Http\Origin::current())
+                : null,
+            'onlinePayments' => $this->paymentLinks !== null && $detail->invoice->isFinalized()
+                ? $this->queries->ask(new \App\Application\OnlinePayment\Query\GetInvoiceOnlinePayments($id))
+                : [],
         ], activeNav: 'invoices', title: t('invoices.page_title.detail'));
     }
 

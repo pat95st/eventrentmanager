@@ -6,6 +6,8 @@
 $powerDistributor ??= null;
 /** @var \App\Application\Cable\Query\ArticleCableDetail|null $cable Leitungsangaben (Migration 125) */
 $cable ??= null;
+/** @var \App\Application\DigitalStagebox\Query\ArticleDigitalStageboxDetail|null $digitalStagebox Angaben der digitalen Stagebox (Migration 152) */
+$digitalStagebox ??= null;
 /** @var string|null $editInventoryId */
 /** @var string|null $editAccessoryId */
 /** @var string|null $editPreIssueCheckId */
@@ -107,6 +109,11 @@ $availabilityStatusMeta = [
             <?php if ($cable !== null): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800">
                     Leitung · <?= e($cable->cable->lengthLabel()) ?>
+                </span>
+            <?php endif; ?>
+            <?php if ($digitalStagebox !== null): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700" title="Eingänge/Ausgänge">
+                    Digitale Stagebox · <?= e($digitalStagebox->protocol?->name ?? '–') ?> · <?= e($digitalStagebox->stagebox->channelSummary()) ?>
                 </span>
             <?php endif; ?>
             <?php if ($article->hasFirmware): ?>
@@ -289,6 +296,22 @@ $availabilityStatusMeta = [
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Länge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->cable->lengthLabel()) ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite A</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorA?->name ?? '–') ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite B</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorB?->name ?? '–') ?></dd></div>
+                </dl>
+            </div>
+        <?php endif; ?>
+
+        <!-- Digitale Stagebox (Migration 152): Angaben werden im Artikelformular gepflegt -->
+        <?php if ($digitalStagebox !== null): ?>
+            <?php $sb = $digitalStagebox->stagebox; ?>
+            <div id="digitale-stagebox" class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Digitale Stagebox</h2>
+                    <a href="/artikel/<?= e($article->id) ?>/bearbeiten#digital_stagebox_section" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                </div>
+                <dl class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Digitales Protokoll</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($digitalStagebox->protocol?->name ?? '–') ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Analoge Eingänge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($sb->inputsLabel()) ?></dd></div>
+                    <div><dt class="text-xs text-slate-500 dark:text-slate-400">Ausgänge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($sb->outputsLabel()) ?></dd></div>
                 </dl>
             </div>
         <?php endif; ?>

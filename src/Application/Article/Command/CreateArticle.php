@@ -40,6 +40,8 @@ final class CreateArticle implements CommandInterface
         public readonly ?\App\Application\Cable\CableInput $cable = null,
         // Migration 128: Einbaubreite eines Rackeinbaugeräts ('19' | '9.5'); null = nicht übermittelt (unverändert/19 Zoll).
         public readonly ?string $rackWidth = null,
+        // Digitale Stagebox (Migration 152): nur ausgewertet, wenn die Kategorie "Digitale Stagebox" gewählt ist.
+        public readonly ?\App\Application\DigitalStagebox\DigitalStageboxInput $digitalStagebox = null,
     ) {
     }
 }

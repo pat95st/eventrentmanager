@@ -32,6 +32,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         // Stromverteiler (Migration 117): Elektroprüfung immer erforderlich.
         private readonly ?\App\Domain\PowerDistributor\PowerDistributorRepositoryInterface $powerDistributors = null,
         private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
+        // Digitale Stageboxen (Migration 152)
+        private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
     ) {
     }
 
@@ -156,6 +158,16 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $articleName = \App\Application\Cable\CableBuilder::suggestName($cableType, $cable, $this->cables->findConnectorById($cable->connectorAId), $this->cables->findConnectorById($cable->connectorBId));
         }
 
+        // Digitale Stagebox (Migration 152): Protokoll, Ein- und Ausgänge. Ohne
+        // Stagebox-Abschnitt im Formular (null) bleiben gespeicherte Angaben unverändert.
+        $stagebox = null;
+        $stageboxCategoryId = $this->digitalStageboxes !== null ? $this->categories->findDigitalStageboxCategoryId() : null;
+        $isStagebox = !$command->isBundle && $stageboxCategoryId !== null && $command->categoryId === $stageboxCategoryId;
+        if ($isStagebox && $command->digitalStagebox !== null) {
+            [$stageboxErrors, $stagebox] = (new \App\Application\DigitalStagebox\DigitalStageboxBuilder($this->digitalStageboxes))->build($article->id, $command->digitalStagebox);
+            $errors = array_merge($errors, $stageboxErrors);
+        }
+
         if ($isCableArticle) {
             unset($errors['protectionClass']); // Leitungen haben keine Schutzklasse
             if ($command->manufacturerId === '') {
@@ -214,6 +226,14 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             } elseif ($command->isBundle || ($command->cable !== null && !$isCable)) {
                 // Kategorie gewechselt oder Bundle: keine Leitung mehr.
                 $this->cables->deleteArticleCable($article->id);
+            }
+        }
+        if ($this->digitalStageboxes !== null) {
+            if ($stagebox !== null) {
+                $this->digitalStageboxes->saveArticleStagebox($stagebox);
+            } elseif ($stageboxCategoryId !== null && ($command->isBundle || !$isStagebox)) {
+                // Kategorie gewechselt oder Bundle: keine digitale Stagebox mehr.
+                $this->digitalStageboxes->deleteArticleStagebox($article->id);
             }
         }
         if ($this->bundleComponents !== null) {

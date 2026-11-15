@@ -348,6 +348,8 @@ final class ArticleController
         $viewData = [
             // "+ Neue Leitung" nur, wenn es die Kategorie "Leitungen" gibt (Migration 125).
             'hasCableCategory' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()) !== null,
+            // "+ Neue digitale Stagebox" nur mit Kategorie "Digitale Stagebox" (Migration 152).
+            'hasDigitalStageboxCategory' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()) !== null,
             'articles' => $result->items,
             'manufacturers' => $manufacturers,
             'categories' => $categories,
@@ -382,6 +384,7 @@ final class ArticleController
         $presetCategoryId = match (true) {
             $request->query('stromverteiler') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             $request->query('leitung') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
+            $request->query('stagebox') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             default => null,
         };
         $this->renderForm(null, [], $presetCategoryId !== null ? ['category_id' => $presetCategoryId] : []);
@@ -462,6 +465,7 @@ final class ArticleController
             documentShortText: $request->input('document_short_text', '') ?? '',
             powerDistributor: $this->powerDistributorFromRequest($request) ?: null,
             cable: $this->cableFromRequest($request),
+            digitalStagebox: $this->digitalStageboxFromRequest($request),
         );
 
         try {
@@ -555,6 +559,8 @@ final class ArticleController
             'powerDistributor' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\PowerDistributor\Query\GetPowerDistributor($detail->article->id)),
             // Leitungen (Migration 125)
             'cable' => $detail->article->isBundle ? null : $this->articleCable($detail->article->id),
+            // Digitale Stagebox (Migration 152)
+            'digitalStagebox' => $detail->article->isBundle ? null : $this->articleDigitalStagebox($detail->article->id),
             'editInventoryId' => $editInventoryId,
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
@@ -657,6 +663,7 @@ final class ArticleController
             documentShortText: $request->input('document_short_text', '') ?? '',
             powerDistributor: $this->powerDistributorFromRequest($request),
             cable: $this->cableFromRequest($request),
+            digitalStagebox: $this->digitalStageboxFromRequest($request),
         );
 
         try {
@@ -1275,6 +1282,10 @@ final class ArticleController
             'cable' => $article !== null && !$article->isBundle ? $this->articleCable($article->id) : null,
             'cableCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
             'cableSettings' => $this->cableSettings(),
+            // Digitale Stagebox (Migration 152): Protokoll, Ein- und Ausgänge direkt im Artikelformular.
+            'digitalStagebox' => $article !== null && !$article->isBundle ? $this->articleDigitalStagebox($article->id) : null,
+            'digitalStageboxCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
+            'digitalStageboxSettings' => $this->digitalStageboxSettings(),
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 
@@ -1316,6 +1327,12 @@ final class ArticleController
             'cable_length' => $command->cable?->length,
             'cable_connector_a' => $command->cable?->connectorAId,
             'cable_connector_b' => $command->cable?->connectorBId,
+            // Digitale Stagebox (Migration 152)
+            'stagebox_protocol_id' => $command->digitalStagebox?->protocolId,
+            'stagebox_inputs_xlr' => $command->digitalStagebox?->inputsXlr,
+            'stagebox_inputs_combo' => $command->digitalStagebox?->inputsCombo,
+            'stagebox_outputs_analog' => $command->digitalStagebox?->outputsAnalog,
+            'stagebox_outputs_aes' => $command->digitalStagebox?->outputsAes,
         ];
     }
 
@@ -1361,6 +1378,40 @@ final class ArticleController
             $request->input('cable_connector_a'),
             $request->input('cable_connector_b'),
         );
+    }
+
+    /** Angaben der digitalen Stagebox aus dem Artikelformular (Migration 152), null ohne diesen Abschnitt. */
+    private function digitalStageboxFromRequest(Request $request): ?\App\Application\DigitalStagebox\DigitalStageboxInput
+    {
+        if ($request->input('digital_stagebox_section') === null) {
+            return null;
+        }
+
+        return new \App\Application\DigitalStagebox\DigitalStageboxInput(
+            $request->input('stagebox_protocol_id'),
+            $request->input('stagebox_inputs_xlr'),
+            $request->input('stagebox_inputs_combo'),
+            $request->input('stagebox_outputs_analog'),
+            $request->input('stagebox_outputs_aes'),
+        );
+    }
+
+    private function articleDigitalStagebox(string $articleId): ?\App\Application\DigitalStagebox\Query\ArticleDigitalStageboxDetail
+    {
+        try {
+            return $this->queries->ask(new \App\Application\DigitalStagebox\Query\GetArticleDigitalStagebox($articleId));
+        } catch (\PDOException) {
+            return null; // Migration 152 noch nicht eingespielt
+        }
+    }
+
+    private function digitalStageboxSettings(): ?\App\Application\DigitalStagebox\Query\DigitalStageboxSettings
+    {
+        try {
+            return $this->queries->ask(new \App\Application\DigitalStagebox\Query\GetDigitalStageboxSettings());
+        } catch (\PDOException) {
+            return null;
+        }
     }
 
     private function articleCable(string $articleId): ?\App\Application\Cable\Query\ArticleCableDetail

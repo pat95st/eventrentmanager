@@ -489,6 +489,10 @@ final class RentalInsuranceListTest extends Unit
             {
                 return null;
             }
+            public function findDigitalStageboxCategoryId(): ?string
+            {
+                return null;
+            }
         };
     }
 }

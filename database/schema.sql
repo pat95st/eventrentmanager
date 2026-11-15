@@ -4422,6 +4422,10 @@ CREATE TABLE IF NOT EXISTS partner_requests (
 
 ALTER TABLE users ADD COLUMN onboarding_tour_completed_at DATETIME NULL AFTER dashboard_layout;
 
+-- --- 162_ai_ad_image_model.sql ------------------------------------------
+ALTER TABLE ai_ad_image_settings
+    ADD COLUMN image_model VARCHAR(100) NULL AFTER openai_api_key;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4605,4 +4609,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('158_minute_program_live_tracking.sql', NOW()),
     ('159_rental_power_planning.sql', NOW()),
     ('160_partner_instances.sql', NOW()),
-    ('161_onboarding_tour.sql', NOW());
+    ('161_onboarding_tour.sql', NOW()),
+    ('162_ai_ad_image_model.sql', NOW());

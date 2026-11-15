@@ -8,7 +8,8 @@ use App\Infrastructure\Integration\HttpJsonRequest;
 use CURLStringFile;
 
 /**
- * Dünner curl-Client für OpenAIs Bild-API (Modell "gpt-image-1"), analog zu
+ * Dünner curl-Client für OpenAIs Bild-API (Modell konfigurierbar, siehe
+ * App\Domain\Settings\AiAdImageSettings::effectiveImageModel()), analog zu
  * den übrigen direkten curl-Integrationen des Projekts (S3Client,
  * WebDavClient, HttpJsonRequest) — es gibt bewusst keine HTTP-Client-
  * Bibliothek (Guzzle o. Ä.) als Abhängigkeit.
@@ -28,13 +29,13 @@ use CURLStringFile;
  */
 final class OpenAiImageClient
 {
-    private const MODEL = 'gpt-image-1';
     private const GENERATIONS_URL = 'https://api.openai.com/v1/images/generations';
     private const EDITS_URL = 'https://api.openai.com/v1/images/edits';
+    private const MODELS_URL = 'https://api.openai.com/v1/models';
     private const TIMEOUT_SECONDS = 120; // Bildgenerierung dauert oft 10-30s, großzügiger Puffer
 
     /** @return string Base64-kodierte PNG-Bilddaten */
-    public function generateFromText(string $apiKey, string $prompt, string $size): string
+    public function generateFromText(string $apiKey, string $model, string $prompt, string $size): string
     {
         $response = HttpJsonRequest::send(
             method: 'POST',
@@ -44,7 +45,7 @@ final class OpenAiImageClient
                 'Content-Type' => 'application/json',
             ],
             jsonBody: [
-                'model' => self::MODEL,
+                'model' => $model,
                 'prompt' => $prompt,
                 'size' => $size,
                 'n' => 1,
@@ -56,7 +57,7 @@ final class OpenAiImageClient
     }
 
     /** @return string Base64-kodierte PNG-Bilddaten */
-    public function generateFromImage(string $apiKey, string $prompt, string $size, string $referenceImageBytes, string $referenceImageMimeType, string $referenceImageFilename): string
+    public function generateFromImage(string $apiKey, string $model, string $prompt, string $size, string $referenceImageBytes, string $referenceImageMimeType, string $referenceImageFilename): string
     {
         $ch = curl_init(self::EDITS_URL);
         if ($ch === false) {
@@ -72,7 +73,7 @@ final class OpenAiImageClient
                 'Authorization: Bearer ' . $apiKey,
             ],
             CURLOPT_POSTFIELDS => [
-                'model' => self::MODEL,
+                'model' => $model,
                 'prompt' => $prompt,
                 'size' => $size,
                 'n' => 1,
@@ -96,6 +97,39 @@ final class OpenAiImageClient
         $json = json_decode($raw, true);
 
         return $this->extractBase64Image(['status' => $status, 'json' => is_array($json) ? $json : null, 'raw' => $raw]);
+    }
+
+    /**
+     * Lists the image models available to the given API key (ids starting
+     * with "gpt-image" or "dall-e"), sorted descending so newer versions come first.
+     *
+     * @return list<string>
+     */
+    public function listImageModels(string $apiKey): array
+    {
+        $response = HttpJsonRequest::send(
+            method: 'GET',
+            url: self::MODELS_URL,
+            headers: ['Authorization' => 'Bearer ' . $apiKey],
+            timeoutSeconds: 10,
+        );
+
+        if ($response['status'] < 200 || $response['status'] >= 300) {
+            $message = $response['json']['error']['message'] ?? $response['raw'];
+            throw new OpenAiImageException('OpenAI meldet einen Fehler (HTTP ' . $response['status'] . '): ' . $message);
+        }
+
+        $models = [];
+        foreach ($response['json']['data'] ?? [] as $entry) {
+            $id = is_array($entry) ? ($entry['id'] ?? null) : null;
+            if (is_string($id) && preg_match('/^(gpt-image|dall-e)/', $id) === 1) {
+                $models[] = $id;
+            }
+        }
+        $models = array_values(array_unique($models));
+        rsort($models, SORT_NATURAL);
+
+        return $models;
     }
 
     /** @param array{status: int, json: array<string, mixed>|null, raw: string} $response */

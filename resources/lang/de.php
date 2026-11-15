@@ -389,7 +389,7 @@ return [
     'articles.show.confirm_delete_pre_issue_check' => 'Diesen Vor-Ausgabe-Check löschen?',
 
     'articles.show.ad_images_title' => 'Werbebilder (KI-generiert)',
-    'articles.show.ad_images_hint' => 'Generiert mit OpenAI (gpt-image-1) Werbebilder für Social Media, z. B. Instagram. Nutzt bevorzugt ein vorhandenes Artikelfoto als Vorlage. Zugangsdaten unter {link}.',
+    'articles.show.ad_images_hint' => 'Generiert mit OpenAI Werbebilder für Social Media, z. B. Instagram. Nutzt bevorzugt ein vorhandenes Artikelfoto als Vorlage. Zugangsdaten unter {link}.',
     'articles.show.ad_images_settings_link' => 'Einstellungen > KI-Werbebilder',
     'articles.show.ad_images_none' => 'Noch keine Werbebilder generiert.',
     'articles.show.ad_images_format' => 'Format',
@@ -2462,12 +2462,16 @@ return [
     'settings.messaging.error.unknown_channel' => 'Unbekannter Nachrichtendienst.',
 
     'settings.ai_ad_images.title' => 'KI-Werbebilder',
-    'settings.ai_ad_images.subtitle' => 'Zugangsdaten für den KI-Werbebildgenerator auf den Artikelseiten (nutzt OpenAI gpt-image-1).',
+    'settings.ai_ad_images.subtitle' => 'Zugangsdaten für den KI-Werbebildgenerator auf den Artikelseiten (nutzt die Bild-Modelle von OpenAI).',
     'settings.ai_ad_images.field.openai_api_key' => 'OpenAI-API-Key',
     'settings.ai_ad_images.field.token_placeholder' => '•••••••• (unverändert übernehmen)',
     'settings.ai_ad_images.field.openai_api_key_configured' => 'Ein API-Key ist hinterlegt. Leer lassen, um ihn unverändert zu übernehmen.',
     'settings.ai_ad_images.field.openai_api_key_hint' => 'Zu finden unter platform.openai.com im Bereich "API keys".',
-    'settings.ai_ad_images.hint' => 'Anthropic/Claude bietet keine Bildgenerierung an — die Werbebilder werden daher über OpenAIs Bild-Modell "gpt-image-1" erzeugt. Wird auf den Artikelseiten im Bereich "Werbebilder" genutzt.',
+    'settings.ai_ad_images.hint' => 'Anthropic/Claude bietet keine Bildgenerierung an — die Werbebilder werden daher über ein Bild-Modell von OpenAI erzeugt (oben auswählbar). Wird auf den Artikelseiten im Bereich "Werbebilder" genutzt.',
+    'settings.ai_ad_images.field.image_model' => 'Bild-Modell',
+    'settings.ai_ad_images.field.image_model_hint' => 'Leer lassen für den Standard ({default}). Ein Modellname aus der Vorschlagsliste oder ein beliebiger anderer OpenAI-Modellname.',
+    'settings.ai_ad_images.field.image_model_from_api' => 'Für diesen API-Key verfügbar: {models}.',
+    'settings.ai_ad_images.field.image_model_list_failed' => 'Die Modellliste konnte nicht von OpenAI abgerufen werden: {error}',
     'settings.ai_ad_images.flash.saved' => 'KI-Werbebild-Einstellungen wurden gespeichert.',
 
     'settings.messaging_templates.title' => 'Nachrichtendienste-Vorlagen',

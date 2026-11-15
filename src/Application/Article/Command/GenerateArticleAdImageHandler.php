@@ -41,6 +41,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
         private readonly LocalFileStorage $fileStorage,
         private readonly AiAdImageSettingsRepositoryInterface $settingsRepository,
         private readonly OpenAiImageClient $openAiImageClient,
+        private readonly ArticleAdImagePromptBuilder $promptBuilder = new ArticleAdImagePromptBuilder(),
     ) {
     }
 
@@ -91,7 +92,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
 
         try {
             if ($sourceImage !== null) {
-                $prompt = $this->buildEditPrompt($article, $manufacturer?->name, $category?->name, $additionalInstructions);
+                $prompt = $this->promptBuilder->build($article, $manufacturer, $category, true, $command->includeArticleName, $command->includeProperties, $additionalInstructions);
 
                 $absolutePath = $this->fileStorage->absolutePath('articles', $sourceImage->filePath);
                 $referenceBytes = file_get_contents($absolutePath);
@@ -111,7 +112,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
                     count: $command->count,
                 );
             } else {
-                $prompt = $this->buildGenerationPrompt($article, $manufacturer?->name, $category?->name, $additionalInstructions);
+                $prompt = $this->promptBuilder->build($article, $manufacturer, $category, false, $command->includeArticleName, $command->includeProperties, $additionalInstructions);
 
                 $base64Images = $this->openAiImageClient->generateFromText(
                     apiKey: $settings->openaiApiKey,
@@ -159,56 +160,6 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
         }
 
         return $ids;
-    }
-
-    private function buildGenerationPrompt(\App\Domain\Article\Article $article, ?string $manufacturerName, ?string $categoryName, ?string $additionalInstructions): string
-    {
-        $details = $this->productDetailsText($article, $manufacturerName, $categoryName);
-
-        $prompt = 'Erstelle ein professionelles, hochwertiges Werbebild für Social Media (z. B. Instagram) für folgendes '
-            . 'Produkt aus einem Veranstaltungstechnik-Verleih: ' . $details . ' '
-            . 'Stil: realistische, moderne Produktfotografie mit ansprechender Beleuchtung und einem leicht abgedunkelten, '
-            . 'stimmungsvollen Bühnen- oder Veranstaltungshintergrund (z. B. Lichtstrahlen, Bokeh), das Produkt steht klar im Fokus. '
-            . 'Keine Logos, kein Text und keine Wasserzeichen im Bild.';
-
-        if ($additionalInstructions !== null) {
-            $prompt .= ' Zusätzliche Anweisungen: ' . $additionalInstructions;
-        }
-
-        return $prompt;
-    }
-
-    private function buildEditPrompt(\App\Domain\Article\Article $article, ?string $manufacturerName, ?string $categoryName, ?string $additionalInstructions): string
-    {
-        $details = $this->productDetailsText($article, $manufacturerName, $categoryName);
-
-        $prompt = 'Style dieses Produktfoto zu einem professionellen Werbebild für Social Media (z. B. Instagram) um. '
-            . 'Es zeigt folgendes Produkt aus einem Veranstaltungstechnik-Verleih: ' . $details . ' '
-            . 'Behalte das Produkt und sein Erscheinungsbild exakt bei, verändere nur Hintergrund, Beleuchtung und Stimmung: '
-            . 'ein moderner, stimmungsvoller Bühnen- oder Veranstaltungshintergrund (z. B. Lichtstrahlen, Bokeh). '
-            . 'Keine Logos, kein Text und keine Wasserzeichen im Bild.';
-
-        if ($additionalInstructions !== null) {
-            $prompt .= ' Zusätzliche Anweisungen: ' . $additionalInstructions;
-        }
-
-        return $prompt;
-    }
-
-    private function productDetailsText(\App\Domain\Article\Article $article, ?string $manufacturerName, ?string $categoryName): string
-    {
-        $parts = [$article->name];
-        if ($manufacturerName !== null) {
-            $parts[] = 'Hersteller: ' . $manufacturerName;
-        }
-        if ($categoryName !== null) {
-            $parts[] = 'Kategorie: ' . $categoryName;
-        }
-        if ($article->description !== null && trim($article->description) !== '') {
-            $parts[] = 'Beschreibung: ' . trim($article->description);
-        }
-
-        return implode('. ', $parts) . '.';
     }
 
     private function nullIfEmpty(?string $value): ?string

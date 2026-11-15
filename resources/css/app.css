@@ -246,6 +246,28 @@ input[type="week"],
 input[type="time"] {
   cursor: pointer;
 }
+/* iOS Safari: native date/time inputs keep an intrinsic minimum width and
+   ignore width: 100%, so they overflow their container on narrow screens.
+   They also render centered and taller than text inputs. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value,
+input[type="month"]::-webkit-date-and-time-value,
+input[type="week"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-height: 1.25rem;
+  margin: 0;
+}
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 input[type="month"]::-webkit-calendar-picker-indicator,

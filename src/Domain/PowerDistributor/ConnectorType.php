@@ -50,6 +50,18 @@ enum ConnectorType: string
         return in_array($this, [self::CeeRed16, self::CeeRed32, self::CeeRed63, self::CeeRed125], true);
     }
 
+    /** Rated current per phase in ampere (load limit of the connector). */
+    public function ratedCurrentA(): int
+    {
+        return match ($this) {
+            self::CeeRed16, self::CeeBlue16, self::Schuko, self::PowerconTrue1 => 16,
+            self::Powercon => 20,
+            self::CeeRed32, self::CeeBlue32 => 32,
+            self::CeeRed63, self::CeeBlue63 => 63,
+            self::CeeRed125 => 125,
+        };
+    }
+
     /** Farbe für die Darstellung (Tailwind-unabhängig, als CSS-Farbe). */
     public function color(): string
     {

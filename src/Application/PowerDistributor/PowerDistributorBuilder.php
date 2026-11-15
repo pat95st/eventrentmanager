@@ -177,6 +177,11 @@ final class PowerDistributorBuilder
 
         $outlets = [];
         $position = 0;
+        // Existing outlets keep their ID (power plans of events refer to it).
+        $existingOutletIds = [];
+        foreach ($existing?->outlets ?? [] as $outlet) {
+            $existingOutletIds[$outlet->id] = true;
+        }
         foreach (array_values($input->outlets) as $i => $raw) {
             $connector = ConnectorType::tryFrom((string) ($raw['connector_type'] ?? ''));
             if ($connector === null) {
@@ -216,7 +221,10 @@ final class PowerDistributorBuilder
                     }
                 }
             }
-            $outlets[] = new Outlet(Uuid::v4(), $connector, $quantity, $label !== '' ? $label : null, $deviceId, $position++, $phase);
+            $outletKey = trim((string) ($raw['key'] ?? ''));
+            $outletId = isset($existingOutletIds[$outletKey]) ? $outletKey : Uuid::v4();
+            unset($existingOutletIds[$outletKey]);
+            $outlets[] = new Outlet($outletId, $connector, $quantity, $label !== '' ? $label : null, $deviceId, $position++, $phase);
         }
 
         if ($deviceErrors !== []) {

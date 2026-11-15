@@ -218,6 +218,12 @@ $availabilityStatusMeta = [
                     <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.weight')) ?><?= $article->isBundle ? ' (' . e(t('articles.show.weight_calculated')) . ')' : '' ?></dt>
                     <dd class="font-mono text-slate-800 dark:text-slate-200"><?= $article->weightValue !== null ? e($article->weightValue . ' ' . $article->weightUnit) : '–' ?></dd>
                 </div>
+                <?php if (($inputPowerW ?? null) !== null): ?>
+                <div>
+                    <dt class="text-xs text-slate-400 dark:text-slate-500">Eingangsleistung</dt>
+                    <dd class="font-mono text-slate-800 dark:text-slate-200"><?= e(number_format((int) $inputPowerW, 0, ',', '.') . ' W') ?> <span class="font-sans text-xs text-slate-400 dark:text-slate-500">(≈ <?= e(number_format($inputPowerW / 230, 1, ',', '.')) ?> A bei 230 V)</span></dd>
+                </div>
+                <?php endif; ?>
                 <div>
                     <dt class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.dimensions')) ?></dt>
                     <dd class="font-mono text-slate-800 dark:text-slate-200"><?= e($article->dimensions ?? '–') ?></dd>

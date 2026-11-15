@@ -38,7 +38,7 @@ use function App\Infrastructure\Http\e;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($racks as $detail): ?>
                     <?php $rack = $detail->rack; ?>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" data-row-link="/racks/<?= e($rack->id) ?>">
                         <td class="px-4 py-3">
                             <a href="/racks/<?= e($rack->id) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($rack->name) ?></a>
                             <?php if ($detail->manufacturer !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400"><?= e($detail->manufacturer->name) ?></div><?php endif; ?>

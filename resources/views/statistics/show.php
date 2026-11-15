@@ -76,7 +76,7 @@ foreach ($chart->columns as $i => $_) {
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($chart->rows as $r => $row): ?>
                     <?php $link = $chart->links[$r] ?? null; $isTotal = $row[0] === 'Summe'; ?>
-                    <tr class="<?= $isTotal ? 'font-semibold' : 'hover:bg-slate-50 dark:hover:bg-slate-800' ?>">
+                    <tr class="<?= $isTotal ? 'font-semibold' : 'hover:bg-slate-50 dark:hover:bg-slate-800' ?><?= !$isTotal && $link !== null ? ' cursor-pointer' : '' ?>"<?php if (!$isTotal && $link !== null): ?> data-row-link="<?= e($link) ?>"<?php endif; ?>>
                         <?php foreach ($row as $i => $cell): ?>
                             <td class="px-4 py-2 <?= ($numeric[$i] ?? false) ? 'whitespace-nowrap text-right' : '' ?> text-slate-700 dark:text-slate-300" style="font-variant-numeric:tabular-nums">
                                 <?php if ($i === 0 && $link !== null): ?>

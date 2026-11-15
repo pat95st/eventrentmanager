@@ -41,7 +41,7 @@ use function App\Infrastructure\Http\t;
                 <?php foreach ($sales as $entry): ?>
                     <?php $sale = $entry->sale; ?>
                     <?php $margin = $sale->marginAmount(); ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/rechnungen/<?= e($sale->invoiceId) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/rechnungen/<?= e($sale->invoiceId) ?>">
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($sale->soldAt->format('d.m.Y')) ?></td>
                         <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                             <?= e($entry->displayName()) ?>

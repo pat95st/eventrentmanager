@@ -124,7 +124,8 @@ $modeLabels = [AccountPeriod::MONTH => 'Monat', AccountPeriod::YEAR => 'Jahr', A
                     <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">Keine Buchungen im Zeitraum <?= e($period->label()) ?>.</td></tr>
                 <?php endif; ?>
                 <?php foreach ($rows as $row): $t = $row['transaction']; ?>
-                    <tr>
+                    <?php $rowLink = $t->receiptId !== null ? '/belege/' . $t->receiptId : ($t->invoiceId !== null ? '/rechnungen/' . $t->invoiceId : null); ?>
+                    <tr<?php if ($rowLink !== null): ?> class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="<?= e($rowLink) ?>"<?php endif; ?>>
                         <td class="acct-num px-4 py-2 text-slate-600 dark:text-slate-400"><?= e($t->bookingDate->format('d.m.Y')) ?></td>
                         <td class="px-4 py-2">
                             <span class="text-slate-900 dark:text-slate-100">

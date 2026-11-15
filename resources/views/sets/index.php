@@ -28,7 +28,7 @@ use function App\Infrastructure\Http\t;
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($sets as $detail): ?>
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/sets/<?= e($detail->set->id) ?>">
                         <td class="px-4 py-2">
                             <a href="/sets/<?= e($detail->set->id) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($detail->set->name) ?></a>
                             <?php if (!$detail->set->isActive): ?><span class="ml-1 text-xs text-slate-400"><?= e(t('sets.inactive')) ?></span><?php endif; ?>

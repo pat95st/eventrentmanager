@@ -6,7 +6,7 @@ namespace App\Domain\Cable;
 
 /**
  * Additional details of a cable whose type is an analog multicore
- * (migration 156): number of sends and returns, whether it is wound on a
+ * (migration 157): number of sends and returns, whether it is wound on a
  * cable drum and whether it uses Harting connectors.
  */
 final class CableMulticore

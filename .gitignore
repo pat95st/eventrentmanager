@@ -19,3 +19,5 @@ var/phpstan/
 /tests/_support/_generated/
 /tests/_output/*
 !/tests/_output/.gitkeep
+# Cron-Logs (z. B. automatische Sicherung, siehe Einstellungen → Sicherung)
+/storage/logs/

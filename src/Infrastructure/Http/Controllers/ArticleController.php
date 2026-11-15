@@ -352,7 +352,7 @@ final class ArticleController
             'hasDigitalStageboxCategory' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()) !== null,
             // "New article > Mixing console" only with category "Tonmischpult" (migration 154).
             'hasMixingConsoleCategory' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()) !== null,
-            // "New article > Analog multicore" only if a multicore cable type exists (migration 156).
+            // "New article > Analog multicore" only if a multicore cable type exists (migration 157).
             'hasAnalogMulticoreCableType' => $this->firstAnalogMulticoreCableTypeId() !== null,
             'articles' => $result->items,
             'manufacturers' => $manufacturers,
@@ -394,7 +394,7 @@ final class ArticleController
             default => null,
         };
         $preset = $presetCategoryId !== null ? ['category_id' => $presetCategoryId] : [];
-        // "New article > Analog multicore" (migration 156): cable form with the first multicore cable type preselected.
+        // "New article > Analog multicore" (migration 157): cable form with the first multicore cable type preselected.
         if ($presetCategoryId !== null && $request->query('multicore') === '1') {
             $multicoreTypeId = $this->firstAnalogMulticoreCableTypeId();
             if ($multicoreTypeId !== null) {
@@ -1410,7 +1410,7 @@ final class ArticleController
             'cable_length' => $command->cable?->length,
             'cable_connector_a' => $command->cable?->connectorAId,
             'cable_connector_b' => $command->cable?->connectorBId,
-            // Analog multicore (migration 156)
+            // Analog multicore (migration 157)
             'multicore_sends' => $command->cable?->multicoreSends,
             'multicore_returns' => $command->cable?->multicoreReturns,
             'multicore_on_drum' => $command->cable?->multicoreOnDrum,
@@ -1467,7 +1467,7 @@ final class ArticleController
             $request->input('cable_length'),
             $request->input('cable_connector_a'),
             $request->input('cable_connector_b'),
-            // Analog multicore (migration 156)
+            // Analog multicore (migration 157)
             $request->input('multicore_sends'),
             $request->input('multicore_returns'),
             $request->input('multicore_on_drum') !== null,
@@ -1581,7 +1581,7 @@ final class ArticleController
         }
     }
 
-    /** First cable type marked as analog multicore (migration 156), if any. */
+    /** First cable type marked as analog multicore (migration 157), if any. */
     private function firstAnalogMulticoreCableTypeId(): ?string
     {
         foreach ($this->cableSettings()?->types ?? [] as $cableType) {

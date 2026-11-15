@@ -22,7 +22,7 @@ final class CableType
         public ?ProtectionClass $protectionClass,
         public array $connectorIds,
         public int $sortOrder = 0,
-        // Migration 156: cables of this type are analog multicores (sends, returns, drum, Harting).
+        // Migration 157: cables of this type are analog multicores (sends, returns, drum, Harting).
         public bool $isAnalogMulticore = false,
     ) {
     }

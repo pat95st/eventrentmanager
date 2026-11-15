@@ -1,4 +1,4 @@
--- Migration 156: Analoge Multicores in der Leitungsverwaltung (Nutzerwunsch).
+-- Migration 157: Analoge Multicores in der Leitungsverwaltung (Nutzerwunsch).
 -- Ein Leitungstyp kann als "analoges Multicore" markiert werden
 -- (cable_types.is_analog_multicore). Leitungen dieses Typs haben neben
 -- Länge und Steckverbindern (article_cables) die Anzahl Sends und Returns,

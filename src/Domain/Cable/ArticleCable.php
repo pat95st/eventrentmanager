@@ -6,7 +6,7 @@ namespace App\Domain\Cable;
 
 /**
  * Leitungsangaben eines Artikels (Migration 125): Typ, Länge, zwei Steckverbinder.
- * Analog multicores (migration 156) additionally carry sends/returns, drum and Harting flags.
+ * Analog multicores (migration 157) additionally carry sends/returns, drum and Harting flags.
  */
 final class ArticleCable
 {

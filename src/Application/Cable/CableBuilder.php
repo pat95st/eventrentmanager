@@ -14,7 +14,7 @@ use App\Domain\Cable\ConnectorType;
  * Prüft die Leitungsangaben eines Artikels (Migration 125): Leitungstyp,
  * Länge (0,1–1000 m) und zwei Steckverbinder, die für diesen Leitungstyp
  * erlaubt sind (Einstellungen › Leitungen).
- * For analog multicore types (migration 156) also sends and returns
+ * For analog multicore types (migration 157) also sends and returns
  * (0–999 each, at least one channel), drum and Harting flags.
  */
 final class CableBuilder

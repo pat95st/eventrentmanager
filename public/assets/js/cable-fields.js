@@ -3,7 +3,7 @@
 // - bietet je Leitungstyp nur die erlaubten Steckverbinder an,
 // - übernimmt die Vorgabe des Leitungstyps zur Elektroprüfung/Schutzklasse,
 // - schlägt den Produktnamen aus Typ, Länge und Steckverbindern vor,
-// - shows the analog multicore fields for multicore cable types (migration 156).
+// - shows the analog multicore fields for multicore cable types (migration 157).
 (function () {
   'use strict';
 

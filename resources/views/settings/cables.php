@@ -98,7 +98,7 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
 </section>
 
 <script>
-    // Analog multicores never need an electrical inspection (migration 156).
+    // Analog multicores never need an electrical inspection (migration 157).
     document.querySelectorAll('[data-cable-type-flags]').forEach(function (flags) {
         var multicore = flags.querySelector('[data-multicore-flag]');
         var inspection = flags.querySelector('[data-inspection-flag]');

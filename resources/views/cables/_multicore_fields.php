@@ -1,6 +1,6 @@
 <?php
 /**
- * Analog multicore fields of a cable (migration 156). Only shown (by
+ * Analog multicore fields of a cable (migration 157). Only shown (by
  * cable-fields.js) when the selected cable type is an analog multicore.
  *
  * @var \App\Domain\Cable\CableMulticore|null $multicore saved details

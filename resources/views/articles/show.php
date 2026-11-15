@@ -322,7 +322,7 @@ $availabilityStatusMeta = [
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Seite B</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($cable->connectorB?->name ?? '–') ?></dd></div>
                     <?php if ($cable->cable->multicore !== null && ($cable->type?->isAnalogMulticore ?? false)): ?>
                         <?php $cableMulticore = $cable->cable->multicore; ?>
-                        <!-- Analog multicore (migration 156) -->
+                        <!-- Analog multicore (migration 157) -->
                         <div><dt class="text-xs text-slate-500 dark:text-slate-400">Sends</dt><dd class="text-slate-800 dark:text-slate-200"><?= e((string) $cableMulticore->sends) ?></dd></div>
                         <div><dt class="text-xs text-slate-500 dark:text-slate-400">Returns</dt><dd class="text-slate-800 dark:text-slate-200"><?= e((string) $cableMulticore->returns) ?></dd></div>
                         <div><dt class="text-xs text-slate-500 dark:text-slate-400">Auf Trommel</dt><dd class="text-slate-800 dark:text-slate-200"><?= $cableMulticore->onDrum ? 'ja' : 'nein' ?></dd></div>

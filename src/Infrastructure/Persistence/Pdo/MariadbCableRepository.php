@@ -184,7 +184,7 @@ final class MariadbCableRepository implements CableRepositoryInterface
             'connector_b_id' => $cable->connectorBId,
         ]);
 
-        // Analog multicore details (migration 156): stored only for multicore cable types.
+        // Analog multicore details (migration 157): stored only for multicore cable types.
         if ($cable->multicore === null) {
             $this->pdo->prepare('DELETE FROM article_cable_multicores WHERE article_id = :id')->execute(['id' => $cable->articleId]);
 

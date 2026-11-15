@@ -51,6 +51,7 @@ final class EmailInvoicePdfHandler implements CommandHandlerInterface
         private readonly MailerInterface $mailer,
         private readonly EmailTemplateRenderer $templateRenderer,
         private readonly DocumentStoragePusher $documentStoragePusher,
+        private readonly ?\App\Application\OnlinePayment\InvoicePaymentLinkProvider $paymentLinks = null,
     ) {
     }
 
@@ -143,6 +144,26 @@ final class EmailInvoicePdfHandler implements CommandHandlerInterface
             'invoice_number' => e($invoice->invoiceNumber ?? ''),
             'due_date' => $invoice->dueDate !== null ? e($invoice->dueDate->format('d.m.Y')) : '',
             'note_html' => $noteHtml,
+            'payment_link_html' => $this->paymentLinkHtml($detail),
         ];
+    }
+
+    /**
+     * Link to the public online payment page (PayPal/SumUp, migration 161),
+     * only for invoices still awaiting payment and only if online payment is
+     * set up (provider + base URL); otherwise empty.
+     */
+    private function paymentLinkHtml(InvoiceDetail $detail): string
+    {
+        if ($this->paymentLinks === null || $detail->invoice->status !== \App\Domain\Invoice\InvoiceStatus::Sent) {
+            return '';
+        }
+
+        $url = $this->paymentLinks->publicUrlFor($detail->invoice->id);
+        if ($url === null) {
+            return '';
+        }
+
+        return '<p>Sie können die Rechnung bequem online bezahlen (PayPal bzw. Karte):<br><a href="' . e($url) . '">' . e($url) . '</a></p>';
     }
 }

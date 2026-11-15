@@ -321,6 +321,20 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Basis-URL unter *Einstellungen › Integrationen* gesetzt und von der
   anderen Instanz aus erreichbar sein. Protokoll und Details:
   `docs/partner-instanzen-api.md`.
+- **Online-Zahlung per PayPal oder SumUp** (Migration 161): unter
+  *Einstellungen › Online-Zahlung* lassen sich PayPal (REST-App: Client-ID +
+  Secret, wahlweise Sandbox) und SumUp (API-Schlüssel + Händlercode, Bezahlung
+  per Karte/Apple Pay/Google Pay über die SumUp-Bezahlseite) aktivieren. Jede
+  versendete Rechnung bekommt dann einen geheimen Zahlungslink
+  `/zahlung/{token}` (ohne Login erreichbar), der auf der Rechnungs-
+  Detailseite angezeigt und über den Platzhalter `{{payment_link_html}}`
+  automatisch in die Rechnungs-E-Mail eingefügt wird. Der Betrag wird immer
+  serverseitig berechnet (Brutto inkl. ausgestellter Rechnungskorrekturen).
+  Nach der Rückkehr vom Anbieter bzw. per SumUp-Webhook
+  (`/api/payments/sumup/webhook`) fragt die Anwendung den Zahlungsstatus beim
+  Anbieter ab und markiert die Rechnung bei vollständiger Zahlung automatisch
+  als bezahlt; alle Zahlungsversuche erscheinen auf der Rechnungs-
+  Detailseite. Voraussetzung: Basis-URL unter *Einstellungen › Integrationen*.
 - **Seitentitel**: jede Funktionsseite setzt einen passenden HTML-`<title>`
   nach dem Schema „(Funktionalität) - Materialverleih Verwaltung“
   (`View::page()`/`resources/views/layout.php`).

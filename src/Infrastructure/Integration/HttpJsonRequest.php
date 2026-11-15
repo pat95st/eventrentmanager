@@ -24,6 +24,18 @@ final class HttpJsonRequest
      */
     public static function send(string $method, string $url, array $headers = [], ?array $jsonBody = null, int $timeoutSeconds = 20): array
     {
+        return self::sendRaw($method, $url, $headers, $jsonBody !== null ? json_encode($jsonBody, JSON_THROW_ON_ERROR) : null, $timeoutSeconds);
+    }
+
+    /**
+     * Same as send(), but with an already encoded request body (e.g. a
+     * form-encoded OAuth token request or a JSON object "{}").
+     *
+     * @param array<string, string> $headers
+     * @return array{status: int, json: array<string, mixed>|null, raw: string}
+     */
+    public static function sendRaw(string $method, string $url, array $headers = [], ?string $body = null, int $timeoutSeconds = 20): array
+    {
         $ch = curl_init($url);
         if ($ch === false) {
             throw new RuntimeException('curl konnte nicht initialisiert werden.');
@@ -42,8 +54,8 @@ final class HttpJsonRequest
             CURLOPT_HTTPHEADER => $headerLines,
         ]);
 
-        if ($jsonBody !== null) {
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($jsonBody, JSON_THROW_ON_ERROR));
+        if ($body !== null) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
         }
 
         $raw = curl_exec($ch);

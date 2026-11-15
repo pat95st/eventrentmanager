@@ -1120,6 +1120,26 @@ $commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::
 $invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $xRechnungGenerator = new XRechnungGenerator();
 $getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver, setContents: $setContentsResolver);
+// --- Online payment via PayPal / SumUp (migration 161) -------------------
+$onlinePaymentSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOnlinePaymentSettingsRepository($pdo);
+$invoicePaymentLinkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoicePaymentLinkRepository($pdo);
+$onlinePaymentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOnlinePaymentRepository($pdo);
+$paymentGatewayRegistry = new \App\Application\OnlinePayment\PaymentGatewayRegistry(
+    new \App\Infrastructure\Integration\Payment\PayPalGateway(),
+    new \App\Infrastructure\Integration\Payment\SumUpGateway(),
+);
+$payableInvoiceLookup = new \App\Application\OnlinePayment\InvoicePayableInvoiceLookup($getInvoiceHandler, $invoiceSettingsRepository, $invoiceCorrectionRepository);
+$invoicePaymentUrlBuilder = new \App\Application\OnlinePayment\InvoicePaymentUrlBuilder($integrationBaseSettingsRepository);
+$invoicePaymentLinkProvider = new \App\Application\OnlinePayment\InvoicePaymentLinkProvider($invoicePaymentLinkRepository, $onlinePaymentSettingsRepository, $invoicePaymentUrlBuilder);
+$commandBus->register(\App\Application\OnlinePayment\Command\StartInvoiceOnlinePayment::class, new \App\Application\OnlinePayment\Command\StartInvoiceOnlinePaymentHandler($invoicePaymentLinkRepository, $payableInvoiceLookup, $onlinePaymentSettingsRepository, $onlinePaymentRepository, $paymentGatewayRegistry, $invoicePaymentUrlBuilder, $companySettingsRepository));
+$commandBus->register(\App\Application\OnlinePayment\Command\ConfirmInvoiceOnlinePayment::class, new \App\Application\OnlinePayment\Command\ConfirmInvoiceOnlinePaymentHandler($onlinePaymentRepository, $onlinePaymentSettingsRepository, $paymentGatewayRegistry, $invoiceRepository));
+$commandBus->register(\App\Application\OnlinePayment\Command\CancelInvoiceOnlinePayment::class, new \App\Application\OnlinePayment\Command\CancelInvoiceOnlinePaymentHandler($invoicePaymentLinkRepository, $onlinePaymentRepository));
+$commandBus->register(\App\Application\OnlinePayment\Command\UpdateOnlinePaymentSettings::class, new \App\Application\OnlinePayment\Command\UpdateOnlinePaymentSettingsHandler($onlinePaymentSettingsRepository));
+$commandBus->register(\App\Application\OnlinePayment\Command\RemoveOnlinePaymentSecret::class, new \App\Application\OnlinePayment\Command\RemoveOnlinePaymentSecretHandler($onlinePaymentSettingsRepository));
+$queryBus->register(\App\Application\OnlinePayment\Query\GetOnlinePaymentSettings::class, new \App\Application\OnlinePayment\Query\GetOnlinePaymentSettingsHandler($onlinePaymentSettingsRepository));
+$queryBus->register(\App\Application\OnlinePayment\Query\GetInvoicePaymentPage::class, new \App\Application\OnlinePayment\Query\GetInvoicePaymentPageHandler($invoicePaymentLinkRepository, $payableInvoiceLookup, $onlinePaymentSettingsRepository, $onlinePaymentRepository, $companySettingsRepository));
+$queryBus->register(\App\Application\OnlinePayment\Query\GetInvoiceOnlinePayments::class, new \App\Application\OnlinePayment\Query\GetInvoiceOnlinePaymentsHandler($onlinePaymentRepository));
+
 $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, new EmailInvoicePdfHandler(
     $getInvoiceHandler,
     $companySettingsRepository,
@@ -1133,6 +1153,7 @@ $commandBus->register(\App\Application\Invoice\Command\EmailInvoicePdf::class, n
     $mailer,
     $emailTemplateRenderer,
     $documentStoragePusher,
+    $invoicePaymentLinkProvider,
 ));
 
 $commandBus->register(\App\Application\Invoice\Command\SendInvoiceSentViaMessaging::class, new \App\Application\Invoice\Command\SendInvoiceSentViaMessagingHandler(
@@ -1774,7 +1795,9 @@ $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedem
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
 $offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository, $rentalRepository, $customerRepository);
 $orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator, $rentalRepository, $customerRepository);
-$invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository, $userRepository);
+$invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository, $userRepository, $invoicePaymentLinkProvider);
+$invoicePaymentController = new \App\Infrastructure\Http\Controllers\InvoicePaymentController($queryBus, $commandBus);
+$onlinePaymentSettingsController = new \App\Infrastructure\Http\Controllers\OnlinePaymentSettingsController($commandBus, $queryBus, $invoicePaymentUrlBuilder);
 $bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository, $bankAccountRepository);
 $invoiceSettingsController = new InvoiceSettingsController($commandBus, $queryBus);
 $numberingSettingsController = new DocumentNumberingSettingsController($commandBus, $queryBus);
@@ -2648,6 +2671,13 @@ $router->post('/einstellungen/integrationen/datev/export', $auth->guard(Permissi
 $router->get('/produkte/{id}/bild', [$publicProductController, 'image']);
 $router->get('/produkte/{id}', [$publicProductController, 'show']);
 
+// Public invoice payment page (no login), see InvoicePaymentController (migration 161).
+$router->get('/zahlung/{token}', [$invoicePaymentController, 'show']);
+$router->get('/zahlung/{token}/abbrechen', [$invoicePaymentController, 'cancel']);
+$router->post('/zahlung/{token}/{provider}', [$invoicePaymentController, 'start']);
+$router->get('/zahlung/{token}/{provider}/zurueck', [$invoicePaymentController, 'returnFromProvider']);
+$router->post('/api/payments/sumup/webhook', [$invoicePaymentController, 'sumUpWebhook']);
+
 // Öffentlich (kein Login), siehe CustomerChecklistController-Docblock.
 $router->get('/kundencheckliste/{token}', [$customerChecklistController, 'show']);
 $router->post('/kundencheckliste/{token}/{item}', [$customerChecklistController, 'toggle']);
@@ -2699,6 +2729,9 @@ $router->get('/einstellungen/bankverbindungen/{id}/bearbeiten', $auth->guard(Per
 $router->post('/einstellungen/bankverbindungen', $auth->guard(Permission::Administration, [$bankAccountSettingsController, 'store']));
 $router->post('/einstellungen/bankverbindungen/{id}', $auth->guard(Permission::Administration, [$bankAccountSettingsController, 'update']));
 $router->post('/einstellungen/bankverbindungen/{id}/loeschen', $auth->guard(Permission::Administration, [$bankAccountSettingsController, 'destroy']));
+$router->get('/einstellungen/online-zahlung', $auth->guard(Permission::Administration, [$onlinePaymentSettingsController, 'edit']));
+$router->post('/einstellungen/online-zahlung', $auth->guard(Permission::Administration, [$onlinePaymentSettingsController, 'update']));
+$router->post('/einstellungen/online-zahlung/{provider}/zugangsdaten/loeschen', $auth->guard(Permission::Administration, [$onlinePaymentSettingsController, 'removeSecret']));
 $router->get('/einstellungen/zahlungsarten', $auth->guard(Permission::Administration, [$paymentMethodSettingsController, 'index']));
 $router->get('/einstellungen/zahlungsarten/{id}/bearbeiten', $auth->guard(Permission::Administration, [$paymentMethodSettingsController, 'edit']));
 $router->post('/einstellungen/zahlungsarten', $auth->guard(Permission::Administration, [$paymentMethodSettingsController, 'store']));

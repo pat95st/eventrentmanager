@@ -116,6 +116,7 @@ enum EmailTemplateKey: string
                 'invoice_number' => 'Rechnungsnummer',
                 'due_date' => 'Fälligkeitsdatum, formatiert (TT.MM.JJJJ)',
                 'note_html' => 'Vom Versender frei eingegebene Anmerkung als HTML-Absatz, oder leer',
+                'payment_link_html' => 'Absatz mit dem Link zur Online-Zahlung (PayPal/SumUp), oder leer, falls Online-Zahlung nicht eingerichtet ist',
             ],
             self::DunningNotice => [
                 'customer_name' => 'Name des Kunden (leer, falls kein Kunde verknüpft ist)',
@@ -209,7 +210,7 @@ enum EmailTemplateKey: string
             self::PasswordReset => "<p>Hallo,</p>\n<p>für Ihr Konto in der {{company_name}}-Verwaltung wurde ein neues Passwort angefordert. Über folgenden Link können Sie ein neues Passwort festlegen:</p>\n<p><a href=\"{{link}}\">{{link}}</a></p>\n<p>Der Link ist {{valid_hours}} Stunden gültig. Falls Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren — es ändert sich nichts an Ihrem Konto.</p>",
             self::OfferPdf => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie unser Angebot.</p>\n<p>{{location_line}}Zeitraum: {{date_range}}<br>{{valid_until_line}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
             self::PackingListPdf => "<p>Guten Tag,</p>\n<p>im Anhang finden Sie die Packliste für folgende Veranstaltung:</p>\n<p>Veranstaltung: {{event_name}}<br>Kunde: {{customer_name}}<br>{{location_line}}Zeitraum: {{date_range}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
-            self::InvoicePdf => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie Ihre Rechnung {{invoice_number}} (inkl. XRechnung-XML zur elektronischen Weiterverarbeitung).</p>\n<p>{{location_line}}Leistungszeitraum: {{date_range}}<br>Fällig am: {{due_date}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
+            self::InvoicePdf => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie Ihre Rechnung {{invoice_number}} (inkl. XRechnung-XML zur elektronischen Weiterverarbeitung).</p>\n<p>{{location_line}}Leistungszeitraum: {{date_range}}<br>Fällig am: {{due_date}}</p>\n{{note_html}}\n{{payment_link_html}}\n<p>Mit freundlichen Grüßen</p>",
             self::DunningNotice => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie eine {{dunning_level_name}} zu unserer Rechnung {{invoice_number}}, die am {{due_date}} fällig war.</p>\n<p>Offener Gesamtbetrag: {{total_due}}</p>\n<p>Bitte begleichen Sie den Betrag umgehend. Sollte dies bereits geschehen sein, betrachten Sie diese E-Mail als gegenstandslos.</p>\n<p>Mit freundlichen Grüßen</p>",
             self::InvoiceCorrection => "<p>Guten Tag{{customer_name}},</p>\n<p>im Anhang finden Sie unsere {{document_title}} {{correction_number}} zur Rechnung {{invoice_number}} vom {{invoice_date}} (inkl. E-Rechnung als XML zur elektronischen Weiterverarbeitung).</p>\n<p>Grund: {{reason}}<br>Betrag: {{amount}}</p>\n<p>{{payment_line}}</p>\n{{note_html}}\n<p>Mit freundlichen Grüßen</p>",
             self::RentalPickupReminder => "<p>Guten Tag {{customer_name}},</p>\n<p>wir möchten Sie an die bevorstehende Abholung für folgende Veranstaltung erinnern:</p>\n<p>Veranstaltung: {{event_name}}<br>Abholtermin: {{pickup_at}}<br>{{warehouse_line}}</p>\n<p>Mit freundlichen Grüßen</p>",

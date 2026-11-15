@@ -499,14 +499,16 @@ $availabilityStatusMeta = [
                         <div class="w-32 space-y-1">
                             <div class="relative h-32 w-32 overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
                                 <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
-                                <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
-                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                    <button type="submit" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
-                                </form>
                             </div>
                             <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?></p>
-                            <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                            <div class="flex items-center justify-between gap-2" data-row-actions="off">
+                                <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                                <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
+                                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                    <button type="submit" class="text-[11px] font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.ad_images_delete')) ?></button>
+                                </form>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>

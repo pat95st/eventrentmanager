@@ -595,7 +595,9 @@ $technicianSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbT
 $documentStorageTargetRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageTargetRepository($pdo);
 $documentStorageAssignmentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageAssignmentRepository($pdo);
 $documentStorageUploadLogRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageUploadLogRepository($pdo);
-$documentStorageClientFactory = new \App\Infrastructure\DocumentStorage\StorageClientFactory();
+$documentStorageCloudHttp = new \App\Infrastructure\DocumentStorage\Cloud\CurlCloudHttpClient();
+$documentStorageOAuthClient = new \App\Infrastructure\DocumentStorage\Cloud\CloudOAuthClient($documentStorageCloudHttp);
+$documentStorageClientFactory = new \App\Infrastructure\DocumentStorage\StorageClientFactory($documentStorageTargetRepository, $documentStorageCloudHttp, $documentStorageOAuthClient);
 // Ordner für Veranstaltungen/Kunden (Migration 148)
 $storageFolderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbStorageFolderRepository($pdo);
 $documentStoragePusher = new \App\Infrastructure\DocumentStorage\DocumentStoragePusher(
@@ -1211,6 +1213,8 @@ $commandBus->register(\App\Application\User\Command\UpdateNotifyOnNewReceiptEmai
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageTarget::class, new \App\Application\DocumentStorage\Command\CreateStorageTargetHandler($documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\UpdateStorageTarget::class, new \App\Application\DocumentStorage\Command\UpdateStorageTargetHandler($documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageTarget::class, new \App\Application\DocumentStorage\Command\DeleteStorageTargetHandler($documentStorageTargetRepository));
+$commandBus->register(\App\Application\DocumentStorage\Command\CompleteStorageTargetOAuth::class, new \App\Application\DocumentStorage\Command\CompleteStorageTargetOAuthHandler($documentStorageTargetRepository, $documentStorageOAuthClient));
+$commandBus->register(\App\Application\DocumentStorage\Command\DisconnectStorageTargetOAuth::class, new \App\Application\DocumentStorage\Command\DisconnectStorageTargetOAuthHandler($documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\TestStorageConnection::class, new \App\Application\DocumentStorage\Command\TestStorageConnectionHandler($documentStorageTargetRepository, $documentStorageClientFactory));
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageAssignment::class, new \App\Application\DocumentStorage\Command\CreateStorageAssignmentHandler($documentStorageAssignmentRepository, $documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageAssignment::class, new \App\Application\DocumentStorage\Command\DeleteStorageAssignmentHandler($documentStorageAssignmentRepository));
@@ -2599,6 +2603,10 @@ $router->post('/einstellungen/speicherziele', $auth->guard(Permission::Administr
 $router->get('/einstellungen/speicherziele/zuordnungen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'assignments']));
 $router->post('/einstellungen/speicherziele/zuordnungen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'storeAssignment']));
 $router->post('/einstellungen/speicherziele/zuordnungen/{id}/loeschen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'destroyAssignment']));
+// OAuth connection of cloud storage targets (Migration 153). The callback path is fixed so it can be registered at the provider.
+$router->get(\App\Infrastructure\Http\Controllers\DocumentStorageSettingsController::OAUTH_CALLBACK_PATH, $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'oauthCallback']));
+$router->get('/einstellungen/speicherziele/{id}/verbinden', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'connect']));
+$router->post('/einstellungen/speicherziele/{id}/trennen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'disconnect']));
 $router->get('/einstellungen/speicherziele/{id}/bearbeiten', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'edit']));
 $router->post('/einstellungen/speicherziele/{id}', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'update']));
 $router->post('/einstellungen/speicherziele/{id}/loeschen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'destroy']));

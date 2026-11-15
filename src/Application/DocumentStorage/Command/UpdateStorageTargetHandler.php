@@ -50,10 +50,22 @@ final class UpdateStorageTargetHandler implements CommandHandlerInterface
         );
 
         [$folderErrors, $folderData] = $this->validateFolderSettings($data['protocol'], $data['username'], $command->folderSettings);
-        $errors = array_merge($errors, $folderErrors);
+        // A stored client secret belongs to the app of the previous protocol.
+        $hasStoredSecret = $target->protocol === $data['protocol'] && $target->oauthClientSecret !== null && $target->oauthClientSecret !== '';
+        [$cloudErrors, $cloudData] = $this->validateCloudSettings($data['protocol'], $command->cloudSettings, $hasStoredSecret);
+        $errors = array_merge($errors, $folderErrors, $cloudErrors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
+        }
+
+        // Another service, app or tenant: the existing connection is no longer valid.
+        if (
+            $target->protocol !== $data['protocol']
+            || $target->oauthClientId !== $cloudData['oauthClientId']
+            || $target->oauthTenant !== $cloudData['oauthTenant']
+        ) {
+            $target->disconnectOAuth();
         }
 
         $target->name = $data['name'];
@@ -74,6 +86,13 @@ final class UpdateStorageTargetHandler implements CommandHandlerInterface
         }
         if ($data['s3SecretAccessKey'] !== null) {
             $target->s3SecretAccessKey = $data['s3SecretAccessKey'];
+        }
+        $target->oauthClientId = $cloudData['oauthClientId'];
+        $target->oauthTenant = $cloudData['oauthTenant'];
+        if ($cloudData['oauthClientSecret'] !== null) {
+            $target->oauthClientSecret = $cloudData['oauthClientSecret'];
+        } elseif (!$data['protocol']->usesOAuth()) {
+            $target->oauthClientSecret = null;
         }
         $target->basePath = $data['basePath'];
         $target->webdavUseHttps = $data['webdavUseHttps'];

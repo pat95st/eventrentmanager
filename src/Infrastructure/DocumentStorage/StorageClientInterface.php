@@ -6,7 +6,8 @@ namespace App\Infrastructure\DocumentStorage;
 
 /**
  * Gemeinsame Schnittstelle aller Protokoll-Clients (WebDavClient, FtpsClient,
- * SftpClient, ScpClient, S3Client) — siehe StorageClientFactory für die
+ * SftpClient, ScpClient, S3Client, Cloud\DropboxClient, Cloud\OneDriveClient,
+ * Cloud\GoogleDriveClient, Cloud\BoxClient, LocalDirectoryClient) — siehe StorageClientFactory für die
  * Auswahl anhand von DocumentStorageTarget::$protocol.
  */
 interface StorageClientInterface

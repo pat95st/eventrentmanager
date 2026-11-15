@@ -35,6 +35,11 @@ final class UpdateStorageTarget implements CommandInterface
         // ValidatesStorageTargetInput::validateFolderSettings()).
         /** @var array<string, mixed> */
         public readonly array $folderSettings = [],
+        // Migration 153: OAuth app credentials (oauthClientId,
+        // oauthClientSecret, oauthTenant) as raw form values, see
+        // ValidatesStorageTargetInput::validateCloudSettings().
+        /** @var array<string, mixed> */
+        public readonly array $cloudSettings = [],
     ) {
     }
 }

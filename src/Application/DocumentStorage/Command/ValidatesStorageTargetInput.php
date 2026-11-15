@@ -55,7 +55,17 @@ trait ValidatesStorageTargetInput
         $s3Region = trim($s3Region) !== '' ? trim($s3Region) : 'eu-central-1';
         $s3Endpoint = trim($s3Endpoint);
 
-        if ($protocolEnum === StorageProtocol::S3) {
+        if ($protocolEnum !== null && $protocolEnum->usesOAuth()) {
+            // Validated in validateCloudSettings().
+        } elseif ($protocolEnum !== null && $protocolEnum->usesLocalDirectory()) {
+            if ($basePath === '') {
+                $errors['basePath'] = 'Bitte den Ordner auf dem Server angeben.';
+            } elseif (!str_starts_with($basePath, '/') && preg_match('#^[A-Za-z]:[\\/]#', $basePath) !== 1) {
+                $errors['basePath'] = 'Bitte einen absoluten Pfad angeben (z. B. /Users/verleih/Library/Mobile Documents/com~apple~CloudDocs/Verleih).';
+            } elseif (preg_match('#(^|[/\\\\])\.\.([/\\\\]|$)#', $basePath) === 1) {
+                $errors['basePath'] = 'Der Pfad darf kein „..“ enthalten.';
+            }
+        } elseif ($protocolEnum === StorageProtocol::S3) {
             if ($s3AccessKeyId === '') {
                 $errors['s3AccessKeyId'] = 'Bitte einen Access Key angeben.';
             }
@@ -97,6 +107,41 @@ trait ValidatesStorageTargetInput
             's3Endpoint' => $s3Endpoint !== '' ? $s3Endpoint : null,
             's3UsePathStyle' => $s3UsePathStyle,
             'enabled' => $enabled,
+        ]];
+    }
+
+    /**
+     * OAuth app credentials of the cloud services (Migration 153). An empty
+     * client secret is only valid when one is already stored ("unchanged").
+     *
+     * @param array<string, mixed> $input Raw form values
+     * @return array{0: array<string, string>, 1: array{oauthClientId: ?string, oauthClientSecret: ?string, oauthTenant: ?string}}
+     */
+    private function validateCloudSettings(?StorageProtocol $protocol, array $input, bool $hasStoredSecret): array
+    {
+        $errors = [];
+        $clientId = trim((string) ($input['oauthClientId'] ?? ''));
+        $clientSecret = trim((string) ($input['oauthClientSecret'] ?? ''));
+        $tenant = trim((string) ($input['oauthTenant'] ?? ''));
+
+        if ($protocol === null || !$protocol->usesOAuth()) {
+            return [[], ['oauthClientId' => null, 'oauthClientSecret' => null, 'oauthTenant' => null]];
+        }
+
+        if ($clientId === '') {
+            $errors['oauthClientId'] = 'Bitte die Client-ID (App-Key) der registrierten App angeben.';
+        }
+        if ($clientSecret === '' && !$hasStoredSecret) {
+            $errors['oauthClientSecret'] = 'Bitte das Client-Secret der registrierten App angeben.';
+        }
+        if ($tenant !== '' && preg_match('/^[A-Za-z0-9.\-]+$/', $tenant) !== 1) {
+            $errors['oauthTenant'] = 'Bitte eine gültige Mandanten-ID oder Domain angeben (oder leer lassen).';
+        }
+
+        return [$errors, [
+            'oauthClientId' => $clientId !== '' ? mb_substr($clientId, 0, 255) : null,
+            'oauthClientSecret' => $clientSecret !== '' ? mb_substr($clientSecret, 0, 500) : null,
+            'oauthTenant' => $protocol === StorageProtocol::OneDrive && $tenant !== '' ? mb_substr($tenant, 0, 255) : null,
         ]];
     }
 

@@ -488,6 +488,7 @@ final class ArticleController
             $this->saveDryHirePrice((string) $articleId, $request);
             $this->saveFixedCurrentValue((string) $articleId, $request);
             $this->saveNetworkSettings((string) $articleId, $request);
+            $this->saveInputPower((string) $articleId, $request);
             $duplicateOf = $this->nullIfEmpty($request->input('duplicate_of'));
             if ($duplicateOf !== null) {
                 $this->copyArticleExtras($duplicateOf, (string) $articleId);
@@ -503,7 +504,7 @@ final class ArticleController
                 } catch (NotFoundException) {
                 }
             }
-            $this->renderForm($source, $e->errors(), $this->oldFromCommand($command) + $this->networkOld($request));
+            $this->renderForm($source, $e->errors(), $this->oldFromCommand($command) + $this->networkOld($request) + $this->inputPowerOld($request));
         }
     }
 
@@ -585,6 +586,8 @@ final class ArticleController
             'networkOverview' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($id)),
             'networkAddForm' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\Network\Query\GetInventoryNumberNetworkForm($id)),
             'networkEditForm' => $detail->article->isBundle || $editInventoryId === null ? null : $this->queries->ask(new \App\Application\Network\Query\GetInventoryNumberNetworkForm($id, $editInventoryId)),
+            // Power planning (migration 159)
+            'inputPowerW' => $detail->article->isBundle ? null : $this->queries->ask(new \App\Application\PowerPlan\Query\GetArticleInputPower($id)),
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
             'suppliers' => $suppliers,
@@ -695,11 +698,12 @@ final class ArticleController
             $this->saveDryHirePrice($id, $request);
             $this->saveFixedCurrentValue($id, $request);
             $this->saveNetworkSettings($id, $request);
+            $this->saveInputPower($id, $request);
             Flash::success(t('articles.flash.updated'));
             Response::redirect('/artikel/' . $id);
         } catch (ValidationException $e) {
             $detail = $this->queries->ask(new GetArticle($id));
-            $this->renderForm($detail->article, $e->errors(), $this->oldFromCommand($command) + $this->networkOld($request), $id);
+            $this->renderForm($detail->article, $e->errors(), $this->oldFromCommand($command) + $this->networkOld($request) + $this->inputPowerOld($request), $id);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }
@@ -733,6 +737,25 @@ final class ArticleController
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
         }
+    }
+
+    /** Input power of the device (migration 159) – only if the field was part of the form. */
+    private function saveInputPower(string $articleId, Request $request): void
+    {
+        if ($request->input('input_power_section') !== '1') {
+            return;
+        }
+        try {
+            $this->commands->dispatch(new \App\Application\PowerPlan\Command\SetArticleInputPower($articleId, $request->input('input_power_w')));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        }
+    }
+
+    /** @return array<string, string> input power for re-rendering the form after validation errors */
+    private function inputPowerOld(Request $request): array
+    {
+        return $request->input('input_power_section') === '1' ? ['input_power_w' => (string) $request->input('input_power_w', '')] : [];
     }
 
     /** @return array<string, bool> network checkboxes for re-rendering the form after validation errors */
@@ -1369,6 +1392,8 @@ final class ArticleController
             'mixingConsoleFormData' => $this->mixingConsoleFormData(),
             // Networks (migration 155): network interface of the article
             'networkOverview' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\Network\Query\GetArticleNetworkOverview($article->id)) : null,
+            // Power planning (migration 159): input power of the device
+            'inputPowerW' => $article !== null && !$article->isBundle ? $this->queries->ask(new \App\Application\PowerPlan\Query\GetArticleInputPower($article->id)) : null,
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 

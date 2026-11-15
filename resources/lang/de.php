@@ -654,6 +654,7 @@ return [
     'rentals.show.send_packing_list' => 'Packliste senden',
     'rentals.show.documents_menu' => 'Dokumente',
     'rentals.show.loading_list' => 'Beladungsliste',
+    'rentals.show.power_plan' => 'Stromplanung',
     'rentals.show.more_actions' => 'Weitere Aktionen',
     'rentals.show.delete_event' => 'Veranstaltung löschen',
     'rentals.show.status.starts_in' => 'Beginnt in {days} Tagen',

@@ -34,7 +34,7 @@ if ($old !== null) {
         'fuse_system' => (string) ($d->fuseSystem ?? ''), 'three_single' => $d->threeSingle ? '1' : '', 'phase' => (string) ($d->phase ?? ''),
     ], $distributor?->devices ?? []);
     $outletRows = array_map(static fn ($o) => [
-        'connector_type' => $o->connectorType->value, 'quantity' => (string) $o->quantity, 'label' => (string) ($o->label ?? ''),
+        'key' => $o->id, 'connector_type' => $o->connectorType->value, 'quantity' => (string) $o->quantity, 'label' => (string) ($o->label ?? ''),
         'device_key' => (string) ($o->deviceId ?? ''), 'phase' => (string) ($o->phase ?? ''),
     ], $distributor?->outlets ?? []);
 }
@@ -126,6 +126,8 @@ $renderOutletRow = static function (string $index, array $row) use ($input, $lab
     $name = static fn (string $field) => 'pd_outlets[' . $index . '][' . $field . ']';
     ?>
     <div data-outlet-row class="flex flex-wrap items-end gap-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <?php // Keeps the outlet ID stable across saves (power plans of events refer to it). ?>
+        <input type="hidden" name="<?= $name('key') ?>" value="<?= e($row['key'] ?? '') ?>">
         <div style="flex:3 1 12rem">
             <label class="<?= $label ?>">Steckverbindung</label>
             <select name="<?= $name('connector_type') ?>" class="<?= $input ?>" data-outlet-connector><?= $options($connectorOptions, $row['connector_type'] ?? 'schuko') ?></select>

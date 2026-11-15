@@ -758,6 +758,14 @@ $networkSettingsHandler = new \App\Application\Network\Command\NetworkSettingsHa
 foreach ([\App\Application\Network\Command\SaveNetwork::class, \App\Application\Network\Command\DeleteNetwork::class, \App\Application\Network\Command\SaveNetworkCategoryRange::class, \App\Application\Network\Command\DeleteNetworkCategoryRange::class] as $networkCommand) {
     $commandBus->register($networkCommand, $networkSettingsHandler);
 }
+// Power planning of events (migration 159)
+$rentalPowerPlanRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalPowerPlanRepository($pdo);
+$rentalPowerSetupLoader = new \App\Application\PowerPlan\RentalPowerSetupLoader($rentalRepository, $rentalItemRepository, $articleRepository, $manufacturerRepository, $categoryRepository, $powerDistributorRepository, $venuePowerConnectionRepository, $rentalPowerPlanRepository);
+$commandBus->register(\App\Application\PowerPlan\Command\SaveRentalPowerPlan::class, new \App\Application\PowerPlan\Command\SaveRentalPowerPlanHandler($rentalPowerSetupLoader, $rentalPowerPlanRepository));
+$commandBus->register(\App\Application\PowerPlan\Command\ApplyRentalPowerSuggestions::class, new \App\Application\PowerPlan\Command\ApplyRentalPowerSuggestionsHandler($rentalPowerSetupLoader, $rentalPowerPlanRepository));
+$commandBus->register(\App\Application\PowerPlan\Command\SetArticleInputPower::class, new \App\Application\PowerPlan\Command\SetArticleInputPowerHandler($rentalPowerPlanRepository, $articleRepository, $categoryRepository));
+$queryBus->register(\App\Application\PowerPlan\Query\GetArticleInputPower::class, new \App\Application\PowerPlan\Query\GetArticleInputPowerHandler($rentalPowerPlanRepository));
+$queryBus->register(\App\Application\PowerPlan\Query\GetRentalPowerPlan::class, new \App\Application\PowerPlan\Query\GetRentalPowerPlanHandler($rentalPowerSetupLoader));
 $commandBus->register(\App\Application\Network\Command\SaveArticleNetworkSettings::class, new \App\Application\Network\Command\SaveArticleNetworkSettingsHandler($networkRepository, $articleRepository, $networkInterfaceResolver));
 $networkQueryHandler = new \App\Application\Network\Query\NetworkQueryHandler($networkRepository, $categoryRepository, $articleRepository, $inventoryNumberRepository, $inventoryNumberNetworkService);
 foreach ([\App\Application\Network\Query\GetNetworkSettings::class, \App\Application\Network\Query\GetNetworkDetail::class, \App\Application\Network\Query\GetInventoryNumberNetworkForm::class, \App\Application\Network\Query\GetArticleNetworkOverview::class] as $networkQuery) {
@@ -1744,6 +1752,7 @@ $calDavSigningCertificateProvider = new \App\Infrastructure\Http\CalDav\CalDavSi
 $mobileConfigBuilder = new \App\Infrastructure\Http\CalDav\MobileConfigBuilder($calDavSigningCertificateProvider);
 $profileController = new ProfileController($commandBus, $queryBus, $mobileConfigBuilder, $trustedDeviceService);
 $userController = new UserController($commandBus, $queryBus, $technicianProfileRepository);
+$rentalPowerPlanController = new \App\Infrastructure\Http\Controllers\RentalPowerPlanController($commandBus, $queryBus);
 $rentalTechnicianController = new \App\Infrastructure\Http\Controllers\RentalTechnicianController($commandBus, $queryBus, $rentalTechnicianRepository);
 $technicianSettingsController = new \App\Infrastructure\Http\Controllers\TechnicianSettingsController($commandBus, $tradeRepository, $technicianSettingsRepository);
 $smtpSettingsController = new SmtpSettingsController($commandBus, $queryBus);
@@ -2274,6 +2283,11 @@ $router->post('/veranstaltungs-techniker/{id}/antwort', $auth->guard(Permission:
 $router->get('/veranstaltungen/{id}/rma', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalTechnicianController, 'rmaForm']));
 $router->post('/veranstaltungen/{id}/rma', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalTechnicianController, 'storeRma']));
 $router->post('/veranstaltungen/{id}/rueckgabe', $auth->guard([Permission::AusgabeRuecknahme, Permission::Techniker], [$rentalController, 'returnItem']));
+
+// Power planning: input power, plug assignments, load per phase and re-plugging suggestions (migration 159).
+$router->get('/veranstaltungen/{id}/strom', $auth->guard(Permission::AusgabeRuecknahme, [$rentalPowerPlanController, 'show']));
+$router->post('/veranstaltungen/{id}/strom', $auth->guard(Permission::AusgabeRuecknahme, [$rentalPowerPlanController, 'save']));
+$router->post('/veranstaltungen/{id}/strom/vorschlaege', $auth->guard(Permission::AusgabeRuecknahme, [$rentalPowerPlanController, 'applySuggestions']));
 
 // Beladungsliste: Zuordnung ausgegebener Posten zu Fahrzeugen inkl.
 // Anhänger-Zugfahrzeug-Zuordnung und Überladungs-Berechnung (siehe

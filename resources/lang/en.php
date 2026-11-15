@@ -653,6 +653,7 @@ return [
     'rentals.show.send_packing_list' => 'Send packing list',
     'rentals.show.documents_menu' => 'Documents',
     'rentals.show.loading_list' => 'Loading list',
+    'rentals.show.power_plan' => 'Power planning',
     'rentals.show.more_actions' => 'More actions',
     'rentals.show.delete_event' => 'Delete event',
     'rentals.show.status.starts_in' => 'Starts in {days} days',

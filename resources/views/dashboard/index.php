@@ -64,7 +64,7 @@ $renderStack = static function (array $tiles) use ($renderTiles): void {
         <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e(t('dashboard.title')) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('dashboard.subtitle')) ?></p>
     </div>
-    <a href="/profil/dashboard" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
+    <a href="/profil/dashboard" data-tour="dashboard-configure" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
         <?= e(t('dashboard.configure')) ?>
     </a>
 </div>

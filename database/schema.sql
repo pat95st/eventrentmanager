@@ -4412,6 +4412,16 @@ CREATE TABLE IF NOT EXISTS partner_requests (
         FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- --- 161_onboarding_tour.sql ---
+-- Migration 161: onboarding tour shown after the first login.
+--  - users.onboarding_tour_completed_at: when the user finished or skipped
+--    the guided tour. NULL = not seen yet, the tour starts automatically on
+--    the next page view. Existing users stay NULL on purpose, so everyone
+--    sees the new tour once (it can be skipped with one click). The tour can
+--    be started again any time under Profil › Darstellung.
+
+ALTER TABLE users ADD COLUMN onboarding_tour_completed_at DATETIME NULL AFTER dashboard_layout;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4594,4 +4604,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('157_analog_multicore_cables.sql', NOW()),
     ('158_minute_program_live_tracking.sql', NOW()),
     ('159_rental_power_planning.sql', NOW()),
-    ('160_partner_instances.sql', NOW());
+    ('160_partner_instances.sql', NOW()),
+    ('161_onboarding_tour.sql', NOW());

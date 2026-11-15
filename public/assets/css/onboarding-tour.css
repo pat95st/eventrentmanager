@@ -1,0 +1,188 @@
+/*
+ * Onboarding tour (migration 161), see public/assets/js/onboarding-tour.js.
+ *
+ * Idea: the page goes dark like a stage, a soft "follow spot" lands on the
+ * control being explained and a hand-drawn arrow runs from the note card to
+ * it. The overlay is always dark, so the arrow and the spot ring use light
+ * colours in both themes; the card itself follows light/dark mode and the
+ * user's colour scheme (--color-brand-*).
+ */
+.ot-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  font: inherit;
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+.ot-root.ot-leaving { opacity: 0; }
+.ot-root.ot-entering { opacity: 0; }
+
+/* Catches clicks so the page underneath is not used by accident. */
+.ot-blocker { position: absolute; inset: 0; }
+
+/* The spot: a cut-out with a huge shadow that dims everything else. */
+.ot-spot {
+  position: absolute;
+  border-radius: 12px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px rgb(var(--color-brand-300, 147 197 253) / 0.95),
+    0 0 0 7px rgb(var(--color-brand-400, 96 165 250) / 0.28),
+    0 0 28px 8px rgb(var(--color-brand-300, 147 197 253) / 0.35),
+    0 0 0 200vmax rgba(8, 12, 26, 0.74);
+  transition: top 320ms cubic-bezier(.2, .8, .2, 1), left 320ms cubic-bezier(.2, .8, .2, 1),
+    width 320ms cubic-bezier(.2, .8, .2, 1), height 320ms cubic-bezier(.2, .8, .2, 1),
+    border-radius 320ms ease;
+}
+/* No target (welcome/finish): a zero-size spot in the middle only dims. */
+.ot-spot.ot-spot-off {
+  box-shadow: 0 0 0 200vmax rgba(8, 12, 26, 0.78);
+  border-radius: 50%;
+}
+
+.ot-arrow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.ot-arrow path {
+  fill: none;
+  stroke: #f8fafc;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgb(var(--color-brand-400, 96 165 250) / 0.7));
+}
+.ot-arrow .ot-arrow-head { opacity: 0; transition: opacity 140ms ease 300ms; }
+.ot-arrow.ot-drawn .ot-arrow-head { opacity: 1; }
+.ot-arrow .ot-arrow-line { transition: stroke-dashoffset 420ms cubic-bezier(.5, 0, .2, 1); }
+
+.ot-card {
+  position: absolute;
+  box-sizing: border-box;
+  width: min(22.5rem, calc(100vw - 2rem));
+  padding: 1.25rem 1.25rem 1rem;
+  border-radius: 14px;
+  background: #fff;
+  color: rgb(15 23 42);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.08), 0 30px 60px -18px rgba(0, 0, 0, 0.55);
+  transition: top 320ms cubic-bezier(.2, .8, .2, 1), left 320ms cubic-bezier(.2, .8, .2, 1);
+}
+html.dark .ot-card {
+  background: rgb(15 23 42);
+  color: rgb(241 245 249);
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18), 0 30px 60px -18px rgba(0, 0, 0, 0.85);
+}
+.ot-card.ot-card-center { width: min(26rem, calc(100vw - 2rem)); padding: 1.75rem 1.5rem 1.25rem; }
+
+/* Segmented progress: one segment per step, filled up to the current one. */
+.ot-progress { display: flex; gap: 4px; margin-bottom: 0.875rem; }
+.ot-progress span {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(226 232 240);
+  transition: background-color 200ms ease;
+}
+html.dark .ot-progress span { background: rgb(51 65 85); }
+.ot-progress span.ot-done { background: rgb(var(--color-brand-500, 59 130 246)); }
+
+.ot-count {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgb(100 116 139);
+  font-variant-numeric: tabular-nums;
+}
+html.dark .ot-count { color: rgb(148 163 184); }
+
+.ot-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.ot-card-center .ot-title { font-size: 1.375rem; line-height: 1.3; letter-spacing: -0.015em; }
+
+.ot-body {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: rgb(71 85 105);
+}
+html.dark .ot-body { color: rgb(203 213 225); }
+.ot-body p { margin: 0; }
+.ot-body ul { margin: 0.5rem 0 0; padding: 0; list-style: none; columns: 2; column-gap: 1rem; }
+.ot-body li { padding: 0.125rem 0 0.125rem 0.875rem; position: relative; break-inside: avoid; }
+.ot-body li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(var(--color-brand-500, 59 130 246));
+}
+
+.ot-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.125rem;
+}
+.ot-spacer { flex: 1; }
+.ot-card button {
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.ot-card button:focus-visible { outline: 2px solid rgb(var(--color-brand-500, 59 130 246)); outline-offset: 2px; }
+.ot-link {
+  padding: 0.5rem 0.25rem;
+  margin-left: -0.25rem;
+  border: 0;
+  background: none;
+  color: rgb(100 116 139);
+  text-decoration: underline;
+  text-decoration-color: rgb(203 213 225);
+  text-underline-offset: 3px;
+}
+.ot-link:hover { color: rgb(15 23 42); text-decoration-color: currentColor; }
+html.dark .ot-link { color: rgb(148 163 184); text-decoration-color: rgb(71 85 105); }
+html.dark .ot-link:hover { color: rgb(241 245 249); }
+.ot-btn { padding: 0.5rem 0.875rem; font-weight: 500; border: 1px solid transparent; }
+.ot-btn-ghost { border-color: rgb(203 213 225); background: #fff; color: rgb(51 65 85); }
+.ot-btn-ghost:hover { background: rgb(248 250 252); }
+html.dark .ot-btn-ghost { border-color: rgb(51 65 85); background: rgb(15 23 42); color: rgb(203 213 225); }
+html.dark .ot-btn-ghost:hover { background: rgb(30 41 59); }
+.ot-btn-primary { background: rgb(var(--color-brand-600, 37 99 235)); color: #fff; }
+.ot-btn-primary:hover { background: rgb(var(--color-brand-700, 29 78 216)); }
+
+.ot-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Phones: the card sits at the bottom (or top) edge like a sheet. */
+@media (max-width: 639px) {
+  .ot-card, .ot-card.ot-card-center { width: auto; left: 1rem !important; right: 1rem; }
+  .ot-body ul { columns: 1; }
+  .ot-actions { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ot-root, .ot-spot, .ot-card, .ot-progress span,
+  .ot-arrow .ot-arrow-line, .ot-arrow .ot-arrow-head { transition: none; }
+}

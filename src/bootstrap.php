@@ -985,6 +985,7 @@ $commandBus->register(\App\Application\Dashboard\DeleteDashboardTemplate::class,
 $dashboardSettingsController = new \App\Infrastructure\Http\Controllers\DashboardSettingsController($commandBus, $dashboardTemplateRepository);
 $dashboardTemplateController = new \App\Infrastructure\Http\Controllers\DashboardTemplateController($commandBus, $dashboardTemplateRepository);
 $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new UpdateLocaleHandler($userRepository));
+$commandBus->register(\App\Application\User\Command\CompleteOnboardingTour::class, new \App\Application\User\Command\CompleteOnboardingTourHandler($userRepository));
 
 $commandBus->register(\App\Application\Auth\Command\AuthenticatePassword::class, new AuthenticatePasswordHandler($userRepository));
 $commandBus->register(\App\Application\Auth\Command\RequestEmailOtp::class, new RequestEmailOtpHandler($userRepository, $loginChallengeRepository, $mailer, $emailTemplateRenderer));
@@ -1919,6 +1920,7 @@ $router->post('/profil/sicherheit/deaktivieren', $auth->guard(null, [$profileCon
 $router->post('/profil/sicherheit/vertraute-geraete/widerrufen', $auth->guard(null, [$profileController, 'revokeTrustedDevices']));
 $router->get('/profil/darstellung', $auth->guard(null, [$profileController, 'showDisplaySettings']));
 $router->post('/profil/darstellung', $auth->guard(null, [$profileController, 'updateDisplaySettings']));
+$router->post('/profil/tour/abschliessen', $auth->guard(null, [$profileController, 'completeOnboardingTour']));
 $router->get('/profil/dashboard', $auth->guard(null, [$dashboardSettingsController, 'show']));
 $router->post('/profil/dashboard', $auth->guard(null, [$dashboardSettingsController, 'update']));
 $router->post('/profil/dashboard/zuruecksetzen', $auth->guard(null, [$dashboardSettingsController, 'reset']));

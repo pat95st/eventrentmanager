@@ -1,4 +1,4 @@
--- Migration 161: Selectable OpenAI image model for AI ad images.
+-- Migration 162: Selectable OpenAI image model for AI ad images.
 --
 -- The model used to be hard-coded ("gpt-image-1"), which OpenAI has since
 -- retired. NULL means "use the application default"

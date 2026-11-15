@@ -46,7 +46,7 @@ $renderTiles = static function (array $tiles, bool $groupCompact) use ($sections
 
 // Als Raster (untere Reihe, oder die Seitenleiste, wenn der Hauptbereich leer ist).
 $renderGrid = static function (array $tiles) use ($renderTiles): void {
-    echo '<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:items-start">';
+    echo '<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:items-start min-[1920px]:grid-cols-4">';
     foreach ($renderTiles($tiles, false) as $block) {
         echo '<div class="min-w-0 ' . ($block['wide'] ? 'sm:col-span-2' : '') . '">' . $block['html'] . '</div>';
     }

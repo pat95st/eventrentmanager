@@ -378,7 +378,7 @@ $canDocuments = $canRentals;
     </div>
   </dialog>
   <header class="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" style="position:sticky;top:0;z-index:30">
-    <div class="flex items-center gap-3 px-4 py-3 lg:gap-8">
+    <div class="app-container app-container-bar flex items-center gap-3 py-3 lg:gap-8">
       <button
         type="button"
         id="mobile-menu-toggle"
@@ -428,7 +428,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.articles')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($articlesChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -448,7 +448,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.contacts')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($contactsChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -471,7 +471,7 @@ $canDocuments = $canRentals;
               <span class="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500"></span>
             <?php endif; ?>
           </a>
-          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($procurementChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -516,7 +516,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.documents')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($documentsChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -536,7 +536,7 @@ $canDocuments = $canRentals;
             <?= e(t('nav.rentals')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </a>
-          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <?php foreach ($rentalsChildren as $child): ?>
               <a
                 href="<?= e($child['href']) ?>"
@@ -641,7 +641,7 @@ $canDocuments = $canRentals;
             <span class="hidden max-w-[10rem] truncate sm:inline"><?= e($currentUser->displayName()) ?></span>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </button>
-          <div class="nav-flyout invisible absolute right-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+          <div class="nav-flyout invisible absolute right-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
             <div class="truncate border-b border-slate-100 px-3 py-2 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500"><?= e($currentUser->displayName()) ?></div>
             <a href="/profil/sicherheit" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.security_2fa')) ?></a>
             <a href="/profil/sitzungen" class="block px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"><?= e(t('nav.sessions')) ?></a>
@@ -866,7 +866,7 @@ $canDocuments = $canRentals;
     </div>
   <?php endif; ?>
 
-  <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
+  <main class="app-container flex-1 py-6 sm:py-8 2xl:py-10">
     <?php $settingsGroupKey = \App\Infrastructure\Http\SettingsSections::groupKeyFor($activeNav); ?>
     <?php if ($settingsGroupKey !== null): ?>
       <?php /* Einstellungsseiten: Navigation links (ab lg), Inhalt rechts — siehe settings/_tabs.php */ ?>
@@ -950,7 +950,7 @@ $canDocuments = $canRentals;
   </main>
 
   <footer class="mt-auto border-t border-slate-200 bg-white py-4 dark:border-slate-800 dark:bg-slate-900">
-    <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-y-1 px-4 text-xs text-slate-500 dark:text-slate-400">
+    <div class="app-container flex flex-wrap items-center justify-center gap-y-1 text-xs text-slate-500 dark:text-slate-400">
       <a href="<?= e($imprintHref) ?>"<?= $imprintExternal ? ' target="_blank" rel="noopener noreferrer"' : '' ?> class="hover:underline"><?= e(t('footer.imprint')) ?></a>
       <span class="px-2">|</span>
       <a href="<?= e($privacyHref) ?>"<?= $privacyExternal ? ' target="_blank" rel="noopener noreferrer"' : '' ?> class="hover:underline"><?= e(t('footer.privacy')) ?></a>

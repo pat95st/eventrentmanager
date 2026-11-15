@@ -20,8 +20,11 @@ use App\Shared\Uuid;
  */
 final class DigitalProtocolSettingsHandler implements CommandHandlerInterface
 {
-    public function __construct(private readonly DigitalStageboxRepositoryInterface $stageboxes)
-    {
+    public function __construct(
+        private readonly DigitalStageboxRepositoryInterface $stageboxes,
+        // Mixing consoles (migration 154) also use protocols for interfaces and expansion cards.
+        private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $consoles = null,
+    ) {
     }
 
     public function handle(CommandInterface $command): mixed
@@ -59,6 +62,10 @@ final class DigitalProtocolSettingsHandler implements CommandHandlerInterface
         $used = $this->stageboxes->usageCounts()[$id] ?? 0;
         if ($used > 0) {
             throw new ConflictException("Das Protokoll „{$protocol->name}“ wird von {$used} digitalen Stagebox(en) verwendet und kann nicht gelöscht werden.");
+        }
+        $usedByConsoles = $this->consoles?->protocolUsageCounts()[$id] ?? 0;
+        if ($usedByConsoles > 0) {
+            throw new ConflictException("Das Protokoll „{$protocol->name}“ wird von {$usedByConsoles} Tonmischpult(en) verwendet und kann nicht gelöscht werden.");
         }
         $this->stageboxes->deleteProtocol($id);
 

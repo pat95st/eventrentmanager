@@ -31,4 +31,7 @@ interface CategoryRepositoryInterface
 
     /** ID der Kategorie "Digitale Stagebox" (Migration 152, categories.is_digital_stagebox), falls vorhanden. */
     public function findDigitalStageboxCategoryId(): ?string;
+
+    /** ID der Kategorie "Tonmischpult" (Migration 154, categories.is_mixing_console), falls vorhanden. */
+    public function findMixingConsoleCategoryId(): ?string;
 }

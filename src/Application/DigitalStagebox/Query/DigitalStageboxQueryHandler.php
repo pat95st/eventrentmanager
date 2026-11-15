@@ -11,8 +11,10 @@ use App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface;
 /** Beantwortet GetDigitalStageboxSettings und GetArticleDigitalStagebox (Migration 152). */
 final class DigitalStageboxQueryHandler implements QueryHandlerInterface
 {
-    public function __construct(private readonly DigitalStageboxRepositoryInterface $stageboxes)
-    {
+    public function __construct(
+        private readonly DigitalStageboxRepositoryInterface $stageboxes,
+        private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $consoles = null,
+    ) {
     }
 
     public function handle(QueryInterface $query): mixed
@@ -24,6 +26,6 @@ final class DigitalStageboxQueryHandler implements QueryHandlerInterface
         }
         assert($query instanceof GetDigitalStageboxSettings);
 
-        return new DigitalStageboxSettings($this->stageboxes->findAllProtocols(), $this->stageboxes->usageCounts());
+        return new DigitalStageboxSettings($this->stageboxes->findAllProtocols(), $this->stageboxes->usageCounts(), $this->consoles?->protocolUsageCounts() ?? []);
     }
 }

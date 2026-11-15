@@ -12,8 +12,9 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
 <div class="mb-6">
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Digitale Protokolle</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
-        Digitale Audioprotokolle für Artikel der Kategorie „Digitale Stagebox“. Jede digitale Stagebox bekommt im Artikelformular
-        eines dieser Protokolle zugeordnet. Protokolle, die von Stageboxen verwendet werden, lassen sich umbenennen, aber nicht löschen.
+        Digitale Audioprotokolle für Artikel der Kategorien „Digitale Stagebox“ und „Tonmischpult“. Jede digitale Stagebox bekommt im Artikelformular
+        eines dieser Protokolle zugeordnet; digitale Tonmischpulte nutzen sie für ihre Schnittstellen und Erweiterungskarten.
+        Protokolle, die von Stageboxen oder Mischpulten verwendet werden, lassen sich umbenennen, aber nicht löschen.
     </p>
 </div>
 
@@ -23,7 +24,7 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
             <p class="p-4 text-sm text-slate-500 dark:text-slate-400">Noch keine digitalen Protokolle angelegt.</p>
         <?php endif; ?>
         <?php foreach ($settings->protocols as $protocol): ?>
-            <?php $used = $settings->usage[$protocol->id] ?? 0; ?>
+            <?php $used = $settings->usage[$protocol->id] ?? 0; $usedByConsoles = $settings->consoleUsage[$protocol->id] ?? 0; ?>
             <div class="flex flex-wrap items-end gap-3 p-3">
                 <form method="post" action="/einstellungen/digitale-protokolle/<?= e($protocol->id) ?>" class="flex min-w-0 flex-1 flex-wrap items-end gap-3">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
@@ -34,8 +35,8 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
                     <input name="sort_order" type="number" value="<?= e((string) $protocol->sortOrder) ?>" class="<?= $input ?>" style="width:5.5rem" aria-label="Reihenfolge">
                     <button type="submit" class="<?= $btn ?>">Speichern</button>
                 </form>
-                <span class="text-xs text-slate-500 dark:text-slate-400" style="min-width:5.5rem"><?= $used ?> Stagebox<?= $used === 1 ? '' : 'en' ?></span>
-                <?php if ($used === 0): ?>
+                <span class="text-xs text-slate-500 dark:text-slate-400" style="min-width:5.5rem"><?= $used ?> Stagebox<?= $used === 1 ? '' : 'en' ?><?php if ($usedByConsoles > 0): ?> · <?= $usedByConsoles ?> Mischpult<?= $usedByConsoles === 1 ? '' : 'e' ?><?php endif; ?></span>
+                <?php if ($used === 0 && $usedByConsoles === 0): ?>
                     <form method="post" action="/einstellungen/digitale-protokolle/<?= e($protocol->id) ?>/loeschen" data-confirm="Digitales Protokoll „<?= e($protocol->name) ?>“ löschen?" data-confirm-style="danger">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>

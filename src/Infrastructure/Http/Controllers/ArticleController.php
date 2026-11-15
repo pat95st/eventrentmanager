@@ -350,6 +350,8 @@ final class ArticleController
             'hasCableCategory' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()) !== null,
             // "+ Neue digitale Stagebox" nur mit Kategorie "Digitale Stagebox" (Migration 152).
             'hasDigitalStageboxCategory' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()) !== null,
+            // "New article > Mixing console" only with category "Tonmischpult" (migration 154).
+            'hasMixingConsoleCategory' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()) !== null,
             'articles' => $result->items,
             'manufacturers' => $manufacturers,
             'categories' => $categories,
@@ -385,6 +387,7 @@ final class ArticleController
             $request->query('stromverteiler') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetPowerDistributorCategoryId()),
             $request->query('leitung') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()),
             $request->query('stagebox') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
+            $request->query('mischpult') === '1' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()),
             default => null,
         };
         $this->renderForm(null, [], $presetCategoryId !== null ? ['category_id' => $presetCategoryId] : []);
@@ -466,6 +469,7 @@ final class ArticleController
             powerDistributor: $this->powerDistributorFromRequest($request) ?: null,
             cable: $this->cableFromRequest($request),
             digitalStagebox: $this->digitalStageboxFromRequest($request),
+            mixingConsole: $this->mixingConsoleFromRequest($request),
         );
 
         try {
@@ -561,6 +565,9 @@ final class ArticleController
             'cable' => $detail->article->isBundle ? null : $this->articleCable($detail->article->id),
             // Digitale Stagebox (Migration 152)
             'digitalStagebox' => $detail->article->isBundle ? null : $this->articleDigitalStagebox($detail->article->id),
+            // Mixing console (migration 154); for stageboxes the consoles listing them as compatible
+            'mixingConsole' => $detail->article->isBundle ? null : $this->articleMixingConsole($detail->article->id),
+            'compatibleConsoles' => $detail->article->isBundle ? [] : $this->compatibleConsoles($detail->article->id),
             'editInventoryId' => $editInventoryId,
             'editAccessoryId' => $editAccessoryId,
             'editPreIssueCheckId' => $editPreIssueCheckId,
@@ -664,6 +671,7 @@ final class ArticleController
             powerDistributor: $this->powerDistributorFromRequest($request),
             cable: $this->cableFromRequest($request),
             digitalStagebox: $this->digitalStageboxFromRequest($request),
+            mixingConsole: $this->mixingConsoleFromRequest($request),
         );
 
         try {
@@ -1286,6 +1294,10 @@ final class ArticleController
             'digitalStagebox' => $article !== null && !$article->isBundle ? $this->articleDigitalStagebox($article->id) : null,
             'digitalStageboxCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             'digitalStageboxSettings' => $this->digitalStageboxSettings(),
+            // Mixing console (migration 154): analog or digital console details directly in the article form.
+            'mixingConsole' => $article !== null && !$article->isBundle ? $this->articleMixingConsole($article->id) : null,
+            'mixingConsoleCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()),
+            'mixingConsoleFormData' => $this->mixingConsoleFormData(),
         ], activeNav: 'articles', title: $bundleMode ? ($article !== null ? t('articles.bundle.edit') : t('articles.bundle.new')) : ($article !== null ? t('articles.edit') : t('articles.new')));
     }
 
@@ -1333,6 +1345,8 @@ final class ArticleController
             'stagebox_inputs_combo' => $command->digitalStagebox?->inputsCombo,
             'stagebox_outputs_analog' => $command->digitalStagebox?->outputsAnalog,
             'stagebox_outputs_aes' => $command->digitalStagebox?->outputsAes,
+            // Mixing console (migration 154)
+            'mixing_console' => $command->mixingConsole,
         ];
     }
 
@@ -1394,6 +1408,78 @@ final class ArticleController
             $request->input('stagebox_outputs_analog'),
             $request->input('stagebox_outputs_aes'),
         );
+    }
+
+    /** Mixing console fields from the article form (migration 154), null without this section. */
+    private function mixingConsoleFromRequest(Request $request): ?\App\Application\MixingConsole\MixingConsoleInput
+    {
+        if ($request->input('mixing_console_section') === null) {
+            return null;
+        }
+        $rows = static function (mixed $raw): array {
+            $result = [];
+            foreach (is_array($raw) ? $raw : [] as $row) {
+                if (is_array($row)) {
+                    $result[] = array_map(static fn ($value) => is_string($value) ? $value : '', $row);
+                }
+            }
+
+            return $result;
+        };
+        $stageboxes = [];
+        foreach (is_array($request->post['mc_stageboxes'] ?? null) ? $request->post['mc_stageboxes'] : [] as $id => $value) {
+            if (is_string($value)) {
+                $stageboxes[(string) $id] = $value;
+            }
+        }
+
+        return new \App\Application\MixingConsole\MixingConsoleInput(
+            $request->input('mc_type'),
+            micInputs: $request->input('mc_mic_inputs'),
+            stereoInputs: $request->input('mc_stereo_inputs'),
+            comboInputs: $request->input('mc_combo_inputs'),
+            auxPre: $request->input('mc_aux_pre'),
+            auxPost: $request->input('mc_aux_post'),
+            auxSwitchable: $request->input('mc_aux_switchable'),
+            subgroups: $request->input('mc_subgroups'),
+            hasMonoMaster: $request->input('mc_mono_master') === '1',
+            localInputs: $request->input('mc_local_inputs'),
+            localOutputs: $request->input('mc_local_outputs'),
+            expansionSlots: $request->input('mc_expansion_slots'),
+            expansionSlotType: $request->input('mc_expansion_slot_type'),
+            interfaces: $rows($request->post['mc_interfaces'] ?? []),
+            channels: $rows($request->post['mc_channels'] ?? []),
+            cards: $rows($request->post['mc_cards'] ?? []),
+            stageboxes: $stageboxes,
+        );
+    }
+
+    private function articleMixingConsole(string $articleId): ?\App\Application\MixingConsole\Query\ArticleMixingConsoleDetail
+    {
+        try {
+            return $this->queries->ask(new \App\Application\MixingConsole\Query\GetArticleMixingConsole($articleId));
+        } catch (\PDOException) {
+            return null; // migration 154 not applied yet
+        }
+    }
+
+    /** @return \App\Domain\MixingConsole\CompatibleConsole[] */
+    private function compatibleConsoles(string $stageboxArticleId): array
+    {
+        try {
+            return $this->queries->ask(new \App\Application\MixingConsole\Query\GetCompatibleConsoles($stageboxArticleId));
+        } catch (\PDOException) {
+            return [];
+        }
+    }
+
+    private function mixingConsoleFormData(): ?\App\Application\MixingConsole\Query\MixingConsoleFormData
+    {
+        try {
+            return $this->queries->ask(new \App\Application\MixingConsole\Query\GetMixingConsoleFormData());
+        } catch (\PDOException) {
+            return null;
+        }
     }
 
     private function articleDigitalStagebox(string $articleId): ?\App\Application\DigitalStagebox\Query\ArticleDigitalStageboxDetail

@@ -134,7 +134,10 @@
 /* Karten/Panels: nur halbtransparent, OHNE backdrop-filter — ein Filter
    macht jede Karte zu einem eigenen Stapelkontext, dann lagen Dropdowns
    und Aufklapper hinter der nächsten Karte (Bugreport "Dropdowns überdeckt"). */
-body.has-bg-image .bg-white {
+/* Light mode only: in dark mode, elements carrying both bg-white and a
+   dark:bg-* class (e.g. rich-text editors, toolbar selects) must keep their
+   dark background, otherwise light text ends up on a white surface. */
+html:not(.dark) body.has-bg-image .bg-white {
   background-color: rgb(255 255 255 / 0.86) !important;
 }
 

@@ -58,32 +58,48 @@ final class AiAdImageSettingsController
         return $settings;
     }
 
-    /** @param array<string, string> $errors */
-    private function render(AiAdImageSettings $settings, array $errors = [], ?string $submittedModel = null): void
+    /**
+     * JSON endpoint for the model picker. Querying OpenAI can take a few
+     * seconds, so the settings page loads the list asynchronously and shows
+     * a spinner meanwhile instead of blocking the page render.
+     */
+    public function models(Request $request): void
     {
-        // Ask OpenAI which image models this key can use; fall back to a
-        // static list when no key is set or the request fails.
+        $settings = $this->currentSettings();
         $availableModels = [];
-        $modelListError = null;
+        $error = null;
         if ($settings->isConfigured() && $this->imageClient !== null) {
             try {
                 $availableModels = $this->imageClient->listImageModels((string) $settings->openaiApiKey);
             } catch (RuntimeException $e) {
-                $modelListError = $e->getMessage();
+                $error = $e->getMessage();
             }
         }
-        $modelsFromApi = $availableModels !== [];
-        if (!$modelsFromApi) {
-            $availableModels = AiAdImageSettings::SUGGESTED_IMAGE_MODELS;
-        }
 
+        $fromApi = $availableModels !== [];
+        Response::json([
+            'models' => $fromApi ? array_values($availableModels) : AiAdImageSettings::SUGGESTED_IMAGE_MODELS,
+            'fromApi' => $fromApi,
+            'hint' => $fromApi
+                ? t('settings.ai_ad_images.field.image_model_from_api', ['models' => implode(', ', $availableModels)])
+                : null,
+            'error' => $error !== null
+                ? t('settings.ai_ad_images.field.image_model_list_failed', ['error' => $error])
+                : null,
+        ]);
+    }
+
+    /** @param array<string, string> $errors */
+    private function render(AiAdImageSettings $settings, array $errors = [], ?string $submittedModel = null): void
+    {
+        // The page renders with the static suggestions; the models available
+        // for the configured key are fetched afterwards via models().
         echo View::page('settings/ai-ad-images', [
             'settings' => $settings,
             'errors' => $errors,
             'imageModelValue' => $submittedModel ?? ($settings->imageModel ?? ''),
-            'availableModels' => $availableModels,
-            'modelsFromApi' => $modelsFromApi,
-            'modelListError' => $modelListError,
+            'availableModels' => AiAdImageSettings::SUGGESTED_IMAGE_MODELS,
+            'loadModelsFromApi' => $settings->isConfigured() && $this->imageClient !== null,
         ], activeNav: 'settings-ki-werbebilder', title: t('settings.ai_ad_images.title'));
     }
 }

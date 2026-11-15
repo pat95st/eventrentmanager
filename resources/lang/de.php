@@ -2472,6 +2472,7 @@ return [
     'settings.ai_ad_images.field.image_model_hint' => 'Leer lassen für den Standard ({default}). Ein Modellname aus der Vorschlagsliste oder ein beliebiger anderer OpenAI-Modellname.',
     'settings.ai_ad_images.field.image_model_from_api' => 'Für diesen API-Key verfügbar: {models}.',
     'settings.ai_ad_images.field.image_model_list_failed' => 'Die Modellliste konnte nicht von OpenAI abgerufen werden: {error}',
+    'settings.ai_ad_images.field.image_model_loading' => 'Verfügbare Modelle werden von OpenAI geladen …',
     'settings.ai_ad_images.flash.saved' => 'KI-Werbebild-Einstellungen wurden gespeichert.',
 
     'settings.messaging_templates.title' => 'Nachrichtendienste-Vorlagen',

@@ -4,6 +4,7 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var \App\Domain\DocumentStorage\StorageProtocol[] $protocols */
+/** @var string $oauthRedirectUri */
 
 use App\Domain\DocumentStorage\FolderPathTemplate;
 use App\Domain\DocumentStorage\SharePasswordPolicy;
@@ -12,6 +13,7 @@ use App\Domain\DocumentStorage\StorageProtocol;
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
+$oauthGroup = implode(',', array_map(static fn (StorageProtocol $p) => $p->value, array_filter(StorageProtocol::cases(), static fn (StorageProtocol $p) => $p->usesOAuth())));
 $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $editing?->protocol->value ?? StorageProtocol::WebDav->value)) ?? StorageProtocol::WebDav;
 ?>
 
@@ -43,6 +45,10 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
                                 <?= e($target->protocol->label()) ?>
                                 <?php if ($target->host !== null): ?>
                                     · <?= e($target->host) ?><?= $target->port !== null ? ':' . e((string) $target->port) : '' ?>
+                                <?php elseif ($target->protocol->usesOAuth()): ?>
+                                    · <?php if ($target->isOAuthConnected()): ?><?= e($target->oauthAccountLabel ?? t('settings.document_storage.targets.oauth.status_connected')) ?><?php else: ?><span class="text-amber-600 dark:text-amber-400"><?= e(t('settings.document_storage.targets.oauth.status_not_connected')) ?></span><?php endif; ?>
+                                <?php elseif ($target->protocol->usesLocalDirectory()): ?>
+                                    · <span class="font-mono"><?= e((string) $target->basePath) ?></span>
                                 <?php elseif ($target->s3Bucket !== null): ?>
                                     · <?= e($target->s3Bucket) ?>
                                 <?php endif; ?>
@@ -80,6 +86,32 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
         <h2 class="mb-4 text-sm font-semibold text-slate-700 dark:text-slate-300">
             <?= $editing !== null ? e(t('settings.document_storage.targets.edit')) : e(t('settings.document_storage.targets.new')) ?>
         </h2>
+        <?php if ($editing !== null && $editing->protocol->usesOAuth()): ?>
+            <div class="mb-4 space-y-2 rounded-md border border-slate-200 p-3 dark:border-slate-800">
+                <p class="text-xs font-semibold text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.oauth.title')) ?></p>
+                <?php if ($editing->isOAuthConnected()): ?>
+                    <p class="text-sm text-emerald-700 dark:text-emerald-400">
+                        <?= e(t('settings.document_storage.targets.oauth.status_connected')) ?><?= $editing->oauthAccountLabel !== null ? ': ' . e($editing->oauthAccountLabel) : '' ?>
+                        <?php if ($editing->oauthConnectedAt !== null): ?>
+                            <span class="text-xs text-slate-400 dark:text-slate-500">(<?= e(t('settings.document_storage.targets.oauth.connected_since', ['date' => $editing->oauthConnectedAt->format('d.m.Y H:i')])) ?>)</span>
+                        <?php endif; ?>
+                    </p>
+                <?php else: ?>
+                    <p class="text-sm text-amber-600 dark:text-amber-400"><?= e(t('settings.document_storage.targets.oauth.status_not_connected')) ?></p>
+                <?php endif; ?>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="/einstellungen/speicherziele/<?= e($editing->id) ?>/verbinden" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+                        <?= $editing->isOAuthConnected() ? e(t('settings.document_storage.targets.oauth.reconnect')) : e(t('settings.document_storage.targets.oauth.connect', ['service' => $editing->protocol->label()])) ?>
+                    </a>
+                    <?php if ($editing->isOAuthConnected()): ?>
+                        <form method="post" action="/einstellungen/speicherziele/<?= e($editing->id) ?>/trennen" data-confirm="<?= e(t('settings.document_storage.targets.oauth.confirm_disconnect')) ?>" data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <button type="submit" class="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('settings.document_storage.targets.oauth.disconnect')) ?></button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
         <form
             method="post"
             action="<?= $editing !== null ? '/einstellungen/speicherziele/' . e($editing->id) : '/einstellungen/speicherziele' ?>"
@@ -171,12 +203,62 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
                 <p data-protocol-group="scp" class="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e(t('settings.document_storage.targets.scp_no_mkdir_hint')) ?></p>
             </div>
 
-            <!-- WebDAV / FTPS / SFTP / SCP: Basis-Pfad -->
-            <div data-protocol-group="webdav,nextcloud,owncloud,ftps,sftp,scp">
-                <label for="base_path" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.base_path')) ?></label>
+            <!-- Dropbox / OneDrive / Google Drive / Box: OAuth app credentials -->
+            <div data-protocol-group="<?= e($oauthGroup) ?>" class="space-y-4">
+                <?php foreach (StorageProtocol::cases() as $oauthProtocol): ?>
+                    <?php if ($oauthProtocol->usesOAuth()): ?>
+                        <p data-protocol-group="<?= e($oauthProtocol->value) ?>" class="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e(t('settings.document_storage.targets.oauth.setup.' . $oauthProtocol->value)) ?></p>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+                <div>
+                    <label for="oauth_redirect_uri" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.oauth_redirect_uri')) ?></label>
+                    <input type="text" id="oauth_redirect_uri" readonly value="<?= e($oauthRedirectUri) ?>" onclick="this.select()"
+                           class="mt-1 w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.oauth_redirect_uri_hint')) ?></p>
+                </div>
+                <div>
+                    <label for="oauth_client_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.oauth_client_id')) ?> *</label>
+                    <input type="text" id="oauth_client_id" name="oauth_client_id" autocomplete="off"
+                           value="<?= e($old['oauth_client_id'] ?? $editing?->oauthClientId ?? '') ?>"
+                           class="mt-1 w-full rounded-md border <?= isset($errors['oauthClientId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <?php if (isset($errors['oauthClientId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['oauthClientId']) ?></p><?php endif; ?>
+                </div>
+                <div>
+                    <label for="oauth_client_secret" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.oauth_client_secret')) ?> *</label>
+                    <input type="password" id="oauth_client_secret" name="oauth_client_secret" autocomplete="new-password"
+                           placeholder="<?= $editing?->oauthClientSecret !== null ? e(t('settings.document_storage.targets.field.password_placeholder')) : '' ?>"
+                           class="mt-1 w-full rounded-md border <?= isset($errors['oauthClientSecret']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <?php if (isset($errors['oauthClientSecret'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['oauthClientSecret']) ?></p><?php endif; ?>
+                </div>
+                <div data-protocol-group="onedrive">
+                    <label for="oauth_tenant" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('settings.document_storage.targets.field.oauth_tenant')) ?></label>
+                    <input type="text" id="oauth_tenant" name="oauth_tenant" placeholder="common"
+                           value="<?= e($old['oauth_tenant'] ?? $editing?->oauthTenant ?? '') ?>"
+                           class="mt-1 w-full rounded-md border <?= isset($errors['oauthTenant']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                    <?php if (isset($errors['oauthTenant'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['oauthTenant']) ?></p><?php endif; ?>
+                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.oauth_tenant_hint')) ?></p>
+                </div>
+                <?php if ($editing === null || !$editing->protocol->usesOAuth()): ?>
+                    <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.oauth.save_first_hint')) ?></p>
+                <?php endif; ?>
+            </div>
+
+            <!-- iCloud Drive: locally synchronised folder -->
+            <p data-protocol-group="icloud" class="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e(t('settings.document_storage.targets.icloud_hint')) ?></p>
+
+            <!-- Basis-Pfad (für iCloud: lokaler Ordner auf dem Server) -->
+            <div data-protocol-group="webdav,nextcloud,owncloud,ftps,sftp,scp,<?= e($oauthGroup) ?>,icloud">
+                <label for="base_path" class="block text-xs font-medium text-slate-600 dark:text-slate-400">
+                    <span data-protocol-group="webdav,nextcloud,owncloud,ftps,sftp,scp,<?= e($oauthGroup) ?>"><?= e(t('settings.document_storage.targets.field.base_path')) ?></span>
+                    <span data-protocol-group="icloud"><?= e(t('settings.document_storage.targets.field.base_path_icloud')) ?> *</span>
+                </label>
                 <input type="text" id="base_path" name="base_path" placeholder="/remote.php/dav/files/benutzername/"
+                       data-placeholder-default="/remote.php/dav/files/benutzername/" data-placeholder-cloud="Materialverleih" data-placeholder-icloud="/Users/verleih/Library/Mobile Documents/com~apple~CloudDocs/Materialverleih"
                        value="<?= e($old['base_path'] ?? $editing?->basePath ?? '') ?>"
-                       class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+                       class="mt-1 w-full rounded-md border <?= isset($errors['basePath']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 font-mono text-xs focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['basePath'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['basePath']) ?></p><?php endif; ?>
+                <p data-protocol-group="<?= e($oauthGroup) ?>" class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.base_path_cloud_hint')) ?></p>
+                <p data-protocol-group="icloud" class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.base_path_icloud_hint')) ?></p>
                 <p data-protocol-group="webdav,ftps,sftp,scp" class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('settings.document_storage.targets.field.base_path_hint')) ?></p>
                 <p data-protocol-group="nextcloud,owncloud" class="mt-1 text-xs text-slate-400 dark:text-slate-500">Optionaler Unterordner in den Dateien des Benutzers, z. B. „Verleih“. Die WebDAV-Adresse (/remote.php/dav/files/&lt;Benutzer&gt;/) wird automatisch ergänzt. Läuft die Cloud in einem Unterverzeichnis, dieses beim Host mit angeben (z. B. „example.org/cloud“). Als Passwort am besten ein App-Passwort verwenden.</p>
             </div>
@@ -345,6 +427,13 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
         // Felder ausgeblendeter Gruppen nicht mitschicken: Benutzername und
         // Passwort gibt es je Protokollgruppe einmal mit demselben Namen —
         // sonst überschreibt das leere, unsichtbare Feld das ausgefüllte.
+        var basePath = document.getElementById('base_path');
+        if (basePath) {
+            var oauthProtocols = '<?= e($oauthGroup) ?>'.split(',');
+            basePath.placeholder = protocol === 'icloud'
+                ? basePath.getAttribute('data-placeholder-icloud')
+                : (oauthProtocols.indexOf(protocol) !== -1 ? basePath.getAttribute('data-placeholder-cloud') : basePath.getAttribute('data-placeholder-default'));
+        }
         document.querySelectorAll('[data-protocol-group] input, [data-protocol-group] select, [data-protocol-group] textarea').forEach(function (field) {
             var hidden = false;
             for (var group = field.closest('[data-protocol-group]'); group; group = group.parentElement ? group.parentElement.closest('[data-protocol-group]') : null) {

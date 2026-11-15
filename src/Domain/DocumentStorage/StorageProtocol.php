@@ -15,6 +15,14 @@ enum StorageProtocol: string
     // Migration 148: WebDAV + Freigaben über die OCS-Share-API.
     case Nextcloud = 'nextcloud';
     case OwnCloud = 'owncloud';
+    // Migration 153: cloud storage services connected via OAuth 2.0.
+    case Dropbox = 'dropbox';
+    case OneDrive = 'onedrive';
+    case GoogleDrive = 'google_drive';
+    case Box = 'box';
+    // Migration 153: iCloud Drive has no public file API for third-party
+    // servers, so it is written to as a locally synchronised folder.
+    case ICloud = 'icloud';
 
     public function label(): string
     {
@@ -26,6 +34,11 @@ enum StorageProtocol: string
             self::S3 => 'S3 (kompatibler Objektspeicher)',
             self::Nextcloud => 'Nextcloud',
             self::OwnCloud => 'ownCloud',
+            self::Dropbox => 'Dropbox',
+            self::OneDrive => 'Microsoft OneDrive',
+            self::GoogleDrive => 'Google Drive',
+            self::Box => 'Box',
+            self::ICloud => 'iCloud Drive (synchronisierter Ordner)',
         };
     }
 
@@ -50,12 +63,42 @@ enum StorageProtocol: string
     /** Lässt sich ein Ordner samt Inhalt löschen? Für FTPS und S3 nicht umgesetzt. */
     public function supportsFolderDelete(): bool
     {
-        return $this->usesWebDav() || $this === self::Sftp || $this === self::Scp;
+        return $this->usesWebDav()
+            || $this === self::Sftp
+            || $this === self::Scp
+            || $this->usesOAuth()
+            || $this === self::ICloud;
     }
 
     /** Wird über WebDAV angesprochen (siehe App\Infrastructure\DocumentStorage\WebDavClient). */
     public function usesWebDav(): bool
     {
         return $this === self::WebDav || $this->supportsSharing();
+    }
+
+    /**
+     * Cloud service that is connected via the OAuth 2.0 authorization code
+     * flow (client ID/secret of an app registered by the administrator,
+     * then "Verbinden" in the settings), see
+     * App\Infrastructure\DocumentStorage\Cloud\CloudOAuthEndpoints.
+     */
+    public function usesOAuth(): bool
+    {
+        return match ($this) {
+            self::Dropbox, self::OneDrive, self::GoogleDrive, self::Box => true,
+            default => false,
+        };
+    }
+
+    /** Writes into a directory on the application server (iCloud Drive sync folder). */
+    public function usesLocalDirectory(): bool
+    {
+        return $this === self::ICloud;
+    }
+
+    /** Needs host/port (and usually username/password) of a server. */
+    public function usesServerConnection(): bool
+    {
+        return !$this->usesOAuth() && !$this->usesLocalDirectory() && $this !== self::S3;
     }
 }

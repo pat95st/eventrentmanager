@@ -2,7 +2,8 @@
 // - nur sichtbar, wenn die Kategorie "Leitungen" gewählt ist,
 // - bietet je Leitungstyp nur die erlaubten Steckverbinder an,
 // - übernimmt die Vorgabe des Leitungstyps zur Elektroprüfung/Schutzklasse,
-// - schlägt den Produktnamen aus Typ, Länge und Steckverbindern vor.
+// - schlägt den Produktnamen aus Typ, Länge und Steckverbindern vor,
+// - shows the analog multicore fields for multicore cable types (migration 157).
 (function () {
   'use strict';
 
@@ -22,6 +23,8 @@
   var type = document.getElementById('cable_type_id');
   var length = document.getElementById('cable_length');
   var connectors = section.querySelectorAll('[data-cable-connector]');
+  var multicoreFields = section.querySelector('[data-cable-multicore-fields]');
+  var multicoreCounts = section.querySelectorAll('[data-cable-multicore-count]');
   var name = document.getElementById('name');
   var inspection = document.getElementById('requires_electrical_inspection');
   var protectionClass = document.getElementById('protection_class');
@@ -56,6 +59,17 @@
     });
   }
 
+  function isMulticoreType() {
+    var entry = type.value ? config[type.value] : null;
+    return !!(entry && entry.multicore);
+  }
+
+  function syncMulticoreFields() {
+    if (multicoreFields) {
+      multicoreFields.classList.toggle('hidden', !isMulticoreType());
+    }
+  }
+
   function applyInspectionDefault() {
     var entry = type.value ? config[type.value] : null;
     if (!entry || !inspection || inspection.disabled) {
@@ -77,7 +91,13 @@
       return null;
     }
     var ends = [a, b].filter(function (x) { return x; }).join(' / ');
-    return (entry.name + ' ' + len + ' m ' + ends).replace(/\s+/g, ' ').trim();
+    var channels = '';
+    if (entry.multicore && multicoreCounts.length === 2) {
+      var sends = parseInt(multicoreCounts[0].value, 10) || 0;
+      var returns = parseInt(multicoreCounts[1].value, 10) || 0;
+      channels = ' ' + sends + '/' + returns;
+    }
+    return (entry.name + channels + ' ' + len + ' m ' + ends).replace(/\s+/g, ' ').trim();
   }
 
   function updateName() {
@@ -101,11 +121,13 @@
   }
 
   type.addEventListener('change', function () {
+    syncMulticoreFields();
     filterConnectors();
     applyInspectionDefault();
     updateName();
   });
   length.addEventListener('input', updateName);
+  multicoreCounts.forEach(function (input) { input.addEventListener('input', updateName); });
   connectors.forEach(function (select) { select.addEventListener('change', updateName); });
   if (category) {
     category.addEventListener('change', function () {
@@ -121,5 +143,6 @@
   }
 
   syncVisibility();
+  syncMulticoreFields();
   filterConnectors();
 })();

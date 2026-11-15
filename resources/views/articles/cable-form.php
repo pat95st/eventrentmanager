@@ -29,6 +29,12 @@ $cableConnectorA = $val('cable_connector_a', $cable?->cable->connectorAId);
 $cableConnectorB = $val('cable_connector_b', $cable?->cable->connectorBId);
 $cableLength = $val('cable_length', $cable !== null ? rtrim(rtrim(number_format((float) $cable->cable->lengthM, 2, ',', ''), '0'), ',') : null);
 $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
+$selectedCableType = null;
+foreach ($cableSettings->types as $type) {
+    if ($type->id === $cableTypeSelected) {
+        $selectedCableType = $type;
+    }
+}
 ?>
 <div class="mb-6">
     <a href="<?= $article !== null ? '/artikel/' . e($article->id) : '/artikel' ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Zurück</a>
@@ -92,6 +98,12 @@ $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
                 </div>
             <?php endforeach; ?>
         </div>
+        <?= \App\Infrastructure\Http\View::render('cables/_multicore_fields', [
+            'multicore' => $cable?->cable->multicore,
+            'old' => $old,
+            'errors' => $errors,
+            'visible' => $selectedCableType?->isAnalogMulticore ?? false,
+        ]) ?>
         <p id="cable_inspection_info" class="mt-3 text-xs text-slate-600 dark:text-slate-400" aria-live="polite"></p>
     </div>
 
@@ -140,7 +152,7 @@ $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
             <li>Hersteller „<?= e($genericManufacturer?->name ?? 'Generisch') ?>“</li>
             <li>Immer Zubehör – wird nicht als eigener Posten abgerechnet (kein Preis pro Einsatztag) und ist nicht einzeln vermietbar</li>
             <li>Kein Einkaufspreis, keine Firmware, nicht in ein Rack einbaubar</li>
-            <li>Elektroprüfung, wenn der Leitungstyp sie verlangt (ohne Schutzklasse)</li>
+            <li>Elektroprüfung, wenn der Leitungstyp sie verlangt (ohne Schutzklasse) – analoge Multicores nie</li>
         </ul>
     </div>
 
@@ -160,9 +172,11 @@ $selectedUnit = $val('weight_unit', $article?->weightUnit ?? 'g');
     try { config = JSON.parse(section.getAttribute('data-cable-config') || '{}'); } catch (e) { /* leer */ }
     function update() {
         var entry = type.value ? config[type.value] : null;
-        info.textContent = !entry ? '' : (entry.inspection
-            ? 'Elektroprüfung: erforderlich (vom Leitungstyp vorgegeben).'
-            : 'Elektroprüfung: nicht erforderlich (vom Leitungstyp vorgegeben).');
+        info.textContent = !entry ? '' : (entry.multicore
+            ? 'Elektroprüfung: nicht erforderlich (analoges Multicore).'
+            : (entry.inspection
+                ? 'Elektroprüfung: erforderlich (vom Leitungstyp vorgegeben).'
+                : 'Elektroprüfung: nicht erforderlich (vom Leitungstyp vorgegeben).'));
     }
     type.addEventListener('change', update);
     update();

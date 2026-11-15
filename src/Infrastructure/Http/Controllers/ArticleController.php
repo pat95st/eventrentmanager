@@ -1205,9 +1205,11 @@ final class ArticleController
         $sourceArticleImageId = $request->input('source_article_image_id');
         $additionalInstructions = $request->input('additional_instructions');
         $count = (int) ($request->input('count', '1') ?? '1');
+        $includeArticleName = $request->input('include_article_name') === '1';
+        $includeProperties = $request->input('include_properties') === '1';
 
         try {
-            $ids = $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions, $count));
+            $ids = $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions, $count, $includeArticleName, $includeProperties));
             $generated = is_array($ids) ? count($ids) : 1;
             Flash::success($generated === 1
                 ? t('articles.show.ad_images_flash_generated')

@@ -569,6 +569,16 @@ $availabilityStatusMeta = [
                     <input id="ad_image_instructions" type="text" name="additional_instructions" placeholder="<?= e(t('articles.show.ad_images_additional_instructions_placeholder')) ?>"
                            class="mt-1 w-full disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
                 </div>
+                <div class="space-y-1 pb-1">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <input type="checkbox" name="include_article_name" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
+                        <?= e(t('articles.show.ad_images_include_name')) ?>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300" title="<?= e(t('articles.show.ad_images_include_properties_hint')) ?>">
+                        <input type="checkbox" name="include_properties" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
+                        <?= e(t('articles.show.ad_images_include_properties')) ?>
+                    </label>
+                </div>
                 <div>
                     <button type="submit" data-ad-image-submit
                             class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:border-brand-300 disabled:bg-brand-50 disabled:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:disabled:border-brand-800 dark:disabled:bg-brand-950 dark:disabled:text-brand-300">
@@ -719,7 +729,7 @@ $availabilityStatusMeta = [
                         toggle('[data-ad-image-label]', false);
                         toggle('[data-ad-image-busy-label]', true);
                         toggle('[data-ad-image-hint]', false);
-                        form.querySelectorAll('select, input[type="text"]').forEach(function (field) { field.disabled = true; });
+                        form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = true; });
 
                         form.querySelector('[data-ad-image-status-text]').textContent =
                             n === 1 ? form.dataset.statusOne : fill(form.dataset.statusMany, n);
@@ -758,7 +768,7 @@ $availabilityStatusMeta = [
                     toggle('[data-ad-image-busy-label]', false);
                     toggle('[data-ad-image-hint]', true);
                     status.classList.add('hidden');
-                    form.querySelectorAll('select, input[type="text"]').forEach(function (field) { field.disabled = false; });
+                    form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = false; });
                     gallery.querySelectorAll('[data-ad-image-placeholder]').forEach(function (tile) { tile.remove(); });
                     if (emptyText && !gallery.children.length) {
                         emptyText.classList.remove('hidden');

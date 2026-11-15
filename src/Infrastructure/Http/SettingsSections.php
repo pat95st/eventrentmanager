@@ -6,8 +6,9 @@ namespace App\Infrastructure\Http;
 
 /**
  * Zentrales Verzeichnis aller "/einstellungen/..."-Unterseiten, gruppiert in
- * sechs thematische Bereiche (Firma & Steuern, Dokumente & PDF, Preise &
- * Zahlung, Kommunikation, Lager & Veranstaltungen, System).
+ * sieben thematische Bereiche (Firma & Steuern, Dokumente & PDF, Preise &
+ * Zahlung, Kommunikation, Artikel & Technik, Veranstaltungen & Planung,
+ * System).
  * Einzige Quelle der Wahrheit für zwei Stellen in resources/views/layout.php:
  *
  *  - die Hauptnavigation zeigt dort nur noch VIER Gruppen-Links (statt aller
@@ -50,7 +51,6 @@ final class SettingsSections
                     $page('settings-abschreibungen', '/einstellungen/abschreibungen', t('nav.depreciation_settings'), 'Nutzungsdauer, GWG-Grenze und Berechnung der AfA'),
                     $page('settings-bankverbindungen', '/einstellungen/bankverbindungen', t('nav.bank_accounts'), 'Firmenkonten für Dokumente und Kontoführung'),
                     $page('settings-rechtliches', '/einstellungen/rechtliches', t('nav.legal_settings'), 'Vermietbedingungen, Impressum, Datenschutz'),
-                    $page('settings-betriebsurlaub', '/einstellungen/betriebsurlaub', 'Betriebsurlaub', 'Zeiträume ohne Ausgabe und Rücknahme'),
                 ],
             ],
             'documents' => [
@@ -95,17 +95,26 @@ final class SettingsSections
                     $page('settings-messenger-vorlagen', '/einstellungen/messenger-vorlagen', t('nav.messaging_templates'), 'Texte der Messenger-Nachrichten'),
                 ],
             ],
-            'operations' => [
-                'label' => 'Lager & Veranstaltungen',
-                'desc' => 'Techniker, Gewerke, Veranstaltungs-Audio, Leitungen, digitale Protokolle, Netzwerke, Etikettendruck und Kalender',
+            // Split by topic (user request): technical master data used by
+            // articles and inventory numbers vs. planning of events.
+            'equipment' => [
+                'label' => 'Artikel & Technik',
+                'desc' => 'Technische Angaben für Artikel und Inventarnummern',
                 'pages' => [
-                    $page('settings-techniker', '/einstellungen/techniker', 'Techniker & Gewerke', 'Gewerke und Erinnerungen bei offenen Techniker-Anfragen'),
-                    $page('settings-veranstaltungs-audio', '/einstellungen/veranstaltungs-audio', 'Veranstaltungs-Audio', 'Abspielgeräte (Raspberry Pi), Gong und Sprachausgabe für Durchsagen'),
                     $page('settings-leitungen', '/einstellungen/leitungen', 'Leitungen', 'Leitungstypen und Steckverbinder'),
-                    $page('settings-digitale-protokolle', '/einstellungen/digitale-protokolle', 'Digitale Protokolle', 'Protokolle für digitale Stageboxen und Tonmischpulte (Dante, AES50, MADI, …)'),
+                    $page('settings-digitale-protokolle', '/einstellungen/digitale-protokolle', 'Digitale Protokolle', 'Audioprotokolle für Stageboxen und Tonmischpulte, z. B. Dante oder MADI'),
                     $page('settings-netzwerke', '/einstellungen/netzwerke', 'Netzwerke', 'IP-Netzwerke, VLANs und Adressbereiche der Geräte'),
                     $page('settings-etikettendrucker', '/einstellungen/etikettendrucker', t('nav.label_printers'), 'Drucker für Inventur-Etiketten'),
+                ],
+            ],
+            'operations' => [
+                'label' => 'Veranstaltungen & Planung',
+                'desc' => 'Techniker, Betriebsurlaub, Kalender und Durchsagen',
+                'pages' => [
+                    $page('settings-techniker', '/einstellungen/techniker', 'Techniker & Gewerke', 'Gewerke und Erinnerungen bei offenen Techniker-Anfragen'),
+                    $page('settings-betriebsurlaub', '/einstellungen/betriebsurlaub', 'Betriebsurlaub', 'Zeiträume ohne Ausgabe und Rücknahme'),
                     $page('settings-kalender', '/einstellungen/kalender', t('nav.calendar_settings'), 'Kalender-Abos (CalDAV/ICS)'),
+                    $page('settings-veranstaltungs-audio', '/einstellungen/veranstaltungs-audio', 'Veranstaltungs-Audio', 'Abspielgeräte (Raspberry Pi), Gong und Sprachausgabe für Durchsagen'),
                 ],
             ],
             'system' => [

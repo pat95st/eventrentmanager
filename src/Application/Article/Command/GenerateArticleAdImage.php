@@ -15,6 +15,8 @@ final class GenerateArticleAdImage implements CommandInterface
         // null/leer = reine Text-zu-Bild-Generierung ("images/generations").
         public readonly ?string $sourceArticleImageId,
         public readonly ?string $additionalInstructions,
+        // Number of images to generate in one go (validated in the handler).
+        public readonly int $count = 1,
     ) {
     }
 }

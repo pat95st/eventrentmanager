@@ -31,6 +31,7 @@ use DateTimeImmutable;
 final class GenerateArticleAdImageHandler implements CommandHandlerInterface
 {
     private const MAX_ADDITIONAL_INSTRUCTIONS_LENGTH = 500;
+    public const MAX_COUNT = 4;
 
     public function __construct(
         private readonly ArticleRepositoryInterface $articles,
@@ -43,7 +44,8 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
     ) {
     }
 
-    public function handle(CommandInterface $command): string
+    /** @return list<string> IDs der erzeugten Werbebilder */
+    public function handle(CommandInterface $command): array
     {
         assert($command instanceof GenerateArticleAdImage);
 
@@ -55,6 +57,10 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
         $format = ArticleAdImageFormat::tryFrom($command->format);
         if ($format === null) {
             throw new ValidationException(['format' => 'Bitte ein gültiges Format auswählen.']);
+        }
+
+        if ($command->count < 1 || $command->count > self::MAX_COUNT) {
+            throw new ValidationException(['count' => 'Bitte zwischen 1 und ' . self::MAX_COUNT . ' Werbebilder auswählen.']);
         }
 
         $additionalInstructions = $this->nullIfEmpty($command->additionalInstructions);
@@ -94,7 +100,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
                 }
                 $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'image/jpeg') : 'image/jpeg';
 
-                $base64 = $this->openAiImageClient->generateFromImage(
+                $base64Images = $this->openAiImageClient->generateFromImage(
                     apiKey: $settings->openaiApiKey,
                     model: $settings->effectiveImageModel(),
                     prompt: $prompt,
@@ -102,48 +108,57 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
                     referenceImageBytes: $referenceBytes,
                     referenceImageMimeType: $mimeType,
                     referenceImageFilename: basename($sourceImage->filePath),
+                    count: $command->count,
                 );
             } else {
                 $prompt = $this->buildGenerationPrompt($article, $manufacturer?->name, $category?->name, $additionalInstructions);
 
-                $base64 = $this->openAiImageClient->generateFromText(
+                $base64Images = $this->openAiImageClient->generateFromText(
                     apiKey: $settings->openaiApiKey,
                     model: $settings->effectiveImageModel(),
                     prompt: $prompt,
                     size: $format->openAiSize(),
+                    count: $command->count,
                 );
             }
         } catch (OpenAiImageException $e) {
             throw new ValidationException(['format' => 'Werbebild konnte nicht generiert werden: ' . $e->getMessage()]);
         }
 
-        $imageBytes = base64_decode($base64, true);
-        if ($imageBytes === false) {
-            throw new ValidationException(['format' => 'OpenAI hat ungültige Bilddaten geliefert.']);
+        // Decode everything first so an invalid response stores nothing.
+        $decodedImages = [];
+        foreach ($base64Images as $base64) {
+            $imageBytes = base64_decode($base64, true);
+            if ($imageBytes === false) {
+                throw new ValidationException(['format' => 'OpenAI hat ungültige Bilddaten geliefert.']);
+            }
+            $decodedImages[] = $imageBytes;
         }
 
-        $imageId = Uuid::v4();
-        $stored = $this->fileStorage->storeRawBytes(
-            bytes: $imageBytes,
-            subDirectory: 'article-ad-images/' . $article->id,
-            storedFilenameWithoutExtension: $imageId,
-            originalFilename: $imageId . '.png',
-            mimeType: 'image/png',
-        );
+        $ids = [];
+        foreach ($decodedImages as $imageBytes) {
+            $imageId = Uuid::v4();
+            $stored = $this->fileStorage->storeRawBytes(
+                bytes: $imageBytes,
+                subDirectory: 'article-ad-images/' . $article->id,
+                storedFilenameWithoutExtension: $imageId,
+                originalFilename: $imageId . '.png',
+                mimeType: 'image/png',
+            );
 
-        $adImage = new ArticleAdImage(
-            id: $imageId,
-            articleId: $article->id,
-            filePath: $article->id . '/' . $stored['storedFilename'],
-            format: $format,
-            prompt: $prompt,
-            sourceArticleImageId: $sourceImage?->id,
-            createdAt: new DateTimeImmutable(),
-        );
+            $this->adImages->save(new ArticleAdImage(
+                id: $imageId,
+                articleId: $article->id,
+                filePath: $article->id . '/' . $stored['storedFilename'],
+                format: $format,
+                prompt: $prompt,
+                sourceArticleImageId: $sourceImage?->id,
+                createdAt: new DateTimeImmutable(),
+            ));
+            $ids[] = $imageId;
+        }
 
-        $this->adImages->save($adImage);
-
-        return $adImage->id;
+        return $ids;
     }
 
     private function buildGenerationPrompt(\App\Domain\Article\Article $article, ?string $manufacturerName, ?string $categoryName, ?string $additionalInstructions): string

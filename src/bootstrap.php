@@ -2562,6 +2562,7 @@ $router->post('/einstellungen/push', $auth->guard(Permission::Administration, [$
 $router->get('/einstellungen/messenger', $auth->guard(Permission::Administration, [$messagingSettingsController, 'edit']));
 $router->post('/einstellungen/messenger', $auth->guard(Permission::Administration, [$messagingSettingsController, 'update']));
 $router->get('/einstellungen/ki-werbebilder', $auth->guard(Permission::Administration, [$aiAdImageSettingsController, 'edit']));
+$router->get('/einstellungen/ki-werbebilder/modelle', $auth->guard(Permission::Administration, [$aiAdImageSettingsController, 'models']));
 $router->post('/einstellungen/ki-werbebilder', $auth->guard(Permission::Administration, [$aiAdImageSettingsController, 'update']));
 $router->post('/einstellungen/messenger/test/{channel}', $auth->guard(Permission::Administration, [$messagingSettingsController, 'testConnection']));
 $router->get('/einstellungen/messenger-vorlagen', $auth->guard(Permission::Administration, [$messageTemplateSettingsController, 'index']));

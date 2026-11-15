@@ -4,8 +4,7 @@
  * @var array<string, string> $errors
  * @var string $imageModelValue
  * @var list<string> $availableModels
- * @var bool $modelsFromApi
- * @var string|null $modelListError
+ * @var bool $loadModelsFromApi
  */
 
 use function App\Infrastructure\Http\e;
@@ -50,12 +49,14 @@ use function App\Infrastructure\Http\t;
         <?php endif; ?>
         <p class="mt-1 text-xs text-slate-400">
             <?= e(t('settings.ai_ad_images.field.image_model_hint', ['default' => \App\Domain\Settings\AiAdImageSettings::DEFAULT_IMAGE_MODEL])) ?>
-            <?php if ($modelsFromApi): ?>
-                <?= e(t('settings.ai_ad_images.field.image_model_from_api', ['models' => implode(', ', $availableModels)])) ?>
-            <?php elseif ($modelListError !== null): ?>
-                <span class="text-amber-600 dark:text-amber-400"><?= e(t('settings.ai_ad_images.field.image_model_list_failed', ['error' => $modelListError])) ?></span>
-            <?php endif; ?>
+            <span id="image_model_status"></span>
         </p>
+        <?php if ($loadModelsFromApi): ?>
+            <p id="image_model_loading" class="mt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span class="loading-spinner text-brand-600 dark:text-brand-400" aria-hidden="true"></span>
+                <span><?= e(t('settings.ai_ad_images.field.image_model_loading')) ?></span>
+            </p>
+        <?php endif; ?>
     </div>
 
     <p class="text-xs text-slate-400">
@@ -66,3 +67,44 @@ use function App\Infrastructure\Http\t;
         <?= e(t('common.save')) ?>
     </button>
 </form>
+
+<?php if ($loadModelsFromApi): ?>
+<script>
+    // Fetch the models available for the configured API key without blocking
+    // the page render (the OpenAI request can take a few seconds).
+    document.addEventListener('DOMContentLoaded', function () {
+        var input = document.getElementById('image_model');
+        var datalist = document.getElementById('image_model_options');
+        var status = document.getElementById('image_model_status');
+        var loading = document.getElementById('image_model_loading');
+        input.setAttribute('aria-busy', 'true');
+
+        fetch('/einstellungen/ki-werbebilder/modelle', { headers: { 'Accept': 'application/json' } })
+            .then(function (response) {
+                if (!response.ok) { throw new Error('HTTP ' + response.status); }
+                return response.json();
+            })
+            .then(function (data) {
+                if (Array.isArray(data.models) && data.models.length > 0) {
+                    datalist.replaceChildren();
+                    data.models.forEach(function (model) {
+                        var option = document.createElement('option');
+                        option.value = model;
+                        datalist.appendChild(option);
+                    });
+                }
+                if (data.hint) {
+                    status.textContent = data.hint;
+                } else if (data.error) {
+                    status.className = 'text-amber-600 dark:text-amber-400';
+                    status.textContent = data.error;
+                }
+            })
+            .catch(function () { /* keep the static suggestions */ })
+            .finally(function () {
+                input.removeAttribute('aria-busy');
+                if (loading) { loading.remove(); }
+            });
+    });
+</script>
+<?php endif; ?>

@@ -2471,6 +2471,7 @@ return [
     'settings.ai_ad_images.field.image_model_hint' => 'Leave blank for the default ({default}). Pick a model from the suggestions or enter any other OpenAI model name.',
     'settings.ai_ad_images.field.image_model_from_api' => 'Available for this API key: {models}.',
     'settings.ai_ad_images.field.image_model_list_failed' => 'Could not fetch the model list from OpenAI: {error}',
+    'settings.ai_ad_images.field.image_model_loading' => 'Loading available models from OpenAI …',
     'settings.ai_ad_images.flash.saved' => 'AI ad-image settings were saved.',
 
     'settings.messaging_templates.title' => 'Messaging templates',

@@ -509,8 +509,15 @@ $availabilityStatusMeta = [
                                 <button type="submit" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
                             </form>
                         </div>
-                        <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?></p>
-                        <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                        <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?><?php if ($adImage->sourceAdImageId !== null): ?> · <?= e(t('articles.show.ad_images_refined_badge')) ?><?php endif; ?></p>
+                        <div class="flex flex-wrap gap-x-2">
+                            <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                            <button type="button" data-ad-image-refine
+                                    data-action="/werbebilder/<?= e($adImage->id) ?>/ueberarbeiten"
+                                    data-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>"
+                                    data-format="<?= e($adImage->format->label()) ?>"
+                                    class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_refine')) ?></button>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -576,6 +583,85 @@ $availabilityStatusMeta = [
                     <span data-ad-image-elapsed class="ml-1 tabular-nums text-slate-400 dark:text-slate-500"></span>
                 </p>
             </form>
+
+            <dialog data-ad-image-refine-dialog aria-labelledby="ad_image_refine_title" class="modal-panel w-full max-w-lg rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+                <form method="post" action="" data-ad-image-refine-form class="space-y-3 p-4">
+                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                    <h3 id="ad_image_refine_title" class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('articles.show.ad_images_refine_title')) ?></h3>
+                    <div class="flex gap-3">
+                        <img data-ad-image-refine-preview src="" alt="" class="h-24 w-24 shrink-0 rounded-md object-cover ring-1 ring-slate-200 dark:ring-slate-700">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            <span data-ad-image-refine-format class="block font-medium text-slate-700 dark:text-slate-300"></span>
+                            <?= e(t('articles.show.ad_images_refine_hint')) ?>
+                        </p>
+                    </div>
+                    <div>
+                        <label for="ad_image_refine_instructions" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_instructions')) ?></label>
+                        <textarea id="ad_image_refine_instructions" name="instructions" rows="3" required maxlength="<?= \App\Application\Article\Command\RefineArticleAdImageHandler::MAX_INSTRUCTIONS_LENGTH ?>"
+                                  placeholder="<?= e(t('articles.show.ad_images_refine_instructions_placeholder')) ?>"
+                                  class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"></textarea>
+                    </div>
+                    <div>
+                        <label for="ad_image_refine_count" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_count')) ?></label>
+                        <select id="ad_image_refine_count" name="count" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900">
+                            <?php for ($n = 1; $n <= \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_COUNT; $n++): ?>
+                                <option value="<?= $n ?>"><?= $n ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <p class="text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" data-ad-image-refine-cancel
+                                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <?= e(t('common.cancel')) ?>
+                        </button>
+                        <button type="submit" data-ad-image-refine-submit
+                                class="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
+                            <span data-ad-image-refine-label><?= e(t('articles.show.ad_images_refine_submit')) ?></span>
+                            <span data-ad-image-refine-busy class="hidden"><?= e(t('articles.show.ad_images_refining')) ?></span>
+                        </button>
+                    </div>
+                </form>
+            </dialog>
+            <script>
+            (function () {
+                var dialog = document.querySelector('[data-ad-image-refine-dialog]');
+                if (!dialog) return;
+                var form = dialog.querySelector('[data-ad-image-refine-form]');
+                var submit = form.querySelector('[data-ad-image-refine-submit]');
+                var instructions = form.querySelector('[name="instructions"]');
+
+                function setBusy(busy) {
+                    submit.disabled = busy;
+                    submit.toggleAttribute('aria-busy', busy);
+                    form.querySelector('[data-ad-image-refine-label]').classList.toggle('hidden', busy);
+                    form.querySelector('[data-ad-image-refine-busy]').classList.toggle('hidden', !busy);
+                }
+
+                document.querySelectorAll('[data-ad-image-refine]').forEach(function (trigger) {
+                    trigger.addEventListener('click', function () {
+                        form.action = trigger.dataset.action;
+                        dialog.querySelector('[data-ad-image-refine-preview]').src = trigger.dataset.src;
+                        dialog.querySelector('[data-ad-image-refine-format]').textContent = trigger.dataset.format;
+                        setBusy(false);
+                        dialog.showModal();
+                        instructions.focus();
+                    });
+                });
+                dialog.querySelector('[data-ad-image-refine-cancel]').addEventListener('click', function () { dialog.close(); });
+                // Keep the dialog open while the request runs (it takes a while).
+                dialog.addEventListener('cancel', function (event) { if (submit.disabled) event.preventDefault(); });
+                form.addEventListener('submit', function (event) {
+                    if (event.defaultPrevented || submit.disabled) return;
+                    // Disable only after the browser has collected the form data.
+                    setTimeout(function () { setBusy(true); }, 0);
+                });
+                window.addEventListener('pageshow', function (event) {
+                    if (event.persisted) { setBusy(false); dialog.close(); }
+                });
+            })();
+            </script>
 
             <template data-ad-image-tile>
                 <div class="w-32 space-y-1" data-ad-image-placeholder>

@@ -22,9 +22,10 @@ final class MariadbArticleAdImageRepository implements ArticleAdImageRepositoryI
         // übrigen Artikel-Unterentitäten): jedes generierte Werbebild ist
         // ein eigener, unveränderlicher Historien-Eintrag (siehe
         // ArticleAdImage), es gibt kein "Bearbeiten" eines bestehenden Bilds.
+        // Refining an image (RefineArticleAdImageHandler) also creates a new entry.
         $stmt = $this->pdo->prepare(
-            'INSERT INTO article_ad_images (id, article_id, file_path, format, prompt, source_article_image_id, created_at)
-             VALUES (:id, :article_id, :file_path, :format, :prompt, :source_article_image_id, :created_at)'
+            'INSERT INTO article_ad_images (id, article_id, file_path, format, prompt, source_article_image_id, source_ad_image_id, created_at)
+             VALUES (:id, :article_id, :file_path, :format, :prompt, :source_article_image_id, :source_ad_image_id, :created_at)'
         );
 
         $stmt->execute([
@@ -34,6 +35,7 @@ final class MariadbArticleAdImageRepository implements ArticleAdImageRepositoryI
             'format' => $image->format->value,
             'prompt' => $image->prompt,
             'source_article_image_id' => $image->sourceArticleImageId,
+            'source_ad_image_id' => $image->sourceAdImageId,
             'created_at' => $image->createdAt->format('Y-m-d H:i:s'),
         ]);
     }
@@ -73,6 +75,7 @@ final class MariadbArticleAdImageRepository implements ArticleAdImageRepositoryI
             prompt: $row['prompt'],
             sourceArticleImageId: $row['source_article_image_id'],
             createdAt: new DateTimeImmutable($row['created_at']),
+            sourceAdImageId: $row['source_ad_image_id'] ?? null,
         );
     }
 }

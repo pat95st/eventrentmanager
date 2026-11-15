@@ -12,7 +12,11 @@ use App\Application\MinuteProgram\Command\SetMinuteProgramDelay;
 use App\Application\MinuteProgram\Command\StartMinuteProgramItem;
 use App\Application\MinuteProgram\Query\MinuteProgramDetail;
 use App\Application\MinuteProgram\Query\RunSheetPayload;
+use App\Application\EventMessage\Command\AcknowledgeEventMessage;
+use App\Application\EventMessage\Command\CloseEventMessage;
 use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
+use App\Domain\EventMessage\EventMessage;
+use App\Domain\EventMessage\EventMessageRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -23,6 +27,9 @@ use App\Infrastructure\Http\Request;
  * (MinuteProgramFohController) and the stage display API
  * (RunSheetApiController): set/adjust the delay, start an item, finish and
  * reset. Input comes from form fields or a JSON body.
+ *
+ * Migration 166: the payload also carries the organizer's active messages;
+ * FOH may acknowledge ("seen") or hide them.
  */
 final class RunSheetActions
 {
@@ -32,17 +39,24 @@ final class RunSheetActions
         'start' => 'start',
         'ende' => 'finish', 'finish' => 'finish',
         'zuruecksetzen' => 'reset', 'reset' => 'reset',
+        'nachricht-gesehen' => 'message-ack',
+        'nachricht-ausblenden' => 'message-close',
     ];
+
+    /** Payload audiences: FOH sees all messages, stage displays only those sent to the stage. */
+    public const AUDIENCE_FOH = 'foh';
+    public const AUDIENCE_STAGE = 'stage';
 
     public function __construct(
         private readonly CommandBus $commands,
         private readonly RentalRepositoryInterface $rentals,
         private readonly ?RentalAudioFileRepositoryInterface $audioFiles = null,
+        private readonly ?EventMessageRepositoryInterface $messages = null,
     ) {
     }
 
     /** @return array<string, mixed> */
-    public function payload(MinuteProgramDetail $detail, bool $canControl): array
+    public function payload(MinuteProgramDetail $detail, bool $canControl, string $audience = self::AUDIENCE_FOH): array
     {
         $program = $detail->program;
         $jingleTitle = null;
@@ -54,7 +68,22 @@ final class RunSheetActions
             'eventName' => $this->rentals->findById($program->rentalId)?->eventName,
             'jingleTitle' => $jingleTitle,
             'canControl' => $canControl,
+            'messages' => $this->messagesFor($program->rentalId, $program->id, $audience),
         ]);
+    }
+
+    /** @return list<EventMessage> */
+    private function messagesFor(string $rentalId, string $programId, string $audience): array
+    {
+        $result = [];
+        foreach ($this->messages?->findActiveByRental($rentalId) ?? [] as $message) {
+            $forAudience = $audience === self::AUDIENCE_STAGE ? $message->toStage : ($message->toFoh || $message->toStage);
+            if ($forAudience && $message->appliesTo($programId)) {
+                $result[] = $message;
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -65,7 +94,7 @@ final class RunSheetActions
      *
      * @return array{0: string, 1: int}|null
      */
-    public function perform(string $action, MinuteProgramDetail $detail, array $input, ?string $itemId = null): ?array
+    public function perform(string $action, MinuteProgramDetail $detail, array $input, ?string $itemId = null, string $actorName = 'FOH'): ?array
     {
         $program = $detail->program;
         try {
@@ -92,6 +121,12 @@ final class RunSheetActions
                     break;
                 case 'reset':
                     $this->commands->dispatch(new ResetMinuteProgramLive($program->id));
+                    break;
+                case 'message-ack':
+                    $this->commands->dispatch(new AcknowledgeEventMessage((string) $itemId, $program->rentalId, $actorName));
+                    break;
+                case 'message-close':
+                    $this->commands->dispatch(new CloseEventMessage((string) $itemId, $program->rentalId, $actorName));
                     break;
                 default:
                     return ['Unbekannte Aktion.', 400];

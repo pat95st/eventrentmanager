@@ -33,7 +33,7 @@ final class RunSheetApiController
     {
         $resolved = $this->resolve($request);
         if ($resolved !== null) {
-            self::json($this->actions->payload($resolved->detail, $resolved->link->mode->canEdit()));
+            self::json($this->actions->payload($resolved->detail, $resolved->link->mode->canEdit(), RunSheetActions::AUDIENCE_STAGE));
         }
     }
 
@@ -84,7 +84,7 @@ final class RunSheetApiController
             return;
         }
         $fresh = $this->queries->ask(new ResolveMinuteProgramShareLink($request->param('token')));
-        self::json(['ok' => true] + $this->actions->payload($fresh->detail, true));
+        self::json(['ok' => true] + $this->actions->payload($fresh->detail, true, RunSheetActions::AUDIENCE_STAGE));
     }
 
     private function resolve(Request $request): ?ResolvedMinuteProgramShareLink

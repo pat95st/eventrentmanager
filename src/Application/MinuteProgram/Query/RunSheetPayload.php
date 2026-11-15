@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\MinuteProgram\Query;
 
+use App\Domain\EventMessage\EventMessage;
 use DateTimeImmutable;
 
 /**
@@ -22,7 +23,10 @@ final class RunSheetPayload
     public const API_VERSION = 1;
 
     /**
-     * @param array{eventName?: ?string, jingleTitle?: ?string, canControl?: bool} $context
+     * $context['messages']: active messages (migration 166) already filtered
+     * for the audience (stage display: only those sent to the stage).
+     *
+     * @param array{eventName?: ?string, jingleTitle?: ?string, canControl?: bool, messages?: list<EventMessage>} $context
      *
      * @return array<string, mixed>
      */
@@ -40,6 +44,8 @@ final class RunSheetPayload
             ? ($last->effectiveEnd() ?? $last->effectiveStart())
             : $program->delayedStartAt();
 
+        $messages = $context['messages'] ?? [];
+
         $state = match (true) {
             $detail->finished => 'finished',
             $current !== null => 'running',
@@ -50,7 +56,7 @@ final class RunSheetPayload
             'apiVersion' => self::API_VERSION,
             'serverTime' => $now->format(DATE_ATOM),
             // Changes whenever plan or live state change (not with the clock).
-            'revision' => self::revision($detail),
+            'revision' => self::revision($detail, $messages),
             'event' => ['name' => $context['eventName'] ?? null],
             'program' => [
                 'id' => $program->id,
@@ -80,6 +86,8 @@ final class RunSheetPayload
             'current' => $current !== null ? self::itemRef($current, $now) : null,
             'next' => $next !== null ? self::itemRef($next, $now) : null,
             'items' => array_map(static fn (MinuteProgramItemDetail $d): array => self::item($d), $items),
+            // Migration 166: messages from the organizer, oldest first.
+            'messages' => array_map(static fn (EventMessage $m): array => self::message($m), array_values($messages)),
         ];
     }
 
@@ -139,13 +147,34 @@ final class RunSheetPayload
         ];
     }
 
-    private static function revision(MinuteProgramDetail $detail): string
+    /** @return array<string, mixed> */
+    private static function message(EventMessage $m): array
+    {
+        return [
+            'id' => $m->id,
+            'text' => $m->body,
+            'urgent' => $m->urgent,
+            'stage' => $m->toStage,
+            'foh' => $m->toFoh,
+            'allPrograms' => $m->minuteProgramId === null,
+            'sentAt' => self::time($m->createdAt),
+            'sentBy' => $m->sentByName,
+            'acknowledgedAt' => self::time($m->acknowledgedAt),
+            'acknowledgedBy' => $m->acknowledgedBy,
+        ];
+    }
+
+    /** @param list<EventMessage> $messages */
+    private static function revision(MinuteProgramDetail $detail, array $messages = []): string
     {
         $p = $detail->program;
         $parts = [$p->updatedAt->format(DATE_ATOM), $p->startAt->format(DATE_ATOM), $p->currentDelaySeconds, $p->liveItemId, $p->liveFinishedAt?->format(DATE_ATOM)];
         foreach ($detail->items as $d) {
             $i = $d->item;
             $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, $i->noteSound, $i->noteLight, $i->noteVideo, $i->noteStage]);
+        }
+        foreach ($messages as $m) {
+            $parts[] = 'm|' . $m->id . '|' . ($m->acknowledgedAt?->format(DATE_ATOM) ?? '');
         }
 
         return substr(sha1(implode("\n", array_map(static fn ($v): string => (string) $v, $parts))), 0, 16);

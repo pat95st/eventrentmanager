@@ -19,7 +19,7 @@ use App\Domain\Rental\RentalRepositoryInterface;
 use App\Infrastructure\Http\Request;
 
 /**
- * Live run sheet actions (migration 157) shared by the FOH page
+ * Live run sheet actions (migration 158) shared by the FOH page
  * (MinuteProgramFohController) and the stage display API
  * (RunSheetApiController): set/adjust the delay, start an item, finish and
  * reset. Input comes from form fields or a JSON body.

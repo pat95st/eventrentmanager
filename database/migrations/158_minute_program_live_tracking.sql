@@ -1,4 +1,4 @@
--- Migration 157: Live-Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API.
+-- Migration 158: Live-Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API.
 --
 --  - current_delay_seconds: sekundengenauer Verzug (auch negativ). Ersetzt
 --    fachlich current_delay_minutes; diese Spalte wird weiterhin (gerundet)

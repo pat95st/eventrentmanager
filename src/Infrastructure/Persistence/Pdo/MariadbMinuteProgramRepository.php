@@ -103,7 +103,7 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             jingleBefore: (bool) $row['jingle_before'],
             handheldMicCount: (int) $row['handheld_mic_count'],
             headsetMicCount: (int) $row['headset_mic_count'],
-            // Before migration 157 only minutes existed.
+            // Before migration 158 only minutes existed.
             currentDelaySeconds: array_key_exists('current_delay_seconds', $row)
                 ? (int) $row['current_delay_seconds']
                 : (int) $row['current_delay_minutes'] * 60,

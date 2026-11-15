@@ -18,7 +18,7 @@ use DateTimeImmutable;
  * Two modes determine the current item:
  *  - clock mode (default): the current item is the last one whose delayed
  *    start has passed, the next one is the first after it;
- *  - live tracking (an item was started at FOH, migration 157): the started
+ *  - live tracking (an item was started at FOH, migration 158): the started
  *    item stays current until the next one is started. If it runs past the
  *    next item's start, the overrun is added to the projected start of all
  *    following items and to the projected delay.

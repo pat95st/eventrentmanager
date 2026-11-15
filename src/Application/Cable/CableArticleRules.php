@@ -15,7 +15,7 @@ use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
  * - immer Zubehör (nicht als eigener Posten abgerechnet, kein Tagespreis)
  *   und nicht einzeln vermietbar,
  * - Elektroprüfung genau dann, wenn der Leitungstyp sie verlangt — ohne
- *   Schutzklasse.
+ *   Schutzklasse; analog multicores never need one (migration 157).
  *
  * Die Handler wenden die Regeln serverseitig an, egal aus welchem Formular
  * die Angaben kommen.
@@ -41,7 +41,7 @@ final class CableArticleRules
             'manufacturerId' => $this->manufacturers->findGeneric()?->id ?? '',
             'dimensions' => null,
             'purchasePrice' => null,
-            'requiresElectricalInspection' => $type?->requiresElectricalInspection ?? false,
+            'requiresElectricalInspection' => $type?->requiresInspection() ?? false,
             'protectionClass' => null,
             'isBillable' => false,
             'dailyRentalPrice' => null,

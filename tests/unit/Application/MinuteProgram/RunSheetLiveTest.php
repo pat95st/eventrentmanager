@@ -25,7 +25,7 @@ use Tests\Support\Fakes\InMemoryMinuteProgramItemRepository;
 use Tests\Support\Fakes\InMemoryMinuteProgramRepository;
 
 /**
- * Live run sheet (migration 157): program starts 20:00 with
+ * Live run sheet (migration 158): program starts 20:00 with
  * Einlass (10 min) → Begrüßung (5 min) → Keynote (30 min) → Ende (no duration).
  */
 final class RunSheetLiveTest extends Unit

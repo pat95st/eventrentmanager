@@ -23,10 +23,14 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
             <input id="desc-<?= e($prefix) ?>" name="description" maxlength="500" value="<?= e($type?->description ?? '') ?>" placeholder="optional" class="<?= $input ?>">
         </div>
     </div>
-    <div class="mt-3 flex flex-wrap items-end gap-4">
+    <div class="mt-3 flex flex-wrap items-end gap-4" data-cable-type-flags>
         <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-            <input type="checkbox" name="requires_electrical_inspection" value="1" <?= $type?->requiresElectricalInspection ? 'checked' : '' ?>>
+            <input type="checkbox" name="requires_electrical_inspection" value="1" data-inspection-flag <?= $type?->requiresInspection() ? 'checked' : '' ?> <?= $type?->isAnalogMulticore ? 'disabled' : '' ?>>
             Elektroprüfung erforderlich (gilt für alle Leitungen dieses Typs)
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300" title="Leitungen dieses Typs erfassen zusätzlich Sends, Returns, Trommel und Harting-Steckverbinder; sie brauchen keine Elektroprüfung.">
+            <input type="checkbox" name="is_analog_multicore" value="1" data-multicore-flag <?= $type?->isAnalogMulticore ? 'checked' : '' ?>>
+            Analoges Multicore (Sends, Returns, Trommel, Harting; ohne Elektroprüfung)
         </label>
         <div>
             <label class="block text-xs font-medium text-slate-600 dark:text-slate-400" for="sort-<?= e($prefix) ?>">Reihenfolge</label>
@@ -92,6 +96,18 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
         </form>
     </div>
 </section>
+
+<script>
+    // Analog multicores never need an electrical inspection (migration 157).
+    document.querySelectorAll('[data-cable-type-flags]').forEach(function (flags) {
+        var multicore = flags.querySelector('[data-multicore-flag]');
+        var inspection = flags.querySelector('[data-inspection-flag]');
+        multicore.addEventListener('change', function () {
+            if (multicore.checked) { inspection.checked = false; }
+            inspection.disabled = multicore.checked;
+        });
+    });
+</script>
 
 <section id="steckverbinder" class="space-y-3">
     <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Steckverbinder</h2>

@@ -26,18 +26,18 @@ final class MinuteProgram
         public int $headsetMicCount,
         // Live delay in seconds (may be negative = ahead of schedule). Only
         // shifts the displayed/live times, never the original plan
-        // ($startAt, item durations). Migration 157 switched from minutes.
+        // ($startAt, item durations). Migration 158 switched from minutes.
         public int $currentDelaySeconds,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
         // Migration 135: welcher hinterlegte Jingle der Veranstaltung vor
         // diesem Programm gespielt wird (App\Domain\EventAudio\RentalAudioFile).
         public ?string $jingleAudioFileId = null,
-        // Migration 157: item last started at FOH and its actual start time.
+        // Migration 158: item last started at FOH and its actual start time.
         // While set, that item stays "current" until the next one is started.
         public ?string $liveItemId = null,
         public ?DateTimeImmutable $liveItemStartedAt = null,
-        // Migration 157: program marked as finished at FOH.
+        // Migration 158: program marked as finished at FOH.
         public ?DateTimeImmutable $liveFinishedAt = null,
     ) {
     }

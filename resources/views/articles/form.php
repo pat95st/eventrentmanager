@@ -279,7 +279,7 @@ $bundleComponentRows ??= [];
                 <select id="cable_type_id" name="cable_type_id" class="<?= $cableInput ?>">
                     <option value="">Bitte wählen…</option>
                     <?php foreach ($cableSettings->types as $cableTypeOption): ?>
-                        <option value="<?= e($cableTypeOption->id) ?>" <?= $cableTypeSelected === $cableTypeOption->id ? 'selected' : '' ?>><?= e($cableTypeOption->name) ?><?= $cableTypeOption->requiresElectricalInspection ? ' (prüfpflichtig)' : '' ?></option>
+                        <option value="<?= e($cableTypeOption->id) ?>" <?= $cableTypeSelected === $cableTypeOption->id ? 'selected' : '' ?>><?= e($cableTypeOption->name) ?><?= $cableTypeOption->requiresInspection() ? ' (prüfpflichtig)' : '' ?></option>
                     <?php endforeach; ?>
                 </select>
                 <?= $cableErr('cable_type_id') ?>
@@ -302,6 +302,18 @@ $bundleComponentRows ??= [];
                 </div>
             <?php endforeach; ?>
         </div>
+        <?php
+            $cableTypeIsMulticore = false;
+            foreach ($cableSettings->types as $cableTypeOption) {
+                $cableTypeIsMulticore = $cableTypeIsMulticore || ($cableTypeOption->id === $cableTypeSelected && $cableTypeOption->isAnalogMulticore);
+            }
+        ?>
+        <?= \App\Infrastructure\Http\View::render('cables/_multicore_fields', [
+            'multicore' => $cable?->cable->multicore,
+            'old' => $old,
+            'errors' => $errors,
+            'visible' => $cableTypeIsMulticore,
+        ]) ?>
     </div>
     <?php endif; ?>
 

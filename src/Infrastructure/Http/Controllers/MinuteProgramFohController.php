@@ -21,7 +21,7 @@ use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
 /**
- * FOH run sheet ("Ablauf am FOH", migration 157): full-screen live page of a
+ * FOH run sheet ("Ablauf am FOH", migration 158): full-screen live page of a
  * minute program for the front of house, analogous to the live audio page
  * (EventAudioLiveController). Shows all information of the program and lets
  * the operator record the delay – either as an exact value or by pressing

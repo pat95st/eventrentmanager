@@ -13,7 +13,7 @@ use App\Infrastructure\Http\Response;
 
 /**
  * Run sheet API for stage displays and other external clients
- * (migration 157), see docs/stagedisplay-api.md.
+ * (migration 158), see docs/stagedisplay-api.md.
  *
  * Authentication: the token of a minute program share link, in the path
  * (/api/runsheet/v1/{token}) – "read" links may only read, "read/write"

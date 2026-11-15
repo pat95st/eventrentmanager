@@ -1705,7 +1705,7 @@ $audioSettingsController = new \App\Infrastructure\Http\Controllers\AudioSetting
 $audioPlayerApiController = new \App\Infrastructure\Http\Controllers\AudioPlayerApiController($commandBus, $audioPlayerRepository, $audioSettingsRepository, $rentalAudioSettingsRepository, $rentalAudioFileRepository, $playbackRequestRepository, $rentalRepository, $fileStorage, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
-// Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API, siehe Migration 157.
+// Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API, siehe Migration 158.
 $runSheetActions = new \App\Infrastructure\Http\Controllers\RunSheetActions($commandBus, $rentalRepository, $rentalAudioFileRepository);
 $minuteProgramFohController = new \App\Infrastructure\Http\Controllers\MinuteProgramFohController($queryBus, $runSheetActions, $rentalRepository, $minuteProgramRepository, $minuteProgramShareLinkRepository, $rentalTechnicianRepository);
 $runSheetApiController = new \App\Infrastructure\Http\Controllers\RunSheetApiController($queryBus, $runSheetActions);
@@ -2302,7 +2302,7 @@ $router->post('/minutenprogramme/{id}/loeschen', $auth->guard(Permission::Minute
 $router->post('/minutenprogramme/{id}/verzoegerung', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'setDelay']));
 $router->get('/minutenprogramme/{id}/vollbild', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'fullscreen']));
 $router->get('/minutenprogramme/{id}/countdown.json', $auth->guard(Permission::Minutenprogramme, [$minuteProgramController, 'countdown']));
-// Ablauf am FOH (Migration 157): wie die Live-Audio-Oberfläche auch für eingeplante Techniker.
+// Ablauf am FOH (Migration 158): wie die Live-Audio-Oberfläche auch für eingeplante Techniker.
 $fohAccess = [Permission::AusgabeRuecknahme, Permission::Minutenprogramme, Permission::Techniker];
 $router->get('/minutenprogramme/{id}/foh', $auth->guard($fohAccess, [$minuteProgramFohController, 'userPage']));
 $router->get('/minutenprogramme/{id}/foh/status', $auth->guard($fohAccess, [$minuteProgramFohController, 'userStatus']));
@@ -2569,7 +2569,7 @@ $router->get('/minutenprogramm/freigabe/{token}/foh/status', [$minuteProgramFohC
 $router->post('/minutenprogramm/freigabe/{token}/foh/{action}', [$minuteProgramFohController, 'shareAction']);
 $router->post('/minutenprogramm/freigabe/{token}/foh/{action}/{itemId}', [$minuteProgramFohController, 'shareAction']);
 
-// Stagedisplay-/Ablauf-API (Migration 157), Token = Freigabe-Link, siehe docs/stagedisplay-api.md.
+// Stagedisplay-/Ablauf-API (Migration 158), Token = Freigabe-Link, siehe docs/stagedisplay-api.md.
 $router->get('/api/runsheet/v1/{token}', [$runSheetApiController, 'state']);
 $router->post('/api/runsheet/v1/{token}/delay', [$runSheetApiController, 'delay']);
 $router->post('/api/runsheet/v1/{token}/items/{itemId}/start', [$runSheetApiController, 'start']);

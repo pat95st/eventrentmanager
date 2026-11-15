@@ -1,6 +1,6 @@
 # Ablauf-Schnittstelle für Stagedisplays (Run-Sheet-API)
 
-Stand: Migration 157 „Ablauf am FOH“. Diese Beschreibung ist die Vorlage für ein separat entwickeltes Stagedisplay (Bühnenmonitor, Konfidenzmonitor, Countdown-Anzeige o. Ä.). Dieselben Daten zeigt die FOH-Oberfläche **Ablauf am FOH** (`/minutenprogramme/{id}/foh`).
+Stand: Migration 158 „Ablauf am FOH“. Diese Beschreibung ist die Vorlage für ein separat entwickeltes Stagedisplay (Bühnenmonitor, Konfidenzmonitor, Countdown-Anzeige o. Ä.). Dieselben Daten zeigt die FOH-Oberfläche **Ablauf am FOH** (`/minutenprogramme/{id}/foh`).
 
 ## Überblick
 

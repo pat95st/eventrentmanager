@@ -1,6 +1,6 @@
 <?php
 /**
- * Ablauf am FOH (Migration 157) – eigenständige Live-Seite eines
+ * Ablauf am FOH (Migration 158) – eigenständige Live-Seite eines
  * Minutenprogramms für die Regie, analog zur Live-Oberfläche
  * „Audio & Durchsagen“ (event-audio/live.php). Alle Inhalte werden
  * clientseitig aus dem Run-Sheet-JSON (RunSheetPayload) gerendert, damit

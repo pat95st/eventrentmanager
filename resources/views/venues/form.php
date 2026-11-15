@@ -13,6 +13,7 @@
 /** @var string $companyAddress */
 
 use App\Domain\Venue\CircuitBreakerRating;
+use App\Domain\Venue\FogPolicy;
 use App\Domain\Venue\PowerConnectionType;
 use App\Domain\Venue\RcdTripCurrent;
 use function App\Infrastructure\Http\e;
@@ -121,6 +122,19 @@ $formatMeters = static function (float $meters): string {
                    class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
         </div>
         <p class="sm:col-span-2 -mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('venues.form.caretaker_hint')) ?></p>
+    </div>
+
+    <div>
+        <label for="fog_policy" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.form.fog_policy')) ?></label>
+        <?php $fogPolicyValue = (string) $val('fog_policy', $venue?->fogPolicy?->value); ?>
+        <select id="fog_policy" name="fog_policy"
+                class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
+            <option value=""><?= e(t('venues.fog.unspecified')) ?></option>
+            <?php foreach (FogPolicy::cases() as $fogPolicyCase): ?>
+                <option value="<?= e($fogPolicyCase->value) ?>" <?= $fogPolicyValue === $fogPolicyCase->value ? 'selected' : '' ?>><?= e(t($fogPolicyCase->labelKey())) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <?php if (isset($errors['fogPolicy'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['fogPolicy']) ?></p><?php endif; ?>
     </div>
 
     <div class="rounded-md bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">

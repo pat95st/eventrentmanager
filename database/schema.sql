@@ -4490,6 +4490,16 @@ SET body_html = REPLACE(body_html, '<p>Mit freundlichen Grüßen</p>', '{{paymen
 WHERE template_key = 'invoice_pdf'
   AND body_html NOT LIKE '%{{payment_link_html}}%';
 
+-- --- 164_venue_fog_policy.sql ---
+-- Migration 164: Whether haze/fog machines may be used at a venue.
+--
+--  - venues.fog_policy: 'allowed', 'not_allowed' or 'on_request' (fog only
+--    after consultation, the fire alarm system is temporarily disabled).
+--    NULL = not specified (default for all existing venues).
+
+ALTER TABLE venues
+    ADD COLUMN fog_policy VARCHAR(20) NULL AFTER caretaker_phone;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4675,4 +4685,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('160_partner_instances.sql', NOW()),
     ('161_onboarding_tour.sql', NOW()),
     ('162_ai_ad_image_model.sql', NOW()),
-    ('163_online_payments.sql', NOW());
+    ('163_online_payments.sql', NOW()),
+    ('164_venue_fog_policy.sql', NOW());

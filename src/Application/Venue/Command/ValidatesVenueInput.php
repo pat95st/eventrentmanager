@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Venue\Command;
 
+use App\Domain\Venue\FogPolicy;
+
 /**
  * Gemeinsame Validierung für Create-/UpdateVenueHandler, damit die Regeln
  * nicht an zwei Stellen auseinanderlaufen können.
@@ -14,7 +16,8 @@ trait ValidatesVenueInput
      * @return array{0: array<string, string>, 1: array{
      *     name: string, street: string, postalCode: string, city: string,
      *     country: string|null, notes: string|null,
-     *     caretakerName: string|null, caretakerPhone: string|null
+     *     caretakerName: string|null, caretakerPhone: string|null,
+     *     fogPolicy: FogPolicy|null
      * }}
      */
     private function validateVenueInput(
@@ -26,6 +29,7 @@ trait ValidatesVenueInput
         ?string $notes,
         ?string $caretakerName = null,
         ?string $caretakerPhone = null,
+        ?string $fogPolicy = null,
     ): array {
         $errors = [];
 
@@ -71,6 +75,16 @@ trait ValidatesVenueInput
             $caretakerPhone = null;
         }
 
+        // Fog policy is optional; an empty value means "not specified".
+        $fogPolicyValue = $fogPolicy !== null ? trim($fogPolicy) : '';
+        $fogPolicyEnum = null;
+        if ($fogPolicyValue !== '') {
+            $fogPolicyEnum = FogPolicy::tryFrom($fogPolicyValue);
+            if ($fogPolicyEnum === null) {
+                $errors['fogPolicy'] = 'Bitte eine gültige Angabe zu Nebel auswählen.';
+            }
+        }
+
         return [$errors, [
             'name' => $name,
             'street' => $street,
@@ -80,6 +94,7 @@ trait ValidatesVenueInput
             'notes' => $notes,
             'caretakerName' => $caretakerName,
             'caretakerPhone' => $caretakerPhone,
+            'fogPolicy' => $fogPolicyEnum,
         ]];
     }
 }

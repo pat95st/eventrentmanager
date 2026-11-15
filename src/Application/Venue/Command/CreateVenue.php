@@ -17,6 +17,7 @@ final class CreateVenue implements CommandInterface
         public readonly ?string $notes,
         public readonly ?string $caretakerName = null,
         public readonly ?string $caretakerPhone = null,
+        public readonly ?string $fogPolicy = null,
     ) {
     }
 }

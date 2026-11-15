@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Pdo;
 
+use App\Domain\Venue\FogPolicy;
 use App\Domain\Venue\Venue;
 use App\Domain\Venue\VenueRepositoryInterface;
 use DateTimeImmutable;
@@ -20,15 +21,15 @@ final class MariadbVenueRepository implements VenueRepositoryInterface
         $stmt = $this->pdo->prepare(
             'INSERT INTO venues (
                 id, name, street, postal_code, city, country, notes, caretaker_name, caretaker_phone,
-                latitude, longitude, created_at, updated_at
+                fog_policy, latitude, longitude, created_at, updated_at
              ) VALUES (
                 :id, :name, :street, :postal_code, :city, :country, :notes, :caretaker_name, :caretaker_phone,
-                :latitude, :longitude, :created_at, :updated_at
+                :fog_policy, :latitude, :longitude, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 name = :name2, street = :street2, postal_code = :postal_code2, city = :city2,
                 country = :country2, notes = :notes2, caretaker_name = :caretaker_name2,
-                caretaker_phone = :caretaker_phone2, latitude = :latitude2, longitude = :longitude2,
+                caretaker_phone = :caretaker_phone2, fog_policy = :fog_policy2, latitude = :latitude2, longitude = :longitude2,
                 updated_at = :updated_at2'
         );
 
@@ -42,6 +43,7 @@ final class MariadbVenueRepository implements VenueRepositoryInterface
             'notes' => $venue->notes,
             'caretaker_name' => $venue->caretakerName,
             'caretaker_phone' => $venue->caretakerPhone,
+            'fog_policy' => $venue->fogPolicy?->value,
             'latitude' => $venue->latitude,
             'longitude' => $venue->longitude,
             'created_at' => $venue->createdAt->format('Y-m-d H:i:s'),
@@ -54,6 +56,7 @@ final class MariadbVenueRepository implements VenueRepositoryInterface
             'notes2' => $venue->notes,
             'caretaker_name2' => $venue->caretakerName,
             'caretaker_phone2' => $venue->caretakerPhone,
+            'fog_policy2' => $venue->fogPolicy?->value,
             'latitude2' => $venue->latitude,
             'longitude2' => $venue->longitude,
             'updated_at2' => $venue->updatedAt->format('Y-m-d H:i:s'),
@@ -148,6 +151,7 @@ final class MariadbVenueRepository implements VenueRepositoryInterface
             notes: $row['notes'],
             caretakerName: $row['caretaker_name'],
             caretakerPhone: $row['caretaker_phone'],
+            fogPolicy: isset($row['fog_policy']) ? FogPolicy::tryFrom((string) $row['fog_policy']) : null,
             latitude: $row['latitude'] !== null ? (float) $row['latitude'] : null,
             longitude: $row['longitude'] !== null ? (float) $row['longitude'] : null,
             createdAt: new DateTimeImmutable($row['created_at']),

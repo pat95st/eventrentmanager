@@ -8,6 +8,10 @@ $powerDistributor ??= null;
 $cable ??= null;
 /** @var \App\Application\DigitalStagebox\Query\ArticleDigitalStageboxDetail|null $digitalStagebox Angaben der digitalen Stagebox (Migration 152) */
 $digitalStagebox ??= null;
+/** @var \App\Application\MixingConsole\Query\ArticleMixingConsoleDetail|null $mixingConsole Tonmischpult (Migration 153) */
+$mixingConsole ??= null;
+/** @var \App\Domain\MixingConsole\CompatibleConsole[] $compatibleConsoles Pulte, die diese Stagebox als kompatibel führen */
+$compatibleConsoles ??= [];
 /** @var string|null $editInventoryId */
 /** @var string|null $editAccessoryId */
 /** @var string|null $editPreIssueCheckId */
@@ -114,6 +118,11 @@ $availabilityStatusMeta = [
             <?php if ($digitalStagebox !== null): ?>
                 <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-700" title="Eingänge/Ausgänge">
                     Digitale Stagebox · <?= e($digitalStagebox->protocol?->name ?? '–') ?> · <?= e($digitalStagebox->stagebox->channelSummary()) ?>
+                </span>
+            <?php endif; ?>
+            <?php if ($mixingConsole !== null): ?>
+                <span class="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-800 ring-1 ring-inset ring-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-700">
+                    Tonmischpult · <?= e($mixingConsole->console->summary()) ?>
                 </span>
             <?php endif; ?>
             <?php if ($article->hasFirmware): ?>
@@ -313,6 +322,96 @@ $availabilityStatusMeta = [
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Analoge Eingänge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($sb->inputsLabel()) ?></dd></div>
                     <div><dt class="text-xs text-slate-500 dark:text-slate-400">Ausgänge</dt><dd class="text-slate-800 dark:text-slate-200"><?= e($sb->outputsLabel()) ?></dd></div>
                 </dl>
+            </div>
+        <?php endif; ?>
+
+        <!-- Tonmischpult (Migration 153): Angaben werden im Artikelformular gepflegt -->
+        <?php if ($mixingConsole !== null): ?>
+            <?php
+                $mc = $mixingConsole->console;
+                $dt = 'text-xs text-slate-500 dark:text-slate-400';
+                $dd = 'text-slate-800 dark:text-slate-200';
+            ?>
+            <div id="tonmischpult" class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Tonmischpult · <?= e($mc->type->label()) ?></h2>
+                    <a href="/artikel/<?= e($article->id) ?>/bearbeiten#mixing_console_section" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                </div>
+                <?php if (!$mc->isDigital()): ?>
+                    <dl class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <div><dt class="<?= $dt ?>">Eingänge</dt><dd class="<?= $dd ?>"><?= e($mc->analogInputsLabel()) ?></dd></div>
+                        <div><dt class="<?= $dt ?>">AUX-Wege</dt><dd class="<?= $dd ?>"><?= e($mc->auxLabel()) ?></dd></div>
+                        <div><dt class="<?= $dt ?>">Subgruppen</dt><dd class="<?= $dd ?>"><?= $mc->subgroups > 0 ? e((string) $mc->subgroups) : 'keine' ?></dd></div>
+                        <div><dt class="<?= $dt ?>">MONO-Master</dt><dd class="<?= $dd ?>"><?= $mc->hasMonoMaster ? 'ja' : 'nein' ?></dd></div>
+                    </dl>
+                <?php else: ?>
+                    <dl class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        <div>
+                            <dt class="<?= $dt ?>">Digitale Schnittstellen</dt>
+                            <dd class="<?= $dd ?>"><?= $mc->interfaces === [] ? 'keine' : e(implode(', ', array_map(static fn ($i) => $i->quantity . ' × ' . $mixingConsole->protocolName($i->protocolId), $mc->interfaces))) ?></dd>
+                        </div>
+                        <div>
+                            <dt class="<?= $dt ?>">Lokale analoge Ein-/Ausgänge</dt>
+                            <dd class="<?= $dd ?>"><?= e($mc->localInputs . ' Eingänge / ' . $mc->localOutputs . ' Ausgänge') ?></dd>
+                        </div>
+                        <div>
+                            <dt class="<?= $dt ?>">Erweiterungsslots</dt>
+                            <dd class="<?= $dd ?>"><?= $mc->expansionSlots > 0 ? e($mc->expansionSlots . ' ×' . ($mc->expansionSlotType !== null ? ' ' . $mc->expansionSlotType : '')) : 'keine' ?></dd>
+                        </div>
+                    </dl>
+                    <?php if ($mc->channels !== []): ?>
+                        <h3 class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">DSP-Kanäle</h3>
+                        <div class="mt-1 overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead><tr class="text-left text-xs text-slate-500 dark:text-slate-400"><th class="py-1 pr-4 font-medium">Herstellerbezeichnung</th><th class="py-1 pr-4 font-medium">Kanalart</th><th class="py-1 pr-4 font-medium">Anzahl</th><th class="py-1 font-medium">Ausführung</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <?php foreach ($mc->channels as $channel): ?>
+                                        <tr class="<?= $dd ?>"><td class="py-1 pr-4"><?= e($channel->manufacturerLabel ?? '–') ?></td><td class="py-1 pr-4"><?= e($channel->kind->label()) ?></td><td class="py-1 pr-4"><?= e((string) $channel->quantity) ?></td><td class="py-1"><?= $channel->isStereo ? 'Stereo' : 'Mono' ?></td></tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($mc->cards !== []): ?>
+                        <h3 class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">Mögliche Erweiterungskarten</h3>
+                        <div class="mt-1 overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead><tr class="text-left text-xs text-slate-500 dark:text-slate-400"><th class="py-1 pr-4 font-medium">Karte</th><th class="py-1 pr-4 font-medium">Protokoll</th><th class="py-1 pr-4 font-medium">Kanäle</th><th class="py-1 font-medium">Bemerkung</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <?php foreach ($mc->cards as $card): ?>
+                                        <tr class="<?= $dd ?>"><td class="py-1 pr-4"><?= e($card->name) ?></td><td class="py-1 pr-4"><?= e($mixingConsole->protocolName($card->protocolId)) ?></td><td class="py-1 pr-4"><?= e($card->channelSummary()) ?></td><td class="py-1"><?= e($card->notes ?? '') ?></td></tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                    <?php foreach (\App\Domain\MixingConsole\StageboxCompatibility::cases() as $compatibility): ?>
+                        <?php $linked = $mixingConsole->stageboxes($compatibility); ?>
+                        <?php if ($linked !== []): ?>
+                            <h3 class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">Stageboxen – <?= e($compatibility->label()) ?></h3>
+                            <ul class="mt-1 space-y-0.5">
+                                <?php foreach ($linked as $stageboxOption): ?>
+                                    <li><a href="/artikel/<?= e($stageboxOption->articleId) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($stageboxOption->displayName()) ?></a> <span class="text-xs text-slate-500 dark:text-slate-400"><?= e($mixingConsole->protocolName($stageboxOption->protocolId)) ?></span></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Digitale Stagebox: Tonmischpulte, die diese Stagebox als kompatibel führen (Migration 153) -->
+        <?php if ($digitalStagebox !== null && $compatibleConsoles !== []): ?>
+            <div id="kompatible-tonmischpulte" class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+                <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Kompatible Tonmischpulte</h2>
+                <ul class="space-y-0.5">
+                    <?php foreach ($compatibleConsoles as $compatibleConsole): ?>
+                        <li>
+                            <a href="/artikel/<?= e($compatibleConsole->articleId) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($compatibleConsole->displayName()) ?></a>
+                            <span class="text-xs <?= $compatibleConsole->compatibility === \App\Domain\MixingConsole\StageboxCompatibility::Native ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400' ?>"><?= e($compatibleConsole->compatibility->label()) ?></span>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
         <?php endif; ?>
 

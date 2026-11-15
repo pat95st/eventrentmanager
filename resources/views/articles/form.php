@@ -39,6 +39,13 @@ $digitalStageboxCategoryId ??= null;
 /** @var \App\Application\DigitalStagebox\Query\DigitalStageboxSettings|null $digitalStageboxSettings */
 $digitalStageboxSettings ??= null;
 $isDigitalStagebox = $digitalStageboxCategoryId !== null && $val('category_id', $article?->categoryId) === $digitalStageboxCategoryId;
+// Mixing console (migration 153): category "Tonmischpult" selected.
+/** @var \App\Application\MixingConsole\Query\ArticleMixingConsoleDetail|null $mixingConsole */
+$mixingConsole ??= null;
+$mixingConsoleCategoryId ??= null;
+/** @var \App\Application\MixingConsole\Query\MixingConsoleFormData|null $mixingConsoleFormData */
+$mixingConsoleFormData ??= null;
+$isMixingConsole = $mixingConsoleCategoryId !== null && $val('category_id', $article?->categoryId) === $mixingConsoleCategoryId;
 $protectionClassValue = $val('protection_class', $article?->protectionClass?->value ?? ($isPowerDistributor ? 'I' : null));
 // Neue Artikel sind standardmäßig abrechenbar; nur wer bewusst das Häkchen
 // entfernt (z. B. für Zubehör wie Kabel), bekommt is_billable = false.
@@ -373,6 +380,25 @@ $bundleComponentRows ??= [];
     </script>
     <?php endif; ?>
 
+    <!-- Tonmischpult (Migration 153): erscheint bei Kategorie "Tonmischpult" -->
+    <?php if ($mixingConsoleCategoryId !== null && $mixingConsoleFormData !== null): ?>
+    <div id="mixing_console_section" class="rounded-md border border-violet-300 bg-violet-50/40 p-4 dark:border-violet-700 dark:bg-violet-950/20 <?= $isMixingConsole ? '' : 'hidden' ?>"
+         data-mixing-console-category="<?= e($mixingConsoleCategoryId) ?>">
+        <input type="hidden" name="mixing_console_section" value="1">
+        <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Tonmischpult</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Analoges oder digitales Pult wählen und die Ausstattung erfassen. Leere Anzahl-Felder zählen als 0, leere Zeilen werden ignoriert.</p>
+        <div class="mt-4">
+            <?= \App\Infrastructure\Http\View::render('mixing-consoles/_fields', [
+                'console' => $mixingConsole?->console,
+                'old' => ($old['mixing_console'] ?? null) instanceof \App\Application\MixingConsole\MixingConsoleInput ? $old['mixing_console'] : null,
+                'formData' => $mixingConsoleFormData,
+                'manufacturerId' => $val('manufacturer_id', $article?->manufacturerId),
+                'errors' => $errors,
+            ]) ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div id="is_19_inch_fields" class="grid grid-cols-1 gap-4 sm:grid-cols-3 <?= $is19Inch ? '' : 'hidden' ?>">
         <fieldset>
             <legend class="block text-xs font-medium text-slate-600 dark:text-slate-400">Einbaubreite</legend>
@@ -540,3 +566,4 @@ $bundleComponentRows ??= [];
 </script>
 <script src="/assets/js/power-distributor-fields.js"></script>
 <script src="/assets/js/cable-fields.js"></script>
+<script src="/assets/js/mixing-console-fields.js"></script>

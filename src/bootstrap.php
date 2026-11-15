@@ -435,6 +435,7 @@ $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
 $powerDistributorRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPowerDistributorRepository($pdo);
 $cableRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCableRepository($pdo); // Leitungen (Migration 125)
 $digitalStageboxRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDigitalStageboxRepository($pdo); // Digitale Stageboxen (Migration 152)
+$mixingConsoleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMixingConsoleRepository($pdo); // Tonmischpulte (Migration 153)
 $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepository($pdo);
 // Schriftarten je Bereich für alle PDFs (Migration 116), erst beim ersten PDF geladen.
 \App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
@@ -661,8 +662,8 @@ $commandBus->register(\App\Application\LaborTime\Command\CreateLaborTimeArticle:
 $commandBus->register(\App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, new UpdateLaborTimeArticleHandler($laborTimeArticleRepository));
 $commandBus->register(\App\Application\LaborTime\Command\DeleteLaborTimeArticle::class, new DeleteLaborTimeArticleHandler($laborTimeArticleRepository));
 
-$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository));
-$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository));
+$commandBus->register(\App\Application\Article\Command\CreateArticle::class, new CreateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository, mixingConsoles: $mixingConsoleRepository));
+$commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new UpdateArticleHandler($articleRepository, $manufacturerRepository, $categoryRepository, $articleBundleComponentRepository, $rentalBundleRepository, $inventoryNumberRepository, powerDistributors: $powerDistributorRepository, cables: $cableRepository, digitalStageboxes: $digitalStageboxRepository, mixingConsoles: $mixingConsoleRepository));
 // Leitungen (Migration 125)
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
 // Techniker & Gewerke (Migration 134)
@@ -733,7 +734,7 @@ foreach ([\App\Application\Cable\Command\SaveCableType::class, \App\Application\
     $commandBus->register($cableCommand, $cableSettingsHandler);
 }
 // Digitale Protokolle (Migration 152)
-$digitalProtocolSettingsHandler = new \App\Application\DigitalStagebox\Command\DigitalProtocolSettingsHandler($digitalStageboxRepository);
+$digitalProtocolSettingsHandler = new \App\Application\DigitalStagebox\Command\DigitalProtocolSettingsHandler($digitalStageboxRepository, $mixingConsoleRepository);
 $commandBus->register(\App\Application\DigitalStagebox\Command\SaveDigitalProtocol::class, $digitalProtocolSettingsHandler);
 $commandBus->register(\App\Application\DigitalStagebox\Command\DeleteDigitalProtocol::class, $digitalProtocolSettingsHandler);
 $commandBus->register(\App\Application\Article\Command\DeleteArticle::class, new DeleteArticleHandler($articleRepository, $fileStorage, $caseContentItemRepository, $rentalItemRepository, $articleChannelListingRepository, $articleChannelPublisherRegistry, $articleBundleComponentRepository, $articleSetRepository));
@@ -1266,9 +1267,15 @@ $queryBus->register(\App\Application\Cable\Query\GetCableSettings::class, $cable
 $queryBus->register(\App\Application\Cable\Query\GetArticleCable::class, $cableQueryHandler);
 // Digitale Stageboxen (Migration 152)
 $queryBus->register(\App\Application\Category\Query\GetDigitalStageboxCategoryId::class, new \App\Application\Category\Query\GetDigitalStageboxCategoryIdHandler($categoryRepository));
-$digitalStageboxQueryHandler = new \App\Application\DigitalStagebox\Query\DigitalStageboxQueryHandler($digitalStageboxRepository);
+$digitalStageboxQueryHandler = new \App\Application\DigitalStagebox\Query\DigitalStageboxQueryHandler($digitalStageboxRepository, $mixingConsoleRepository);
 $queryBus->register(\App\Application\DigitalStagebox\Query\GetDigitalStageboxSettings::class, $digitalStageboxQueryHandler);
 $queryBus->register(\App\Application\DigitalStagebox\Query\GetArticleDigitalStagebox::class, $digitalStageboxQueryHandler);
+// Tonmischpulte (Migration 153)
+$queryBus->register(\App\Application\Category\Query\GetMixingConsoleCategoryId::class, new \App\Application\Category\Query\GetMixingConsoleCategoryIdHandler($categoryRepository));
+$mixingConsoleQueryHandler = new \App\Application\MixingConsole\Query\MixingConsoleQueryHandler($mixingConsoleRepository, $digitalStageboxRepository);
+$queryBus->register(\App\Application\MixingConsole\Query\GetArticleMixingConsole::class, $mixingConsoleQueryHandler);
+$queryBus->register(\App\Application\MixingConsole\Query\GetMixingConsoleFormData::class, $mixingConsoleQueryHandler);
+$queryBus->register(\App\Application\MixingConsole\Query\GetCompatibleConsoles::class, $mixingConsoleQueryHandler);
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFolders::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplateFoldersHandler($closingTextTemplateFolderRepository));
 $queryBus->register(\App\Application\ClosingTextTemplate\Query\ListClosingTextTemplates::class, new \App\Application\ClosingTextTemplate\Query\ListClosingTextTemplatesHandler($closingTextTemplateRepository));
 $queryBus->register(\App\Application\Manufacturer\Query\ListManufacturers::class, new ListManufacturersHandler($manufacturerRepository));

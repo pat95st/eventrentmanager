@@ -66,6 +66,21 @@ final class DigitalProtocolSettingsHandlerTest extends Unit
         $this->handler->handle(new DeleteDigitalProtocol($id));
     }
 
+    public function testProtocolUsedByMixingConsoleCannotBeDeleted(): void
+    {
+        $consoles = new \Tests\Support\Fakes\InMemoryMixingConsoleRepository();
+        $handler = new DigitalProtocolSettingsHandler($this->repository, $consoles);
+        $id = $handler->handle(new SaveDigitalProtocol(null, 'Dante'));
+        $consoles->save(new \App\Domain\MixingConsole\ArticleMixingConsole(
+            'console-1',
+            \App\Domain\MixingConsole\MixingConsoleType::Digital,
+            cards: [new \App\Domain\MixingConsole\MixingConsoleExpansionCard('Dante card', $id, 64, 64)],
+        ));
+
+        $this->expectException(ConflictException::class);
+        $handler->handle(new DeleteDigitalProtocol($id));
+    }
+
     public function testUnusedProtocolIsDeleted(): void
     {
         $id = $this->handler->handle(new SaveDigitalProtocol(null, 'AVB / Milan'));

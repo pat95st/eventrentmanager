@@ -34,6 +34,8 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
         // Digitale Stageboxen (Migration 152)
         private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
+        // Mixing consoles (migration 153)
+        private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $mixingConsoles = null,
     ) {
     }
 
@@ -168,6 +170,20 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $errors = array_merge($errors, $stageboxErrors);
         }
 
+        // Mixing console (migration 153). Without the console section in the form (null)
+        // stored data stays unchanged.
+        $console = null;
+        $consoleCategoryId = $this->mixingConsoles !== null && $this->digitalStageboxes !== null ? $this->categories->findMixingConsoleCategoryId() : null;
+        $isConsole = !$command->isBundle && $consoleCategoryId !== null && $command->categoryId === $consoleCategoryId;
+        if ($isConsole && $command->mixingConsole !== null) {
+            [$consoleErrors, $console] = (new \App\Application\MixingConsole\MixingConsoleBuilder($this->mixingConsoles, $this->digitalStageboxes))->build(
+                $article->id,
+                $command->mixingConsole,
+                $command->manufacturerId,
+            );
+            $errors = array_merge($errors, $consoleErrors);
+        }
+
         if ($isCableArticle) {
             unset($errors['protectionClass']); // Leitungen haben keine Schutzklasse
             if ($command->manufacturerId === '') {
@@ -234,6 +250,14 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             } elseif ($stageboxCategoryId !== null && ($command->isBundle || !$isStagebox)) {
                 // Kategorie gewechselt oder Bundle: keine digitale Stagebox mehr.
                 $this->digitalStageboxes->deleteArticleStagebox($article->id);
+            }
+        }
+        if ($this->mixingConsoles !== null) {
+            if ($console !== null) {
+                $this->mixingConsoles->save($console);
+            } elseif ($consoleCategoryId !== null && ($command->isBundle || !$isConsole)) {
+                // Category changed or bundle: no mixing console anymore.
+                $this->mixingConsoles->delete($article->id);
             }
         }
         if ($this->bundleComponents !== null) {

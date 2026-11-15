@@ -42,6 +42,9 @@ final class CreateArticle implements CommandInterface
         public readonly ?string $rackWidth = null,
         // Digitale Stagebox (Migration 152): nur ausgewertet, wenn die Kategorie "Digitale Stagebox" gewählt ist.
         public readonly ?\App\Application\DigitalStagebox\DigitalStageboxInput $digitalStagebox = null,
+        // Mixing console (migration 153): null = form without console section (keep stored data);
+        // only stored for category "Tonmischpult", otherwise removed.
+        public readonly ?\App\Application\MixingConsole\MixingConsoleInput $mixingConsole = null,
     ) {
     }
 }

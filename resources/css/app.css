@@ -221,8 +221,8 @@ progress {
   margin: 0 -1.5rem -1.5rem;
   padding: 1rem 1.5rem;
   background-color: rgb(255 255 255);
-  border-bottom-left-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
+  border-bottom-left-radius: 0.75rem;
+  border-bottom-right-radius: 0.75rem;
   transition: box-shadow 150ms ease;
 }
 html.dark .p-6 > .form-actions {
@@ -258,4 +258,240 @@ html.dark input,
 html.dark select,
 html.dark textarea {
   color-scheme: dark;
+}
+
+/* =====================================================================
+   Apple-style refinements (Human Interface Guidelines, translated to the
+   web) and use of large / 4K screens. Everything here is global so that
+   the individual templates stay unchanged.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Content width: one shared container for header, main area and footer.
+   Up to 1535px it behaves exactly like the previous "max-w-6xl px-4"
+   (phones, tablets and laptops are unaffected). From 1536px on the
+   container grows step by step, so wide tables, the calendar and the
+   dashboard can use the space instead of a narrow 1152px column in the
+   middle of a 4K screen. It stays capped, so rows never become so wide
+   that the eye loses the line.
+   ------------------------------------------------------------------- */
+.app-container {
+  width: 100%;
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+/* Header bar: full width below 1536px (the desktop navigation needs every
+   pixel on 1024-1440px screens), aligned with the content above that. */
+.app-container.app-container-bar {
+  max-width: none;
+}
+@media (min-width: 1536px) {
+  .app-container,
+  .app-container.app-container-bar {
+    max-width: 92rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+@media (min-width: 1920px) {
+  .app-container,
+  .app-container.app-container-bar {
+    max-width: 112rem;
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}
+@media (min-width: 2400px) {
+  .app-container,
+  .app-container.app-container-bar {
+    max-width: 150rem;
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+/* Very large viewports (4K / 5K at 100% scaling): text and controls are
+   tiny at 16px from normal viewing distance. Scale the root size fluidly
+   (all Tailwind spacing and type is in rem, so the whole UI scales evenly)
+   from 16px at 2400px up to at most 20px at ~3400px and beyond. Based on
+   the user's own browser font size, so their setting is still respected.
+   No effect below 2400px CSS pixels (i.e. on 4K screens with 150-200 %
+   OS scaling, which already render at a comfortable size). */
+@media (min-width: 2400px) {
+  html {
+    font-size: clamp(100%, calc(0.5rem + 0.35vw), 125%);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Typography: system font with optical sizing, size-specific tracking
+   (tight for large text, slightly open for small text), clear hierarchy
+   through weight. Custom UI fonts (Settings -> Fonts) still win, because
+   UiFonts::styles() sets them later in the cascade.
+   ------------------------------------------------------------------- */
+@layer base {
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Page titles ("large titles"): bigger, bolder, tighter. */
+main h1.text-xl,
+main h1.text-lg {
+  font-size: 1.375rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.021em;
+}
+@media (min-width: 640px) {
+  main h1.text-xl {
+    font-size: 1.625rem;
+  }
+}
+main h2.text-lg,
+main h2.text-base,
+main h3.text-base {
+  letter-spacing: -0.012em;
+}
+.text-2xl,
+.text-3xl {
+  letter-spacing: -0.022em;
+}
+.text-xs {
+  letter-spacing: 0.01em;
+}
+
+/* Numbers in tables and totals line up (tabular figures). */
+td,
+th,
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------
+   Response: feedback on press, not on release. Buttons shrink slightly
+   the moment they are pressed; the ~300ms double-tap delay on touch
+   devices is removed. Full-width rows (menu entries, .block/.w-full)
+   are excluded, a shrinking row looks wrong.
+   ------------------------------------------------------------------- */
+a,
+button,
+summary,
+label,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+:is(button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"], summary):not(:disabled):not(.block):not(.w-full) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+:is(button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"], summary):not(:disabled):not(.block):not(.w-full):active,
+a.rounded-md[class*="bg-brand-"]:active,
+a.rounded-md[class*="border-slate-"]:active {
+  transform: scale(0.97);
+  transition-duration: 60ms;
+}
+
+/* One consistent, clearly visible focus ring in the brand colour
+   (keyboard only, never on mouse click). */
+:focus-visible {
+  outline: 2px solid rgb(var(--color-brand-500));
+  outline-offset: 2px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+}
+
+/* Touch devices: 44x44pt minimum hit area for navigation entries. */
+@media (pointer: coarse) {
+  #mobile-nav a,
+  #mobile-nav button,
+  #mobile-menu-toggle {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  #mobile-nav a {
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Materials: the sticky header is a translucent layer, the content
+   scrolls visibly underneath (instead of an opaque strip). Only when
+   no background image is set (that case has its own glass rules above).
+   Dropdown flyouts stay opaque on purpose: a translucent surface on a
+   translucent surface loses legibility.
+   ------------------------------------------------------------------- */
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  body:not(.has-bg-image) > header {
+    background-color: rgb(255 255 255 / 0.78);
+    border-bottom-color: rgb(15 23 42 / 0.08);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+  html.dark body:not(.has-bg-image) > header {
+    background-color: rgb(15 23 42 / 0.75);
+    border-bottom-color: rgb(255 255 255 / 0.08);
+  }
+  /* Open mobile menu: a full list of links needs a calm, solid surface. */
+  body:not(.has-bg-image) > header:has(#mobile-nav:not(.hidden)) {
+    background-color: rgb(255 255 255 / 0.96);
+  }
+  html.dark body:not(.has-bg-image) > header:has(#mobile-nav:not(.hidden)) {
+    background-color: rgb(15 23 42 / 0.96);
+  }
+}
+
+/* Cards: very soft, layered shadow gives depth without heavy borders. */
+main .rounded-lg.border.bg-white {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 1px rgb(15 23 42 / 0.02);
+}
+html.dark main .rounded-lg.border.bg-white {
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------
+   Accessibility: reduced motion, reduced transparency, higher contrast.
+   ------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  :is(button, [role="button"], input[type="submit"], input[type="button"], input[type="reset"], summary, a):active {
+    transform: none !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  body:not(.has-bg-image) > header {
+    background-color: rgb(255 255 255) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  html.dark body:not(.has-bg-image) > header {
+    background-color: rgb(15 23 42) !important;
+  }
+}
+@media (prefers-contrast: more) {
+  body:not(.has-bg-image) > header {
+    background-color: rgb(255 255 255) !important;
+    border-bottom-color: rgb(71 85 105) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  html.dark body:not(.has-bg-image) > header {
+    background-color: rgb(15 23 42) !important;
+    border-bottom-color: rgb(148 163 184) !important;
+  }
 }

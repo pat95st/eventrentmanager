@@ -6,6 +6,14 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // Softer, more generous corner radii (Apple HIG: controls ~8px, cards and
+      // grouped containers ~12px). Overriding the scale keeps every template
+      // unchanged while the whole UI picks up the new shapes.
+      borderRadius: {
+        md: '0.5rem',
+        lg: '0.75rem',
+        xl: '1rem',
+      },
       colors: {
         // Werte kommen NICHT mehr fest kodiert, sondern über CSS-Variablen
         // (siehe resources/css/app.css, Abschnitt "Farbschema"), damit die

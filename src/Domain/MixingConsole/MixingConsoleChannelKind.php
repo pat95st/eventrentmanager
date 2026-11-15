@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\MixingConsole;
 
 /**
- * Generic kind of a DSP channel of a digital mixing console (migration 153).
+ * Generic kind of a DSP channel of a digital mixing console (migration 154).
  * The manufacturer's own designation (e.g. "Mix Bus", "Aux Send") is stored
  * separately per channel row.
  */

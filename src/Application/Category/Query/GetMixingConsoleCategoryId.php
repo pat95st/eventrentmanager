@@ -6,7 +6,7 @@ namespace App\Application\Category\Query;
 
 use App\Application\Query\QueryInterface;
 
-/** ID der Artikelkategorie "Tonmischpult" (Migration 153) oder null. */
+/** ID der Artikelkategorie "Tonmischpult" (Migration 154) oder null. */
 final class GetMixingConsoleCategoryId implements QueryInterface
 {
 }

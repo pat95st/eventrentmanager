@@ -1,4 +1,4 @@
--- Migration 153: Tonmischpulte als Spezialartikel (Nutzerwunsch, analog zu
+-- Migration 154: Tonmischpulte als Spezialartikel (Nutzerwunsch, analog zu
 -- digitalen Stageboxen). Ein Tonmischpult ist analog oder digital.
 --
 -- Analog: Eingangskanäle mit Mikrofonvorverstärker, Stereo-Eingänge,

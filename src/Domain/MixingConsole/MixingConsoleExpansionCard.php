@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\MixingConsole;
 
 /**
- * Expansion card that fits a mixing console's slots (migration 153), e.g.
+ * Expansion card that fits a mixing console's slots (migration 154), e.g.
  * "Dante card, 64 in / 64 out". Without a protocol the card is analog.
  */
 final class MixingConsoleExpansionCard

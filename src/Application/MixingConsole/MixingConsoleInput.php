@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\MixingConsole;
 
-/** Mixing console fields from the article form (migration 153), raw string values. */
+/** Mixing console fields from the article form (migration 154), raw string values. */
 final class MixingConsoleInput
 {
     /**

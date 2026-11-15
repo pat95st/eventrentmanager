@@ -35,7 +35,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
         // Digitale Stageboxen (Migration 152)
         private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
-        // Mixing consoles (migration 153)
+        // Mixing consoles (migration 154)
         private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $mixingConsoles = null,
     ) {
     }
@@ -112,7 +112,7 @@ final class CreateArticleHandler implements CommandHandlerInterface
             $errors = array_merge($errors, $stageboxErrors);
         }
 
-        // Mixing console (migration 153): articles of category "Tonmischpult" are analog or digital consoles.
+        // Mixing console (migration 154): articles of category "Tonmischpult" are analog or digital consoles.
         $console = null;
         $consoleCategoryId = $this->mixingConsoles !== null && $this->digitalStageboxes !== null ? $this->categories->findMixingConsoleCategoryId() : null;
         if (!$command->isBundle && $consoleCategoryId !== null && $command->categoryId === $consoleCategoryId) {

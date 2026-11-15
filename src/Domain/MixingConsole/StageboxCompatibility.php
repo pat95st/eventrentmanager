@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\MixingConsole;
 
 /**
- * Compatibility of a digital stagebox with a mixing console (migration 153).
+ * Compatibility of a digital stagebox with a mixing console (migration 154).
  * "Limited" covers stageboxes that speak the same protocol but are not
  * natively supported, e.g. because they are made by another manufacturer.
  */

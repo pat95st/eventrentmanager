@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\MixingConsole;
 
-/** Mixing console that lists a given stagebox as compatible (migration 153). */
+/** Mixing console that lists a given stagebox as compatible (migration 154). */
 final class CompatibleConsole
 {
     public function __construct(

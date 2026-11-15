@@ -17,7 +17,7 @@ use App\Domain\MixingConsole\StageboxCompatibility;
 use App\Domain\MixingConsole\StageboxOption;
 use PDO;
 
-/** Mixing consoles of articles with interfaces, DSP channels, expansion cards and stageboxes (migration 153). */
+/** Mixing consoles of articles with interfaces, DSP channels, expansion cards and stageboxes (migration 154). */
 final class MariadbMixingConsoleRepository implements MixingConsoleRepositoryInterface
 {
     public function __construct(private readonly PDO $pdo)

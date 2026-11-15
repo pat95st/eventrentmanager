@@ -8,7 +8,7 @@ $powerDistributor ??= null;
 $cable ??= null;
 /** @var \App\Application\DigitalStagebox\Query\ArticleDigitalStageboxDetail|null $digitalStagebox Angaben der digitalen Stagebox (Migration 152) */
 $digitalStagebox ??= null;
-/** @var \App\Application\MixingConsole\Query\ArticleMixingConsoleDetail|null $mixingConsole Tonmischpult (Migration 153) */
+/** @var \App\Application\MixingConsole\Query\ArticleMixingConsoleDetail|null $mixingConsole Tonmischpult (Migration 154) */
 $mixingConsole ??= null;
 /** @var \App\Domain\MixingConsole\CompatibleConsole[] $compatibleConsoles Pulte, die diese Stagebox als kompatibel führen */
 $compatibleConsoles ??= [];
@@ -325,7 +325,7 @@ $availabilityStatusMeta = [
             </div>
         <?php endif; ?>
 
-        <!-- Tonmischpult (Migration 153): Angaben werden im Artikelformular gepflegt -->
+        <!-- Tonmischpult (Migration 154): Angaben werden im Artikelformular gepflegt -->
         <?php if ($mixingConsole !== null): ?>
             <?php
                 $mc = $mixingConsole->console;
@@ -400,7 +400,7 @@ $availabilityStatusMeta = [
             </div>
         <?php endif; ?>
 
-        <!-- Digitale Stagebox: Tonmischpulte, die diese Stagebox als kompatibel führen (Migration 153) -->
+        <!-- Digitale Stagebox: Tonmischpulte, die diese Stagebox als kompatibel führen (Migration 154) -->
         <?php if ($digitalStagebox !== null && $compatibleConsoles !== []): ?>
             <div id="kompatible-tonmischpulte" class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
                 <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Kompatible Tonmischpulte</h2>

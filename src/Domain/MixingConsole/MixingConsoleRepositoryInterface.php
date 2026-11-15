@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\MixingConsole;
 
-/** Mixing console details of articles (migration 153). */
+/** Mixing console details of articles (migration 154). */
 interface MixingConsoleRepositoryInterface
 {
     public function findByArticle(string $articleId): ?ArticleMixingConsole;

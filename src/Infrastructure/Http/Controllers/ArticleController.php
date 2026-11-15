@@ -350,7 +350,7 @@ final class ArticleController
             'hasCableCategory' => $this->queries->ask(new \App\Application\Category\Query\GetCableCategoryId()) !== null,
             // "+ Neue digitale Stagebox" nur mit Kategorie "Digitale Stagebox" (Migration 152).
             'hasDigitalStageboxCategory' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()) !== null,
-            // "New article > Mixing console" only with category "Tonmischpult" (migration 153).
+            // "New article > Mixing console" only with category "Tonmischpult" (migration 154).
             'hasMixingConsoleCategory' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()) !== null,
             'articles' => $result->items,
             'manufacturers' => $manufacturers,
@@ -565,7 +565,7 @@ final class ArticleController
             'cable' => $detail->article->isBundle ? null : $this->articleCable($detail->article->id),
             // Digitale Stagebox (Migration 152)
             'digitalStagebox' => $detail->article->isBundle ? null : $this->articleDigitalStagebox($detail->article->id),
-            // Mixing console (migration 153); for stageboxes the consoles listing them as compatible
+            // Mixing console (migration 154); for stageboxes the consoles listing them as compatible
             'mixingConsole' => $detail->article->isBundle ? null : $this->articleMixingConsole($detail->article->id),
             'compatibleConsoles' => $detail->article->isBundle ? [] : $this->compatibleConsoles($detail->article->id),
             'editInventoryId' => $editInventoryId,
@@ -1294,7 +1294,7 @@ final class ArticleController
             'digitalStagebox' => $article !== null && !$article->isBundle ? $this->articleDigitalStagebox($article->id) : null,
             'digitalStageboxCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetDigitalStageboxCategoryId()),
             'digitalStageboxSettings' => $this->digitalStageboxSettings(),
-            // Mixing console (migration 153): analog or digital console details directly in the article form.
+            // Mixing console (migration 154): analog or digital console details directly in the article form.
             'mixingConsole' => $article !== null && !$article->isBundle ? $this->articleMixingConsole($article->id) : null,
             'mixingConsoleCategoryId' => $this->queries->ask(new \App\Application\Category\Query\GetMixingConsoleCategoryId()),
             'mixingConsoleFormData' => $this->mixingConsoleFormData(),
@@ -1345,7 +1345,7 @@ final class ArticleController
             'stagebox_inputs_combo' => $command->digitalStagebox?->inputsCombo,
             'stagebox_outputs_analog' => $command->digitalStagebox?->outputsAnalog,
             'stagebox_outputs_aes' => $command->digitalStagebox?->outputsAes,
-            // Mixing console (migration 153)
+            // Mixing console (migration 154)
             'mixing_console' => $command->mixingConsole,
         ];
     }
@@ -1410,7 +1410,7 @@ final class ArticleController
         );
     }
 
-    /** Mixing console fields from the article form (migration 153), null without this section. */
+    /** Mixing console fields from the article form (migration 154), null without this section. */
     private function mixingConsoleFromRequest(Request $request): ?\App\Application\MixingConsole\MixingConsoleInput
     {
         if ($request->input('mixing_console_section') === null) {
@@ -1459,7 +1459,7 @@ final class ArticleController
         try {
             return $this->queries->ask(new \App\Application\MixingConsole\Query\GetArticleMixingConsole($articleId));
         } catch (\PDOException) {
-            return null; // migration 153 not applied yet
+            return null; // migration 154 not applied yet
         }
     }
 

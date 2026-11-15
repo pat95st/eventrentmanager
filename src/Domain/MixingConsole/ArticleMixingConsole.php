@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\MixingConsole;
 
 /**
- * Mixing console details of an article (migration 153).
+ * Mixing console details of an article (migration 154).
  *
  * Analog consoles: input channels with mic preamp, stereo inputs, combo
  * inputs, aux sends (pre, post, switchable), subgroups and mono master.

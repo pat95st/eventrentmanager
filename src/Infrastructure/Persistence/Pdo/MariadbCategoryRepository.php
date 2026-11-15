@@ -137,7 +137,7 @@ final class MariadbCategoryRepository implements CategoryRepositoryInterface
         try {
             $id = $this->pdo->query('SELECT id FROM categories WHERE is_mixing_console = 1 LIMIT 1')->fetchColumn();
         } catch (\PDOException) {
-            return null; // migration 153 not applied yet
+            return null; // migration 154 not applied yet
         }
 
         return $id !== false && $id !== null && $id !== 0 ? (string) $id : null;

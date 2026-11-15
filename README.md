@@ -128,6 +128,24 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   gelöscht werden soll. Umbenennen geht mit allen Protokollen außer S3,
   Löschen mit Nextcloud/ownCloud/WebDAV, SFTP und SCP. Wird nur der Haken
   entfernt, wird die Freigabe aufgehoben, der Ordner bleibt bestehen.
+- **Cloud-Speicher als Ziellaufwerk** (Migration 153): Neben WebDAV,
+  Nextcloud/ownCloud, FTPS, SFTP, SCP und S3 lassen sich unter
+  Einstellungen › Ziellaufwerke auch **Dropbox**, **Microsoft OneDrive**,
+  **Google Drive** und **Box** anbinden. Dafür beim Anbieter eine eigene App
+  registrieren (die Einstellungsseite nennt je Dienst die nötigen
+  Berechtigungen und die einzutragende Weiterleitungs-URI
+  `<Basis-URL>/einstellungen/speicherziele/oauth/callback`; die Basis-URL
+  kommt aus Einstellungen › Integrationen), Client-ID und Client-Secret
+  speichern und anschließend „Mit … verbinden“ klicken. Die Tokens werden
+  automatisch erneuert. Google Drive nutzt den Bereich `drive.file`: die
+  Anwendung sieht nur selbst angelegte Ordner und Dateien; der
+  OAuth-Zustimmungsbildschirm muss auf „In Produktion“ stehen, sonst laufen
+  Verbindungen nach 7 Tagen ab. Gelöschte Ordner landen bei Google Drive und
+  Box im Papierkorb. **iCloud Drive** bietet keine Schnittstelle für Server
+  und wird daher als lokal synchronisierter Ordner angebunden (absoluter
+  Pfad auf dem Server, z. B. der iCloud-Drive-Ordner eines Macs oder ein per
+  rclone eingebundenes iCloud Drive); der Webserver braucht Schreibrechte.
+  Freigabe-Links an Kunden gibt es weiterhin nur für Nextcloud/ownCloud.
 - **Cases** (Menüpunkt „Cases“, im Untermenü von „Artikel“): ein Case ist
   ein Transport-/Flightcase-Modell, das funktional wie ein Artikel behandelt
   wird — mit Hersteller (aus derselben Herstellerliste wie Artikel), eigenem

@@ -9,7 +9,7 @@ $powerDistributorCategoryId ??= null;
 $cableCategoryId ??= null;
 /** @var string|null $digitalStageboxCategoryId Kategorie "Digitale Stagebox" (Migration 152) */
 $digitalStageboxCategoryId ??= null;
-/** @var string|null $mixingConsoleCategoryId Kategorie "Tonmischpult" (Migration 153) */
+/** @var string|null $mixingConsoleCategoryId Kategorie "Tonmischpult" (Migration 154) */
 $mixingConsoleCategoryId ??= null;
 
 use function App\Infrastructure\Http\e;

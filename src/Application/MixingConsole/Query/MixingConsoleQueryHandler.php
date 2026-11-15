@@ -9,7 +9,7 @@ use App\Application\Query\QueryInterface;
 use App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface;
 use App\Domain\MixingConsole\MixingConsoleRepositoryInterface;
 
-/** Answers GetArticleMixingConsole, GetMixingConsoleFormData and GetCompatibleConsoles (migration 153). */
+/** Answers GetArticleMixingConsole, GetMixingConsoleFormData and GetCompatibleConsoles (migration 154). */
 final class MixingConsoleQueryHandler implements QueryHandlerInterface
 {
     public function __construct(

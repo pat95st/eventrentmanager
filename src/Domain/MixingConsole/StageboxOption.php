@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\MixingConsole;
 
-/** Digital stagebox article as offered for compatibility selection (migration 153). */
+/** Digital stagebox article as offered for compatibility selection (migration 154). */
 final class StageboxOption
 {
     public function __construct(

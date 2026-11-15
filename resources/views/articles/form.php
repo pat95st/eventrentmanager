@@ -39,7 +39,7 @@ $digitalStageboxCategoryId ??= null;
 /** @var \App\Application\DigitalStagebox\Query\DigitalStageboxSettings|null $digitalStageboxSettings */
 $digitalStageboxSettings ??= null;
 $isDigitalStagebox = $digitalStageboxCategoryId !== null && $val('category_id', $article?->categoryId) === $digitalStageboxCategoryId;
-// Mixing console (migration 153): category "Tonmischpult" selected.
+// Mixing console (migration 154): category "Tonmischpult" selected.
 /** @var \App\Application\MixingConsole\Query\ArticleMixingConsoleDetail|null $mixingConsole */
 $mixingConsole ??= null;
 $mixingConsoleCategoryId ??= null;
@@ -380,7 +380,7 @@ $bundleComponentRows ??= [];
     </script>
     <?php endif; ?>
 
-    <!-- Tonmischpult (Migration 153): erscheint bei Kategorie "Tonmischpult" -->
+    <!-- Tonmischpult (Migration 154): erscheint bei Kategorie "Tonmischpult" -->
     <?php if ($mixingConsoleCategoryId !== null && $mixingConsoleFormData !== null): ?>
     <div id="mixing_console_section" class="rounded-md border border-violet-300 bg-violet-50/40 p-4 dark:border-violet-700 dark:bg-violet-950/20 <?= $isMixingConsole ? '' : 'hidden' ?>"
          data-mixing-console-category="<?= e($mixingConsoleCategoryId) ?>">

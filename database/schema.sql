@@ -2025,7 +2025,7 @@ CREATE TABLE message_templates (
 CREATE TABLE document_storage_targets (
     id                       CHAR(36)      NOT NULL PRIMARY KEY,
     name                     VARCHAR(255)  NOT NULL,
-    protocol                 ENUM('webdav', 'ftps', 'sftp', 'scp', 's3', 'nextcloud', 'owncloud') NOT NULL,
+    protocol                 ENUM('webdav', 'ftps', 'sftp', 'scp', 's3', 'nextcloud', 'owncloud', 'dropbox', 'onedrive', 'google_drive', 'box', 'icloud') NOT NULL,
     host                     VARCHAR(255)  NULL,
     port                     SMALLINT UNSIGNED NULL,
     username                 VARCHAR(255)  NULL,
@@ -2041,6 +2041,16 @@ CREATE TABLE document_storage_targets (
     s3_region                VARCHAR(64)   NULL DEFAULT 'eu-central-1',
     s3_endpoint              VARCHAR(255)  NULL,
     s3_use_path_style        TINYINT(1)    NOT NULL DEFAULT 0,
+    -- OAuth connection for Dropbox/OneDrive/Google Drive/Box (see
+    -- database/migrations/153_cloud_storage_providers.sql).
+    oauth_client_id               VARCHAR(255) NULL,
+    oauth_client_secret           VARCHAR(500) NULL,
+    oauth_tenant                  VARCHAR(255) NULL,
+    oauth_refresh_token           TEXT         NULL,
+    oauth_access_token            TEXT         NULL,
+    oauth_access_token_expires_at DATETIME     NULL,
+    oauth_account_label           VARCHAR(255) NULL,
+    oauth_connected_at            DATETIME     NULL,
     -- Ordner für Veranstaltungen/Kunden (siehe database/migrations/148_storage_folders.sql).
     folders_enabled          TINYINT(1)    NOT NULL DEFAULT 0,
     event_folder_template    VARCHAR(500)  NOT NULL DEFAULT 'Veranstaltungen/{year}/{date} {event_name}',
@@ -3948,8 +3958,8 @@ INSERT INTO digital_protocols (id, name, sort_order) VALUES
     ('d1000000-0000-0000-0000-000000000004', 'MADI', 40),
     ('d1000000-0000-0000-0000-000000000005', 'AES67', 50);
 
--- --- 153_mixing_consoles.sql ---
--- Migration 153: Tonmischpulte als Spezialartikel (Nutzerwunsch, analog zu
+-- --- 154_mixing_consoles.sql ---
+-- Migration 154: Tonmischpulte als Spezialartikel (Nutzerwunsch, analog zu
 -- digitalen Stageboxen). Ein Tonmischpult ist analog oder digital.
 --
 -- Analog: Eingangskanäle mit Mikrofonvorverstärker, Stereo-Eingänge,
@@ -4234,4 +4244,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('150_venue_stage_elements.sql', NOW()),
     ('151_venue_stage_risers.sql', NOW()),
     ('152_digital_stageboxes.sql', NOW()),
-    ('153_mixing_consoles.sql', NOW());
+    ('153_cloud_storage_providers.sql', NOW()),
+    ('154_mixing_consoles.sql', NOW());

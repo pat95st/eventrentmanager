@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\MixingConsole;
 
-/** Group of DSP channels of a digital mixing console, e.g. 16 × "Mix Bus" mono (migration 153). */
+/** Group of DSP channels of a digital mixing console, e.g. 16 × "Mix Bus" mono (migration 154). */
 final class MixingConsoleChannel
 {
     public function __construct(

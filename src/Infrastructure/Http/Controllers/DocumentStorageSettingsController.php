@@ -5,22 +5,28 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
+use App\Application\DocumentStorage\Command\CompleteStorageTargetOAuth;
 use App\Application\DocumentStorage\Command\CreateStorageAssignment;
 use App\Application\DocumentStorage\Command\CreateStorageTarget;
 use App\Application\DocumentStorage\Command\DeleteStorageAssignment;
 use App\Application\DocumentStorage\Command\DeleteStorageTarget;
+use App\Application\DocumentStorage\Command\DisconnectStorageTargetOAuth;
 use App\Application\DocumentStorage\Command\TestStorageConnection;
 use App\Application\DocumentStorage\Command\UpdateStorageTarget;
 use App\Application\DocumentStorage\Query\ListStorageAssignments;
 use App\Application\DocumentStorage\Query\ListStorageTargets;
 use App\Application\DocumentStorage\Query\ListStorageUploadLog;
 use App\Application\Query\QueryBus;
+use App\Application\Settings\Query\GetIntegrationBaseSettings;
 use App\Domain\DocumentStorage\DocumentStorageTarget;
 use App\Domain\DocumentStorage\DocumentType;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\DocumentStorage\StorageProtocol;
+use App\Infrastructure\DocumentStorage\Cloud\CloudOAuthEndpoints;
 use App\Infrastructure\DocumentStorage\StorageUploadException;
+use App\Infrastructure\Http\Csrf;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
@@ -37,6 +43,10 @@ use function App\Infrastructure\Http\t;
  */
 final class DocumentStorageSettingsController
 {
+    /** Fixed redirect URI for all OAuth targets — registered once per app at the provider. */
+    public const OAUTH_CALLBACK_PATH = '/einstellungen/speicherziele/oauth/callback';
+    private const OAUTH_SESSION_KEY = 'document_storage_oauth';
+
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
@@ -75,10 +85,18 @@ final class DocumentStorageSettingsController
             s3UsePathStyle: $request->input('s3_use_path_style') === '1',
             enabled: $request->input('enabled') === '1',
             folderSettings: $this->folderSettingsFromRequest($request),
+            cloudSettings: $this->cloudSettingsFromRequest($request),
         );
 
         try {
-            $this->commands->dispatch($command);
+            $id = $this->commands->dispatch($command);
+            // OAuth services still need to be connected — show the "Verbinden" button.
+            if (StorageProtocol::tryFrom($command->protocol)?->usesOAuth() === true && is_string($id)) {
+                Flash::success(t('settings.document_storage.targets.flash.created') . ' ' . t('settings.document_storage.targets.oauth.connect_now'));
+                Response::redirect('/einstellungen/speicherziele/' . rawurlencode($id) . '/bearbeiten');
+
+                return;
+            }
             Flash::success(t('settings.document_storage.targets.flash.created'));
             Response::redirect('/einstellungen/speicherziele');
         } catch (ValidationException $e) {
@@ -125,6 +143,7 @@ final class DocumentStorageSettingsController
             s3UsePathStyle: $request->input('s3_use_path_style') === '1',
             enabled: $request->input('enabled') === '1',
             folderSettings: $this->folderSettingsFromRequest($request),
+            cloudSettings: $this->cloudSettingsFromRequest($request),
         );
 
         try {
@@ -167,6 +186,91 @@ final class DocumentStorageSettingsController
         }
 
         Response::redirect('/einstellungen/speicherziele');
+    }
+
+    // --- OAuth connection (Dropbox, OneDrive, Google Drive, Box) ---------
+
+    /** Redirects to the consent page of the cloud service. */
+    public function connect(Request $request): void
+    {
+        $id = $request->param('id');
+        $target = $this->findTarget($id);
+
+        if ($target === null) {
+            Response::notFound(t('settings.document_storage.targets.not_found'));
+
+            return;
+        }
+        if (!$target->protocol->usesOAuth() || $target->oauthClientId === null || $target->oauthClientSecret === null) {
+            Flash::error(t('settings.document_storage.targets.oauth.missing_credentials'));
+            Response::redirect('/einstellungen/speicherziele/' . rawurlencode($id) . '/bearbeiten');
+
+            return;
+        }
+
+        Csrf::token(); // starts the session
+        $state = bin2hex(random_bytes(24));
+        $_SESSION[self::OAUTH_SESSION_KEY] = ['state' => $state, 'targetId' => $target->id];
+
+        Response::redirect(CloudOAuthEndpoints::authorizeUrl($target, $this->oauthRedirectUri(), $state));
+    }
+
+    /** OAuth redirect back from the cloud service (see connect()). */
+    public function oauthCallback(Request $request): void
+    {
+        Csrf::token(); // starts the session
+        $pending = $_SESSION[self::OAUTH_SESSION_KEY] ?? null;
+        unset($_SESSION[self::OAUTH_SESSION_KEY]);
+
+        $state = (string) ($request->query('state') ?? '');
+        $code = $request->query('code');
+        $error = $request->query('error');
+
+        if (!is_array($pending) || !is_string($pending['state'] ?? null) || $state === '' || !hash_equals($pending['state'], $state)) {
+            Flash::error(t('settings.document_storage.targets.oauth.invalid_state'));
+            Response::redirect('/einstellungen/speicherziele');
+
+            return;
+        }
+
+        $targetId = (string) $pending['targetId'];
+        $editUrl = '/einstellungen/speicherziele/' . rawurlencode($targetId) . '/bearbeiten';
+
+        if ($error !== null || $code === null || $code === '') {
+            $description = (string) ($request->query('error_description') ?? $error ?? '');
+            Flash::error(t('settings.document_storage.targets.oauth.cancelled') . ($description !== '' ? ' (' . $description . ')' : ''));
+            Response::redirect($editUrl);
+
+            return;
+        }
+
+        try {
+            $account = $this->commands->dispatch(new CompleteStorageTargetOAuth($targetId, $code, $this->oauthRedirectUri()));
+            Flash::success(t('settings.document_storage.targets.oauth.connected') . (is_string($account) ? ' (' . $account . ')' : ''));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+            Response::redirect('/einstellungen/speicherziele');
+
+            return;
+        }
+
+        Response::redirect($editUrl);
+    }
+
+    public function disconnect(Request $request): void
+    {
+        $id = $request->param('id');
+
+        try {
+            $this->commands->dispatch(new DisconnectStorageTargetOAuth($id));
+            Flash::success(t('settings.document_storage.targets.oauth.disconnected'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/einstellungen/speicherziele/' . rawurlencode($id) . '/bearbeiten');
     }
 
     // --- Zuordnungen (Dokumenttyp -> Ziellaufwerk + Pfad) -----------------
@@ -236,6 +340,34 @@ final class DocumentStorageSettingsController
         ];
     }
 
+    /**
+     * OAuth app credentials (Migration 153).
+     *
+     * @return array<string, mixed>
+     */
+    private function cloudSettingsFromRequest(Request $request): array
+    {
+        return [
+            'oauthClientId' => $request->input('oauth_client_id', '') ?? '',
+            'oauthClientSecret' => $request->input('oauth_client_secret', '') ?? '',
+            'oauthTenant' => $request->input('oauth_tenant', '') ?? '',
+        ];
+    }
+
+    /** Redirect URI registered with the provider: base URL from Einstellungen › Integrationen, else the current host. */
+    private function oauthRedirectUri(): string
+    {
+        $baseSettings = $this->queries->ask(new GetIntegrationBaseSettings());
+        if ($baseSettings->baseUrl !== null && trim($baseSettings->baseUrl) !== '') {
+            $baseUrl = rtrim(trim($baseSettings->baseUrl), '/');
+        } else {
+            $scheme = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off' ? 'https' : 'http';
+            $baseUrl = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        }
+
+        return $baseUrl . self::OAUTH_CALLBACK_PATH;
+    }
+
     /** @param DocumentStorageTarget[] $targets */
     private function findInList(array $targets, string $id): ?DocumentStorageTarget
     {
@@ -265,7 +397,8 @@ final class DocumentStorageSettingsController
             'editing' => $editing,
             'errors' => $errors,
             'old' => $old,
-            'protocols' => \App\Domain\DocumentStorage\StorageProtocol::cases(),
+            'protocols' => StorageProtocol::cases(),
+            'oauthRedirectUri' => $this->oauthRedirectUri(),
         ], activeNav: 'settings-speicherziele', title: t('settings.document_storage.targets.title'));
     }
 
@@ -320,6 +453,8 @@ final class DocumentStorageSettingsController
             'share_password_lowercase' => $command->folderSettings['sharePasswordLowercase'] ?? true,
             'share_password_digits' => $command->folderSettings['sharePasswordDigits'] ?? true,
             'share_password_symbols' => $command->folderSettings['sharePasswordSymbols'] ?? false,
+            'oauth_client_id' => $command->cloudSettings['oauthClientId'] ?? '',
+            'oauth_tenant' => $command->cloudSettings['oauthTenant'] ?? '',
         ];
     }
 }

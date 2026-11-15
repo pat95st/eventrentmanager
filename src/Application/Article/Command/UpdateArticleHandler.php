@@ -34,7 +34,7 @@ final class UpdateArticleHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\Cable\CableRepositoryInterface $cables = null,
         // Digitale Stageboxen (Migration 152)
         private readonly ?\App\Domain\DigitalStagebox\DigitalStageboxRepositoryInterface $digitalStageboxes = null,
-        // Mixing consoles (migration 153)
+        // Mixing consoles (migration 154)
         private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $mixingConsoles = null,
     ) {
     }
@@ -170,7 +170,7 @@ final class UpdateArticleHandler implements CommandHandlerInterface
             $errors = array_merge($errors, $stageboxErrors);
         }
 
-        // Mixing console (migration 153). Without the console section in the form (null)
+        // Mixing console (migration 154). Without the console section in the form (null)
         // stored data stays unchanged.
         $console = null;
         $consoleCategoryId = $this->mixingConsoles !== null && $this->digitalStageboxes !== null ? $this->categories->findMixingConsoleCategoryId() : null;

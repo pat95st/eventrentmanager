@@ -1,5 +1,5 @@
 /**
- * Mixing console section of the article form (migration 153), see
+ * Mixing console section of the article form (migration 154), see
  * resources/views/mixing-consoles/_fields.php. Shows the section for the
  * category "Tonmischpult", switches between analog and digital fields, adds
  * and removes rows (interfaces, DSP channels, expansion cards), keeps totals

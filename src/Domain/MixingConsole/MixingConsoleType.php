@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\MixingConsole;
 
-/** Bauart eines Tonmischpults (Migration 153). */
+/** Bauart eines Tonmischpults (Migration 154). */
 enum MixingConsoleType: string
 {
     case Analog = 'analog';

@@ -46,7 +46,7 @@ final class UpdateArticle implements CommandInterface
         // Digitale Stagebox (Migration 152): null = Formular ohne Stagebox-Abschnitt (unverändert lassen);
         // gespeichert nur bei Kategorie "Digitale Stagebox", sonst entfernt.
         public readonly ?\App\Application\DigitalStagebox\DigitalStageboxInput $digitalStagebox = null,
-        // Mixing console (migration 153): null = form without console section (keep stored data);
+        // Mixing console (migration 154): null = form without console section (keep stored data);
         // only stored for category "Tonmischpult", otherwise removed.
         public readonly ?\App\Application\MixingConsole\MixingConsoleInput $mixingConsole = null,
     ) {

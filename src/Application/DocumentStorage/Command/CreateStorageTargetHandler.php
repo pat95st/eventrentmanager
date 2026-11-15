@@ -46,7 +46,8 @@ final class CreateStorageTargetHandler implements CommandHandlerInterface
         );
 
         [$folderErrors, $folderData] = $this->validateFolderSettings($data['protocol'], $data['username'], $command->folderSettings);
-        $errors = array_merge($errors, $folderErrors);
+        [$cloudErrors, $cloudData] = $this->validateCloudSettings($data['protocol'], $command->cloudSettings, false);
+        $errors = array_merge($errors, $folderErrors, $cloudErrors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -80,6 +81,9 @@ final class CreateStorageTargetHandler implements CommandHandlerInterface
         foreach ($folderData as $property => $value) {
             $target->{$property} = $value;
         }
+        $target->oauthClientId = $cloudData['oauthClientId'];
+        $target->oauthClientSecret = $cloudData['oauthClientSecret'];
+        $target->oauthTenant = $cloudData['oauthTenant'];
 
         $this->targets->save($target);
 

@@ -435,7 +435,7 @@ $caseInventoryNumberRepository = new MariadbCaseInventoryNumberRepository($pdo);
 $powerDistributorRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPowerDistributorRepository($pdo);
 $cableRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCableRepository($pdo); // Leitungen (Migration 125)
 $digitalStageboxRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDigitalStageboxRepository($pdo); // Digitale Stageboxen (Migration 152)
-$mixingConsoleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMixingConsoleRepository($pdo); // Tonmischpulte (Migration 153)
+$mixingConsoleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMixingConsoleRepository($pdo); // Tonmischpulte (Migration 154)
 $pdfFontRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPdfFontRepository($pdo);
 // Schriftarten je Bereich für alle PDFs (Migration 116), erst beim ersten PDF geladen.
 \App\Infrastructure\Pdf\SimplePdfWriter::useFontConfiguration(static function () use ($pdfFontRepository, $fileStorage): array {
@@ -596,7 +596,9 @@ $technicianSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbT
 $documentStorageTargetRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageTargetRepository($pdo);
 $documentStorageAssignmentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageAssignmentRepository($pdo);
 $documentStorageUploadLogRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDocumentStorageUploadLogRepository($pdo);
-$documentStorageClientFactory = new \App\Infrastructure\DocumentStorage\StorageClientFactory();
+$documentStorageCloudHttp = new \App\Infrastructure\DocumentStorage\Cloud\CurlCloudHttpClient();
+$documentStorageOAuthClient = new \App\Infrastructure\DocumentStorage\Cloud\CloudOAuthClient($documentStorageCloudHttp);
+$documentStorageClientFactory = new \App\Infrastructure\DocumentStorage\StorageClientFactory($documentStorageTargetRepository, $documentStorageCloudHttp, $documentStorageOAuthClient);
 // Ordner für Veranstaltungen/Kunden (Migration 148)
 $storageFolderRepository = new \App\Infrastructure\Persistence\Pdo\MariadbStorageFolderRepository($pdo);
 $documentStoragePusher = new \App\Infrastructure\DocumentStorage\DocumentStoragePusher(
@@ -1212,6 +1214,8 @@ $commandBus->register(\App\Application\User\Command\UpdateNotifyOnNewReceiptEmai
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageTarget::class, new \App\Application\DocumentStorage\Command\CreateStorageTargetHandler($documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\UpdateStorageTarget::class, new \App\Application\DocumentStorage\Command\UpdateStorageTargetHandler($documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageTarget::class, new \App\Application\DocumentStorage\Command\DeleteStorageTargetHandler($documentStorageTargetRepository));
+$commandBus->register(\App\Application\DocumentStorage\Command\CompleteStorageTargetOAuth::class, new \App\Application\DocumentStorage\Command\CompleteStorageTargetOAuthHandler($documentStorageTargetRepository, $documentStorageOAuthClient));
+$commandBus->register(\App\Application\DocumentStorage\Command\DisconnectStorageTargetOAuth::class, new \App\Application\DocumentStorage\Command\DisconnectStorageTargetOAuthHandler($documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\TestStorageConnection::class, new \App\Application\DocumentStorage\Command\TestStorageConnectionHandler($documentStorageTargetRepository, $documentStorageClientFactory));
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageAssignment::class, new \App\Application\DocumentStorage\Command\CreateStorageAssignmentHandler($documentStorageAssignmentRepository, $documentStorageTargetRepository));
 $commandBus->register(\App\Application\DocumentStorage\Command\DeleteStorageAssignment::class, new \App\Application\DocumentStorage\Command\DeleteStorageAssignmentHandler($documentStorageAssignmentRepository));
@@ -1270,7 +1274,7 @@ $queryBus->register(\App\Application\Category\Query\GetDigitalStageboxCategoryId
 $digitalStageboxQueryHandler = new \App\Application\DigitalStagebox\Query\DigitalStageboxQueryHandler($digitalStageboxRepository, $mixingConsoleRepository);
 $queryBus->register(\App\Application\DigitalStagebox\Query\GetDigitalStageboxSettings::class, $digitalStageboxQueryHandler);
 $queryBus->register(\App\Application\DigitalStagebox\Query\GetArticleDigitalStagebox::class, $digitalStageboxQueryHandler);
-// Tonmischpulte (Migration 153)
+// Tonmischpulte (Migration 154)
 $queryBus->register(\App\Application\Category\Query\GetMixingConsoleCategoryId::class, new \App\Application\Category\Query\GetMixingConsoleCategoryIdHandler($categoryRepository));
 $mixingConsoleQueryHandler = new \App\Application\MixingConsole\Query\MixingConsoleQueryHandler($mixingConsoleRepository, $digitalStageboxRepository);
 $queryBus->register(\App\Application\MixingConsole\Query\GetArticleMixingConsole::class, $mixingConsoleQueryHandler);
@@ -2606,6 +2610,10 @@ $router->post('/einstellungen/speicherziele', $auth->guard(Permission::Administr
 $router->get('/einstellungen/speicherziele/zuordnungen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'assignments']));
 $router->post('/einstellungen/speicherziele/zuordnungen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'storeAssignment']));
 $router->post('/einstellungen/speicherziele/zuordnungen/{id}/loeschen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'destroyAssignment']));
+// OAuth connection of cloud storage targets (Migration 153). The callback path is fixed so it can be registered at the provider.
+$router->get(\App\Infrastructure\Http\Controllers\DocumentStorageSettingsController::OAUTH_CALLBACK_PATH, $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'oauthCallback']));
+$router->get('/einstellungen/speicherziele/{id}/verbinden', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'connect']));
+$router->post('/einstellungen/speicherziele/{id}/trennen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'disconnect']));
 $router->get('/einstellungen/speicherziele/{id}/bearbeiten', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'edit']));
 $router->post('/einstellungen/speicherziele/{id}', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'update']));
 $router->post('/einstellungen/speicherziele/{id}/loeschen', $auth->guard(Permission::Administration, [$documentStorageSettingsController, 'destroy']));

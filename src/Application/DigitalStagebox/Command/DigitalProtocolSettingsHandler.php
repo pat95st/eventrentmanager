@@ -22,7 +22,7 @@ final class DigitalProtocolSettingsHandler implements CommandHandlerInterface
 {
     public function __construct(
         private readonly DigitalStageboxRepositoryInterface $stageboxes,
-        // Mixing consoles (migration 153) also use protocols for interfaces and expansion cards.
+        // Mixing consoles (migration 154) also use protocols for interfaces and expansion cards.
         private readonly ?\App\Domain\MixingConsole\MixingConsoleRepositoryInterface $consoles = null,
     ) {
     }

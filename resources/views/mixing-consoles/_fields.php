@@ -1,6 +1,6 @@
 <?php
 /**
- * Felder eines Tonmischpults (Migration 153) im Artikelformular. Analog:
+ * Felder eines Tonmischpults (Migration 154) im Artikelformular. Analog:
  * Eingänge, AUX-Wege, Subgruppen, Mono-Master. Digital: Schnittstellen,
  * DSP-Kanäle, lokale Ein-/Ausgänge, Erweiterungsslots/-karten und
  * kompatible Stageboxen. Zeilen werden per /assets/js/mixing-console-fields.js

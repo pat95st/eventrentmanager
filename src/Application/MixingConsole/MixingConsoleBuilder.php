@@ -16,7 +16,7 @@ use App\Domain\MixingConsole\MixingConsoleType;
 use App\Domain\MixingConsole\StageboxCompatibility;
 
 /**
- * Validates the mixing console fields of the article form (migration 153)
+ * Validates the mixing console fields of the article form (migration 154)
  * and builds an ArticleMixingConsole. Empty count fields count as 0, rows
  * without any value are ignored. Only the fields of the selected type are
  * kept; those of the other type are reset.

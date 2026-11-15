@@ -115,7 +115,7 @@ $rentalsChildren = [
     ['key' => 'venues', 'label' => t('nav.venues'), 'href' => '/veranstaltungsorte'],
     ['key' => 'calendar', 'label' => t('nav.calendar'), 'href' => '/kalender'],
     ['key' => 'minute_program_templates', 'label' => t('nav.minute_program_templates'), 'href' => '/minutenprogramm-vorlagen'],
-    // Partner instances (migration 157)
+    // Partner instances (migration 160)
     ['key' => 'partners', 'label' => t('nav.partners'), 'href' => '/partner'],
 ];
 $isRentalsGroupActive = in_array($activeNav, $rentalsGroupKeys, true);

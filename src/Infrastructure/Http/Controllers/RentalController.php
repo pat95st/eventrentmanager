@@ -460,7 +460,7 @@ final class RentalController
             'technicianTeam' => $this->rentalTechnicians !== null ? $this->queries->ask(new \App\Application\Technician\Query\GetRentalTechnicians($id)) : null,
             'rentalHolidays' => $this->schedule?->holidaysDuring($detail->rental->startDate, $detail->rental->endDate) ?? [],
             'blockingConflicts' => $this->schedule?->blockingConflicts($detail->rental) ?? [],
-            // Partner instances (migration 157)
+            // Partner instances (migration 160)
             'partnerRequests' => $this->queries->ask(new \App\Application\Federation\Query\ListPartnerRequestsForRental($id)),
         ], activeNav: 'rentals', title: t('rentals.page_title.detail', ['event' => $detail->rental->eventName]));
     }

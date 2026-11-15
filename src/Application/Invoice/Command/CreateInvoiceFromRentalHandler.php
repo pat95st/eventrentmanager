@@ -59,7 +59,7 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
         // Dry-Hire (Migration 142): Dry-Hire-Kunden bekommen Dry-Hire-Preise
         private readonly ?\App\Domain\DryHire\DryHireRepositoryInterface $dryHire = null,
-        // Partner instances (migration 157): events created from a partner's
+        // Partner instances (migration 160): events created from a partner's
         // material request get the agreed partner discount as percentage discount.
         private readonly ?\App\Domain\Federation\PartnerRentalDiscountLookupInterface $partnerDiscounts = null,
     ) {

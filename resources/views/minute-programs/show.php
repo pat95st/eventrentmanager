@@ -25,6 +25,8 @@ $program = $detail->program;
         <?php endif; ?>
     </div>
     <div class="flex flex-wrap gap-2">
+        <a href="/minutenprogramme/<?= e($program->id) ?>/foh" title="<?= e(t('minute_programs.show.foh_hint')) ?>"
+           class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('minute_programs.show.foh')) ?></a>
         <a href="/minutenprogramme/<?= e($program->id) ?>/vollbild" target="_blank"
            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('minute_programs.show.fullscreen')) ?></a>
         <a href="/minutenprogramme/<?= e($program->id) ?>/bearbeiten"
@@ -42,7 +44,7 @@ $program = $detail->program;
         <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
         <div>
             <label for="current_delay_minutes" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.show.delay')) ?></label>
-            <input type="number" id="current_delay_minutes" name="current_delay_minutes" value="<?= e((string) $program->currentDelayMinutes) ?>"
+            <input type="number" id="current_delay_minutes" name="current_delay_minutes" value="<?= e((string) $program->delayMinutes()) ?>"
                    class="mt-1 w-28 rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
         </div>
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('minute_programs.show.delay_apply')) ?></button>
@@ -185,6 +187,12 @@ $program = $detail->program;
                 <div>
                     <span class="font-mono"><?= e($link->isActive() ? '/minutenprogramm/freigabe/' . $link->token : t('minute_programs.show.share_link_revoked')) ?></span>
                     <span class="ml-2 rounded bg-slate-100 px-1.5 py-0.5 dark:bg-slate-800"><?= e($link->mode->label()) ?></span>
+                    <?php if ($link->isActive()): ?>
+                        <div class="mt-1 text-slate-500 dark:text-slate-400">
+                            <a class="hover:underline" href="/minutenprogramm/freigabe/<?= e($link->token) ?>/foh" target="_blank"><?= e(t('minute_programs.show.foh')) ?></a>
+                            · <?= e(t('minute_programs.show.stage_api')) ?>: <span class="font-mono">/api/runsheet/v1/<?= e($link->token) ?></span>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <?php if ($link->isActive()): ?>
                 <form method="post" action="/freigabe-links/<?= e($link->id) ?>/widerrufen">

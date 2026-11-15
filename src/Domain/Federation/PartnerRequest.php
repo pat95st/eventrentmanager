@@ -8,7 +8,7 @@ use DateTimeImmutable;
 
 /**
  * Material or technician request between two partner installations
- * (migration 157). Both installations store the request with the same
+ * (migration 160). Both installations store the request with the same
  * $reference; $direction tells whether we asked (outgoing) or were asked
  * (incoming).
  *

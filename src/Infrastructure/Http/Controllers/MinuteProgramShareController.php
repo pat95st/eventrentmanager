@@ -107,7 +107,7 @@ final class MinuteProgramShareController
         }
 
         $delay = (int) ($request->input('current_delay_minutes', '0') ?? '0');
-        $this->commands->dispatch(new SetMinuteProgramDelay($resolved->detail->program->id, $delay));
+        $this->commands->dispatch(new SetMinuteProgramDelay($resolved->detail->program->id, $delay * 60));
 
         Response::json(['ok' => true]);
     }

@@ -29,7 +29,8 @@ final class CableSettings
             $config[$type->id] = [
                 'name' => $type->name,
                 'connectors' => array_values($type->connectorIds),
-                'inspection' => $type->requiresElectricalInspection,
+                'inspection' => $type->requiresInspection(),
+                'multicore' => $type->isAnalogMulticore,
                 'protectionClass' => $type->protectionClass?->value,
             ];
         }

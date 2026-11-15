@@ -326,7 +326,7 @@ final class EventAudioLiveController
             if ($program->jingleBefore && $program->jingleAudioFileId !== null && isset($jingleTitles[$program->jingleAudioFileId])) {
                 $programs[] = [
                     'name' => $program->name,
-                    'startAt' => $program->startAt->modify(($program->currentDelayMinutes >= 0 ? '+' : '') . $program->currentDelayMinutes . ' minutes'),
+                    'startAt' => $program->delayedStartAt(),
                     'jingleId' => $program->jingleAudioFileId,
                     'jingleTitle' => $jingleTitles[$program->jingleAudioFileId],
                 ];

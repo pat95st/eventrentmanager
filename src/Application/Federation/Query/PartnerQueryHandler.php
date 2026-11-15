@@ -25,7 +25,7 @@ use App\Domain\Federation\PartnerRequestKind;
 use App\Domain\Federation\PartnerRequestRepositoryInterface;
 use App\Domain\Federation\PartnerRequestStatus;
 
-/** Read side of the partner installations (migration 157). */
+/** Read side of the partner installations (migration 160). */
 final class PartnerQueryHandler implements QueryHandlerInterface
 {
     public function __construct(

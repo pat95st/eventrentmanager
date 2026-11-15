@@ -1,4 +1,4 @@
--- Migration 157: Partner instances (federation between installations).
+-- Migration 160: Partner instances (federation between installations).
 --
 -- Two installations of this software can become "friends": one side creates
 -- an invitation link, the other side enters it, and the inviting side

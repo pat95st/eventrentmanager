@@ -8,7 +8,7 @@ use App\Domain\Exception\ValidationException;
 use DateTimeImmutable;
 
 /**
- * Another installation of this software we are befriended with (migration 157).
+ * Another installation of this software we are befriended with (migration 160).
  *
  * Discounts are always stored from OUR point of view: $discountGranted is
  * what we grant the partner on our material, $discountReceived what the

@@ -15,7 +15,7 @@ use App\Infrastructure\Http\Response;
 
 /**
  * Server-to-server endpoints for partner installations (/api/federation/v1,
- * migration 157). Stateless: no session, no CSRF — authenticated by the
+ * migration 160). Stateless: no session, no CSRF — authenticated by the
  * partner's bearer token (or the secret code of an invitation link).
  */
 final class FederationApiController

@@ -1,6 +1,6 @@
 <?php
 /**
- * Partner box on the event page (migration 157).
+ * Partner box on the event page (migration 160).
  *
  * @var \App\Domain\Rental\Rental $rental
  * @var \App\Application\Federation\Query\RentalPartnerRequests $partnerRequests

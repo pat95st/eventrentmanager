@@ -29,7 +29,7 @@ use App\Infrastructure\Http\View;
 
 /**
  * Partners › material pool, technician requests and the request inbox
- * (migration 157). Available to everyone who may plan events.
+ * (migration 160). Available to everyone who may plan events.
  */
 final class PartnerController
 {

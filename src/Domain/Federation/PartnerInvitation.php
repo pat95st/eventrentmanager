@@ -7,7 +7,7 @@ namespace App\Domain\Federation;
 use DateTimeImmutable;
 
 /**
- * Invitation link for befriending another installation (migration 157).
+ * Invitation link for befriending another installation (migration 160).
  * Only the SHA-256 hash of the secret code is stored; the full link is shown
  * once right after it was created.
  */

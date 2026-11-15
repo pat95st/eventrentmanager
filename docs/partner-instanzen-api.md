@@ -1,6 +1,6 @@
 # Partner-Instanzen (Föderation zwischen Installationen)
 
-Stand: Migration 157 „Partner-Instanzen“. Zwei Installationen dieser Software können sich „befreunden“. Danach sehen sie gegenseitig ihren Materialpool, fragen Vermietungen an und fragen Techniker an.
+Stand: Migration 160 „Partner-Instanzen“. Zwei Installationen dieser Software können sich „befreunden“. Danach sehen sie gegenseitig ihren Materialpool, fragen Vermietungen an und fragen Techniker an.
 
 ## Ablauf aus Sicht der Benutzer
 

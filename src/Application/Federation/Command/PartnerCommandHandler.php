@@ -34,7 +34,7 @@ use App\Shared\Uuid;
 use DateTimeImmutable;
 
 /**
- * All user actions around partner installations (migration 157): invitation
+ * All user actions around partner installations (migration 160): invitation
  * links, confirming partnerships, discount agreements and sending/answering
  * material and technician requests. Every action that affects both sides
  * calls the partner first and only changes our data when the partner

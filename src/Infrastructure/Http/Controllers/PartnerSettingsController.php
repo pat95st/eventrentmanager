@@ -29,7 +29,7 @@ use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
 /**
- * Settings › partner instances (migration 157): invitation links, entering a
+ * Settings › partner instances (migration 160): invitation links, entering a
  * partner's link, confirming partnerships, discount agreements and the local
  * settings of each partnership.
  */

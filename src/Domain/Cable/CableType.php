@@ -22,7 +22,15 @@ final class CableType
         public ?ProtectionClass $protectionClass,
         public array $connectorIds,
         public int $sortOrder = 0,
+        // Migration 157: cables of this type are analog multicores (sends, returns, drum, Harting).
+        public bool $isAnalogMulticore = false,
     ) {
+    }
+
+    /** Effective inspection rule: analog multicores never need an electrical inspection. */
+    public function requiresInspection(): bool
+    {
+        return $this->requiresElectricalInspection && !$this->isAnalogMulticore;
     }
 
     public function allowsConnector(string $connectorId): bool

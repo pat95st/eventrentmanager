@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Federation;
 
-/** Lifecycle of a partnership with another installation (migration 157). */
+/** Lifecycle of a partnership with another installation (migration 160). */
 enum PartnerStatus: string
 {
     // We entered the partner's invitation link and wait for the partner to confirm.

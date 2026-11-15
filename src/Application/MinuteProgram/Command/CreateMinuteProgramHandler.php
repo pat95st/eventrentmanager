@@ -57,7 +57,7 @@ final class CreateMinuteProgramHandler implements CommandHandlerInterface
             jingleBefore: $command->jingleBefore,
             handheldMicCount: max(0, $command->handheldMicCount),
             headsetMicCount: max(0, $command->headsetMicCount),
-            currentDelayMinutes: 0,
+            currentDelaySeconds: 0,
             createdAt: $now,
             updatedAt: $now,
             jingleAudioFileId: $command->jingleBefore && $command->jingleAudioFileId !== null && $command->jingleAudioFileId !== '' ? $command->jingleAudioFileId : null,

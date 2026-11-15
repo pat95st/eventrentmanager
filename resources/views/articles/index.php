@@ -38,6 +38,9 @@ use function App\Infrastructure\Http\t;
                 <a role="menuitem" href="/artikel/neu?stromverteiler=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Stromverteiler</a>
                 <?php if ($hasCableCategory ?? false): ?>
                     <a role="menuitem" href="/artikel/neu?leitung=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Leitung</a>
+                    <?php if ($hasAnalogMulticoreCableType ?? false): ?>
+                        <a role="menuitem" href="/artikel/neu?multicore=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Analoges Multicore</a>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <?php if ($hasDigitalStageboxCategory ?? false): ?>
                     <a role="menuitem" href="/artikel/neu?stagebox=1" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Digitale Stagebox</a>

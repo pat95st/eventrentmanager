@@ -10,7 +10,8 @@ final class SetMinuteProgramDelay implements CommandInterface
 {
     public function __construct(
         public readonly string $minuteProgramId,
-        public readonly int $currentDelayMinutes,
+        // Delay in seconds (negative = ahead of schedule).
+        public readonly int $delaySeconds,
     ) {
     }
 }

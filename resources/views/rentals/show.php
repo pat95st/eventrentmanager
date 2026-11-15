@@ -91,6 +91,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
             </summary>
             <div data-dropdown-menu role="menu" class="absolute left-0 top-full z-20 mt-1 w-80 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900">
                 <a href="/veranstaltungen/<?= e($rental->id) ?>/beladung" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.loading_list')) ?></a>
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/strom" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.power_plan')) ?></a>
                 <a href="/veranstaltungen/<?= e($rental->id) ?>/packliste.pdf" target="_blank" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.export_pdf')) ?></a>
                 <a href="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.insurance_list')) ?></a>
                 <details class="group">
@@ -382,7 +383,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
 </div>
 
 <?php require __DIR__ . '/_technicians.php'; /* Techniker & Gewerke (Migration 134) */ ?>
-<?php if (isset($partnerRequests)): /* Partner instances (migration 157) */ ?>
+<?php if (isset($partnerRequests)): /* Partner instances (migration 160) */ ?>
 <?= \App\Infrastructure\Http\View::render('partners/_rental-box', ['rental' => $rental, 'partnerRequests' => $partnerRequests]) ?>
 <?php endif; ?>
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

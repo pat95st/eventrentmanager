@@ -305,7 +305,7 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Wiederherstellung steht alternativ auch direkt im Installations-
   Assistenten zur Verfügung (siehe „Setup" oben). Details siehe Abschnitt
   „Backup / Sicherung" unten.
-- **Partner-Instanzen** (Migration 157): Installationen dieser Software
+- **Partner-Instanzen** (Migration 160): Installationen dieser Software
   lassen sich miteinander befreunden (*Einstellungen › Partner-Instanzen*).
   Eine Seite erstellt einen Einladungslink, die andere gibt ihn ein und legt
   Rabatt und Einstellungen fest, danach bestätigt die einladende Seite.

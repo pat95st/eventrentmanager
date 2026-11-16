@@ -4,15 +4,23 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Http\Controllers;
 
+use App\Application\Auth\Command\AuthenticateLdap;
 use App\Application\Auth\Command\AuthenticatePassword;
+use App\Application\Auth\Command\CompleteOAuthLogin;
 use App\Application\Auth\Command\RequestEmailOtp;
 use App\Application\Auth\Command\RequestPasswordSetup;
 use App\Application\Auth\Command\VerifyTwoFactorCode;
+use App\Application\Auth\OAuthAuthorizationRequest;
 use App\Application\Auth\TrustedDeviceService;
 use App\Application\Command\CommandBus;
+use App\Application\Query\QueryBus;
+use App\Application\Settings\Query\GetExternalLoginSettings;
 use App\Domain\Auth\UserSessionRepositoryInterface;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Settings\ExternalLoginSettings;
+use App\Domain\Settings\LoginMethod;
 use App\Domain\User\TwoFactorMethod;
+use App\Domain\User\User;
 use App\Domain\User\UserRepositoryInterface;
 use App\Infrastructure\Http\Auth\RecordUserSession;
 use App\Infrastructure\Http\Auth\Session;
@@ -32,6 +40,7 @@ final class AuthController
         private readonly UserSessionRepositoryInterface $userSessions,
         private readonly RecordUserSession $recordUserSession,
         private readonly TrustedDeviceService $trustedDevices,
+        private readonly QueryBus $queries,
     ) {
     }
 
@@ -44,28 +53,161 @@ final class AuthController
         }
 
         // Hinweis z. B. nach automatischer Abmeldung wegen Inaktivität (AuthGuard).
-        echo View::render('auth/login', ['errors' => [], 'email' => '', 'trustDevice' => false, 'notice' => Flash::consumeError()]);
+        $this->renderLogin($this->externalLoginSettings()->activeMethod()->value, [], '', false, Flash::consumeError());
     }
 
+    /** Login form of the active method: local password or LDAP (OAuth has no form). */
     public function login(Request $request): void
     {
+        $email = $request->input('email', '') ?? '';
+        $password = $request->input('password', '') ?? '';
+        $trustDevice = ($request->input('trust_device', '') ?? '') === '1';
+        $method = $this->externalLoginSettings()->activeMethod();
+
+        if ($method === LoginMethod::Oauth) {
+            Response::redirect('/login');
+
+            return;
+        }
+
+        try {
+            $user = $this->commands->dispatch($method === LoginMethod::Ldap
+                ? new AuthenticateLdap($email, $password)
+                : new AuthenticatePassword($email, $password));
+        } catch (ValidationException $e) {
+            $this->renderLogin($method->value, $e->errors(), $email, $trustDevice);
+
+            return;
+        }
+
+        $this->continueAfterFirstFactor($user, $trustDevice, skipTwoFactor: false);
+    }
+
+    /**
+     * Emergency access while LDAP or OAuth replaces the local login: the
+     * local password form, usable by administrators only.
+     */
+    public function showLocalLogin(Request $request): void
+    {
+        if (Session::userId() !== null || $this->externalLoginSettings()->activeMethod() === LoginMethod::Local) {
+            Response::redirect(Session::userId() !== null ? '/' : '/login');
+
+            return;
+        }
+
+        $this->renderLogin('fallback', [], '', false);
+    }
+
+    public function localLogin(Request $request): void
+    {
+        $settings = $this->externalLoginSettings();
+        if ($settings->activeMethod() === LoginMethod::Local) {
+            Response::redirect('/login');
+
+            return;
+        }
+
         $email = $request->input('email', '') ?? '';
         $trustDevice = ($request->input('trust_device', '') ?? '') === '1';
 
         try {
             $user = $this->commands->dispatch(new AuthenticatePassword($email, $request->input('password', '') ?? ''));
+            if (!$settings->allowsLocalLogin($user)) {
+                throw new ValidationException(['credentials' => t('auth.login.error_local_admin_only')]);
+            }
         } catch (ValidationException $e) {
-            echo View::render('auth/login', ['errors' => $e->errors(), 'email' => $email, 'trustDevice' => $trustDevice]);
+            $this->renderLogin('fallback', $e->errors(), $email, $trustDevice);
 
             return;
         }
 
+        $this->continueAfterFirstFactor($user, $trustDevice, skipTwoFactor: false);
+    }
+
+    /** Sends the browser to the OAuth / OpenID Connect identity provider. */
+    public function startOAuthLogin(Request $request): void
+    {
+        $settings = $this->externalLoginSettings();
+        if (Session::userId() !== null || !$settings->oauthActive()) {
+            Response::redirect(Session::userId() !== null ? '/' : '/login');
+
+            return;
+        }
+
+        $authorization = OAuthAuthorizationRequest::create($settings, $this->oauthRedirectUri());
+        Session::startOAuthLogin($authorization->state, $authorization->codeVerifier);
+
+        Response::redirect($authorization->url);
+    }
+
+    /** The identity provider redirects back to this address with "code" and "state". */
+    public function oauthCallback(Request $request): void
+    {
+        // "state" ties the answer to the login this browser session started
+        // (protects against forged callbacks / login CSRF).
+        $codeVerifier = Session::consumeOAuthLogin($request->query('state', '') ?? '');
+        $code = $request->query('code', '') ?? '';
+
+        if ($codeVerifier === null || $code === '' || $request->query('error') !== null) {
+            Flash::error(t('auth.login.error_oauth_failed'));
+            Response::redirect('/login');
+
+            return;
+        }
+
+        try {
+            $user = $this->commands->dispatch(new CompleteOAuthLogin($code, $this->oauthRedirectUri(), $codeVerifier));
+        } catch (ValidationException $e) {
+            Flash::error($e->errors()['credentials'] ?? t('auth.login.error_oauth_failed'));
+            Response::redirect('/login');
+
+            return;
+        }
+
+        $this->continueAfterFirstFactor($user, false, skipTwoFactor: $this->externalLoginSettings()->oauthSkipTwoFactor);
+    }
+
+    /** Must be registered as redirect URI at the identity provider (shown on the settings page). */
+    private function oauthRedirectUri(): string
+    {
+        return Origin::current() . '/login/oauth/callback';
+    }
+
+    private function externalLoginSettings(): ExternalLoginSettings
+    {
+        return $this->queries->ask(new GetExternalLoginSettings());
+    }
+
+    /**
+     * @param string $mode 'local', 'ldap', 'oauth' (the active LoginMethod) or 'fallback'
+     * @param array<string, string> $errors
+     */
+    private function renderLogin(string $mode, array $errors, string $email, bool $trustDevice, ?string $notice = null): void
+    {
+        echo View::render('auth/login', [
+            'mode' => $mode,
+            'errors' => $errors,
+            'email' => $email,
+            'trustDevice' => $trustDevice,
+            'notice' => $notice,
+            'oauthLabel' => $this->externalLoginSettings()->oauthLabel,
+        ]);
+    }
+
+    /**
+     * The first factor (local password, LDAP password or OAuth) is verified:
+     * either the session is logged in right away or the second factor is
+     * requested.
+     */
+    private function continueAfterFirstFactor(User $user, bool $trustDevice, bool $skipTwoFactor): void
+    {
         // Ohne zweiten Faktor gibt es nichts zu überspringen — der Haken
         // bleibt dann wirkungslos (das Passwort ist immer Pflicht).
         // Mit zweitem Faktor: Ist dieses Gerät für genau diesen Benutzer
         // noch vertraut (Cookie, max. 10 Tage), entfällt die Code-Abfrage.
         if (
-            $user->twoFactorMethod === TwoFactorMethod::None
+            $skipTwoFactor
+            || $user->twoFactorMethod === TwoFactorMethod::None
             || $this->trustedDevices->isTrusted(TrustedDeviceCookie::read(), $user->id)
         ) {
             Session::login($user->id);

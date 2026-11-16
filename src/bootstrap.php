@@ -1013,6 +1013,16 @@ $commandBus->register(\App\Application\User\Command\UpdateLocale::class, new Upd
 $commandBus->register(\App\Application\User\Command\CompleteOnboardingTour::class, new \App\Application\User\Command\CompleteOnboardingTourHandler($userRepository));
 
 $commandBus->register(\App\Application\Auth\Command\AuthenticatePassword::class, new AuthenticatePasswordHandler($userRepository));
+// Login through LDAP or OAuth 2.0 / OpenID Connect (migration 171).
+$externalLoginSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbExternalLoginSettingsRepository($pdo);
+$ldapDirectory = new \App\Infrastructure\Ldap\ExtLdapDirectory();
+$oauthClient = new \App\Infrastructure\OAuth\CurlOAuthClient();
+$externalUserProvisioner = new \App\Application\Auth\ExternalUserProvisioner($userRepository);
+$commandBus->register(\App\Application\Auth\Command\AuthenticateLdap::class, new \App\Application\Auth\Command\AuthenticateLdapHandler($externalLoginSettingsRepository, $ldapDirectory, $externalUserProvisioner));
+$commandBus->register(\App\Application\Auth\Command\CompleteOAuthLogin::class, new \App\Application\Auth\Command\CompleteOAuthLoginHandler($externalLoginSettingsRepository, $oauthClient, $externalUserProvisioner));
+$commandBus->register(\App\Application\Settings\Command\UpdateExternalLoginSettings::class, new \App\Application\Settings\Command\UpdateExternalLoginSettingsHandler($externalLoginSettingsRepository, $ldapDirectory, $oauthClient));
+$commandBus->register(\App\Application\Settings\Command\TestLdapConnection::class, new \App\Application\Settings\Command\TestLdapConnectionHandler($externalLoginSettingsRepository, $ldapDirectory));
+$queryBus->register(\App\Application\Settings\Query\GetExternalLoginSettings::class, new \App\Application\Settings\Query\GetExternalLoginSettingsHandler($externalLoginSettingsRepository));
 $commandBus->register(\App\Application\Auth\Command\RequestEmailOtp::class, new RequestEmailOtpHandler($userRepository, $loginChallengeRepository, $mailer, $emailTemplateRenderer));
 $commandBus->register(\App\Application\Auth\Command\VerifyTwoFactorCode::class, new VerifyTwoFactorCodeHandler($userRepository, $loginChallengeRepository));
 
@@ -1853,8 +1863,9 @@ $insuranceListController = new \App\Infrastructure\Http\Controllers\InsuranceLis
 $inventoryNumberController = new InventoryNumberController($queryBus, $commandBus, $supplierRepository, $rmaRepository, $electricalInspectionRepository, $customerRepository, $saleRepository);
 $labelPrinterController = new LabelPrinterController($commandBus, $queryBus);
 $documentStorageSettingsController = new \App\Infrastructure\Http\Controllers\DocumentStorageSettingsController($commandBus, $queryBus);
-$authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession, $trustedDeviceService);
-$setupPasswordController = new SetupPasswordController($commandBus, $passwordSetupTokenRepository, $recordUserSession);
+$authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession, $trustedDeviceService, $queryBus);
+$externalLoginSettingsController = new \App\Infrastructure\Http\Controllers\ExternalLoginSettingsController($commandBus, $queryBus, $ldapDirectory);
+$setupPasswordController = new SetupPasswordController($commandBus, $passwordSetupTokenRepository, $recordUserSession, $queryBus, $userRepository);
 $passkeyController = new PasskeyController($commandBus, $queryBus, $recordUserSession);
 $calDavSigningCertificateProvider = new \App\Infrastructure\Http\CalDav\CalDavSigningCertificateProvider($calDavSigningSettingsRepository, $fileStorage, $companySettingsRepository);
 $mobileConfigBuilder = new \App\Infrastructure\Http\CalDav\MobileConfigBuilder($calDavSigningCertificateProvider);
@@ -1929,6 +1940,13 @@ $router->post('/login', [$authController, 'login']);
 $router->get('/login/zwei-faktor', [$authController, 'showTwoFactor']);
 $router->post('/login/zwei-faktor', [$authController, 'verifyTwoFactor']);
 $router->post('/login/zwei-faktor/code-erneut-senden', [$authController, 'resendEmailCode']);
+// Login through an OAuth 2.0 / OpenID Connect identity provider, if it is the active login method (public,
+// see AuthGuard::PUBLIC_PATHS; the callback is protected by "state").
+// Emergency access for administrators while LDAP or OAuth replaces the local login.
+$router->get('/login/lokal', [$authController, 'showLocalLogin']);
+$router->post('/login/lokal', [$authController, 'localLogin']);
+$router->get('/login/oauth', [$authController, 'startOAuthLogin']);
+$router->get('/login/oauth/callback', [$authController, 'oauthCallback']);
 $router->post('/logout', [$authController, 'logout']);
 
 // Passwort vergessen (öffentlich, siehe AuthController::forgotPassword()
@@ -2840,6 +2858,9 @@ $router->post('/einstellungen/ueberziehung', $auth->guard(Permission::Administra
 // Sicherheit (Migration 127): nur Administratoren
 $router->get('/einstellungen/sicherheit', $auth->guard(Permission::Administration, [$securitySettingsController, 'edit']));
 $router->post('/einstellungen/sicherheit', $auth->guard(Permission::Administration, [$securitySettingsController, 'update']));
+$router->get('/einstellungen/anmeldung', $auth->guard(Permission::Administration, [$externalLoginSettingsController, 'edit']));
+$router->post('/einstellungen/anmeldung', $auth->guard(Permission::Administration, [$externalLoginSettingsController, 'update']));
+$router->post('/einstellungen/anmeldung/ldap-test', $auth->guard(Permission::Administration, [$externalLoginSettingsController, 'testLdap']));
 // Hinweis vor automatischer Abmeldung: Status bewusst ohne Guard (zählt nicht als Aktivität)
 $router->get('/sitzung/status', [$sessionStatusController, 'status']);
 $router->get('/sitzung/verlaengern', $auth->guard(null, [$sessionStatusController, 'extend']));

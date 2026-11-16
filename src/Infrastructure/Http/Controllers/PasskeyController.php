@@ -21,6 +21,8 @@ use App\Infrastructure\Http\Auth\Session;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 
+use function App\Infrastructure\Http\t;
+
 /**
  * HTTP-Schicht für Passkey-/WebAuthn-Registrierung und -Anmeldung. Reine
  * "dünne" Controller-Methoden nach dem bestehenden Muster (siehe
@@ -108,6 +110,14 @@ final class PasskeyController
             ));
         } catch (ValidationException $e) {
             Response::json(['error' => $e->errors()['passkey'] ?? 'Anmeldung fehlgeschlagen.'], 401);
+
+            return;
+        }
+
+        // A passkey belongs to the local login: while LDAP or OAuth is the
+        // login method, it only works as emergency access for administrators.
+        if (!$this->queries->ask(new \App\Application\Settings\Query\GetExternalLoginSettings())->allowsLocalLogin($user)) {
+            Response::json(['error' => t('auth.login.error_local_admin_only')], 403);
 
             return;
         }

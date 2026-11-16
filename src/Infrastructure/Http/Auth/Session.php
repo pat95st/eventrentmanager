@@ -31,6 +31,9 @@ final class Session
     private const KEY_IMPERSONATOR_ID = 'auth_impersonator_user_id';
     /** ID des zugehörigen Protokoll-Datensatzes (App\Domain\Auth\Impersonation), für StopImpersonation. */
     private const KEY_IMPERSONATION_ID = 'auth_impersonation_id';
+    /** Pending OAuth login: "state" and PKCE code verifier until the identity provider redirects back. */
+    private const KEY_OAUTH_STATE = 'auth_oauth_state';
+    private const KEY_OAUTH_CODE_VERIFIER = 'auth_oauth_code_verifier';
 
     public static function ensureStarted(): void
     {
@@ -100,6 +103,32 @@ final class Session
         self::ensureStarted();
 
         return $_SESSION[self::KEY_PENDING_2FA_USER_ID] ?? null;
+    }
+
+    public static function startOAuthLogin(string $state, string $codeVerifier): void
+    {
+        self::ensureStarted();
+        $_SESSION[self::KEY_OAUTH_STATE] = $state;
+        $_SESSION[self::KEY_OAUTH_CODE_VERIFIER] = $codeVerifier;
+    }
+
+    /**
+     * Returns the PKCE code verifier if $state matches the pending OAuth
+     * login of this session, otherwise null. Single use: the pending login
+     * is discarded either way.
+     */
+    public static function consumeOAuthLogin(string $state): ?string
+    {
+        self::ensureStarted();
+        $expected = $_SESSION[self::KEY_OAUTH_STATE] ?? null;
+        $codeVerifier = $_SESSION[self::KEY_OAUTH_CODE_VERIFIER] ?? null;
+        unset($_SESSION[self::KEY_OAUTH_STATE], $_SESSION[self::KEY_OAUTH_CODE_VERIFIER]);
+
+        if (!is_string($expected) || !is_string($codeVerifier) || $state === '' || !hash_equals($expected, $state)) {
+            return null;
+        }
+
+        return $codeVerifier;
     }
 
     public static function setRedirectAfterLogin(string $path): void

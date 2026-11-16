@@ -28,6 +28,7 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
     } catch (e) {}
   })();
 </script>
+<script src="/assets/js/loading-indicator.js"></script>
 </head>
 <body class="flex min-h-screen items-center justify-center bg-slate-50 antialiased dark:bg-slate-950<?= \App\Infrastructure\Http\BackgroundLayer::bodyClass(\App\Domain\Settings\BackgroundSlot::Login) ?>">
 <?= \App\Infrastructure\Http\BackgroundLayer::render(\App\Domain\Settings\BackgroundSlot::Login) ?>

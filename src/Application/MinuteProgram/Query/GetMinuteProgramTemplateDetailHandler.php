@@ -15,6 +15,7 @@ final class GetMinuteProgramTemplateDetailHandler implements QueryHandlerInterfa
     public function __construct(
         private readonly MinuteProgramTemplateRepositoryInterface $templates,
         private readonly MinuteProgramTemplateItemRepositoryInterface $items,
+        private readonly ?MinuteProgramTradeResolver $trades = null,
     ) {
     }
 
@@ -27,6 +28,8 @@ final class GetMinuteProgramTemplateDetailHandler implements QueryHandlerInterfa
             throw new NotFoundException("Vorlage \"{$query->templateId}\" wurde nicht gefunden.");
         }
 
-        return new MinuteProgramTemplateDetail($template, $this->items->findByTemplate($template->id));
+        $items = array_values($this->items->findByTemplate($template->id));
+
+        return new MinuteProgramTemplateDetail($template, $items, $this->trades?->forTemplate($template, $items) ?? []);
     }
 }

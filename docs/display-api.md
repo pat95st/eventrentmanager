@@ -78,7 +78,7 @@ Fehler: `401` ungültiger Token, `403` Display darf nicht steuern, `404` unbekan
 | `display.role` | `stage` oder `foh`. Bestimmt die Darstellung. |
 | `display.canControl` | `true` nur bei FOH-Displays mit „Steuern erlauben“. Nur dann Steuer-Elemente zeigen. Entspricht `runSheet.live.canControl`. |
 | `display.assignment.mode` | `program` (fest gewähltes Programm), `rental` (laufendes Programm einer Veranstaltung) oder `auto`. Nur zur Information. |
-| `display.options.notes` | Gewerke, deren Hinweise angezeigt werden sollen: `general`, `sound`, `light`, `video`, `stage` (Schlüssel von `runSheet.*.notes`). |
+| `display.options.notes` | Gewerke, deren Hinweise angezeigt werden sollen: `general`, `sound`, `light`, `video`, `stage` (Schlüssel von `runSheet.*.notes`). Hinweise frei angelegter Gewerke stehen in `runSheet.*.tradeNotes` (siehe stagedisplay-api.md). |
 | `display.options.show*` | Uhrzeit, Verzug, nächster Punkt, Ablaufliste, Beschreibung, Mikrofonanzahl ein/aus. |
 | `display.options.theme` | `dark` oder `light`. |
 | `display.options.fontScale` | Schriftgröße in Prozent (50–200). |

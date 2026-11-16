@@ -11,6 +11,7 @@ use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgram;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -61,6 +62,7 @@ final class CreateMinuteProgramHandler implements CommandHandlerInterface
             createdAt: $now,
             updatedAt: $now,
             jingleAudioFileId: $command->jingleBefore && $command->jingleAudioFileId !== null && $command->jingleAudioFileId !== '' ? $command->jingleAudioFileId : null,
+            tradeIds: $command->tradeIds !== null ? MinuteProgramTradeNotes::normalizeIds($command->tradeIds) : null,
         );
 
         $this->programs->save($program);

@@ -101,6 +101,45 @@ $action = $isEditing ? '/minutenprogramme/' . e($program->id) : '/veranstaltunge
         </div>
     </div>
 
+    <?php /* Migration 171: trades whose notes this program offers */
+        $allTrades = $allTrades ?? [];
+        $tradesAuto = $tradesAuto ?? true;
+        $selectedTradeIds = $selectedTradeIds ?? [];
+    ?>
+    <fieldset class="rounded-md border border-slate-200 p-4 dark:border-slate-800">
+        <legend class="px-1 text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.form.trades')) ?></legend>
+        <input type="hidden" name="trades_submitted" value="1">
+        <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('minute_programs.form.trades_hint')) ?></p>
+        <?php if ($allTrades === []): ?>
+            <input type="hidden" name="trades_auto" value="1">
+            <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('minute_programs.form.trades_none')) ?></p>
+        <?php else: ?>
+            <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input type="checkbox" id="trades_auto" name="trades_auto" value="1" <?= $tradesAuto ? 'checked' : '' ?>
+                       class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                <?= e(t('minute_programs.form.trades_auto')) ?>
+            </label>
+            <div id="trade-choices" class="mt-3 flex flex-wrap gap-2">
+                <?php foreach ($allTrades as $trade): ?>
+                    <label class="flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 dark:border-slate-700 dark:text-slate-300" style="border-left: 4px solid <?= e($trade->color) ?>">
+                        <input type="checkbox" name="trade_ids[]" value="<?= e($trade->id) ?>" <?= in_array($trade->id, $selectedTradeIds, true) ? 'checked' : '' ?>
+                               class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <?= e($trade->name) ?>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            <script>
+                (function () {
+                    var auto = document.getElementById('trades_auto');
+                    var boxes = document.querySelectorAll('#trade-choices input');
+                    function sync() { boxes.forEach(function (b) { b.disabled = auto.checked; b.parentNode.style.opacity = auto.checked ? '.55' : '1'; }); }
+                    auto.addEventListener('change', sync);
+                    sync();
+                })();
+            </script>
+        <?php endif; ?>
+    </fieldset>
+
     <div class="flex justify-end gap-2 pt-2">
         <a href="/veranstaltungen/<?= e($rental->id) ?>" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.cancel')) ?></a>
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>

@@ -76,6 +76,8 @@ final class RunSheetPayload
                 'headsetMicCount' => $program->headsetMicCount,
                 'itemCount' => count($items),
             ],
+            // Migration 171: trades the program offers notes for (with display color).
+            'trades' => array_map(static fn (MinuteProgramTrade $t): array => $t->toArray(), $detail->trades),
             'live' => [
                 'state' => $state,
                 // Manually tracked via "Start" (current item is held until the next start).
@@ -87,16 +89,20 @@ final class RunSheetPayload
                 'finishedAt' => self::time($program->liveFinishedAt),
                 'canControl' => $context['canControl'] ?? false,
             ],
-            'current' => $current !== null ? self::itemRef($current, $now) : null,
-            'next' => $next !== null ? self::itemRef($next, $now) : null,
-            'items' => array_map(static fn (MinuteProgramItemDetail $d): array => self::item($d), $items),
+            'current' => $current !== null ? self::itemRef($current, $now, $detail->trades) : null,
+            'next' => $next !== null ? self::itemRef($next, $now, $detail->trades) : null,
+            'items' => array_map(static fn (MinuteProgramItemDetail $d): array => self::item($d, $detail->trades), $items),
             // Migration 167: messages from the organizer, oldest first.
             'messages' => array_map(static fn (EventMessage $m): array => self::message($m), array_values($messages)),
         ];
     }
 
-    /** @return array<string, mixed> */
-    private static function itemRef(MinuteProgramItemDetail $d, DateTimeImmutable $now): array
+    /**
+     * @param list<MinuteProgramTrade> $trades
+     *
+     * @return array<string, mixed>
+     */
+    private static function itemRef(MinuteProgramItemDetail $d, DateTimeImmutable $now, array $trades): array
     {
         $start = $d->effectiveStart();
         $end = $d->effectiveEnd();
@@ -108,7 +114,8 @@ final class RunSheetPayload
             'position' => $d->position,
             'name' => $d->item->name,
             'description' => $d->item->description,
-            'notes' => self::notes($d),
+            'notes' => self::notes($d, $trades),
+            'tradeNotes' => self::tradeNotes($d, $trades),
             'noStrobe' => $d->item->noStrobe,
             'durationSeconds' => $duration,
             'startsAt' => self::time($start),
@@ -120,15 +127,20 @@ final class RunSheetPayload
         ];
     }
 
-    /** @return array<string, mixed> */
-    private static function item(MinuteProgramItemDetail $d): array
+    /**
+     * @param list<MinuteProgramTrade> $trades
+     *
+     * @return array<string, mixed>
+     */
+    private static function item(MinuteProgramItemDetail $d, array $trades): array
     {
         return [
             'id' => $d->item->id,
             'position' => $d->position,
             'name' => $d->item->name,
             'description' => $d->item->description,
-            'notes' => self::notes($d),
+            'notes' => self::notes($d, $trades),
+            'tradeNotes' => self::tradeNotes($d, $trades),
             'noStrobe' => $d->item->noStrobe,
             'durationMinutes' => $d->item->durationMinutes,
             'status' => $d->status,
@@ -141,16 +153,65 @@ final class RunSheetPayload
         ];
     }
 
-    /** @return array{general: ?string, sound: ?string, light: ?string, video: ?string, stage: ?string} */
-    private static function notes(MinuteProgramItemDetail $d): array
+    /**
+     * Legacy note keys of API v1 (before migration 171 the notes were fixed
+     * columns). sound/light/video/stage are filled from the offered trade
+     * whose name matches (see LEGACY_TRADE_NAMES), otherwise null.
+     *
+     * @param list<MinuteProgramTrade> $trades
+     *
+     * @return array{general: ?string, sound: ?string, light: ?string, video: ?string, stage: ?string}
+     */
+    private static function notes(MinuteProgramItemDetail $d, array $trades): array
     {
-        return [
-            'general' => $d->item->noteGeneral,
-            'sound' => $d->item->noteSound,
-            'light' => $d->item->noteLight,
-            'video' => $d->item->noteVideo,
-            'stage' => $d->item->noteStage,
-        ];
+        $notes = ['general' => $d->item->noteGeneral, 'sound' => null, 'light' => null, 'video' => null, 'stage' => null];
+        foreach ($trades as $trade) {
+            $key = self::legacyKey($trade->name);
+            if ($key !== null && $notes[$key] === null && isset($d->item->tradeNotes[$trade->id])) {
+                $notes[$key] = $d->item->tradeNotes[$trade->id];
+            }
+        }
+
+        return $notes;
+    }
+
+    /**
+     * Migration 171: non-empty notes of the offered trades, in trade order.
+     *
+     * @param list<MinuteProgramTrade> $trades
+     *
+     * @return list<array{tradeId: string, trade: string, color: string, text: string}>
+     */
+    private static function tradeNotes(MinuteProgramItemDetail $d, array $trades): array
+    {
+        $result = [];
+        foreach ($trades as $trade) {
+            if (isset($d->item->tradeNotes[$trade->id])) {
+                $result[] = ['tradeId' => $trade->id, 'trade' => $trade->name, 'color' => $trade->color, 'text' => $d->item->tradeNotes[$trade->id]];
+            }
+        }
+
+        return $result;
+    }
+
+    /** Trade names mapped to the legacy note keys of API v1. */
+    private const LEGACY_TRADE_NAMES = [
+        'sound' => ['ton', 'tontechnik', 'audio', 'sound'],
+        'light' => ['licht', 'lichttechnik', 'light', 'lighting'],
+        'video' => ['video', 'videotechnik'],
+        'stage' => ['bühne', 'buehne', 'bühnentechnik', 'stage'],
+    ];
+
+    private static function legacyKey(string $tradeName): ?string
+    {
+        $name = mb_strtolower(trim($tradeName));
+        foreach (self::LEGACY_TRADE_NAMES as $key => $names) {
+            if (in_array($name, $names, true)) {
+                return $key;
+            }
+        }
+
+        return null;
     }
 
     /** @return array<string, mixed> */
@@ -177,8 +238,9 @@ final class RunSheetPayload
         $parts = [$p->updatedAt->format(DATE_ATOM), $p->startAt->format(DATE_ATOM), $p->currentDelaySeconds, $p->liveItemId, $p->liveFinishedAt?->format(DATE_ATOM), $eventNoStrobe ? 1 : 0];
         foreach ($detail->items as $d) {
             $i = $d->item;
-            $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, $i->noteSound, $i->noteLight, $i->noteVideo, $i->noteStage, $i->noStrobe ? 1 : 0]);
+            $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, json_encode($i->tradeNotes), $i->noStrobe ? 1 : 0]);
         }
+        $parts[] = 't|' . implode(',', array_map(static fn (MinuteProgramTrade $t): string => $t->id . ':' . $t->name, $detail->trades));
         foreach ($messages as $m) {
             $parts[] = 'm|' . $m->id . '|' . ($m->acknowledgedAt?->format(DATE_ATOM) ?? '');
         }

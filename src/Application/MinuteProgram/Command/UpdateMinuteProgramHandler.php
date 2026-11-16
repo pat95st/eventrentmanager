@@ -9,6 +9,7 @@ use App\Application\Command\CommandInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 use DateTimeImmutable;
 
 final class UpdateMinuteProgramHandler implements CommandHandlerInterface
@@ -50,6 +51,9 @@ final class UpdateMinuteProgramHandler implements CommandHandlerInterface
         $program->jingleAudioFileId = $command->jingleBefore && $command->jingleAudioFileId !== null && $command->jingleAudioFileId !== '' ? $command->jingleAudioFileId : null;
         $program->handheldMicCount = max(0, $command->handheldMicCount);
         $program->headsetMicCount = max(0, $command->headsetMicCount);
+        if ($command->setTrades) {
+            $program->tradeIds = $command->tradeIds !== null ? MinuteProgramTradeNotes::normalizeIds($command->tradeIds) : null;
+        }
         $program->updatedAt = new DateTimeImmutable();
 
         $this->programs->save($program);

@@ -15,14 +15,17 @@ use App\Application\MinuteProgram\Command\StartMinuteProgramItemHandler;
 use App\Application\MinuteProgram\Query\CountdownPayload;
 use App\Application\MinuteProgram\Query\MinuteProgramDetail;
 use App\Application\MinuteProgram\Query\MinuteProgramDetailBuilder;
+use App\Application\MinuteProgram\Query\MinuteProgramTradeResolver;
 use App\Application\MinuteProgram\Query\RunSheetPayload;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\MinuteProgram\MinuteProgram;
 use App\Domain\MinuteProgram\MinuteProgramItem;
+use App\Domain\Technician\Trade;
 use Codeception\Test\Unit;
 use DateTimeImmutable;
 use Tests\Support\Fakes\InMemoryMinuteProgramItemRepository;
 use Tests\Support\Fakes\InMemoryMinuteProgramRepository;
+use Tests\Support\Fakes\InMemoryTradeRepository;
 
 /**
  * Live run sheet (migration 158): program starts 20:00 with
@@ -33,12 +36,19 @@ final class RunSheetLiveTest extends Unit
     private InMemoryMinuteProgramRepository $programs;
     private InMemoryMinuteProgramItemRepository $items;
     private MinuteProgramDetailBuilder $builder;
+    private InMemoryTradeRepository $trades;
 
     protected function _before(): void
     {
         $this->programs = new InMemoryMinuteProgramRepository();
         $this->items = new InMemoryMinuteProgramItemRepository();
-        $this->builder = new MinuteProgramDetailBuilder($this->items);
+        $this->trades = new InMemoryTradeRepository();
+        $at = new DateTimeImmutable('2026-11-01 10:00:00');
+        $this->trades->save(new Trade('t-light', 'Licht', 20, $at, $at));
+        $this->trades->save(new Trade('t-sound', 'Ton', 10, $at, $at));
+        $this->trades->save(new Trade('t-rig', 'Rigging', 30, $at, $at));
+        $this->trades->saveTradeIdsForRental('r1', ['t-light']);
+        $this->builder = new MinuteProgramDetailBuilder($this->items, new MinuteProgramTradeResolver($this->trades));
 
         $this->programs->save(new MinuteProgram(
             id: 'p1',
@@ -54,7 +64,7 @@ final class RunSheetLiveTest extends Unit
             updatedAt: new DateTimeImmutable('2026-11-01 10:00:00'),
         ));
         foreach ([['i1', 'Einlass', 10], ['i2', 'Begrüßung', 5], ['i3', 'Keynote', 30], ['i4', 'Ende', null]] as $n => [$id, $name, $duration]) {
-            $this->items->save(new MinuteProgramItem($id, 'p1', $n + 1, $name, null, null, $id === 'i3' ? 'Headset 1' : null, null, null, null, $duration));
+            $this->items->save(new MinuteProgramItem($id, 'p1', $n + 1, $name, null, null, $id === 'i3' ? ['t-sound' => 'Headset 1', 't-rig' => 'Truss runter'] : [], $duration));
         }
     }
 
@@ -187,6 +197,28 @@ final class RunSheetLiveTest extends Unit
         $this->assertSame($payload['revision'], RunSheetPayload::build($this->detail('20:13:00'))['revision']);
         $this->start('i3', '20:16:00');
         $this->assertNotSame($payload['revision'], RunSheetPayload::build($this->detail('20:16:30'))['revision']);
+    }
+
+    public function testTradeNotesAreGroupedByOfferedTrades(): void
+    {
+        // Automatic: event trade (Licht) plus trades with notes (Ton, Rigging), in global order.
+        $payload = RunSheetPayload::build($this->detail('19:00:00'));
+        $this->assertSame(['Ton', 'Licht', 'Rigging'], array_column($payload['trades'], 'name'));
+        $this->assertCount(3, array_unique(array_column($payload['trades'], 'color')));
+        $keynote = $payload['items'][2];
+        $this->assertSame(['Ton', 'Rigging'], array_column($keynote['tradeNotes'], 'trade'));
+        $this->assertSame('Truss runter', $keynote['tradeNotes'][1]['text']);
+
+        // Explicit selection hides notes of trades that are not selected (but keeps them stored).
+        $program = $this->programs->findById('p1');
+        $this->assertNotNull($program);
+        $program->tradeIds = ['t-rig', 't-light'];
+        $this->programs->save($program);
+        $payload = RunSheetPayload::build($this->detail('19:00:00'));
+        $this->assertSame(['Licht', 'Rigging'], array_column($payload['trades'], 'name'));
+        $this->assertSame(['Rigging'], array_column($payload['items'][2]['tradeNotes'], 'trade'));
+        $this->assertNull($payload['items'][2]['notes']['sound']);
+        $this->assertSame('Headset 1', $this->items->findById('i3')?->tradeNotes['t-sound']);
     }
 
     public function testCountdownUsesProjectedStart(): void

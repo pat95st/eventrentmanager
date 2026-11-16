@@ -38,7 +38,7 @@ final class DisplayProgramResolverTest extends Unit
         $rentals->save(new Rental('r2', 'c1', new DateTimeImmutable('2026-11-22'), new DateTimeImmutable('2026-11-22'), 'Messe', null, null, 1, $at, $at));
         foreach ([['p-noon', 'r1', 'Mittag', 'Saal', '2026-11-15 12:00'], ['p-eve', 'r1', 'Abend', 'Saal', '2026-11-15 20:00'], ['p-foyer', 'r1', 'Foyer', 'Foyer', '2026-11-15 20:00'], ['p-late', 'r2', 'Später', null, '2026-11-22 18:00']] as [$id, $rental, $name, $room, $start]) {
             $this->programs->save(new MinuteProgram($id, $rental, $name, $room, new DateTimeImmutable($start), false, 0, 0, 0, $at, $at));
-            $items->save(new MinuteProgramItem($id . '-1', $id, 1, 'Teil 1', null, null, null, null, null, null, 30));
+            $items->save(new MinuteProgramItem($id . '-1', $id, 1, 'Teil 1', null, null, [], 30));
         }
         $this->resolver = new DisplayProgramResolver($this->programs, $rentals, new MinuteProgramDetailBuilder($items));
     }

@@ -8,6 +8,7 @@ use App\Application\Command\CommandInterface;
 
 final class CreateMinuteProgram implements CommandInterface
 {
+    /** @param list<string>|null $tradeIds */
     public function __construct(
         public readonly string $rentalId,
         public readonly string $name,
@@ -17,6 +18,8 @@ final class CreateMinuteProgram implements CommandInterface
         public readonly int $handheldMicCount,
         public readonly int $headsetMicCount,
         public readonly ?string $jingleAudioFileId = null,
+        // Migration 171: chosen trade IDs, null = automatic.
+        public readonly ?array $tradeIds = null,
     ) {
     }
 }

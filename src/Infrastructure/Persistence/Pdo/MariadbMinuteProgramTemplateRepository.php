@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Pdo;
 
 use App\Domain\MinuteProgram\MinuteProgramTemplate;
 use App\Domain\MinuteProgram\MinuteProgramTemplateRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 use DateTimeImmutable;
 use PDO;
 
@@ -19,13 +20,13 @@ final class MariadbMinuteProgramTemplateRepository implements MinuteProgramTempl
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO minute_program_templates (
-                id, name, jingle_before, handheld_mic_count, headset_mic_count, created_at, updated_at
+                id, name, jingle_before, handheld_mic_count, headset_mic_count, created_at, updated_at, trade_ids
              ) VALUES (
-                :id, :name, :jingle_before, :handheld_mic_count, :headset_mic_count, :created_at, :updated_at
+                :id, :name, :jingle_before, :handheld_mic_count, :headset_mic_count, :created_at, :updated_at, :trade_ids
              )
              ON DUPLICATE KEY UPDATE
                 name = :name2, jingle_before = :jingle_before2, handheld_mic_count = :handheld_mic_count2,
-                headset_mic_count = :headset_mic_count2, updated_at = :updated_at2'
+                headset_mic_count = :headset_mic_count2, updated_at = :updated_at2, trade_ids = :trade_ids2'
         );
 
         $stmt->execute([
@@ -41,6 +42,8 @@ final class MariadbMinuteProgramTemplateRepository implements MinuteProgramTempl
             'handheld_mic_count2' => $template->handheldMicCount,
             'headset_mic_count2' => $template->headsetMicCount,
             'updated_at2' => $template->updatedAt->format('Y-m-d H:i:s'),
+            'trade_ids' => MinuteProgramTradeNotes::encodeIds($template->tradeIds),
+            'trade_ids2' => MinuteProgramTradeNotes::encodeIds($template->tradeIds),
         ]);
     }
 
@@ -76,6 +79,7 @@ final class MariadbMinuteProgramTemplateRepository implements MinuteProgramTempl
             headsetMicCount: (int) $row['headset_mic_count'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            tradeIds: MinuteProgramTradeNotes::decodeIds(isset($row['trade_ids']) ? (string) $row['trade_ids'] : null),
         );
     }
 }

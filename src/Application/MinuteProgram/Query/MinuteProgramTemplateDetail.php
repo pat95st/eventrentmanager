@@ -8,10 +8,15 @@ use App\Domain\MinuteProgram\MinuteProgramTemplate;
 
 final class MinuteProgramTemplateDetail
 {
-    /** @param \App\Domain\MinuteProgram\MinuteProgramTemplateItem[] $items */
+    /**
+     * @param \App\Domain\MinuteProgram\MinuteProgramTemplateItem[] $items
+     * @param list<MinuteProgramTrade> $trades
+     */
     public function __construct(
         public readonly MinuteProgramTemplate $template,
         public readonly array $items,
+        // Migration 171: trades the template offers notes for.
+        public readonly array $trades = [],
     ) {
     }
 }

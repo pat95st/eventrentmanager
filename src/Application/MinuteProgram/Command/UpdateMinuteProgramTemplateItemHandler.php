@@ -9,6 +9,7 @@ use App\Application\Command\CommandInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgramTemplateItemRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 
 final class UpdateMinuteProgramTemplateItemHandler implements CommandHandlerInterface
 {
@@ -33,10 +34,7 @@ final class UpdateMinuteProgramTemplateItemHandler implements CommandHandlerInte
         $item->name = $name;
         $item->description = self::normalize($command->description);
         $item->noteGeneral = self::normalize($command->noteGeneral);
-        $item->noteSound = self::normalize($command->noteSound);
-        $item->noteLight = self::normalize($command->noteLight);
-        $item->noteVideo = self::normalize($command->noteVideo);
-        $item->noteStage = self::normalize($command->noteStage);
+        $item->tradeNotes = MinuteProgramTradeNotes::merge($item->tradeNotes, $command->tradeNotes);
         $item->durationMinutes = $command->durationMinutes !== null ? max(0, $command->durationMinutes) : null;
         $item->noStrobe = $command->noStrobe;
 

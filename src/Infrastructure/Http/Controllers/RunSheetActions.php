@@ -14,6 +14,7 @@ use App\Application\MinuteProgram\Query\MinuteProgramDetail;
 use App\Application\MinuteProgram\Query\RunSheetPayload;
 use App\Application\EventMessage\Command\AcknowledgeEventMessage;
 use App\Application\EventMessage\Command\CloseEventMessage;
+use App\Application\EventMessage\Command\SendEventMessage;
 use App\Domain\EventAudio\RentalAudioFileRepositoryInterface;
 use App\Domain\EventMessage\EventMessage;
 use App\Domain\EventMessage\EventMessageRepositoryInterface;
@@ -29,7 +30,8 @@ use App\Infrastructure\Http\Request;
  * reset. Input comes from form fields or a JSON body.
  *
  * Migration 167: the payload also carries the organizer's active messages;
- * FOH may acknowledge ("seen") or hide them.
+ * FOH may acknowledge ("seen") or hide them, and send its own messages to
+ * the stage display (sender type SENDER_FOH).
  */
 final class RunSheetActions
 {
@@ -41,11 +43,15 @@ final class RunSheetActions
         'zuruecksetzen' => 'reset', 'reset' => 'reset',
         'nachricht-gesehen' => 'message-ack',
         'nachricht-ausblenden' => 'message-close',
+        'nachricht' => 'message-send',
     ];
 
     /** Payload audiences: FOH sees all messages, stage displays only those sent to the stage. */
     public const AUDIENCE_FOH = 'foh';
     public const AUDIENCE_STAGE = 'stage';
+
+    /** sent_by_type of messages written at FOH (always addressed to the stage). */
+    public const SENDER_FOH = 'foh';
 
     public function __construct(
         private readonly CommandBus $commands,
@@ -130,6 +136,20 @@ final class RunSheetActions
                     break;
                 case 'message-close':
                     $this->commands->dispatch(new CloseEventMessage((string) $itemId, $program->rentalId, $actorName));
+                    break;
+                case 'message-send':
+                    // FOH -> stage. "all_programs" addresses every minute program of the rental.
+                    $this->commands->dispatch(new SendEventMessage(
+                        $program->rentalId,
+                        is_scalar($input['text'] ?? null) ? (string) $input['text'] : '',
+                        toStage: true,
+                        toFoh: false,
+                        urgent: self::truthy($input['urgent'] ?? null),
+                        minuteProgramId: self::truthy($input['all_programs'] ?? null) ? null : $program->id,
+                        sentByType: self::SENDER_FOH,
+                        sentById: null,
+                        sentByName: $actorName,
+                    ));
                     break;
                 default:
                     return ['Unbekannte Aktion.', 400];

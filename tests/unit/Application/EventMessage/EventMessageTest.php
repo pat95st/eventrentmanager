@@ -120,6 +120,31 @@ final class EventMessageTest extends Unit
         $this->assertCount(1, $this->messages->findRecentByRental('r1'));
     }
 
+    public function testFohSendsMessagesToTheStage(): void
+    {
+        $program = $this->programs->findById('p1');
+        $this->assertNotNull($program);
+        $detail = (new MinuteProgramDetailBuilder(new InMemoryMinuteProgramItemRepository()))->build($program, new DateTimeImmutable('2026-11-15 19:00:00'));
+        $actions = new RunSheetActions($this->bus, new InMemoryRentalRepository(), null, $this->messages);
+
+        $this->assertSame(422, $actions->perform('nachricht', $detail, ['text' => '  '], null, 'Tom (FOH)')[1] ?? null);
+        $this->assertNull($actions->perform('nachricht', $detail, ['text' => 'Bitte näher ans Mikrofon', 'urgent' => '1'], null, 'Tom (FOH)'));
+        $this->assertNull($actions->perform('nachricht', $detail, ['text' => 'Noch 5 Minuten', 'all_programs' => '1'], null, 'Tom (FOH)'));
+
+        $stage = $this->payload('p1', RunSheetActions::AUDIENCE_STAGE);
+        $this->assertSame(['Bitte näher ans Mikrofon', 'Noch 5 Minuten'], self::texts($stage));
+        $this->assertTrue($stage['messages'][0]['fromFoh']);
+        $this->assertTrue($stage['messages'][0]['urgent']);
+        $this->assertSame('Tom (FOH)', $stage['messages'][0]['sentBy']);
+        $this->assertFalse($stage['messages'][0]['foh']);
+        // The sender keeps seeing its own messages; other programs only get the "all programs" one.
+        $this->assertSame(['Bitte näher ans Mikrofon', 'Noch 5 Minuten'], self::texts($this->payload('p1', RunSheetActions::AUDIENCE_FOH)));
+        $this->assertSame(['Noch 5 Minuten'], self::texts($this->payload('p2', RunSheetActions::AUDIENCE_STAGE)));
+
+        $this->send('Vom Veranstalter', true, true);
+        $this->assertFalse($this->payload('p1', RunSheetActions::AUDIENCE_STAGE)['messages'][2]['fromFoh']);
+    }
+
     public function testMessagesOfOtherRentalsCannotBeClosed(): void
     {
         $id = $this->send('Hallo', true, true);

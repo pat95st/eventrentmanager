@@ -1,4 +1,4 @@
--- Migration 167: Messages from the organizer to the stage display and FOH.
+-- Migration 168: Messages from the organizer to the stage display and FOH.
 --
 --  - event_messages: short text messages sent from the live page
 --    ("Audio & Durchsagen", /live/{id}) to the stage display (run sheet API,

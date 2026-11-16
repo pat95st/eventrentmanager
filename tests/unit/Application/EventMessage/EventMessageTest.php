@@ -22,7 +22,7 @@ use Tests\Support\Fakes\InMemoryMinuteProgramRepository;
 use Tests\Support\Fakes\InMemoryRentalRepository;
 
 /**
- * Messages from the organizer to the stage display and FOH (migration 167).
+ * Messages from the organizer to the stage display and FOH (migration 168).
  */
 final class EventMessageTest extends Unit
 {

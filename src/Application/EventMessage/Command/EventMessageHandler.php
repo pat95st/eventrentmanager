@@ -15,7 +15,7 @@ use App\Shared\Uuid;
 use DateTimeImmutable;
 
 /**
- * Messages to the stage display / FOH (migration 167): SendEventMessage,
+ * Messages to the stage display / FOH (migration 168): SendEventMessage,
  * AcknowledgeEventMessage, CloseEventMessage.
  */
 final class EventMessageHandler implements CommandHandlerInterface

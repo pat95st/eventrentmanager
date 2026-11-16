@@ -6,7 +6,7 @@ namespace App\Application\EventMessage\Command;
 
 use App\Application\Command\CommandInterface;
 
-/** Send a message to the stage display and/or FOH (migration 167). Returns the new id. */
+/** Send a message to the stage display and/or FOH (migration 168). Returns the new id. */
 final class SendEventMessage implements CommandInterface
 {
     public function __construct(

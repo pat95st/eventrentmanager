@@ -6,7 +6,7 @@ namespace App\Application\EventMessage\Command;
 
 use App\Application\Command\CommandInterface;
 
-/** FOH confirms having seen a message (migration 167). */
+/** FOH confirms having seen a message (migration 168). */
 final class AcknowledgeEventMessage implements CommandInterface
 {
     public function __construct(

@@ -12,6 +12,10 @@ use App\Application\EventAudio\Command\ReplayPlayback;
 use App\Application\EventAudio\Command\RequestPlayback;
 use App\Application\EventAudio\Command\SchedulePlayback;
 use App\Application\EventAudio\Command\UploadRentalAudioFile;
+use App\Application\EventMessage\Command\CloseEventMessage;
+use App\Application\EventMessage\Command\SendEventMessage;
+use App\Domain\EventMessage\EventMessage;
+use App\Domain\EventMessage\EventMessageRepositoryInterface;
 use App\Domain\EventAudio\TtsLanguage;
 use App\Application\EventAudio\Translation\TextTranslatorInterface;
 use App\Application\EventAudio\Translation\TranslationException;
@@ -58,6 +62,9 @@ use DateTimeImmutable;
  * Die Oberfläche legt nur Abspielaufträge an; abgespielt wird lokal vom
  * zugeordneten Abspielgerät (Raspberry Pi am Mischpult), siehe
  * AudioPlayerApiController.
+ *
+ * Migration 167: the page can also send short text messages to the stage
+ * display (run sheet API) and/or the FOH run sheet page.
  */
 final class EventAudioLiveController
 {
@@ -81,6 +88,7 @@ final class EventAudioLiveController
         private readonly ?ScheduledPlaybackDispatcher $dispatcher = null,
         private readonly ?LocalFileStorage $storage = null,
         private readonly ?TextTranslatorInterface $translator = null,
+        private readonly ?EventMessageRepositoryInterface $messages = null,
     ) {
     }
 
@@ -219,6 +227,22 @@ final class EventAudioLiveController
         }
     }
 
+    public function organizerSendMessage(Request $request): void
+    {
+        $login = $this->requireOrganizer($request, json: true);
+        if ($login !== null) {
+            $this->sendMessage($request, $request->param('id'), 'organizer', $login->id, $login->label . ' (Veranstalter)');
+        }
+    }
+
+    public function organizerCloseMessage(Request $request): void
+    {
+        $login = $this->requireOrganizer($request, json: true);
+        if ($login !== null) {
+            $this->closeMessage($request, $request->param('id'), $login->label . ' (Veranstalter)');
+        }
+    }
+
     /** Logo der Veranstaltung – nur für angemeldete Veranstalter dieser Veranstaltung. */
     public function organizerLogo(Request $request): void
     {
@@ -302,6 +326,21 @@ final class EventAudioLiveController
         }
     }
 
+    public function userSendMessage(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $user = CurrentUser::get();
+            $this->sendMessage($request, $request->param('id'), 'user', $user?->id, $user?->displayName() ?? 'Benutzer');
+        }
+    }
+
+    public function userCloseMessage(Request $request): void
+    {
+        if ($this->requireUserAccess($request, json: true)) {
+            $this->closeMessage($request, $request->param('id'), CurrentUser::get()?->displayName() ?? 'Benutzer');
+        }
+    }
+
     // ---------------------------------------------------------------- gemeinsam
 
     private function renderPage(string $rentalId, string $basePath, string $actorName, bool $organizer, bool $canSchedule = false, bool $canUpload = false): void
@@ -322,7 +361,10 @@ final class EventAudioLiveController
         }
         // Minutenprogramme mit gewähltem Jingle → Schnellwahl „Jingle für …“.
         $programs = [];
+        // Migration 167: target of a message (all programs or a single one).
+        $messagePrograms = [];
         foreach ($this->minutePrograms?->findByRental($rentalId) ?? [] as $program) {
+            $messagePrograms[] = ['id' => $program->id, 'label' => $program->startAt->format('d.m. H:i') . ' · ' . $program->name . ($program->room !== null ? ' (' . $program->room . ')' : '')];
             if ($program->jingleBefore && $program->jingleAudioFileId !== null && isset($jingleTitles[$program->jingleAudioFileId])) {
                 $programs[] = [
                     'name' => $program->name,
@@ -358,6 +400,9 @@ final class EventAudioLiveController
                 : null,
             'maxUploadMb' => $settings->maxUploadMb,
             'rentalWindow' => [$rental->startDate->modify('-1 day')->format('Y-m-d') . 'T00:00', $rental->endDate->modify('+1 day')->format('Y-m-d') . 'T23:59'],
+            'canMessage' => $this->messages !== null,
+            'messagePrograms' => $messagePrograms,
+            'messageMaxLength' => EventMessage::MAX_LENGTH,
             'initialStatus' => $this->statusPayload($rentalId),
             'csrfToken' => Csrf::token(),
         ]);
@@ -421,7 +466,89 @@ final class EventAudioLiveController
                 'recurrence' => $s->recurrenceLabel(),
                 'replayable' => $s->status === ScheduledPlaybackStatus::Triggered || $s->status === ScheduledPlaybackStatus::Missed,
             ], $this->schedules?->findForRental($rentalId, 5) ?? []),
+            'messages' => $this->messagesPayload($rentalId),
         ];
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function messagesPayload(string $rentalId): array
+    {
+        if ($this->messages === null) {
+            return [];
+        }
+        $programNames = [];
+        foreach ($this->minutePrograms?->findByRental($rentalId) ?? [] as $program) {
+            $programNames[$program->id] = $program->name;
+        }
+        $today = (new DateTimeImmutable())->format('Y-m-d');
+
+        return array_map(static function (EventMessage $m) use ($programNames, $today): array {
+            $targets = array_values(array_filter([$m->toStage ? 'Stagedisplay' : null, $m->toFoh ? 'FOH' : null]));
+            [$status, $statusLabel] = match (true) {
+                !$m->isActive() => ['closed', 'beendet'],
+                $m->acknowledgedAt !== null => ['seen', 'gesehen'],
+                default => ['active', 'aktiv'],
+            };
+
+            return [
+                'id' => $m->id,
+                'text' => $m->body,
+                'urgent' => $m->urgent,
+                'targets' => implode(' + ', $targets),
+                'program' => $m->minuteProgramId !== null ? ($programNames[$m->minuteProgramId] ?? null) : null,
+                'time' => $m->createdAt->format('H:i'),
+                'date' => $m->createdAt->format('Y-m-d') === $today ? null : $m->createdAt->format('d.m.'),
+                'by' => $m->sentByName,
+                'status' => $status,
+                'statusLabel' => $statusLabel,
+                'active' => $m->isActive(),
+                'seen' => $m->acknowledgedAt !== null
+                    ? 'gesehen ' . $m->acknowledgedAt->format('H:i') . ($m->acknowledgedBy !== null ? ' · ' . $m->acknowledgedBy : '')
+                    : null,
+                'closed' => $m->closedAt !== null
+                    ? 'beendet ' . $m->closedAt->format('H:i') . ($m->closedBy !== null ? ' · ' . $m->closedBy : '')
+                    : null,
+            ];
+        }, $this->messages->findRecentByRental($rentalId, 5));
+    }
+
+    private function sendMessage(Request $request, string $rentalId, string $byType, ?string $byId, string $byName): void
+    {
+        if ($this->messages === null) {
+            Response::json(['ok' => false, 'error' => 'Nachrichten sind nicht verfügbar.'], 404);
+
+            return;
+        }
+        try {
+            $this->commands->dispatch(new SendEventMessage(
+                $rentalId,
+                (string) $request->input('text', ''),
+                $request->input('to_stage') === '1',
+                $request->input('to_foh') === '1',
+                $request->input('urgent') === '1',
+                $request->input('minute_program_id'),
+                $byType,
+                $byId,
+                $byName,
+            ));
+        } catch (ValidationException $e) {
+            Response::json(['ok' => false, 'error' => implode(' ', $e->errors())], 422);
+
+            return;
+        }
+        Response::json(['ok' => true] + $this->statusPayload($rentalId));
+    }
+
+    private function closeMessage(Request $request, string $rentalId, string $byName): void
+    {
+        try {
+            $this->commands->dispatch(new CloseEventMessage($request->param('messageId'), $rentalId, $byName));
+        } catch (NotFoundException $e) {
+            Response::json(['ok' => false, 'error' => $e->getMessage()], 404);
+
+            return;
+        }
+        Response::json(['ok' => true] + $this->statusPayload($rentalId));
     }
 
     private function play(Request $request, string $rentalId, string $byType, ?string $byId, string $byName): void

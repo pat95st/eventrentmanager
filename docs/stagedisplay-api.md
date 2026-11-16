@@ -82,6 +82,11 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
     "handheldMicCount": 4, "headsetMicCount": 2,
     "itemCount": 5
   },
+  "trades": [
+    { "id": "…", "name": "Ton", "color": "#3b82f6" },
+    { "id": "…", "name": "Licht", "color": "#f59e0b" },
+    { "id": "…", "name": "Rigging", "color": "#a855f7" }
+  ],
   "live": {
     "state": "running",
     "tracking": true,
@@ -94,6 +99,11 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
   "current": {
     "id": "…", "position": 2, "name": "Begrüßung", "description": "…",
     "notes": { "general": "…", "sound": "HH 1", "light": "…", "video": null, "stage": null },
+    "tradeNotes": [
+      { "tradeId": "…", "trade": "Ton", "color": "#3b82f6", "text": "HH 1" },
+      { "tradeId": "…", "trade": "Licht", "color": "#f59e0b", "text": "…" },
+      { "tradeId": "…", "trade": "Rigging", "color": "#a855f7", "text": "Banner fährt ein" }
+    ],
     "noStrobe": true,
     "durationSeconds": 300,
     "startsAt": "2026-11-15T20:11:00+01:00",
@@ -107,6 +117,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
     {
       "id": "…", "position": 1, "name": "Einlass", "description": null,
       "notes": { "general": null, "sound": "…", "light": "…", "video": null, "stage": null },
+      "tradeNotes": [ { "tradeId": "…", "trade": "Ton", "color": "#3b82f6", "text": "…" } ],
       "noStrobe": false,
       "durationMinutes": 10,
       "status": "done",
@@ -148,7 +159,9 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
 | `items[].plannedStart` | Ursprünglicher Plan ohne Verzug. |
 | `items[].currentStart` | Plan + gesetzter Verzug. |
 | `items[].projectedStart` | Tatsächlicher Beginn (falls gestartet), sonst voraussichtlicher Beginn inkl. laufender Überziehung. |
-| `notes` | Hinweise je Gewerk: `general`, `sound`, `light`, `video`, `stage` (jeweils `null`, wenn leer). |
+| `trades` | Gewerke, für die das Minutenprogramm Hinweise führt (festgelegt oder automatisch aus Veranstaltung/Technikern), in der Reihenfolge der Einstellungen. `color` ist eine feste Farbe je Gewerk (`#rrggbb`). |
+| `tradeNotes` | Hinweise je Gewerk (bei `current`, `next`, `items[]`): nur nicht-leere Hinweise der Gewerke aus `trades`, in deren Reihenfolge. **Für neue Displays verwenden.** |
+| `notes` | `general`: allgemeiner Hinweis. `sound`, `light`, `video`, `stage`: Kompatibilitätsfelder aus der Zeit fester Gewerke – gefüllt mit dem Hinweis des Gewerks namens „Ton“, „Licht“, „Video“ bzw. „Bühne“ (sonst `null`). Hinweise anderer Gewerke stehen nur in `tradeNotes`. |
 | `event.noStrobe` | `true`: Bei der gesamten Veranstaltung darf kein Stroboskop-Licht eingesetzt werden. |
 | `noStrobe` (bei `current`, `next`, `items[]`) | `true`: Bei diesem Programmpunkt darf kein Stroboskop-Licht eingesetzt werden. Gilt zusätzlich zu `event.noStrobe` – ein Display sollte den Hinweis zeigen, wenn eines der beiden `true` ist. |
 | `messages` | Aktive Nachrichten des Veranstalters an die Bühne, älteste zuerst (leeres Array, wenn keine). Über die API kommen nur Nachrichten mit `stage = true`; reine FOH-Nachrichten erscheinen nur auf der FOH-Seite. |

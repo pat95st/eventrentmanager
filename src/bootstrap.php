@@ -404,7 +404,11 @@ $minuteProgramItemRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMi
 $minuteProgramTemplateRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramTemplateRepository($pdo);
 $minuteProgramTemplateItemRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramTemplateItemRepository($pdo);
 $minuteProgramShareLinkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMinuteProgramShareLinkRepository($pdo);
-$minuteProgramDetailBuilder = new \App\Application\MinuteProgram\Query\MinuteProgramDetailBuilder($minuteProgramItemRepository);
+// Trades / technicians (migration 134) – also used for the trade notes of minute programs (migration 172).
+$tradeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTradeRepository($pdo);
+$rentalTechnicianRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalTechnicianRepository($pdo);
+$minuteProgramTradeResolver = new \App\Application\MinuteProgram\Query\MinuteProgramTradeResolver($tradeRepository, $rentalTechnicianRepository);
+$minuteProgramDetailBuilder = new \App\Application\MinuteProgram\Query\MinuteProgramDetailBuilder($minuteProgramItemRepository, $minuteProgramTradeResolver);
 $noticeDocumentRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNoticeDocumentRepository($pdo);
 $noticeDocumentArticleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbNoticeDocumentArticleRepository($pdo);
 $categoryRepository = new MariadbCategoryRepository($pdo);
@@ -593,10 +597,9 @@ $messagingSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMe
 $messageTemplateRepository = new \App\Infrastructure\Persistence\Pdo\MariadbMessageTemplateRepository($pdo);
 $messagingTemplateRenderer = new \App\Application\Messaging\MessagingTemplateRenderer($messageTemplateRepository);
 $messageSender = new \App\Infrastructure\Messaging\HttpMessageSender($messagingSettingsRepository);
-// Techniker & Gewerke (Migration 134)
-$tradeRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTradeRepository($pdo);
+// Techniker & Gewerke (Migration 134): $tradeRepository and
+// $rentalTechnicianRepository are created next to the minute programs.
 $technicianProfileRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTechnicianProfileRepository($pdo);
-$rentalTechnicianRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalTechnicianRepository($pdo);
 // Partner instances / federation (migration 160)
 $partnerInstanceRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPartnerInstanceRepository($pdo);
 $partnerInvitationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPartnerInvitationRepository($pdo);
@@ -1577,7 +1580,7 @@ foreach (['SetArticleFixedCurrentValue', 'SaveInsuranceExportFields', 'EstimateC
 $queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramDetailHandler($minuteProgramRepository, $minuteProgramDetailBuilder));
 $queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramsForRental::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramsForRentalHandler($minuteProgramRepository));
 $queryBus->register(\App\Application\MinuteProgram\Query\ListMinuteProgramTemplates::class, new \App\Application\MinuteProgram\Query\ListMinuteProgramTemplatesHandler($minuteProgramTemplateRepository));
-$queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramTemplateDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramTemplateDetailHandler($minuteProgramTemplateRepository, $minuteProgramTemplateItemRepository));
+$queryBus->register(\App\Application\MinuteProgram\Query\GetMinuteProgramTemplateDetail::class, new \App\Application\MinuteProgram\Query\GetMinuteProgramTemplateDetailHandler($minuteProgramTemplateRepository, $minuteProgramTemplateItemRepository, $minuteProgramTradeResolver));
 $queryBus->register(\App\Application\MinuteProgram\Query\ResolveMinuteProgramShareLink::class, new \App\Application\MinuteProgram\Query\ResolveMinuteProgramShareLinkHandler($minuteProgramShareLinkRepository, $minuteProgramRepository, $minuteProgramDetailBuilder));
 
 $getNoticeDocumentsForArticleIdsHandler = new \App\Application\NoticeDocument\Query\GetNoticeDocumentsForArticleIdsHandler($noticeDocumentArticleRepository, $noticeDocumentRepository);
@@ -1820,7 +1823,7 @@ $queryBus->register(\App\Application\Backup\Query\ListBackupRuns::class, new \Ap
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory, $queryBus);
 
 $rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
-$minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository);
+$minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository, trades: $minuteProgramTradeResolver);
 $eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $audioPairingCodeRepository);
 $eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $fileStorage, new \App\Infrastructure\Integration\Translation\ConfiguredTranslator($audioSettingsRepository, $aiAdImageSettingsRepository), $eventMessageRepository);
 $audioSettingsController = new \App\Infrastructure\Http\Controllers\AudioSettingsController($commandBus, $audioSettingsRepository, $audioPlayerRepository, $fileStorage, $aiAdImageSettingsRepository);

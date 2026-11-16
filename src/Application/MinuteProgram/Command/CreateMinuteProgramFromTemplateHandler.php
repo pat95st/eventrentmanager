@@ -12,6 +12,7 @@ use App\Domain\MinuteProgram\MinuteProgram;
 use App\Domain\MinuteProgram\MinuteProgramItem;
 use App\Domain\MinuteProgram\MinuteProgramItemRepositoryInterface;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 use App\Domain\MinuteProgram\MinuteProgramTemplateItemRepositoryInterface;
 use App\Domain\MinuteProgram\MinuteProgramTemplateRepositoryInterface;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -78,6 +79,7 @@ final class CreateMinuteProgramFromTemplateHandler implements CommandHandlerInte
             currentDelaySeconds: 0,
             createdAt: $now,
             updatedAt: $now,
+            tradeIds: $command->tradeIds !== null ? MinuteProgramTradeNotes::normalizeIds($command->tradeIds) : $template->tradeIds,
         );
         $this->programs->save($program);
 
@@ -89,10 +91,7 @@ final class CreateMinuteProgramFromTemplateHandler implements CommandHandlerInte
                 name: $templateItem->name,
                 description: $templateItem->description,
                 noteGeneral: $templateItem->noteGeneral,
-                noteSound: $templateItem->noteSound,
-                noteLight: $templateItem->noteLight,
-                noteVideo: $templateItem->noteVideo,
-                noteStage: $templateItem->noteStage,
+                tradeNotes: $templateItem->tradeNotes,
                 durationMinutes: $templateItem->durationMinutes,
                 noStrobe: $templateItem->noStrobe,
             );

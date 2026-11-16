@@ -97,11 +97,13 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .bar.over i { background: var(--stop); }
     .empty { color: var(--muted); font-size: .95rem; }
 
-    .notes { display: grid; gap: 8px; margin-top: 14px; }
-    .note { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; background: var(--panel-2); border-radius: 10px; padding: 8px 10px; font-size: .92rem; }
-    .note .k { font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; padding-top: 2px; }
-    .note .t { white-space: pre-wrap; overflow-wrap: anywhere; }
-    .k-sound { color: #93c5fd; } .k-light { color: #fcd34d; } .k-video { color: #c4b5fd; } .k-stage { color: #86efac; } .k-general { color: #cbd5e1; }
+    /* Notes: one card per trade (migration 172), colored by trade */
+    .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
+    .tcard { --c: #94a3b8; background: var(--panel-2); background: color-mix(in srgb, var(--c) 14%, var(--panel-2)); border: 1px solid var(--line); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); border-top: 4px solid var(--c); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+    .tcard h3 { margin: 0 0 6px; font-size: .74rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--c); color: color-mix(in srgb, var(--c) 70%, #fff); display: flex; align-items: center; gap: 6px; }
+    .tcard h3::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--c); flex: none; }
+    .tcard .t { font-size: 1rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .tcard.general { --c: #cbd5e1; }
 
     .btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: .9rem; }
     .btn:disabled { opacity: .45; cursor: default; }
@@ -121,6 +123,8 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .chip { border: 1px solid var(--line); background: var(--panel-2); color: var(--muted); border-radius: 999px; padding: 5px 11px; font-size: .78rem; font-weight: 700; }
     .chip[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .chip[data-color] { border-left: 4px solid var(--c); }
+    .chip[data-color][aria-pressed="true"] { background: var(--c); border-color: var(--c); color: #0b1020; }
 
     .list { display: grid; gap: 8px; }
     .it { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 4px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
@@ -138,8 +142,10 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .nostrobe-banner { display: inline-block; margin-top: 10px; background: var(--stop); color: #fff; font-weight: 800; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; border-radius: 8px; padding: 5px 10px; }
     .it .ds { font-size: .82rem; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
     .it .acts { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-    .it .notes { grid-column: 2 / 4; margin-top: 6px; gap: 6px; }
-    .it .note { font-size: .82rem; grid-template-columns: 80px minmax(0, 1fr); padding: 6px 8px; }
+    .it .notes { grid-column: 2 / 4; margin-top: 6px; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+    .it .tcard { padding: 6px 9px; border-top-width: 3px; border-radius: 9px; }
+    .it .tcard h3 { font-size: .64rem; margin-bottom: 3px; }
+    .it .tcard .t { font-size: .84rem; }
     .it .tform { grid-column: 1 / 4; display: none; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
     .it .tform.open { display: flex; }
     @media (max-width: 520px) { .it { grid-template-columns: 62px 1fr; } .it .acts { grid-column: 1 / 3; flex-direction: row; justify-content: flex-end; } .it .notes { grid-column: 1 / 3; } }
@@ -280,13 +286,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         <div class="side">
             <section class="card">
                 <h2>Ablauf <span class="sp"></span><span id="count"></span></h2>
-                <div class="chips" id="dept" role="group" aria-label="Hinweise anzeigen">
-                    <button class="chip" type="button" data-dept="general">Allgemein</button>
-                    <button class="chip" type="button" data-dept="sound">Ton</button>
-                    <button class="chip" type="button" data-dept="light">Licht</button>
-                    <button class="chip" type="button" data-dept="video">Video</button>
-                    <button class="chip" type="button" data-dept="stage">Bühne</button>
-                </div>
+                <div class="chips" id="dept" role="group" aria-label="Hinweise anzeigen"></div>
                 <div class="list" id="list" style="margin-top: 12px;"></div>
             </section>
         </div>
@@ -302,7 +302,6 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     var CSRF = <?= json_encode($csrfToken, JSON_THROW_ON_ERROR) ?>;
     var CAN_CONTROL = <?= $canControl ? 'true' : 'false' ?>;
     var TITLE = document.title;
-    var DEPTS = { general: 'Allgemein', sound: 'Ton', light: 'Licht', video: 'Video', stage: 'Bühne' };
     var state = <?= json_encode($initialPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     var offset = 0; // server clock − local clock (ms)
     var listKey = '';
@@ -310,20 +309,30 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     var openTimeForm = null;
     var $ = function (id) { return document.getElementById(id); };
 
-    // ---------------------------------------------------------------- department filter (per viewer)
-    var shown = { general: true, sound: true, light: true, video: true, stage: true };
-    try { var saved = JSON.parse(localStorage.getItem('foh-depts') || 'null'); if (saved && typeof saved === 'object') { shown = Object.assign(shown, saved); } } catch (e) {}
-    function syncChips() {
-        document.querySelectorAll('#dept .chip').forEach(function (c) { c.setAttribute('aria-pressed', shown[c.dataset.dept] ? 'true' : 'false'); });
+    // ---------------------------------------------------------------- trade filter (per viewer, migration 172)
+    // Keys: "general" or a trade ID. Trades not stored yet are shown.
+    var shown = {};
+    try { var saved = JSON.parse(localStorage.getItem('foh-trades') || 'null'); if (saved && typeof saved === 'object') { shown = saved; } } catch (e) {}
+    function isShown(key) { return shown[key] !== false; }
+    var chipsKey = null;
+    function renderChips() {
+        var trades = state.trades || [];
+        var key = JSON.stringify(trades);
+        if (key !== chipsKey) {
+            chipsKey = key;
+            $('dept').innerHTML = '<button class="chip" type="button" data-dept="general">Allgemein</button>'
+                + trades.map(function (tr) {
+                    return '<button class="chip" type="button" data-dept="' + esc(tr.id) + '" data-color style="--c: ' + esc(tr.color) + '">' + esc(tr.name) + '</button>';
+                }).join('');
+        }
+        document.querySelectorAll('#dept .chip').forEach(function (c) { c.setAttribute('aria-pressed', isShown(c.dataset.dept) ? 'true' : 'false'); });
     }
-    document.querySelectorAll('#dept .chip').forEach(function (c) {
-        c.addEventListener('click', function () {
-            shown[c.dataset.dept] = !shown[c.dataset.dept];
-            try { localStorage.setItem('foh-depts', JSON.stringify(shown)); } catch (e) {}
-            syncChips(); listKey = ''; render();
-        });
+    $('dept').addEventListener('click', function (ev) {
+        var c = ev.target.closest('.chip'); if (!c) { return; }
+        shown[c.dataset.dept] = !isShown(c.dataset.dept);
+        try { localStorage.setItem('foh-trades', JSON.stringify(shown)); } catch (e) {}
+        renderChips(); listKey = ''; nowKey = ''; nextKey = ''; render();
     });
-    syncChips();
 
     // ---------------------------------------------------------------- helpers
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -343,11 +352,15 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     function noStrobeBanner(item) { return noStrobe(item) ? '<div class="nostrobe-banner">Kein Strobo</div>' : ''; }
     function itemById(id) { for (var i = 0; i < state.items.length; i++) { if (state.items[i].id === id) { return state.items[i]; } } return null; }
 
-    function notesHtml(notes) {
+    // General note plus one colored card per trade note (migration 172).
+    function notesHtml(item) {
         var html = '';
-        Object.keys(DEPTS).forEach(function (k) {
-            if (notes && notes[k] && shown[k]) {
-                html += '<div class="note"><span class="k k-' + k + '">' + DEPTS[k] + '</span><span class="t">' + esc(notes[k]) + '</span></div>';
+        if (item && item.notes && item.notes.general && isShown('general')) {
+            html += '<div class="tcard general"><h3>Allgemein</h3><div class="t">' + esc(item.notes.general) + '</div></div>';
+        }
+        ((item && item.tradeNotes) || []).forEach(function (n) {
+            if (isShown(n.tradeId)) {
+                html += '<div class="tcard" style="--c: ' + esc(n.color) + '"><h3>' + esc(n.trade) + '</h3><div class="t">' + esc(n.text) + '</div></div>';
             }
         });
         return html ? '<div class="notes">' + html + '</div>' : '';
@@ -406,6 +419,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         $('end-v').textContent = live.state === 'finished' && live.finishedAt ? hm(live.finishedAt) : (endMs ? hms(endMs).slice(0, 5) : '--:--');
         $('end-s').textContent = 'geplant ' + hm(state.program.plannedEnd);
 
+        renderChips();
         renderNow(t);
         renderNext(t, overrun);
         renderList();
@@ -472,7 +486,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
                     + '<div class="meta">' + (c.actualStart ? 'gestartet <b class="num">' + hms(ts(c.actualStart)) + '</b>' : 'Beginn lt. Uhr <b class="num">' + hm(c.startsAt) + '</b>')
                     + (it ? '<br>geplant <b class="num">' + hm(it.plannedStart) + '</b>' : '') + '</div></div>'
                     + (hasEnd ? '<div class="bar" id="now-bar"><i></i></div>' : '')
-                    + notesHtml(c.notes);
+                    + notesHtml(c);
             }
         }
         if (!c) { card.classList.remove('over'); return; }
@@ -509,7 +523,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
                     + '<div class="timer-row"><div><div id="next-big" class="big num"></div><div class="meta" id="next-big-l"></div></div>'
                     + '<div class="meta">Start voraussichtlich <b class="num" id="next-at"></b>' + (it0 ? '<br>geplant <b class="num">' + hm(it0.plannedStart) + '</b>' : '')
                     + (n.durationSeconds ? '<br>Dauer <b>' + dur(n.durationSeconds) + '</b>' : '') + '</div></div>'
-                    + notesHtml(n.notes)
+                    + notesHtml(n)
                     + (CAN_CONTROL ? '<button class="btn go start-next" type="button" data-start="' + esc(n.id) + '">▶ <span>Start: ' + esc(n.name) + '</span></button>' : '');
             }
         }
@@ -543,7 +557,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
                 + '<div><div class="nm"><span class="pos">' + it.position + '.</span>' + esc(it.name) + badge + '</div>'
                 + (it.description ? '<div class="ds">' + esc(it.description) + '</div>' : '')
                 + (it.actualStart ? '<div class="ds">gestartet ' + hms(ts(it.actualStart)) + '</div>' : '') + '</div>'
-                + acts + notesHtml(it.notes)
+                + acts + notesHtml(it)
                 + (CAN_CONTROL ? '<form class="tform" data-tform="' + esc(it.id) + '"><span class="hint">Tatsächlich gestartet um</span><input class="input num" name="started_at" placeholder="HH:MM:SS" value="' + hms(now()) + '"><button class="btn sm primary" type="submit">Übernehmen</button></form>' : '')
                 + '</div>';
         }).join('');

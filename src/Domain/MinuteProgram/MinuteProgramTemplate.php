@@ -15,6 +15,7 @@ use DateTimeImmutable;
  */
 final class MinuteProgramTemplate
 {
+    /** @param list<string>|null $tradeIds */
     public function __construct(
         public readonly string $id,
         public string $name,
@@ -23,6 +24,9 @@ final class MinuteProgramTemplate
         public int $headsetMicCount,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Migration 172: trades (IDs) whose notes the template offers.
+        // null = automatic (all trades).
+        public ?array $tradeIds = null,
     ) {
     }
 }

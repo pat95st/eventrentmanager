@@ -15,6 +15,7 @@ use DateTimeImmutable;
  */
 final class MinuteProgram
 {
+    /** @param list<string>|null $tradeIds */
     public function __construct(
         public readonly string $id,
         public string $rentalId,
@@ -39,6 +40,9 @@ final class MinuteProgram
         public ?DateTimeImmutable $liveItemStartedAt = null,
         // Migration 158: program marked as finished at FOH.
         public ?DateTimeImmutable $liveFinishedAt = null,
+        // Migration 172: trades (IDs) whose notes this program offers.
+        // null = automatic (trades of the event and its technicians).
+        public ?array $tradeIds = null,
     ) {
     }
 

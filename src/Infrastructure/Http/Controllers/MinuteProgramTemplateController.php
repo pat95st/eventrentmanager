@@ -151,10 +151,7 @@ final class MinuteProgramTemplateController
                 name: $request->input('name', '') ?? '',
                 description: $request->input('description'),
                 noteGeneral: $request->input('note_general'),
-                noteSound: $request->input('note_sound'),
-                noteLight: $request->input('note_light'),
-                noteVideo: $request->input('note_video'),
-                noteStage: $request->input('note_stage'),
+                tradeNotes: $request->inputMap('trade_notes'),
                 durationMinutes: self::nullableInt($request->input('duration_minutes')),
                 noStrobe: $request->input('no_strobe') !== null,
             ));
@@ -181,10 +178,7 @@ final class MinuteProgramTemplateController
                 name: $request->input('name', '') ?? '',
                 description: $request->input('description'),
                 noteGeneral: $request->input('note_general'),
-                noteSound: $request->input('note_sound'),
-                noteLight: $request->input('note_light'),
-                noteVideo: $request->input('note_video'),
-                noteStage: $request->input('note_stage'),
+                tradeNotes: $request->inputMap('trade_notes'),
                 durationMinutes: self::nullableInt($request->input('duration_minutes')),
                 noStrobe: $request->input('no_strobe') !== null,
             ));

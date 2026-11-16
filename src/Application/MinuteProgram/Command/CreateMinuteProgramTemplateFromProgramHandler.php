@@ -55,6 +55,7 @@ final class CreateMinuteProgramTemplateFromProgramHandler implements CommandHand
             headsetMicCount: $program->headsetMicCount,
             createdAt: $now,
             updatedAt: $now,
+            tradeIds: $program->tradeIds,
         );
         $this->templates->save($template);
 
@@ -66,10 +67,7 @@ final class CreateMinuteProgramTemplateFromProgramHandler implements CommandHand
                 name: $item->name,
                 description: $item->description,
                 noteGeneral: $item->noteGeneral,
-                noteSound: $item->noteSound,
-                noteLight: $item->noteLight,
-                noteVideo: $item->noteVideo,
-                noteStage: $item->noteStage,
+                tradeNotes: $item->tradeNotes,
                 durationMinutes: $item->durationMinutes,
                 noStrobe: $item->noStrobe,
             );

@@ -21,6 +21,8 @@ use App\Application\MinuteProgram\Query\CountdownPayload;
 use App\Application\MinuteProgram\Query\GetMinuteProgramDetail;
 use App\Application\MinuteProgram\Query\ListMinuteProgramsForRental;
 use App\Application\MinuteProgram\Query\ListMinuteProgramTemplates;
+use App\Application\MinuteProgram\Query\MinuteProgramDetail;
+use App\Application\MinuteProgram\Query\MinuteProgramTradeResolver;
 use App\Application\Query\QueryBus;
 use App\Application\Rental\Query\GetRental;
 use App\Domain\EventAudio\AudioFileKind;
@@ -48,7 +50,44 @@ final class MinuteProgramController
         private readonly QueryBus $queries,
         private readonly MinuteProgramShareLinkRepositoryInterface $shareLinks,
         private readonly ?RentalAudioFileRepositoryInterface $audioFiles = null,
+        private readonly ?MinuteProgramTradeResolver $trades = null,
     ) {
+    }
+
+    /**
+     * View data for the trade selection of the program form (migration 172).
+     *
+     * @return array{allTrades: list<\App\Application\MinuteProgram\Query\MinuteProgramTrade>, tradesAuto: bool, selectedTradeIds: list<string>}
+     */
+    private function tradeFormData(string $rentalId, ?MinuteProgramDetail $detail): array
+    {
+        if ($detail !== null) {
+            return [
+                'allTrades' => $this->trades?->all() ?? [],
+                'tradesAuto' => $detail->program->tradeIds === null,
+                'selectedTradeIds' => array_map(static fn ($t): string => $t->id, $detail->trades),
+            ];
+        }
+
+        return [
+            'allTrades' => $this->trades?->all() ?? [],
+            'tradesAuto' => true,
+            'selectedTradeIds' => $this->trades?->automaticIdsForRental($rentalId) ?? [],
+        ];
+    }
+
+    /**
+     * Trade selection posted by the program form: [submitted, IDs or null = automatic].
+     *
+     * @return array{0: bool, 1: list<string>|null}
+     */
+    private static function tradeSelection(Request $request): array
+    {
+        if ($request->input('trades_submitted') === null) {
+            return [false, null];
+        }
+
+        return [true, $request->input('trades_auto') !== null ? null : $request->inputArray('trade_ids')];
     }
 
     /** @return \App\Domain\EventAudio\RentalAudioFile[] Jingles der Veranstaltung (Migration 135). */
@@ -78,13 +117,14 @@ final class MinuteProgramController
             'errors' => [],
             'old' => [],
             'jingles' => $this->jinglesFor($rentalId),
-        ], activeNav: 'rentals', title: t('minute_programs.new'));
+        ] + $this->tradeFormData($rentalId, null), activeNav: 'rentals', title: t('minute_programs.new'));
     }
 
     public function store(Request $request): void
     {
         $rentalId = $request->param('rentalId');
         $templateId = trim($request->input('template_id', '') ?? '');
+        [, $tradeIds] = self::tradeSelection($request);
 
         try {
             if ($templateId !== '') {
@@ -94,6 +134,7 @@ final class MinuteProgramController
                     name: $request->input('name', '') ?? '',
                     room: $request->input('room'),
                     startAt: $request->input('start_at', '') ?? '',
+                    tradeIds: $tradeIds,
                 ));
             } else {
                 $programId = $this->commands->dispatch(new CreateMinuteProgram(
@@ -105,6 +146,7 @@ final class MinuteProgramController
                     handheldMicCount: (int) ($request->input('handheld_mic_count', '0') ?? '0'),
                     headsetMicCount: (int) ($request->input('headset_mic_count', '0') ?? '0'),
                     jingleAudioFileId: $request->input('jingle_audio_file_id'),
+                    tradeIds: $tradeIds,
                 ));
             }
 
@@ -161,12 +203,13 @@ final class MinuteProgramController
             'errors' => [],
             'old' => [],
             'jingles' => $this->jinglesFor($rental->id),
-        ], activeNav: 'rentals', title: t('minute_programs.edit'));
+        ] + $this->tradeFormData($rental->id, $detail), activeNav: 'rentals', title: t('minute_programs.edit'));
     }
 
     public function update(Request $request): void
     {
         $id = $request->param('id');
+        [$setTrades, $tradeIds] = self::tradeSelection($request);
 
         try {
             $this->commands->dispatch(new UpdateMinuteProgram(
@@ -178,6 +221,8 @@ final class MinuteProgramController
                 handheldMicCount: (int) ($request->input('handheld_mic_count', '0') ?? '0'),
                 headsetMicCount: (int) ($request->input('headset_mic_count', '0') ?? '0'),
                 jingleAudioFileId: $request->input('jingle_audio_file_id'),
+                setTrades: $setTrades,
+                tradeIds: $tradeIds,
             ));
             Flash::success(t('minute_programs.flash.updated'));
         } catch (ValidationException $e) {
@@ -273,10 +318,7 @@ final class MinuteProgramController
                 name: $request->input('name', '') ?? '',
                 description: $request->input('description'),
                 noteGeneral: $request->input('note_general'),
-                noteSound: $request->input('note_sound'),
-                noteLight: $request->input('note_light'),
-                noteVideo: $request->input('note_video'),
-                noteStage: $request->input('note_stage'),
+                tradeNotes: $request->inputMap('trade_notes'),
                 durationMinutes: self::nullableInt($request->input('duration_minutes')),
                 noStrobe: $request->input('no_strobe') !== null,
             ));
@@ -303,10 +345,7 @@ final class MinuteProgramController
                 name: $request->input('name', '') ?? '',
                 description: $request->input('description'),
                 noteGeneral: $request->input('note_general'),
-                noteSound: $request->input('note_sound'),
-                noteLight: $request->input('note_light'),
-                noteVideo: $request->input('note_video'),
-                noteStage: $request->input('note_stage'),
+                tradeNotes: $request->inputMap('trade_notes'),
                 durationMinutes: self::nullableInt($request->input('duration_minutes')),
                 noStrobe: $request->input('no_strobe') !== null,
             ));

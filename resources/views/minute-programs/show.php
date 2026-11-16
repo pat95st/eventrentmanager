@@ -8,6 +8,7 @@ use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
 $program = $detail->program;
+$trades = $detail->trades; // migration 172
 ?>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -18,6 +19,13 @@ $program = $detail->program;
             <?= e($rental->eventName) ?>
             <?php if ($program->room !== null): ?> · <?= e($program->room) ?><?php endif; ?>
             · <?= e($program->startAt->format('d.m.Y H:i')) ?>
+        </p>
+        <p class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+            <span><?= e(t($program->tradeIds === null ? 'minute_programs.show.trades_auto' : 'minute_programs.show.trades')) ?>:</span>
+            <?php foreach ($trades as $trade): ?>
+                <span class="rounded px-1.5 py-0.5 font-semibold text-white" style="background: <?= e($trade->color) ?>"><?= e($trade->name) ?></span>
+            <?php endforeach; ?>
+            <?php if ($trades === []): ?><span>–</span><?php endif; ?>
         </p>
         <?php if ($program->jingleBefore): ?>
             <?php $jingleTitle = null; foreach (($jingles ?? []) as $j) { if ($j->id === $program->jingleAudioFileId) { $jingleTitle = $j->title; } } ?>
@@ -76,17 +84,13 @@ $program = $detail->program;
                 <td class="px-4 py-2 align-top">
                     <div class="font-medium text-slate-900 dark:text-slate-100"><?= e($item->name) ?><?= $item->noStrobe ? ' <span class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-700 dark:bg-red-950/40 dark:text-red-400">' . e(t('minute_programs.show.no_strobe')) . '</span>' : '' ?><?= $itemDetail->isNext ? ' <span class="ml-1 rounded bg-brand-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-brand-700 dark:bg-brand-950/40 dark:text-brand-400">' . e(t('minute_programs.show.next')) . '</span>' : '' ?></div>
                     <?php if ($item->description !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400"><?= e($item->description) ?></div><?php endif; ?>
-                    <?php
-                        $notes = array_filter([
-                            $item->noteSound !== null ? t('minute_programs.show.note_sound') . ': ' . $item->noteSound : null,
-                            $item->noteLight !== null ? t('minute_programs.show.note_light') . ': ' . $item->noteLight : null,
-                            $item->noteVideo !== null ? t('minute_programs.show.note_video') . ': ' . $item->noteVideo : null,
-                            $item->noteStage !== null ? t('minute_programs.show.note_stage') . ': ' . $item->noteStage : null,
-                            $item->noteGeneral !== null ? t('minute_programs.show.note_general') . ': ' . $item->noteGeneral : null,
-                        ]);
-                    ?>
-                    <?php foreach ($notes as $note): ?>
-                        <div class="text-xs text-slate-400 dark:text-slate-500"><?= e($note) ?></div>
+                    <?php if ($item->noteGeneral !== null): ?>
+                        <div class="mt-1 text-xs text-slate-500 dark:text-slate-400"><span class="font-semibold"><?= e(t('minute_programs.show.note_general')) ?>:</span> <?= e($item->noteGeneral) ?></div>
+                    <?php endif; ?>
+                    <?php foreach ($trades as $trade): if (!isset($item->tradeNotes[$trade->id])) { continue; } ?>
+                        <div class="mt-1 border-l-4 pl-2 text-xs text-slate-600 dark:text-slate-300" style="border-color: <?= e($trade->color) ?>">
+                            <span class="font-semibold" style="color: <?= e($trade->color) ?>"><?= e($trade->name) ?>:</span> <?= e($item->tradeNotes[$trade->id]) ?>
+                        </div>
                     <?php endforeach; ?>
                 </td>
                 <td class="px-4 py-2 align-top text-xs text-slate-500"><?= $item->durationMinutes !== null ? e((string) $item->durationMinutes) . ' min' : '–' ?></td>
@@ -131,26 +135,22 @@ $program = $detail->program;
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.item_form.description')) ?></label>
                             <input type="text" name="description" value="<?= e($item->description ?? '') ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700">
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.item_form.note_sound')) ?></label>
-                            <input type="text" name="note_sound" value="<?= e($item->noteSound ?? '') ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.item_form.note_light')) ?></label>
-                            <input type="text" name="note_light" value="<?= e($item->noteLight ?? '') ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.item_form.note_video')) ?></label>
-                            <input type="text" name="note_video" value="<?= e($item->noteVideo ?? '') ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.item_form.note_stage')) ?></label>
-                            <input type="text" name="note_stage" value="<?= e($item->noteStage ?? '') ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700">
-                        </div>
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('minute_programs.item_form.note_general')) ?></label>
-                            <input type="text" name="note_general" value="<?= e($item->noteGeneral ?? '') ?>" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700">
+                            <textarea name="note_general" rows="2" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700"><?= e($item->noteGeneral ?? '') ?></textarea>
                         </div>
+                        <?php foreach ($trades as $trade): ?>
+                        <div>
+                            <label class="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+                                <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: <?= e($trade->color) ?>"></span>
+                                <?= e(t('minute_programs.item_form.note_trade', ['trade' => $trade->name])) ?>
+                            </label>
+                            <textarea name="trade_notes[<?= e($trade->id) ?>]" rows="2" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700" style="border-left: 4px solid <?= e($trade->color) ?>"><?= e($item->tradeNotes[$trade->id] ?? '') ?></textarea>
+                        </div>
+                        <?php endforeach; ?>
+                        <?php if ($trades === []): ?>
+                        <p class="text-xs text-slate-500 sm:col-span-2 dark:text-slate-400"><?= e(t('minute_programs.item_form.no_trades')) ?></p>
+                        <?php endif; ?>
                         <div class="sm:col-span-2">
                             <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
                                 <input type="checkbox" name="no_strobe" value="1" <?= $item->noStrobe ? 'checked' : '' ?>>

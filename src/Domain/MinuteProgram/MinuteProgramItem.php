@@ -11,6 +11,7 @@ namespace App\Domain\MinuteProgram;
  */
 final class MinuteProgramItem
 {
+    /** @param array<string, string> $tradeNotes */
     public function __construct(
         public readonly string $id,
         public readonly string $minuteProgramId,
@@ -18,10 +19,9 @@ final class MinuteProgramItem
         public string $name,
         public ?string $description,
         public ?string $noteGeneral,
-        public ?string $noteSound,
-        public ?string $noteLight,
-        public ?string $noteVideo,
-        public ?string $noteStage,
+        // Migration 172: notes per trade, trade ID => note (replaces the
+        // fixed sound/light/video/stage notes), see MinuteProgramTradeNotes.
+        public array $tradeNotes,
         public ?int $durationMinutes,
         // Migration 166: no strobe lighting may be used during this item.
         public bool $noStrobe = false,

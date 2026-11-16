@@ -33,8 +33,10 @@ use DateTimeImmutable;
  */
 final class MinuteProgramDetailBuilder
 {
-    public function __construct(private readonly MinuteProgramItemRepositoryInterface $items)
-    {
+    public function __construct(
+        private readonly MinuteProgramItemRepositoryInterface $items,
+        private readonly ?MinuteProgramTradeResolver $trades = null,
+    ) {
     }
 
     public function build(MinuteProgram $program, ?DateTimeImmutable $now = null): MinuteProgramDetail
@@ -120,6 +122,7 @@ final class MinuteProgramDetailBuilder
             projectedDelaySeconds: $program->currentDelaySeconds + $overrun,
             overrunSeconds: $overrun,
             finished: $finished,
+            trades: $this->trades?->forProgram($program, $items) ?? [],
         );
     }
 }

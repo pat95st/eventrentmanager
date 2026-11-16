@@ -11,6 +11,7 @@ use App\Domain\Exception\ValidationException;
 use App\Domain\MinuteProgram\MinuteProgramItem;
 use App\Domain\MinuteProgram\MinuteProgramItemRepositoryInterface;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 use App\Shared\Uuid;
 
 final class AddMinuteProgramItemHandler implements CommandHandlerInterface
@@ -41,10 +42,7 @@ final class AddMinuteProgramItemHandler implements CommandHandlerInterface
             name: $name,
             description: self::normalize($command->description),
             noteGeneral: self::normalize($command->noteGeneral),
-            noteSound: self::normalize($command->noteSound),
-            noteLight: self::normalize($command->noteLight),
-            noteVideo: self::normalize($command->noteVideo),
-            noteStage: self::normalize($command->noteStage),
+            tradeNotes: MinuteProgramTradeNotes::normalize($command->tradeNotes),
             durationMinutes: $command->durationMinutes !== null ? max(0, $command->durationMinutes) : null,
             noStrobe: $command->noStrobe,
         );

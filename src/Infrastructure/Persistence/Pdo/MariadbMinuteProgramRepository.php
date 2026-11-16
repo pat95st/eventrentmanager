@@ -6,6 +6,7 @@ namespace App\Infrastructure\Persistence\Pdo;
 
 use App\Domain\MinuteProgram\MinuteProgram;
 use App\Domain\MinuteProgram\MinuteProgramRepositoryInterface;
+use App\Domain\MinuteProgram\MinuteProgramTradeNotes;
 use DateTimeImmutable;
 use PDO;
 
@@ -21,11 +22,11 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             'INSERT INTO minute_programs (
                 id, rental_id, name, room, start_at, jingle_before, handheld_mic_count,
                 headset_mic_count, current_delay_minutes, current_delay_seconds, created_at, updated_at,
-                jingle_audio_file_id, live_item_id, live_item_started_at, live_finished_at
+                jingle_audio_file_id, live_item_id, live_item_started_at, live_finished_at, trade_ids
              ) VALUES (
                 :id, :rental_id, :name, :room, :start_at, :jingle_before, :handheld_mic_count,
                 :headset_mic_count, :current_delay_minutes, :current_delay_seconds, :created_at, :updated_at,
-                :jingle_audio_file_id, :live_item_id, :live_item_started_at, :live_finished_at
+                :jingle_audio_file_id, :live_item_id, :live_item_started_at, :live_finished_at, :trade_ids
              )
              ON DUPLICATE KEY UPDATE
                 name = :name2, room = :room2, start_at = :start_at2, jingle_before = :jingle_before2,
@@ -33,7 +34,7 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
                 current_delay_minutes = :current_delay_minutes2, current_delay_seconds = :current_delay_seconds2,
                 updated_at = :updated_at2, jingle_audio_file_id = :jingle_audio_file_id2,
                 live_item_id = :live_item_id2, live_item_started_at = :live_item_started_at2,
-                live_finished_at = :live_finished_at2'
+                live_finished_at = :live_finished_at2, trade_ids = :trade_ids2'
         );
 
         $stmt->execute([
@@ -66,6 +67,8 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             'live_item_started_at2' => $program->liveItemStartedAt?->format('Y-m-d H:i:s'),
             'live_finished_at' => $program->liveFinishedAt?->format('Y-m-d H:i:s'),
             'live_finished_at2' => $program->liveFinishedAt?->format('Y-m-d H:i:s'),
+            'trade_ids' => MinuteProgramTradeNotes::encodeIds($program->tradeIds),
+            'trade_ids2' => MinuteProgramTradeNotes::encodeIds($program->tradeIds),
         ]);
     }
 
@@ -113,6 +116,7 @@ final class MariadbMinuteProgramRepository implements MinuteProgramRepositoryInt
             liveItemId: isset($row['live_item_id']) ? (string) $row['live_item_id'] : null,
             liveItemStartedAt: isset($row['live_item_started_at']) ? new DateTimeImmutable((string) $row['live_item_started_at']) : null,
             liveFinishedAt: isset($row['live_finished_at']) ? new DateTimeImmutable((string) $row['live_finished_at']) : null,
+            tradeIds: MinuteProgramTradeNotes::decodeIds(isset($row['trade_ids']) ? (string) $row['trade_ids'] : null),
         );
     }
 }

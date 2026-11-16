@@ -6,7 +6,7 @@ namespace App\Application\Venue\Command;
 
 use App\Application\Command\CommandInterface;
 
-/** Upload a photo of a venue with an optional description (migration 167). */
+/** Upload a photo of a venue with an optional description (migration 169). */
 final class AddVenueImage implements CommandInterface
 {
     /** @param array{name: string, type: string, tmp_name: string, error: int, size: int} $uploadedFile */

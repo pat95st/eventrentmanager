@@ -7,7 +7,7 @@ namespace App\Domain\Venue;
 use DateTimeImmutable;
 
 /**
- * Photo of a venue (migration 167) with an optional description, e.g. the
+ * Photo of a venue (migration 169) with an optional description, e.g. the
  * access route, the loading dock or the power distribution.
  */
 final class VenueImage

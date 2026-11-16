@@ -4530,8 +4530,84 @@ ALTER TABLE minute_program_items
 ALTER TABLE minute_program_template_items
     ADD COLUMN no_strobe TINYINT(1) NOT NULL DEFAULT 0 AFTER note_stage;
 
--- --- 167_venue_images.sql ---
--- Migration 167: Photos of a venue with an optional description
+-- --- 167_event_messages.sql ---
+-- Migration 167: Messages from the organizer to the stage display and FOH.
+--
+--  - event_messages: short text messages sent from the live page
+--    ("Audio & Durchsagen", /live/{id}) to the stage display (run sheet API,
+--    docs/stagedisplay-api.md) and/or the FOH run sheet page.
+--    minute_program_id NULL = all minute programs of the rental.
+--    A message stays active until it is closed (withdrawn by the sender or
+--    hidden at FOH); acknowledged_at records that FOH has seen it.
+
+CREATE TABLE IF NOT EXISTS event_messages (
+    id CHAR(36) NOT NULL PRIMARY KEY,
+    rental_id CHAR(36) NOT NULL,
+    minute_program_id CHAR(36) NULL,
+    body VARCHAR(500) NOT NULL,
+    to_stage TINYINT(1) NOT NULL DEFAULT 0,
+    to_foh TINYINT(1) NOT NULL DEFAULT 0,
+    urgent TINYINT(1) NOT NULL DEFAULT 0,
+    sent_by_type VARCHAR(20) NOT NULL,
+    sent_by_id CHAR(36) NULL,
+    sent_by_name VARCHAR(160) NOT NULL,
+    created_at DATETIME NOT NULL,
+    acknowledged_at DATETIME NULL,
+    acknowledged_by VARCHAR(160) NULL,
+    closed_at DATETIME NULL,
+    closed_by VARCHAR(160) NULL,
+    KEY idx_event_messages_rental (rental_id, closed_at, created_at),
+    CONSTRAINT fk_event_messages_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_event_messages_program FOREIGN KEY (minute_program_id) REFERENCES minute_programs (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --- 168_display_clients.sql ---
+-- Migration 168: Stage and FOH displays.
+--
+--  display_clients: display devices (stage monitor, confidence monitor,
+--    FOH screen) that authenticate with a device token at the display API
+--    (/api/display/v1, see docs/display-api.md). The role decides which
+--    layout the client shows; it can be switched at any time so the same
+--    device can serve as stage or FOH display. A device shows the minute
+--    program it is pinned to, otherwise the current program of the assigned
+--    event (or of all events running today), optionally limited to a room.
+--    Layout options (notes per trade, clock, item list, control) are stored
+--    as JSON in options_json.
+--  display_settings: global defaults (single row id = 1): poll interval and
+--    countdown warning thresholds.
+
+CREATE TABLE display_clients (
+    id                CHAR(36)     NOT NULL PRIMARY KEY,
+    name              VARCHAR(120) NOT NULL,
+    role              VARCHAR(20)  NOT NULL DEFAULT 'stage',
+    token_hash        CHAR(64)     NOT NULL,
+    token_hint        VARCHAR(20)  NOT NULL,
+    enabled           TINYINT(1)   NOT NULL DEFAULT 1,
+    rental_id         CHAR(36)     NULL,
+    minute_program_id CHAR(36)     NULL,
+    room              VARCHAR(120) NULL,
+    options_json      TEXT         NULL,
+    last_seen_at      DATETIME     NULL,
+    last_ip           VARCHAR(45)  NULL,
+    client_version    VARCHAR(60)  NULL,
+    created_at        DATETIME     NOT NULL,
+    UNIQUE KEY uq_display_clients_token (token_hash),
+    KEY idx_display_clients_rental (rental_id),
+    KEY idx_display_clients_program (minute_program_id),
+    CONSTRAINT fk_display_clients_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT fk_display_clients_program FOREIGN KEY (minute_program_id) REFERENCES minute_programs (id) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE display_settings (
+    id                    TINYINT      NOT NULL PRIMARY KEY,
+    poll_interval_seconds INT          NOT NULL DEFAULT 3,
+    warn_seconds          INT          NOT NULL DEFAULT 120,
+    critical_seconds      INT          NOT NULL DEFAULT 30,
+    updated_at            DATETIME     NOT NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 169_venue_images.sql ---
+-- Migration 169: Photos of a venue with an optional description
 -- (e.g. access route, loading dock, power distribution, stage).
 --
 --  - venue_images.file_path: relative to storage/uploads/venues,
@@ -4739,4 +4815,6 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('164_ai_ad_image_refinement.sql', NOW()),
     ('165_venue_fog_policy.sql', NOW()),
     ('166_no_strobe.sql', NOW()),
-    ('167_venue_images.sql', NOW());
+    ('167_event_messages.sql', NOW()),
+    ('168_display_clients.sql', NOW()),
+    ('169_venue_images.sql', NOW());

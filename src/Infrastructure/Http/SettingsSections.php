@@ -110,12 +110,13 @@ final class SettingsSections
             ],
             'operations' => [
                 'label' => 'Veranstaltungen & Planung',
-                'desc' => 'Techniker, Betriebsurlaub, Kalender und Durchsagen',
+                'desc' => 'Techniker, Betriebsurlaub, Kalender, Durchsagen und Displays',
                 'pages' => [
                     $page('settings-techniker', '/einstellungen/techniker', 'Techniker & Gewerke', 'Gewerke und Erinnerungen bei offenen Techniker-Anfragen'),
                     $page('settings-betriebsurlaub', '/einstellungen/betriebsurlaub', 'Betriebsurlaub', 'Zeiträume ohne Ausgabe und Rücknahme'),
                     $page('settings-kalender', '/einstellungen/kalender', t('nav.calendar_settings'), 'Kalender-Abos (CalDAV/ICS)'),
                     $page('settings-veranstaltungs-audio', '/einstellungen/veranstaltungs-audio', 'Veranstaltungs-Audio', 'Abspielgeräte (Raspberry Pi), Gong und Sprachausgabe für Durchsagen'),
+                    $page('settings-displays', '/einstellungen/displays', 'Stage- & FOH-Displays', 'Bühnen- und Regie-Displays mit Countdown, Ablauf und Hinweisen'),
                 ],
             ],
             'system' => [

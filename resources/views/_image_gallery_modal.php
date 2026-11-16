@@ -9,6 +9,8 @@
  * Logic lives in /assets/js/image-gallery.js.
  */
 
+// `use function` imports are per file, so the including view's imports do
+// not apply here.
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 

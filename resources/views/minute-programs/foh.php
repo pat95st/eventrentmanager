@@ -153,6 +153,22 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .led { width: 9px; height: 9px; border-radius: 99px; background: var(--go); }
     .led.off { background: var(--stop); }
 
+    /* Migration 167: messages from the organizer */
+    .msgs { display: grid; gap: 10px; margin-top: 14px; }
+    .msgs:empty { display: none; }
+    .msg { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; background: linear-gradient(180deg, rgba(96,165,250,.16), var(--panel)); border: 1px solid rgba(96,165,250,.6); border-left: 6px solid var(--info); border-radius: var(--radius); padding: 12px 14px; }
+    .msg.urgent { background: linear-gradient(180deg, rgba(239,68,68,.22), var(--panel)); border-color: rgba(239,68,68,.7); border-left-color: var(--stop); }
+    .msg.seen { background: var(--panel); border-color: var(--line); border-left-color: var(--muted); }
+    .msg.fresh { animation: msgflash 1s ease-in-out 4; }
+    @keyframes msgflash { 50% { box-shadow: 0 0 0 6px rgba(96,165,250,.45); } }
+    .msg.urgent.fresh { animation-name: msgflash-u; }
+    @keyframes msgflash-u { 50% { box-shadow: 0 0 0 6px rgba(239,68,68,.5); } }
+    .msg .tx { font-size: 1.25rem; font-weight: 700; line-height: 1.3; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msg .mt { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+    .msg .mt .tag { display: inline-block; font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-right: 4px; color: var(--text); }
+    .msg .ma { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    @media (max-width: 520px) { .msg { grid-template-columns: 1fr; } .msg .ma { justify-content: flex-start; } }
+
     .toast { position: fixed; left: 50%; bottom: calc(1.5rem + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); opacity: 0; z-index: 40; max-width: calc(100% - 32px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem; font-weight: 600; transition: all .2s; pointer-events: none; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .toast.err { background: #fecaca; color: #7f1d1d; }
@@ -184,6 +200,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
 </header>
 
 <main class="wrap">
+    <div class="msgs" id="msgs" aria-live="assertive"></div>
     <div class="strip">
         <div class="stat delay" id="delay-stat">
             <div class="l">Verzug</div>
@@ -284,6 +301,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     var BASE = <?= json_encode($basePath, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) ?>;
     var CSRF = <?= json_encode($csrfToken, JSON_THROW_ON_ERROR) ?>;
     var CAN_CONTROL = <?= $canControl ? 'true' : 'false' ?>;
+    var TITLE = document.title;
     var DEPTS = { general: 'Allgemein', sound: 'Ton', light: 'Licht', video: 'Video', stage: 'Bühne' };
     var state = <?= json_encode($initialPayload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
     var offset = 0; // server clock − local clock (ms)
@@ -391,6 +409,42 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         renderNow(t);
         renderNext(t, overrun);
         renderList();
+        renderMessages();
+    }
+
+    // ---------------------------------------------------------------- messages from the organizer (migration 167)
+    var msgKey = null, knownMsgs = null;
+    function beep() {
+        try {
+            var Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) { return; }
+            var ctx = new Ctx(), o = ctx.createOscillator(), g = ctx.createGain();
+            o.frequency.value = 880; g.gain.setValueAtTime(0.0001, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+            o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.55);
+            o.onended = function () { ctx.close(); };
+        } catch (e) {}
+    }
+    function renderMessages() {
+        var msgs = state.messages || [];
+        var key = JSON.stringify(msgs.map(function (m) { return [m.id, m.acknowledgedAt]; }));
+        if (key === msgKey) { return; }
+        msgKey = key;
+        var fresh = {}, hasFresh = false;
+        msgs.forEach(function (m) { if (knownMsgs && !knownMsgs[m.id]) { fresh[m.id] = true; hasFresh = true; } });
+        knownMsgs = {}; msgs.forEach(function (m) { knownMsgs[m.id] = true; });
+        $('msgs').innerHTML = msgs.slice().reverse().map(function (m) {
+            var tags = (m.stage ? '<span class="tag">Stagedisplay</span>' : '') + (m.foh ? '<span class="tag">FOH</span>' : '');
+            var meta = hm(m.sentAt) + ' · ' + esc(m.sentBy) + (m.acknowledgedAt ? ' · gesehen ' + hm(m.acknowledgedAt) + (m.acknowledgedBy ? ' (' + esc(m.acknowledgedBy) + ')' : '') : '');
+            var acts = CAN_CONTROL
+                ? '<div class="ma">' + (m.acknowledgedAt ? '' : '<button class="btn sm primary" type="button" data-msg-ack="' + esc(m.id) + '">✓ Gesehen</button>')
+                  + '<button class="btn sm" type="button" data-msg-close="' + esc(m.id) + '" title="' + (m.stage ? 'Auch vom Stagedisplay entfernen' : 'Ausblenden') + '">Ausblenden</button></div>'
+                : '<div></div>';
+            return '<div class="msg' + (m.urgent ? ' urgent' : '') + (m.acknowledgedAt ? ' seen' : '') + (fresh[m.id] ? ' fresh' : '') + '">'
+                + '<div><div class="tx">' + (m.urgent ? '⚠ ' : '✉ ') + esc(m.text) + '</div><div class="mt">' + tags + meta + '</div></div>' + acts + '</div>';
+        }).join('');
+        var open = msgs.filter(function (m) { return !m.acknowledgedAt; }).length;
+        document.title = (open ? '(' + open + ') ' : '') + TITLE;
+        if (hasFresh) { beep(); }
     }
 
     // Card structure is rebuilt only when its content changes; timers are
@@ -566,7 +620,13 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
             return;
         }
         if (!CAN_CONTROL) { return; }
-        if (b.dataset.start) {
+        if (b.dataset.msgAck) {
+            act('nachricht-gesehen/' + encodeURIComponent(b.dataset.msgAck), {}, 'Als gesehen markiert.');
+        } else if (b.dataset.msgClose) {
+            var msg = (state.messages || []).filter(function (m) { return m.id === b.dataset.msgClose; })[0];
+            if (msg && msg.stage && !confirm('Nachricht ausblenden? Sie verschwindet auch vom Stagedisplay.')) { return; }
+            act('nachricht-ausblenden/' + encodeURIComponent(b.dataset.msgClose), {}, 'Nachricht ausgeblendet.');
+        } else if (b.dataset.start) {
             var it = itemById(b.dataset.start);
             var isNext = state.next && state.next.id === b.dataset.start;
             if (!isNext && !confirm('„' + (it ? it.name : '') + '“ jetzt starten? Der Verzug wird danach neu berechnet.')) { return; }

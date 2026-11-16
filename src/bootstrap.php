@@ -732,7 +732,22 @@ $scheduledPlaybackRepository = new \App\Infrastructure\Persistence\Pdo\MariadbSc
 $scheduledPlaybackHandler = new \App\Application\EventAudio\Command\ScheduledPlaybackHandler($scheduledPlaybackRepository, $rentalAudioFileRepository, $rentalAudioFileHandler, $rentalRepository);
 $commandBus->register(\App\Application\EventAudio\Command\SchedulePlayback::class, $scheduledPlaybackHandler);
 $commandBus->register(\App\Application\EventAudio\Command\CancelScheduledPlayback::class, $scheduledPlaybackHandler);
+// Messages from the organizer to the stage display / FOH (migration 169).
+$eventMessageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbEventMessageRepository($pdo);
+$eventMessageHandler = new \App\Application\EventMessage\Command\EventMessageHandler($eventMessageRepository, $minuteProgramRepository);
+foreach (['SendEventMessage', 'AcknowledgeEventMessage', 'CloseEventMessage'] as $emCommand) {
+    $commandBus->register('App\\Application\\EventMessage\\Command\\' . $emCommand, $eventMessageHandler);
+}
 $scheduledPlaybackDispatcher = new \App\Application\EventAudio\ScheduledPlaybackDispatcher($scheduledPlaybackRepository, $playbackHandler);
+
+// Stage & FOH displays (migration 168)
+$displayClientRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDisplayClientRepository($pdo);
+$displaySettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDisplaySettingsRepository($pdo);
+$displayAdminHandler = new \App\Application\Display\Command\DisplayAdminHandler($displayClientRepository, $displaySettingsRepository, $rentalRepository, $minuteProgramRepository);
+foreach (['SaveDisplayClient', 'RegenerateDisplayClientToken', 'DeleteDisplayClient', 'SaveDisplaySettings'] as $displayCommand) {
+    $commandBus->register('App\\Application\\Display\\Command\\' . $displayCommand, $displayAdminHandler);
+}
+$displayProgramResolver = new \App\Application\Display\DisplayProgramResolver($minuteProgramRepository, $rentalRepository, $minuteProgramDetailBuilder);
 // Kontoführung (Migration 131)
 $commandBus->register(\App\Application\Banking\Command\SaveOpeningBalance::class, new \App\Application\Banking\Command\SaveOpeningBalanceHandler($accountLedgerRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\Banking\Command\AddAccountTransaction::class, new \App\Application\Banking\Command\AddAccountTransactionHandler($accountLedgerRepository, $bankAccountRepository));
@@ -1793,15 +1808,17 @@ $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSetti
 $rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository);
 $eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $audioPairingCodeRepository);
-$eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $fileStorage, new \App\Infrastructure\Integration\Translation\ConfiguredTranslator($audioSettingsRepository, $aiAdImageSettingsRepository));
+$eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $fileStorage, new \App\Infrastructure\Integration\Translation\ConfiguredTranslator($audioSettingsRepository, $aiAdImageSettingsRepository), $eventMessageRepository);
 $audioSettingsController = new \App\Infrastructure\Http\Controllers\AudioSettingsController($commandBus, $audioSettingsRepository, $audioPlayerRepository, $fileStorage, $aiAdImageSettingsRepository);
 $audioPlayerApiController = new \App\Infrastructure\Http\Controllers\AudioPlayerApiController($commandBus, $audioPlayerRepository, $audioSettingsRepository, $rentalAudioSettingsRepository, $rentalAudioFileRepository, $playbackRequestRepository, $rentalRepository, $fileStorage, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher);
 $minuteProgramTemplateController = new \App\Infrastructure\Http\Controllers\MinuteProgramTemplateController($commandBus, $queryBus);
 $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteProgramShareController($queryBus, $commandBus);
 // Ablauf am FOH (Minutenprogramm-Regie) und Stagedisplay-API, siehe Migration 158.
-$runSheetActions = new \App\Infrastructure\Http\Controllers\RunSheetActions($commandBus, $rentalRepository, $rentalAudioFileRepository);
+$runSheetActions = new \App\Infrastructure\Http\Controllers\RunSheetActions($commandBus, $rentalRepository, $rentalAudioFileRepository, $eventMessageRepository);
 $minuteProgramFohController = new \App\Infrastructure\Http\Controllers\MinuteProgramFohController($queryBus, $runSheetActions, $rentalRepository, $minuteProgramRepository, $minuteProgramShareLinkRepository, $rentalTechnicianRepository);
 $runSheetApiController = new \App\Infrastructure\Http\Controllers\RunSheetApiController($queryBus, $runSheetActions);
+$displaySettingsController = new \App\Infrastructure\Http\Controllers\DisplaySettingsController($commandBus, $displayClientRepository, $displaySettingsRepository, new \App\Application\Display\DisplayTargets($rentalRepository, $minuteProgramRepository), $displayProgramResolver, $rentalRepository);
+$displayApiController = new \App\Infrastructure\Http\Controllers\DisplayApiController($displayClientRepository, $displaySettingsRepository, $displayProgramResolver, $runSheetActions);
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
 $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository, $voucherRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
@@ -2337,6 +2354,8 @@ $router->get('/veranstaltungen/{id}/live', $auth->guard($eaLive, [$eventAudioLiv
 $router->get('/veranstaltungen/{id}/live/status', $auth->guard($eaLive, [$eventAudioLiveController, 'userStatus']));
 $router->post('/veranstaltungen/{id}/live/abspielen', $auth->guard($eaLive, [$eventAudioLiveController, 'userPlay']));
 $router->post('/veranstaltungen/{id}/live/abbrechen/{requestId}', $auth->guard($eaLive, [$eventAudioLiveController, 'userCancel']));
+$router->post('/veranstaltungen/{id}/live/nachricht', $auth->guard($eaLive, [$eventAudioLiveController, 'userSendMessage']));
+$router->post('/veranstaltungen/{id}/live/nachricht/{messageId}/zurueckziehen', $auth->guard($eaLive, [$eventAudioLiveController, 'userCloseMessage']));
 // Veranstalter-Zugänge: bewusst ohne AuthGuard (eigene Anmeldung, siehe EventAudioLiveController)
 $router->get('/live/login', [$eventAudioLiveController, 'loginForm']);
 $router->post('/live/login', [$eventAudioLiveController, 'login']);
@@ -2352,6 +2371,8 @@ $router->post('/live/{id}/uebersetzen', [$eventAudioLiveController, 'organizerTr
 $router->post('/live/{id}/erneut/{requestId}', [$eventAudioLiveController, 'organizerReplay']);
 $router->post('/live/{id}/planung/{scheduleId}/erneut', [$eventAudioLiveController, 'organizerReplay']);
 $router->post('/live/{id}/planung/{scheduleId}/loeschen', [$eventAudioLiveController, 'organizerCancelSchedule']);
+$router->post('/live/{id}/nachricht', [$eventAudioLiveController, 'organizerSendMessage']);
+$router->post('/live/{id}/nachricht/{messageId}/zurueckziehen', [$eventAudioLiveController, 'organizerCloseMessage']);
 $router->get('/einstellungen/veranstaltungs-audio', $auth->guard(Permission::Administration, [$audioSettingsController, 'index']));
 $router->post('/einstellungen/veranstaltungs-audio', $auth->guard(Permission::Administration, [$audioSettingsController, 'saveSettings']));
 $router->get('/einstellungen/veranstaltungs-audio/gong', $auth->guard(Permission::Administration, [$audioSettingsController, 'gong']));
@@ -2719,6 +2740,26 @@ $router->post('/api/runsheet/v1/{token}/finish', [$runSheetApiController, 'finis
 $router->post('/api/runsheet/v1/{token}/reset', [$runSheetApiController, 'reset']);
 foreach (['/api/runsheet/v1/{token}', '/api/runsheet/v1/{token}/delay', '/api/runsheet/v1/{token}/items/{itemId}/start', '/api/runsheet/v1/{token}/finish', '/api/runsheet/v1/{token}/reset'] as $runSheetPath) {
     $router->options($runSheetPath, [$runSheetApiController, 'preflight']);
+}
+
+// Stage & FOH displays (migration 168): settings page, built-in browser client and
+// display API (bearer device token, CSRF-exempt, see docs/display-api.md).
+$router->get('/einstellungen/displays', $auth->guard(Permission::Administration, [$displaySettingsController, 'index']));
+$router->post('/einstellungen/displays', $auth->guard(Permission::Administration, [$displaySettingsController, 'store']));
+$router->post('/einstellungen/displays/einstellungen', $auth->guard(Permission::Administration, [$displaySettingsController, 'saveSettings']));
+$router->post('/einstellungen/displays/{id}', $auth->guard(Permission::Administration, [$displaySettingsController, 'update']));
+$router->post('/einstellungen/displays/{id}/token', $auth->guard(Permission::Administration, [$displaySettingsController, 'regenerateToken']));
+$router->post('/einstellungen/displays/{id}/loeschen', $auth->guard(Permission::Administration, [$displaySettingsController, 'delete']));
+$router->get('/display', [$displayApiController, 'clientPage']);
+$router->get('/api/display/v1/state', [$displayApiController, 'state']);
+$router->post('/api/display/v1/delay', [$displayApiController, 'delay']);
+$router->post('/api/display/v1/items/{itemId}/start', [$displayApiController, 'start']);
+$router->post('/api/display/v1/finish', [$displayApiController, 'finish']);
+$router->post('/api/display/v1/reset', [$displayApiController, 'reset']);
+$router->post('/api/display/v1/messages/{messageId}/seen', [$displayApiController, 'acknowledgeMessage']);
+$router->post('/api/display/v1/messages/{messageId}/hide', [$displayApiController, 'closeMessage']);
+foreach (['/api/display/v1/state', '/api/display/v1/delay', '/api/display/v1/items/{itemId}/start', '/api/display/v1/finish', '/api/display/v1/reset', '/api/display/v1/messages/{messageId}/seen', '/api/display/v1/messages/{messageId}/hide'] as $displayApiPath) {
+    $router->options($displayApiPath, [$displayApiController, 'preflight']);
 }
 
 $router->get('/einstellungen/rechtliches', $auth->guard(Permission::Administration, [$legalSettingsController, 'edit']));

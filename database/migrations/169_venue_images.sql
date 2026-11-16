@@ -1,4 +1,4 @@
--- Migration 167: Photos of a venue with an optional description
+-- Migration 169: Photos of a venue with an optional description
 -- (e.g. access route, loading dock, power distribution, stage).
 --
 --  - venue_images.file_path: relative to storage/uploads/venues,

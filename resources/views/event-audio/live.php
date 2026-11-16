@@ -23,6 +23,9 @@
  * @var ?string $customLogoUrl eigenes Veranstaltungs-Logo (nur Veranstalter)
  * @var int $maxUploadMb
  * @var array{0: string, 1: string} $rentalWindow
+ * @var bool $canMessage Nachrichten an Stagedisplay/FOH (Migration 167)
+ * @var list<array{id: string, label: string}> $messagePrograms
+ * @var int $messageMaxLength
  */
 
 use App\Domain\EventAudio\AudioFormat;
@@ -36,6 +39,9 @@ $canUpload ??= false;
 $rentalLanguages ??= [];
 $translatorAvailable ??= false;
 $languages ??= [];
+$canMessage ??= false;
+$messagePrograms ??= [];
+$messageMaxLength ??= 500;
 $defaultPlayAt = (new DateTimeImmutable('+10 minutes'))->format('Y-m-d\TH:i');
 $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d') !== $rental->startDate->format('Y-m-d') ? ' – ' . $rental->endDate->format('d.m.Y') : '');
 ?>
@@ -194,6 +200,18 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     .empty { color: var(--muted); font-size: .9rem; margin: 0; }
     .warnbox { margin-top: 14px; padding: 10px 14px; border-radius: var(--radius); background: rgba(245,180,60,.12); border: 1px solid rgba(245,180,60,.35); color: #fcd9a0; font-size: .85rem; }
     @media (min-width: 760px) { .cols { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; align-items: start; } .cols > div > section.card:first-child { margin-top: 16px; } }
+    .msg-targets { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; }
+    .msgs { list-style: none; margin: 14px 0 0; padding: 0; }
+    .msgs li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); font-size: .85rem; }
+    .msgs .tm { color: var(--muted); font-variant-numeric: tabular-nums; width: 3.2rem; flex: none; font-size: .75rem; padding-top: 2px; line-height: 1.2; }
+    .msgs .lb { flex: 1; min-width: 0; }
+    .msgs .lb b { display: block; font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .msgs .lb span { display: block; font-size: .72rem; color: var(--muted); margin-top: 2px; }
+    .msgs li.closed .lb b { color: var(--muted); font-weight: 500; }
+    .msgs .urgent { color: #fca5a5; font-weight: 800; }
+    .pill.active { background: rgba(245,180,60,.15); color: var(--accent); }
+    .pill.seen { background: rgba(34,197,94,.15); color: var(--go); }
+    .pill.closed { background: rgba(139,151,181,.15); color: var(--muted); }
     [hidden] { display: none !important; }
 </style>
 </head>
@@ -271,6 +289,34 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                     <button type="button" class="btn primary big" id="ann-send">Durchsage abspielen</button>
                 </div>
             </section>
+
+            <?php if ($canMessage): ?>
+                <section class="card" aria-labelledby="h-msg">
+                    <h2 id="h-msg">Nachricht an Bühne &amp; FOH</h2>
+                    <form id="msg-form">
+                        <textarea name="text" id="msg-text" maxlength="<?= (int) $messageMaxLength ?>" placeholder="z. B. „Redner kommt 5 Minuten später – bitte überbrücken.“" style="min-height: 80px"></textarea>
+                        <div class="msg-targets" role="group" aria-label="Empfänger">
+                            <label class="toggle"><input type="checkbox" name="to_stage" value="1" checked><span class="sw"></span>Stagedisplay</label>
+                            <label class="toggle"><input type="checkbox" name="to_foh" value="1" checked><span class="sw"></span>FOH (Minutenprogramm)</label>
+                            <label class="toggle"><input type="checkbox" name="urgent" value="1"><span class="sw"></span>Dringend</label>
+                        </div>
+                        <?php if (count($messagePrograms) > 1): ?>
+                            <label class="field">Minutenprogramm
+                                <select name="minute_program_id">
+                                    <option value="">alle Minutenprogramme</option>
+                                    <?php foreach ($messagePrograms as $mp): ?><option value="<?= e($mp['id']) ?>"><?= e($mp['label']) ?></option><?php endforeach; ?>
+                                </select>
+                            </label>
+                        <?php endif; ?>
+                        <div class="row">
+                            <span class="hint"><?= $messagePrograms === [] ? 'Noch kein Minutenprogramm angelegt – die Nachricht erscheint, sobald es eines gibt.' : 'Bleibt sichtbar, bis du sie beendest oder der FOH sie ausblendet.' ?></span>
+                            <span class="spacer"></span>
+                            <button type="submit" class="btn primary" id="msg-send">Nachricht senden</button>
+                        </div>
+                    </form>
+                    <ul class="msgs" id="msgs"></ul>
+                </section>
+            <?php endif; ?>
 
             <?php if ($programs !== []): ?>
                 <section class="card" aria-labelledby="h-prog">
@@ -487,6 +533,20 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 + '<span class="pill ' + esc(s.status) + '">' + esc(s.statusLabel) + '</span></li>';
         }).join('');
         $('sched-empty').hidden = sched.length > 0;
+
+        var msgList = $('msgs');
+        if (msgList) {
+            msgList.innerHTML = (status.messages || []).map(function (m) {
+                var meta = [m.targets];
+                if (m.program) { meta.push(m.program); }
+                meta.push(m.by);
+                if (m.seen) { meta.push(m.seen); }
+                if (m.closed) { meta.push(m.closed); }
+                return '<li class="' + esc(m.status) + '"><span class="tm">' + esc(m.time) + (m.date ? '<br>' + esc(m.date) : '') + '</span><span class="lb"><b>' + (m.urgent ? '<span class="urgent">! </span>' : '') + esc(m.text) + '</b><span>' + esc(meta.join(' · ')) + '</span></span>'
+                    + (m.active ? '<button type="button" class="x" data-msg-close="' + esc(m.id) + '">Beenden</button>' : '')
+                    + '<span class="pill ' + esc(m.status) + '">' + esc(m.statusLabel) + '</span></li>';
+            }).join('');
+        }
     }
     var initial = <?= json_encode($initialStatus, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE) ?>;
     render(initial);
@@ -636,6 +696,28 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
                 toast('Datei hochgeladen.');
                 setTimeout(function () { location.reload(); }, 600);
             }).catch(function (err) { toast(err.message, true); btn.disabled = false; btn.textContent = 'Hochladen'; });
+        });
+    }
+
+    // ---------- Nachrichten an Stagedisplay / FOH (Migration 167)
+    var msgForm = $('msg-form');
+    if (msgForm) {
+        msgForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!$('msg-text').value.trim()) { toast('Bitte eine Nachricht eingeben.', true); return; }
+            if (!msgForm.to_stage.checked && !msgForm.to_foh.checked) { toast('Bitte mindestens ein Ziel wählen (Stagedisplay oder FOH).', true); return; }
+            var btn = $('msg-send');
+            btn.disabled = true; btn.textContent = 'Wird gesendet …';
+            post('/nachricht', new FormData(msgForm)).then(function (s) {
+                render(s); toast('Nachricht gesendet.');
+                $('msg-text').value = ''; msgForm.urgent.checked = false;
+            }).catch(function (err) { toast(err.message, true); }).then(function () { btn.disabled = false; btn.textContent = 'Nachricht senden'; });
+        });
+        $('msgs').addEventListener('click', function (e) {
+            var b = e.target.closest('[data-msg-close]');
+            if (!b) { return; }
+            b.disabled = true;
+            post('/nachricht/' + encodeURIComponent(b.dataset.msgClose) + '/zurueckziehen').then(function (s) { render(s); toast('Nachricht beendet.'); }).catch(function (err) { b.disabled = false; toast(err.message, true); });
         });
     }
 

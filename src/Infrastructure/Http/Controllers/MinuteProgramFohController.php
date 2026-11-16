@@ -131,7 +131,8 @@ final class MinuteProgramFohController
     /** @param callable(): ?MinuteProgramDetail $reload */
     private function act(Request $request, MinuteProgramDetail $detail, callable $reload): void
     {
-        $error = $this->actions->perform($request->param('action'), $detail, RunSheetActions::input($request), $request->routeParams['itemId'] ?? null);
+        $actor = CurrentUser::get()?->displayName();
+        $error = $this->actions->perform($request->param('action'), $detail, RunSheetActions::input($request), $request->routeParams['itemId'] ?? null, $actor !== null && $actor !== '' ? $actor . ' (FOH)' : 'FOH');
         if ($error !== null) {
             Response::json(['ok' => false, 'error' => $error[0]], $error[1]);
 

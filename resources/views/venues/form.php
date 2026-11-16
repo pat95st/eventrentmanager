@@ -8,6 +8,7 @@
 /** @var \App\Domain\Venue\PowerConnection[] $powerConnections */
 /** @var bool $needsDistributorWithRcd */
 /** @var \App\Domain\Venue\Stage[] $stages */
+/** @var \App\Domain\Venue\VenueImage[] $images */
 /** @var array<string, \App\Domain\Venue\Riser[]> $stageRisers Bühnen-ID => Riser */
 /** @var \App\Domain\Warehouse\Warehouse[] $warehouses */
 /** @var string $companyAddress */
@@ -159,6 +160,61 @@ $formatMeters = static function (float $meters): string {
         <a href="/veranstaltungsorte" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
     </div>
 </form>
+
+<?php if ($venue !== null): ?>
+    <div id="bilder" class="mt-6 scroll-mt-20 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('venues.images.title')) ?></h2>
+        <p class="mb-3 mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('venues.images.intro')) ?></p>
+
+        <?php if ($images === []): ?>
+            <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('venues.images.empty')) ?></p>
+        <?php else: ?>
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <?php foreach ($images as $image): ?>
+                    <?php $imageUrl = '/veranstaltungsorte/' . $venue->id . '/bilder/' . $image->id; ?>
+                    <div class="flex min-w-0 flex-col gap-1.5">
+                        <div class="relative aspect-[4/3] w-full overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
+                            <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="venue-images" data-gallery-src="<?= e($imageUrl) ?>" data-gallery-caption="<?= e($image->description ?? $venue->name) ?>" aria-label="<?= e(t('gallery.open')) ?>">
+                                <img src="<?= e($imageUrl) ?>" alt="<?= e($image->description ?? '') ?>" loading="lazy" class="h-full w-full object-cover">
+                            </button>
+                            <form method="post" action="<?= e($imageUrl) ?>/loeschen" data-confirm="<?= e(t('venues.images.confirm_delete')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
+                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <button type="submit" class="rounded bg-white/90 px-1.5 py-0.5 text-xs font-medium text-red-700 shadow hover:bg-white dark:bg-slate-900/90 dark:text-red-400" title="<?= e(t('venues.images.delete')) ?>" aria-label="<?= e(t('venues.images.delete')) ?>">&times;</button>
+                            </form>
+                        </div>
+                        <?php if ($image->description !== null): ?>
+                            <p class="text-xs text-slate-600 dark:text-slate-300" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line;"><?= e($image->description) ?></p>
+                        <?php endif; ?>
+                        <details>
+                            <summary class="cursor-pointer text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($image->description !== null ? t('venues.images.edit_description') : t('venues.images.add_description')) ?></summary>
+                            <form method="post" action="<?= e($imageUrl) ?>" class="mt-1 space-y-1">
+                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <textarea name="description" rows="3" maxlength="<?= \App\Domain\Venue\VenueImage::MAX_DESCRIPTION_LENGTH ?>" placeholder="<?= e(t('venues.images.description_placeholder')) ?>"
+                                          class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700"><?= e($image->description ?? '') ?></textarea>
+                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
+                            </form>
+                        </details>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+        <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/bilder" enctype="multipart/form-data" class="mt-4 space-y-2 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+            <div>
+                <label for="venue-images-upload" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.images.file_label')) ?></label>
+                <input type="file" id="venue-images-upload" name="images[]" accept="image/jpeg,image/png,image/webp,image/gif" multiple required class="mt-1 text-xs text-slate-600 dark:text-slate-300">
+            </div>
+            <div>
+                <label for="venue-images-description" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('venues.images.description_label')) ?></label>
+                <textarea id="venue-images-description" name="description" rows="2" maxlength="<?= \App\Domain\Venue\VenueImage::MAX_DESCRIPTION_LENGTH ?>" placeholder="<?= e(t('venues.images.description_placeholder')) ?>"
+                          class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs dark:border-slate-700"></textarea>
+                <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500"><?= e(t('venues.images.upload_hint')) ?></p>
+            </div>
+            <button type="submit" class="rounded-md bg-brand-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('venues.images.upload')) ?></button>
+        </form>
+    </div>
+<?php endif; ?>
 
 <?php if ($venue !== null): ?>
     <div class="mt-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
@@ -458,3 +514,4 @@ $formatMeters = static function (float $meters): string {
 </script>
 <script src="/assets/js/stage-riser-editor.js?v=<?= (string) (@filemtime(dirname(__DIR__, 3) . '/public/assets/js/stage-riser-editor.js') ?: 1) ?>" defer></script>
 <?php require __DIR__ . '/../_map_modal.php'; /* Karten-Modal */ ?>
+<?php require __DIR__ . '/../_image_gallery_modal.php'; /* Lightbox for venue images */ ?>

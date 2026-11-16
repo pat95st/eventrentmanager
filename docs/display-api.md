@@ -1,6 +1,6 @@
 # Display-Schnittstelle für Stage- und FOH-Displays
 
-Stand: Migration 167 „Stage- & FOH-Displays“. Diese Beschreibung ist die Vorlage für Display-Clients (Bühnenmonitor, Konfidenzmonitor, Regie-Bildschirm). Eine fertige Umsetzung im Browser liefert die Verwaltung selbst unter `/display` mit.
+Stand: Migration 168 „Stage- & FOH-Displays“. Diese Beschreibung ist die Vorlage für Display-Clients (Bühnenmonitor, Konfidenzmonitor, Regie-Bildschirm). Eine fertige Umsetzung im Browser liefert die Verwaltung selbst unter `/display` mit.
 
 ## Überblick
 
@@ -29,6 +29,8 @@ Es gibt weder Cookies noch CSRF-Schutz. Alle Antworten senden `Access-Control-Al
 | POST    | `/api/display/v1/items/{itemId}/start`       | Programmpunkt starten          | FOH-Display mit „Steuern erlauben“ |
 | POST    | `/api/display/v1/finish`                     | Programm beenden               | FOH-Display mit „Steuern erlauben“ |
 | POST    | `/api/display/v1/reset`                      | Live-Stand zurücksetzen        | FOH-Display mit „Steuern erlauben“ |
+| POST    | `/api/display/v1/messages/{id}/seen`         | Nachricht als gesehen markieren | FOH-Display mit „Steuern erlauben“ |
+| POST    | `/api/display/v1/messages/{id}/hide`         | Nachricht ausblenden (auch auf der Bühne) | FOH-Display mit „Steuern erlauben“ |
 
 - Jede Abfrage von `state` zählt als Lebenszeichen; nach 45 s ohne Abfrage gilt das Display in der Verwaltung als offline. `version` (optional) erscheint in der Geräteübersicht.
 - Die POST-Endpunkte nehmen dieselben Daten wie die Run-Sheet-API (`adopt`, `adjust_seconds`, `delay_seconds`, `delay` bzw. `started_at`), als JSON oder Formular. Sie wirken auf das Programm, das das Display gerade zeigt. Die Antwort enthält `"ok": true` und den kompletten neuen Stand (wie `GET …/state`).
@@ -83,6 +85,7 @@ Fehler: `401` ungültiger Token, `403` Display darf nicht steuern, `404` unbekan
 | `display.thresholds` | Restzeit in Sekunden, ab der der Countdown gelb (`warnSeconds`) bzw. rot (`criticalSeconds`, sowie beim Überziehen) dargestellt werden soll. |
 | `display.configRevision` | Ändert sich, sobald sich die Konfiguration des Displays ändert. Zusammen mit `runSheet.revision` für „nur bei Änderung neu zeichnen“. |
 | `runSheet` | Live-Stand des gezeigten Minutenprogramms oder `null`, wenn gerade keins zugeordnet ist (dann z. B. den Display-Namen und „kein Programm“ zeigen). |
+| `runSheet.messages` | Aktive Nachrichten des Veranstalters (Format siehe [stagedisplay-api.md](stagedisplay-api.md)). **Stagedisplays** erhalten nur Nachrichten an die Bühne (`stage = true`), **FOH-Displays** alle. Ein FOH-Display mit Steuerung kann sie als gesehen markieren oder ausblenden. |
 
 Innerhalb von `apiVersion` 1 kommen nur neue Felder hinzu; Clients müssen unbekannte Felder (auch unbekannte Optionen) ignorieren.
 
@@ -91,6 +94,7 @@ Innerhalb von `apiVersion` 1 kommen nur neue Felder hinzu; Clients müssen unbek
 - Im Abstand von `pollIntervalSeconds` abfragen, Countdowns lokal jede Sekunde aus `startsAt`/`endsAt` und dem Uhren-Offset (`serverTime`) berechnen – siehe die Empfehlungen in [stagedisplay-api.md](stagedisplay-api.md).
 - Bei Netzwerkfehlern den letzten Stand weiter anzeigen und sichtbar als „offline“ markieren.
 - `event.noStrobe` oder `current.noStrobe` deutlich als „Kein Stroboskop“ anzeigen.
+- Nachrichten (`runSheet.messages`) gut sichtbar zeigen, dringende (`urgent`) besonders auffällig.
 
 ## Browser-Client `/display`
 

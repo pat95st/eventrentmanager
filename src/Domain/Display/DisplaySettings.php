@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Display;
 
 /**
- * Global display settings (migration 167, single row): how often clients
+ * Global display settings (migration 168, single row): how often clients
  * poll and when a countdown turns yellow (warn) or red (critical).
  */
 final class DisplaySettings

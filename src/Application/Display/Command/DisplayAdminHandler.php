@@ -19,7 +19,7 @@ use App\Shared\Uuid;
 use DateTimeImmutable;
 
 /**
- * Settings › Stage & FOH displays (migration 167): manage display devices
+ * Settings › Stage & FOH displays (migration 168): manage display devices
  * (SaveDisplayClient, RegenerateDisplayClientToken, DeleteDisplayClient)
  * and the global display settings (SaveDisplaySettings).
  */

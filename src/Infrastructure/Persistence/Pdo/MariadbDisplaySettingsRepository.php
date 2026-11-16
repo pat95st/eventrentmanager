@@ -8,7 +8,7 @@ use App\Domain\Display\DisplaySettings;
 use App\Domain\Display\DisplaySettingsRepositoryInterface;
 use PDO;
 
-/** Global display settings (migration 167, single row id = 1). */
+/** Global display settings (migration 168, single row id = 1). */
 final class MariadbDisplaySettingsRepository implements DisplaySettingsRepositoryInterface
 {
     public function __construct(private readonly PDO $pdo)

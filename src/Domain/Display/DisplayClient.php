@@ -7,7 +7,7 @@ namespace App\Domain\Display;
 use DateTimeImmutable;
 
 /**
- * Display device (stage or FOH display, migration 167) that authenticates
+ * Display device (stage or FOH display, migration 168) that authenticates
  * with a device token at the display API (/api/display/v1, see
  * docs/display-api.md).
  *

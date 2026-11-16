@@ -1,6 +1,6 @@
 <?php
 /**
- * Browser client for stage and FOH displays (migration 167). Public page
+ * Browser client for stage and FOH displays (migration 168). Public page
  * without login: the device token is entered once (or passed as URL anchor
  * "#token=…", which never reaches the server) and stored in localStorage.
  * Everything is rendered client-side from GET /api/display/v1/state, so this
@@ -76,6 +76,14 @@
     .btn:hover { border-color: var(--muted); }
     .btn.go { background: var(--go); border-color: var(--go); color: #04210f; }
     .btn.small { padding: .25rem .6rem; font-size: .85rem; }
+    .messages { display: flex; flex-direction: column; gap: .5rem; padding: .6rem 1.2rem 0; }
+    .msg { display: flex; align-items: center; gap: 1rem; background: rgba(96,165,250,.14); border: 2px solid var(--info); border-radius: .8rem; padding: .7rem 1rem; font-size: 1.9rem; font-weight: 700; white-space: pre-line; }
+    .msg.urgent { background: rgba(239,68,68,.18); border-color: var(--stop); animation: blink 1s steps(2, start) infinite; }
+    .msg .text { flex: 1; }
+    .msg .meta { display: block; font-size: .8rem; font-weight: 500; color: var(--muted); }
+    .foh-view .msg { font-size: 1.2rem; animation: none; }
+    @keyframes blink { 50% { border-color: transparent; } }
+    @media (prefers-reduced-motion: reduce) { .msg.urgent { animation: none; } }
     .center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; gap: 1rem; }
     .setup { max-width: 34rem; width: 100%; }
     .setup input { width: 100%; padding: .7rem .9rem; border-radius: .6rem; border: 1px solid var(--line); background: var(--panel); font-family: ui-monospace, monospace; }
@@ -244,6 +252,16 @@
             '<button class="btn" data-finish>Beenden</button><button class="btn" data-reset>Zurücksetzen</button></div>';
     }
 
+    function messagesHtml(rs, foh) {
+        var list = (rs && rs.messages) || [];
+        if (!list.length) { return ''; }
+        return '<div class="messages">' + list.map(function (msg) {
+            var meta = foh ? '<span class="meta">' + esc(msg.sentBy || '') + ' · ' + hm(msg.sentAt) + (msg.stage ? ' · auch auf der Bühne' : ' · nur FOH') + (msg.acknowledgedAt ? ' · gesehen ' + hm(msg.acknowledgedAt) : '') + '</span>' : '';
+            var buttons = foh && rs.live.canControl ? (msg.acknowledgedAt ? '' : '<button class="btn small" data-msg-seen="' + esc(msg.id) + '">Gesehen</button>') + '<button class="btn small" data-msg-hide="' + esc(msg.id) + '">Ausblenden</button>' : '';
+            return '<div class="msg' + (msg.urgent ? ' urgent' : '') + '"><span class="text">' + (msg.urgent ? '⚠ ' : '') + esc(msg.text) + meta + '</span>' + buttons + '</div>';
+        }).join('') + '</div>';
+    }
+
     function render(full) {
         if (!data) { return; }
         var d = data.display, o = d.options, rs = data.runSheet;
@@ -259,7 +277,8 @@
             } else {
                 body = '<main><div class="stage">' + currentBlock(rs, o) + nextBlock(rs, o) + micsHtml(rs, o) + '</div>' + (o.showItemList ? '<div style="width:34%;display:flex;padding:1rem">' + listHtml(rs, o, false) + '</div>' : '') + '</main>';
             }
-            app.innerHTML = header(d, rs, o) + body;
+            document.body.classList.toggle('foh-view', d.role === 'foh');
+            app.innerHTML = header(d, rs, o) + messagesHtml(rs, d.role === 'foh') + body;
         } else {
             var badge = app.querySelector('header .badge.offline');
             if (!offline && badge) { badge.remove(); }
@@ -296,6 +315,8 @@
         if (b.dataset.start) { act('/items/' + encodeURIComponent(b.dataset.start) + '/start'); }
         else if (b.dataset.adjust) { act('/delay', { adjust_seconds: parseInt(b.dataset.adjust, 10) }); }
         else if (b.hasAttribute('data-adopt')) { act('/delay', { adopt: true }); }
+        else if (b.dataset.msgSeen) { act('/messages/' + encodeURIComponent(b.dataset.msgSeen) + '/seen'); }
+        else if (b.dataset.msgHide) { act('/messages/' + encodeURIComponent(b.dataset.msgHide) + '/hide', null, 'Nachricht ausblenden? Sie verschwindet auch vom Stagedisplay.'); }
         else if (b.hasAttribute('data-finish')) { act('/finish', null, 'Programm als beendet markieren?'); }
         else if (b.hasAttribute('data-reset')) { act('/reset', null, 'Live-Stand zurücksetzen (Verzug und Starts löschen)?'); }
     });

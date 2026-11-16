@@ -8,6 +8,7 @@ use App\Application\Display\DisplayProgramResolver;
 use App\Application\MinuteProgram\Query\MinuteProgramDetail;
 use App\Domain\Display\DisplayClient;
 use App\Domain\Display\DisplayClientRepositoryInterface;
+use App\Domain\Display\DisplayRole;
 use App\Domain\Display\DisplaySettings;
 use App\Domain\Display\DisplaySettingsRepositoryInterface;
 use App\Infrastructure\Http\Request;
@@ -16,7 +17,7 @@ use App\Infrastructure\Http\View;
 use DateTimeImmutable;
 
 /**
- * Display API for stage and FOH displays (migration 167), see
+ * Display API for stage and FOH displays (migration 168), see
  * docs/display-api.md.
  *
  * Authentication: "Authorization: Bearer <device token>" (Settings › Stage &
@@ -72,6 +73,18 @@ final class DisplayApiController
         $this->act($request, 'reset');
     }
 
+    /** Marks an organizer message as seen (migration 167 messages). */
+    public function acknowledgeMessage(Request $request): void
+    {
+        $this->act($request, 'nachricht-gesehen', $request->param('messageId'));
+    }
+
+    /** Hides an organizer message (also removes it from stage displays). */
+    public function closeMessage(Request $request): void
+    {
+        $this->act($request, 'nachricht-ausblenden', $request->param('messageId'));
+    }
+
     /** Built-in browser client (public page, the token is entered on the device). */
     public function clientPage(Request $request): void
     {
@@ -106,7 +119,7 @@ final class DisplayApiController
 
             return;
         }
-        $error = $this->actions->perform($action, $detail, RunSheetActions::input($request), $itemId);
+        $error = $this->actions->perform($action, $detail, RunSheetActions::input($request), $itemId, $client->name . ' (FOH-Display)');
         if ($error !== null) {
             self::json(['ok' => false, 'error' => $error[0]], $error[1]);
 
@@ -126,7 +139,8 @@ final class DisplayApiController
             'serverTime' => $now->format(DATE_ATOM),
             'pollIntervalSeconds' => $settings->pollIntervalSeconds,
             'display' => self::display($client, $settings),
-            'runSheet' => $detail !== null ? $this->actions->payload($detail, $client->canControl()) : null,
+            // Messages: FOH displays see all active ones, stage displays only those sent to the stage.
+            'runSheet' => $detail !== null ? $this->actions->payload($detail, $client->canControl(), $client->role === DisplayRole::Foh ? RunSheetActions::AUDIENCE_FOH : RunSheetActions::AUDIENCE_STAGE) : null,
         ];
     }
 

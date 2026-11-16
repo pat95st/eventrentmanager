@@ -25,7 +25,7 @@ use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
 /**
- * Settings › Events & planning › Stage & FOH displays (migration 167):
+ * Settings › Events & planning › Stage & FOH displays (migration 168):
  * display devices with device token, role (stage/FOH), assignment to an
  * event or minute program and layout options – all on one page, modelled
  * after Settings › Event audio. Devices poll /api/display/v1 (see

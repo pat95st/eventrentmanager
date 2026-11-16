@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Display;
 
 /**
- * Role of a display device (migration 167). Decides the layout the client
+ * Role of a display device (migration 168). Decides the layout the client
  * shows; a device can be switched between roles at any time, so the same
  * hardware/client software serves the stage and the FOH.
  */

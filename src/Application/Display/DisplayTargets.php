@@ -11,7 +11,7 @@ use App\Domain\Rental\RentalRepositoryInterface;
 use DateTimeImmutable;
 
 /**
- * Selectable assignments for the display settings page (migration 167):
+ * Selectable assignments for the display settings page (migration 168):
  * events with minute programs from a week ago until four months ahead, plus
  * the events currently assigned to a device (even if outside that window).
  */

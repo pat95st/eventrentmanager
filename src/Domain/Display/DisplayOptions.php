@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Display;
 
 /**
- * Layout options of a display device (migration 167), stored as JSON in
+ * Layout options of a display device (migration 168), stored as JSON in
  * display_clients.options_json and passed unchanged to the client in the
  * display API (see docs/display-api.md). Only ADD keys, never rename them.
  */

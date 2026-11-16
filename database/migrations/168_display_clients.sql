@@ -1,4 +1,4 @@
--- Migration 167: Stage and FOH displays.
+-- Migration 168: Stage and FOH displays.
 --
 --  display_clients: display devices (stage monitor, confidence monitor,
 --    FOH screen) that authenticate with a device token at the display API

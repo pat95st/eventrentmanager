@@ -11,7 +11,7 @@ use App\Domain\Display\DisplayRole;
 use DateTimeImmutable;
 use PDO;
 
-/** Stage and FOH displays (migration 167). */
+/** Stage and FOH displays (migration 168). */
 final class MariadbDisplayClientRepository implements DisplayClientRepositoryInterface
 {
     public function __construct(private readonly PDO $pdo)

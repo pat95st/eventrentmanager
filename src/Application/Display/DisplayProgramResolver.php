@@ -13,7 +13,7 @@ use App\Domain\Rental\RentalRepositoryInterface;
 use DateTimeImmutable;
 
 /**
- * Determines which minute program a display device shows (migration 167):
+ * Determines which minute program a display device shows (migration 168):
  *
  *  1. the pinned program ($client->minuteProgramId), if it still exists;
  *  2. otherwise the programs of the assigned event – or, without an event,

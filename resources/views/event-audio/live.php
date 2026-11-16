@@ -23,7 +23,7 @@
  * @var ?string $customLogoUrl eigenes Veranstaltungs-Logo (nur Veranstalter)
  * @var int $maxUploadMb
  * @var array{0: string, 1: string} $rentalWindow
- * @var bool $canMessage Nachrichten an Stagedisplay/FOH (Migration 166)
+ * @var bool $canMessage Nachrichten an Stagedisplay/FOH (Migration 167)
  * @var list<array{id: string, label: string}> $messagePrograms
  * @var int $messageMaxLength
  */
@@ -699,7 +699,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
         });
     }
 
-    // ---------- Nachrichten an Stagedisplay / FOH (Migration 166)
+    // ---------- Nachrichten an Stagedisplay / FOH (Migration 167)
     var msgForm = $('msg-form');
     if (msgForm) {
         msgForm.addEventListener('submit', function (e) {

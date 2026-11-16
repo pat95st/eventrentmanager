@@ -28,7 +28,7 @@ use App\Infrastructure\Http\Request;
  * (RunSheetApiController): set/adjust the delay, start an item, finish and
  * reset. Input comes from form fields or a JSON body.
  *
- * Migration 166: the payload also carries the organizer's active messages;
+ * Migration 167: the payload also carries the organizer's active messages;
  * FOH may acknowledge ("seen") or hide them.
  */
 final class RunSheetActions
@@ -64,8 +64,11 @@ final class RunSheetActions
             $jingleTitle = $this->audioFiles?->findById($program->jingleAudioFileId)?->title;
         }
 
+        $rental = $this->rentals->findById($program->rentalId);
+
         return RunSheetPayload::build($detail, [
-            'eventName' => $this->rentals->findById($program->rentalId)?->eventName,
+            'eventName' => $rental?->eventName,
+            'eventNoStrobe' => $rental?->noStrobe ?? false,
             'jingleTitle' => $jingleTitle,
             'canControl' => $canControl,
             'messages' => $this->messagesFor($program->rentalId, $program->id, $audience),

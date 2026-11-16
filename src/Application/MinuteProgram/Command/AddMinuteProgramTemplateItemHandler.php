@@ -46,6 +46,7 @@ final class AddMinuteProgramTemplateItemHandler implements CommandHandlerInterfa
             noteVideo: self::normalize($command->noteVideo),
             noteStage: self::normalize($command->noteStage),
             durationMinutes: $command->durationMinutes !== null ? max(0, $command->durationMinutes) : null,
+            noStrobe: $command->noStrobe,
         );
 
         $this->items->save($item);

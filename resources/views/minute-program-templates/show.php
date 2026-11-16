@@ -35,7 +35,7 @@ $template = $detail->template;
         <?php foreach ($detail->items as $item): ?>
             <tr>
                 <td class="px-4 py-2 align-top">
-                    <div class="font-medium text-slate-900 dark:text-slate-100"><?= e($item->name) ?></div>
+                    <div class="font-medium text-slate-900 dark:text-slate-100"><?= e($item->name) ?><?= $item->noStrobe ? ' <span class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-700 dark:bg-red-950/40 dark:text-red-400">' . e(t('minute_programs.show.no_strobe')) . '</span>' : '' ?></div>
                     <?php if ($item->description !== null): ?><div class="text-xs text-slate-500 dark:text-slate-400"><?= e($item->description) ?></div><?php endif; ?>
                 </td>
                 <td class="px-4 py-2 align-top text-xs text-slate-500"><?= $item->durationMinutes !== null ? e((string) $item->durationMinutes) . ' min' : '–' ?></td>
@@ -72,6 +72,10 @@ $template = $detail->template;
             <input type="number" min="0" name="duration_minutes" placeholder="<?= e(t('minute_programs.item_form.duration')) ?>" class="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
             <input type="text" name="description" placeholder="<?= e(t('minute_programs.item_form.description')) ?>" class="rounded-md border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">
             <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('minute_programs.show.add_item')) ?></button>
+            <label class="flex items-center gap-2 text-sm text-slate-700 sm:col-span-4 dark:text-slate-300">
+                <input type="checkbox" name="no_strobe" value="1">
+                <?= e(t('minute_programs.item_form.no_strobe')) ?>
+            </label>
         </form>
     </div>
 </div>

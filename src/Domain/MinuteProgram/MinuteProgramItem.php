@@ -23,6 +23,8 @@ final class MinuteProgramItem
         public ?string $noteVideo,
         public ?string $noteStage,
         public ?int $durationMinutes,
+        // Migration 166: no strobe lighting may be used during this item.
+        public bool $noStrobe = false,
     ) {
     }
 }

@@ -731,7 +731,7 @@ $scheduledPlaybackRepository = new \App\Infrastructure\Persistence\Pdo\MariadbSc
 $scheduledPlaybackHandler = new \App\Application\EventAudio\Command\ScheduledPlaybackHandler($scheduledPlaybackRepository, $rentalAudioFileRepository, $rentalAudioFileHandler, $rentalRepository);
 $commandBus->register(\App\Application\EventAudio\Command\SchedulePlayback::class, $scheduledPlaybackHandler);
 $commandBus->register(\App\Application\EventAudio\Command\CancelScheduledPlayback::class, $scheduledPlaybackHandler);
-// Messages from the organizer to the stage display / FOH (migration 166).
+// Messages from the organizer to the stage display / FOH (migration 167).
 $eventMessageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbEventMessageRepository($pdo);
 $eventMessageHandler = new \App\Application\EventMessage\Command\EventMessageHandler($eventMessageRepository, $minuteProgramRepository);
 foreach (['SendEventMessage', 'AcknowledgeEventMessage', 'CloseEventMessage'] as $emCommand) {

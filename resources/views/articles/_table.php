@@ -40,7 +40,7 @@ use function App\Infrastructure\Http\t;
                     $category = $item->category;
                     $thumb = $article->images[0] ?? null;
                     ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/artikel/<?= e($article->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/artikel/<?= e($article->id) ?>">
                         <td class="px-4 py-3">
                             <div class="flex items-center gap-3">
                                 <?php if ($thumb !== null): ?>

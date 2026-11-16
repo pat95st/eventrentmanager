@@ -9,7 +9,7 @@ Stand: Migration 158 „Ablauf am FOH“. Diese Beschreibung ist die Vorlage fü
 - Nach einem Start bleibt dieser Punkt **aktuell**, bis der nächste gestartet wird („FOH-Modus“, `live.tracking = true`). Überzieht er, wächst der **prognostizierte Verzug** (`live.projectedDelaySeconds`) sekündlich mit, ohne dass jemand etwas eingeben muss.
 - Ohne Start gilt der „Uhr-Modus“: aktuell ist der letzte Punkt, dessen verschobene Startzeit erreicht ist.
 - **Programm beenden** markiert das Programm als beendet (`live.state = "finished"`), **Zurücksetzen** stellt den ursprünglichen Plan wieder her.
-- **Nachrichten** (Migration 166): Der Veranstalter kann über die Live-Oberfläche „Audio & Durchsagen“ (`/live/{id}`) kurze Texte an das Stagedisplay und/oder den FOH schicken. Das Stagedisplay erhält in `messages` alle aktiven Nachrichten, die an die Bühne gerichtet sind. Eine Nachricht bleibt aktiv, bis der Absender sie beendet oder der FOH sie ausblendet – dann fehlt sie in der nächsten Antwort.
+- **Nachrichten** (Migration 167): Der Veranstalter kann über die Live-Oberfläche „Audio & Durchsagen“ (`/live/{id}`) kurze Texte an das Stagedisplay und/oder den FOH schicken. Das Stagedisplay erhält in `messages` alle aktiven Nachrichten, die an die Bühne gerichtet sind. Eine Nachricht bleibt aktiv, bis der Absender sie beendet oder der FOH sie ausblendet – dann fehlt sie in der nächsten Antwort.
 
 ## Zugang (Token)
 
@@ -69,7 +69,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
   "apiVersion": 1,
   "serverTime": "2026-11-15T20:12:00+01:00",
   "revision": "bd7c8561a5b09953",
-  "event": { "name": "Firmengala 2026" },
+  "event": { "name": "Firmengala 2026", "noStrobe": false },
   "program": {
     "id": "…", "name": "Abendprogramm", "room": "Großer Saal",
     "plannedStart": "2026-11-15T20:00:00+01:00",
@@ -92,6 +92,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
   "current": {
     "id": "…", "position": 2, "name": "Begrüßung", "description": "…",
     "notes": { "general": "…", "sound": "HH 1", "light": "…", "video": null, "stage": null },
+    "noStrobe": true,
     "durationSeconds": 300,
     "startsAt": "2026-11-15T20:11:00+01:00",
     "endsAt": "2026-11-15T20:16:00+01:00",
@@ -104,6 +105,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
     {
       "id": "…", "position": 1, "name": "Einlass", "description": null,
       "notes": { "general": null, "sound": "…", "light": "…", "video": null, "stage": null },
+      "noStrobe": false,
       "durationMinutes": 10,
       "status": "done",
       "plannedStart": "…", "plannedEnd": "…",
@@ -145,6 +147,8 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
 | `items[].currentStart` | Plan + gesetzter Verzug. |
 | `items[].projectedStart` | Tatsächlicher Beginn (falls gestartet), sonst voraussichtlicher Beginn inkl. laufender Überziehung. |
 | `notes` | Hinweise je Gewerk: `general`, `sound`, `light`, `video`, `stage` (jeweils `null`, wenn leer). |
+| `event.noStrobe` | `true`: Bei der gesamten Veranstaltung darf kein Stroboskop-Licht eingesetzt werden. |
+| `noStrobe` (bei `current`, `next`, `items[]`) | `true`: Bei diesem Programmpunkt darf kein Stroboskop-Licht eingesetzt werden. Gilt zusätzlich zu `event.noStrobe` – ein Display sollte den Hinweis zeigen, wenn eines der beiden `true` ist. |
 | `messages` | Aktive Nachrichten des Veranstalters an die Bühne, älteste zuerst (leeres Array, wenn keine). Über die API kommen nur Nachrichten mit `stage = true`; reine FOH-Nachrichten erscheinen nur auf der FOH-Seite. |
 | `messages[].text` | Nachrichtentext (max. 500 Zeichen, kann Zeilenumbrüche enthalten). |
 | `messages[].urgent` | Als dringend markiert – auffällig darstellen (z. B. rot, blinkend). |

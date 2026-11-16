@@ -39,7 +39,7 @@ foreach ($manufacturers as $manufacturer) {
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($cases as $case): ?>
                     <?php $manufacturer = $manufacturerById[$case->manufacturerId] ?? null; ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/cases/<?= e($case->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/cases/<?= e($case->id) ?>">
                         <td class="px-4 py-3 break-words font-medium text-slate-900 dark:text-slate-100"><?= e($case->name) ?></td>
                         <td class="px-4 py-3 break-words font-mono text-xs text-slate-500 dark:text-slate-400">
                             <?= ($manufacturer?->prefix !== null && $case->prefix !== null) ? e($manufacturer->prefix . '-' . $case->prefix) : '–' ?>

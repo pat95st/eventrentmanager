@@ -23,10 +23,10 @@ final class RunSheetPayload
     public const API_VERSION = 1;
 
     /**
-     * $context['messages']: active messages (migration 166) already filtered
+     * $context['messages']: active messages (migration 167) already filtered
      * for the audience (stage display: only those sent to the stage).
      *
-     * @param array{eventName?: ?string, jingleTitle?: ?string, canControl?: bool, messages?: list<EventMessage>} $context
+     * @param array{eventName?: ?string, eventNoStrobe?: bool, jingleTitle?: ?string, canControl?: bool, messages?: list<EventMessage>} $context
      *
      * @return array<string, mixed>
      */
@@ -56,8 +56,12 @@ final class RunSheetPayload
             'apiVersion' => self::API_VERSION,
             'serverTime' => $now->format(DATE_ATOM),
             // Changes whenever plan or live state change (not with the clock).
-            'revision' => self::revision($detail, $messages),
-            'event' => ['name' => $context['eventName'] ?? null],
+            'revision' => self::revision($detail, $context['eventNoStrobe'] ?? false, $messages),
+            'event' => [
+                'name' => $context['eventName'] ?? null,
+                // Migration 166: no strobe allowed at the whole event.
+                'noStrobe' => $context['eventNoStrobe'] ?? false,
+            ],
             'program' => [
                 'id' => $program->id,
                 'name' => $program->name,
@@ -86,7 +90,7 @@ final class RunSheetPayload
             'current' => $current !== null ? self::itemRef($current, $now) : null,
             'next' => $next !== null ? self::itemRef($next, $now) : null,
             'items' => array_map(static fn (MinuteProgramItemDetail $d): array => self::item($d), $items),
-            // Migration 166: messages from the organizer, oldest first.
+            // Migration 167: messages from the organizer, oldest first.
             'messages' => array_map(static fn (EventMessage $m): array => self::message($m), array_values($messages)),
         ];
     }
@@ -105,6 +109,7 @@ final class RunSheetPayload
             'name' => $d->item->name,
             'description' => $d->item->description,
             'notes' => self::notes($d),
+            'noStrobe' => $d->item->noStrobe,
             'durationSeconds' => $duration,
             'startsAt' => self::time($start),
             'endsAt' => self::time($end),
@@ -124,6 +129,7 @@ final class RunSheetPayload
             'name' => $d->item->name,
             'description' => $d->item->description,
             'notes' => self::notes($d),
+            'noStrobe' => $d->item->noStrobe,
             'durationMinutes' => $d->item->durationMinutes,
             'status' => $d->status,
             'plannedStart' => self::time($d->plannedStart),
@@ -165,13 +171,13 @@ final class RunSheetPayload
     }
 
     /** @param list<EventMessage> $messages */
-    private static function revision(MinuteProgramDetail $detail, array $messages = []): string
+    private static function revision(MinuteProgramDetail $detail, bool $eventNoStrobe, array $messages = []): string
     {
         $p = $detail->program;
-        $parts = [$p->updatedAt->format(DATE_ATOM), $p->startAt->format(DATE_ATOM), $p->currentDelaySeconds, $p->liveItemId, $p->liveFinishedAt?->format(DATE_ATOM)];
+        $parts = [$p->updatedAt->format(DATE_ATOM), $p->startAt->format(DATE_ATOM), $p->currentDelaySeconds, $p->liveItemId, $p->liveFinishedAt?->format(DATE_ATOM), $eventNoStrobe ? 1 : 0];
         foreach ($detail->items as $d) {
             $i = $d->item;
-            $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, $i->noteSound, $i->noteLight, $i->noteVideo, $i->noteStage]);
+            $parts[] = implode('|', [$i->id, $i->sortOrder, $i->name, $i->durationMinutes, $i->description, $i->noteGeneral, $i->noteSound, $i->noteLight, $i->noteVideo, $i->noteStage, $i->noStrobe ? 1 : 0]);
         }
         foreach ($messages as $m) {
             $parts[] = 'm|' . $m->id . '|' . ($m->acknowledgedAt?->format(DATE_ATOM) ?? '');

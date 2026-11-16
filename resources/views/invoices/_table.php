@@ -38,7 +38,7 @@ use function App\Infrastructure\Http\t;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($invoices as $entry): ?>
                     <?php $invoice = $entry->invoice; ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/rechnungen/<?= e($invoice->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/rechnungen/<?= e($invoice->id) ?>">
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                             <?= $invoice->invoiceNumber !== null ? e($invoice->invoiceNumber) : e(t('invoices.table.no_number')) ?>
                         </td>

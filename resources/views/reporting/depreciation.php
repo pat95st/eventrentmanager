@@ -104,7 +104,7 @@ if ($hideWrittenOff) {
             <?php endif; ?>
             <?php foreach ($rows as $row): ?>
                 <?php $schedule = $row->schedule; $disposal = $schedule->disposalIn($year); ?>
-                <tr>
+                <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($row->asset->inventoryNumberId) ?>">
                     <td class="whitespace-nowrap px-4 py-2">
                         <a href="/inventurnummern/<?= e($row->asset->inventoryNumberId) ?>" class="font-mono text-brand-700 hover:underline dark:text-brand-400"><?= e($row->asset->number) ?></a>
                     </td>

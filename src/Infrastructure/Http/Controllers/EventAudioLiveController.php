@@ -63,7 +63,7 @@ use DateTimeImmutable;
  * zugeordneten Abspielgerät (Raspberry Pi am Mischpult), siehe
  * AudioPlayerApiController.
  *
- * Migration 166: the page can also send short text messages to the stage
+ * Migration 167: the page can also send short text messages to the stage
  * display (run sheet API) and/or the FOH run sheet page.
  */
 final class EventAudioLiveController
@@ -361,7 +361,7 @@ final class EventAudioLiveController
         }
         // Minutenprogramme mit gewähltem Jingle → Schnellwahl „Jingle für …“.
         $programs = [];
-        // Migration 166: target of a message (all programs or a single one).
+        // Migration 167: target of a message (all programs or a single one).
         $messagePrograms = [];
         foreach ($this->minutePrograms?->findByRental($rentalId) ?? [] as $program) {
             $messagePrograms[] = ['id' => $program->id, 'label' => $program->startAt->format('d.m. H:i') . ' · ' . $program->name . ($program->room !== null ? ' (' . $program->room . ')' : '')];

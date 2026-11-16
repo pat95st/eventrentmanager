@@ -1033,7 +1033,7 @@ $availabilityStatusMeta = [
                                 <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
                             </form>
                         <?php else: ?>
-                            <div class="flex flex-wrap items-center justify-between gap-2 py-3">
+                            <div class="-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($inv->id) ?>">
                                 <div>
                                     <a href="/inventurnummern/<?= e($inv->id) ?>" class="font-mono text-sm text-brand-700 hover:underline dark:text-brand-400"><?= e($inv->number) ?></a>
                                     <?php if ($entry->sale !== null): ?>

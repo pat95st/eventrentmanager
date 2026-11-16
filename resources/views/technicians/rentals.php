@@ -35,7 +35,7 @@ $open = array_values(array_filter($rows, static fn ($r) => $r['assignment']->sta
 
 <div class="space-y-3">
     <?php foreach ($rows as $row): $r = $row['rental']; $a = $row['assignment']; ?>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <div class="cursor-pointer rounded-lg border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/60" data-row-link="/veranstaltungen/<?= e($r->id) ?>">
             <div class="flex flex-wrap items-start justify-between gap-3">
                 <div class="min-w-0">
                     <a href="/veranstaltungen/<?= e($r->id) ?>" class="text-base font-semibold text-slate-900 hover:underline dark:text-slate-100"><?= e($r->eventName) ?></a>

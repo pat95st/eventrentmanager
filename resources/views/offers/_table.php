@@ -38,7 +38,7 @@ use function App\Infrastructure\Http\t;
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($offers as $entry): ?>
                     <?php $offer = $entry->offer; ?>
-                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onclick="window.location='/angebote/<?= e($offer->id) ?>'">
+                    <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/angebote/<?= e($offer->id) ?>">
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400"><?= e($offer->offerNumber) ?></td>
                         <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                             <?= $entry->customer !== null ? e($entry->customer->displayName()) : e(t('offers.table.no_customer')) ?>

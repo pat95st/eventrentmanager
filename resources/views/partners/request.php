@@ -57,7 +57,7 @@ $errorText = $errors !== [] ? implode(' ', $errors) : null;
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($r->items as $item): ?>
                             <?php $short = $detail->shortages[$item->articleId] ?? null; ?>
-                            <tr>
+                            <tr<?php if ($incoming): ?> class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/artikel/<?= e($item->articleId) ?>"<?php endif; ?>>
                                 <td class="py-1.5 text-slate-800 dark:text-slate-200">
                                     <?php if ($incoming): ?><a class="hover:underline" href="/artikel/<?= e($item->articleId) ?>"><?= e($item->name !== '' ? $item->name : $item->articleId) ?></a><?php else: ?><?= e($item->name !== '' ? $item->name : 'Artikel') ?><?php endif; ?>
                                     <?php if ($short !== null): ?><span class="ml-1 text-xs text-red-600 dark:text-red-400">nur <?= $short ?> verfügbar</span><?php endif; ?>

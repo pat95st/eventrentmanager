@@ -19,15 +19,16 @@ final class MariadbMinuteProgramTemplateItemRepository implements MinuteProgramT
         $stmt = $this->pdo->prepare(
             'INSERT INTO minute_program_template_items (
                 id, template_id, sort_order, name, description,
-                note_general, note_sound, note_light, note_video, note_stage, duration_minutes
+                note_general, note_sound, note_light, note_video, note_stage, duration_minutes, no_strobe
              ) VALUES (
                 :id, :template_id, :sort_order, :name, :description,
-                :note_general, :note_sound, :note_light, :note_video, :note_stage, :duration_minutes
+                :note_general, :note_sound, :note_light, :note_video, :note_stage, :duration_minutes, :no_strobe
              )
              ON DUPLICATE KEY UPDATE
                 sort_order = :sort_order2, name = :name2, description = :description2,
                 note_general = :note_general2, note_sound = :note_sound2, note_light = :note_light2,
-                note_video = :note_video2, note_stage = :note_stage2, duration_minutes = :duration_minutes2'
+                note_video = :note_video2, note_stage = :note_stage2, duration_minutes = :duration_minutes2,
+                no_strobe = :no_strobe2'
         );
 
         $stmt->execute([
@@ -39,6 +40,7 @@ final class MariadbMinuteProgramTemplateItemRepository implements MinuteProgramT
             'note_general' => $item->noteGeneral,
             'note_sound' => $item->noteSound,
             'note_light' => $item->noteLight,
+            'no_strobe' => $item->noStrobe ? 1 : 0,
             'note_video' => $item->noteVideo,
             'note_stage' => $item->noteStage,
             'duration_minutes' => $item->durationMinutes,
@@ -48,6 +50,7 @@ final class MariadbMinuteProgramTemplateItemRepository implements MinuteProgramT
             'note_general2' => $item->noteGeneral,
             'note_sound2' => $item->noteSound,
             'note_light2' => $item->noteLight,
+            'no_strobe2' => $item->noStrobe ? 1 : 0,
             'note_video2' => $item->noteVideo,
             'note_stage2' => $item->noteStage,
             'duration_minutes2' => $item->durationMinutes,
@@ -99,6 +102,7 @@ final class MariadbMinuteProgramTemplateItemRepository implements MinuteProgramT
             noteVideo: $row['note_video'],
             noteStage: $row['note_stage'],
             durationMinutes: $row['duration_minutes'] !== null ? (int) $row['duration_minutes'] : null,
+            noStrobe: (bool) ($row['no_strobe'] ?? false),
         );
     }
 }

@@ -129,7 +129,7 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <?php foreach ($list->rows as $row): ?>
-                        <tr>
+                        <tr<?php if ($row->isIssued()): ?> class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($row->inventoryNumberId) ?>"<?php endif; ?>>
                             <td class="py-1.5 pr-3 text-slate-600 dark:text-slate-400"><?= e($row->category ?? '') ?></td>
                             <td class="py-1.5 pr-3 text-slate-800 dark:text-slate-200"><?= e($row->manufacturerModel) ?></td>
                             <td class="py-1.5 pr-3 font-mono text-xs">

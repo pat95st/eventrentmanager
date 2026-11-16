@@ -156,6 +156,7 @@ final class MinuteProgramTemplateController
                 noteVideo: $request->input('note_video'),
                 noteStage: $request->input('note_stage'),
                 durationMinutes: self::nullableInt($request->input('duration_minutes')),
+                noStrobe: $request->input('no_strobe') !== null,
             ));
             Flash::success(t('minute_program_templates.flash.item_added'));
         } catch (ValidationException $e) {
@@ -185,6 +186,7 @@ final class MinuteProgramTemplateController
                 noteVideo: $request->input('note_video'),
                 noteStage: $request->input('note_stage'),
                 durationMinutes: self::nullableInt($request->input('duration_minutes')),
+                noStrobe: $request->input('no_strobe') !== null,
             ));
             Flash::success(t('minute_program_templates.flash.item_updated'));
         } catch (ValidationException $e) {

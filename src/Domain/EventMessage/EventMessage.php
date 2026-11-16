@@ -8,7 +8,7 @@ use DateTimeImmutable;
 
 /**
  * Message from the organizer (live page "Audio & Durchsagen") to the stage
- * display and/or the FOH run sheet page (migration 166).
+ * display and/or the FOH run sheet page (migration 167).
  *
  * $minuteProgramId null = applies to all minute programs of the rental.
  * A message is active until it is closed (withdrawn by the sender or hidden

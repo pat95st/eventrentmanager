@@ -94,6 +94,7 @@ final class CreateMinuteProgramFromTemplateHandler implements CommandHandlerInte
                 noteVideo: $templateItem->noteVideo,
                 noteStage: $templateItem->noteStage,
                 durationMinutes: $templateItem->durationMinutes,
+                noStrobe: $templateItem->noStrobe,
             );
             $this->items->save($item);
         }

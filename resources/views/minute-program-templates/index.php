@@ -23,7 +23,7 @@ use function App\Infrastructure\Http\t;
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         <?php foreach ($templates as $template): ?>
-            <tr>
+            <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/minutenprogramm-vorlagen/<?= e($template->id) ?>">
                 <td class="px-4 py-2"><a href="/minutenprogramm-vorlagen/<?= e($template->id) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e($template->name) ?></a></td>
                 <td class="px-4 py-2 text-right">
                     <a href="/minutenprogramm-vorlagen/<?= e($template->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.edit')) ?></a>

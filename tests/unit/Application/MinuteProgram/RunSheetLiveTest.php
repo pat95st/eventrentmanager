@@ -198,4 +198,24 @@ final class RunSheetLiveTest extends Unit
         $this->assertSame(60, $countdown['delaySeconds']);
         $this->assertSame((new DateTimeImmutable('2026-11-15 20:16:00'))->format(DATE_ATOM), $countdown['nextAt']);
     }
+
+    public function testNoStrobeFlagsAreExposedAndChangeTheRevision(): void
+    {
+        $before = RunSheetPayload::build($this->detail('20:12:00'));
+        $this->assertFalse($before['event']['noStrobe']);
+        $this->assertFalse($before['current']['noStrobe']);
+
+        $item = $this->items->findById('i2');
+        $this->assertNotNull($item);
+        $item->noStrobe = true;
+        $this->items->save($item);
+
+        $after = RunSheetPayload::build($this->detail('20:12:00'), ['eventNoStrobe' => true]);
+        $this->assertTrue($after['event']['noStrobe']);
+        $this->assertTrue($after['current']['noStrobe']);
+        $this->assertFalse($after['next']['noStrobe']);
+        $this->assertFalse($after['items'][0]['noStrobe']);
+        $this->assertTrue($after['items'][1]['noStrobe']);
+        $this->assertNotSame($before['revision'], $after['revision']);
+    }
 }

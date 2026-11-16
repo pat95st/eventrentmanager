@@ -64,6 +64,7 @@ final class UpdateRentalHandler implements CommandHandlerInterface
         $rental->venueId = $data['venueId'];
         $rental->deploymentDays = $data['deploymentDays'];
         $rental->blocksOtherRentals = $command->blocksOtherRentals;
+        $rental->noStrobe = $command->noStrobe;
         if ($pickupAt !== null) {
             $rental->pickupAt = $pickupAt;
         }

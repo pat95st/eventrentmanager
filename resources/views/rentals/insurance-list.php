@@ -3,6 +3,9 @@
 /** @var bool $includeUnissued */
 /** @var list<\App\Domain\Insurance\InsuranceField> $selectedFields */
 /** @var bool $aiAvailable */
+/** @var list<\App\Domain\Vehicle\Vehicle> $vehicleCandidates */
+/** @var array<string, true> $loadingListVehicleIds */
+/** @var list<string> $suggestedVehicleIds */
 
 use App\Domain\Insurance\CurrentValueResolver;
 use App\Domain\Insurance\InsuranceField;
@@ -11,7 +14,10 @@ use function App\Infrastructure\Http\e;
 $rental = $list->rental;
 $money = static fn (?string $v): string => $v === null ? '' : number_format((float) $v, 2, ',', '.') . ' €';
 $selected = array_map(static fn (InsuranceField $f) => $f->value, $selectedFields);
-$issuedCount = count(array_filter($list->rows, static fn ($r) => $r->isIssued()));
+$deviceRows = $list->deviceRows();
+$vehicleRows = $list->vehicleRows();
+$issuedCount = count(array_filter($deviceRows, static fn ($r) => $r->isIssued()));
+$csrfToken = \App\Infrastructure\Http\Csrf::token();
 $missingIssued = count(array_filter($list->rows, static fn ($r) => $r->isIssued() && $r->currentValue === null));
 $secondaryButtonClass = 'inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800';
 $originBadge = static function (?string $origin, ?string $note = null): string {
@@ -27,7 +33,7 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
     <a href="/veranstaltungen/<?= e($rental->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Zurück zur Veranstaltung</a>
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">Versicherungsliste: <?= e($rental->eventName) ?></h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
-        Alle auf der Veranstaltung eingesetzten Geräte mit Anschaffungs- und Zeitwert, als CSV oder PDF für die Versicherung.
+        Alle auf der Veranstaltung eingesetzten Geräte (und auf Wunsch Fahrzeuge) mit Anschaffungs- und Zeitwert, als CSV oder PDF für die Versicherung.
         Fehlende Werte bleiben im Export leer.
     </p>
 </div>
@@ -35,8 +41,8 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
 <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
     <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <p class="text-xs text-slate-500 dark:text-slate-400">Geräte</p>
-        <p class="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100"><?= count($list->rows) ?></p>
-        <p class="text-xs text-slate-400 dark:text-slate-500"><?= $issuedCount ?> ausgegeben<?= $includeUnissued && $issuedCount < count($list->rows) ? ', ' . (count($list->rows) - $issuedCount) . ' nur geplant' : '' ?></p>
+        <p class="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100"><?= count($deviceRows) ?><?php if ($vehicleRows !== []): ?> <span class="text-sm font-normal text-slate-500 dark:text-slate-400">+ <?= count($vehicleRows) ?> Fahrzeug<?= count($vehicleRows) === 1 ? '' : 'e' ?></span><?php endif; ?></p>
+        <p class="text-xs text-slate-400 dark:text-slate-500"><?= $issuedCount ?> ausgegeben<?= $includeUnissued && $issuedCount < count($deviceRows) ? ', ' . (count($deviceRows) - $issuedCount) . ' nur geplant' : '' ?></p>
     </div>
     <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <p class="text-xs text-slate-500 dark:text-slate-400">Summe Zeitwert</p>
@@ -112,7 +118,7 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
     </div>
 
     <?php if ($list->rows === []): ?>
-        <p class="text-sm text-slate-500 dark:text-slate-400">Für diese Veranstaltung sind noch keine Geräte geplant oder ausgegeben.</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Für diese Veranstaltung sind noch keine Geräte geplant oder ausgegeben und keine Fahrzeuge auf der Liste.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
@@ -129,12 +135,14 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     <?php foreach ($list->rows as $row): ?>
-                        <tr<?php if ($row->isIssued()): ?> class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($row->inventoryNumberId) ?>"<?php endif; ?>>
+                        <tr<?php if ($row->isIssued()): ?> class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($row->inventoryNumberId) ?>"<?php elseif ($row->isVehicle()): ?> class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/fahrzeuge/<?= e($row->vehicleId) ?>/bearbeiten"<?php endif; ?>>
                             <td class="py-1.5 pr-3 text-slate-600 dark:text-slate-400"><?= e($row->category ?? '') ?></td>
                             <td class="py-1.5 pr-3 text-slate-800 dark:text-slate-200"><?= e($row->manufacturerModel) ?></td>
                             <td class="py-1.5 pr-3 font-mono text-xs">
                                 <?php if ($row->isIssued()): ?>
                                     <a href="/inventurnummern/<?= e($row->inventoryNumberId) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($row->inventoryNumber) ?></a>
+                                <?php elseif ($row->isVehicle()): ?>
+                                    <span class="text-slate-700 dark:text-slate-300" title="Kennzeichen"><?= e($row->inventoryNumber ?? '') ?></span>
                                 <?php else: ?>
                                     <span class="font-sans text-xs italic text-slate-400 dark:text-slate-500">noch nicht ausgegeben</span>
                                 <?php endif; ?>
@@ -148,6 +156,15 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
                             <td class="py-1.5 text-right">
                                 <?php if ($row->isIssued()): ?>
                                     <a href="/artikel/<?= e($row->articleId) ?>?edit_inventory=<?= e($row->inventoryNumberId) ?>" class="text-xs text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                                <?php elseif ($row->isVehicle()): ?>
+                                    <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                                        <a href="/fahrzeuge/<?= e($row->vehicleId) ?>/bearbeiten" class="text-xs text-brand-700 hover:underline dark:text-brand-400" title="Anschaffungsjahr, Anschaffungspreis und Zeitwert am Fahrzeug pflegen">Bearbeiten</a>
+                                        <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste/fahrzeuge/<?= e($row->vehicleId) ?>/entfernen" class="inline">
+                                            <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                                            <input type="hidden" name="unissued" value="<?= $includeUnissued ? '1' : '0' ?>">
+                                            <button type="submit" class="text-xs text-red-600 hover:underline dark:text-red-400">Entfernen</button>
+                                        </form>
+                                    </span>
                                 <?php else: ?>
                                     <a href="/artikel/<?= e($row->articleId) ?>/bearbeiten" class="text-xs text-slate-500 hover:underline dark:text-slate-400" title="Festen Zeitwert im Artikel pflegen">Artikel</a>
                                 <?php endif; ?>
@@ -156,6 +173,52 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+        </div>
+    <?php endif; ?>
+</div>
+
+<div class="mb-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <div class="mb-3">
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Fahrzeuge</h2>
+        <p class="max-w-2xl text-xs text-slate-500 dark:text-slate-400">
+            Fahrzeuge aus dem Fuhrpark mit auf die Versicherungsliste setzen. Sie erscheinen nach den Geräten, mit dem Kennzeichen in der Spalte Inventarnummer.
+            Anschaffungsjahr, Anschaffungspreis und Zeitwert werden am Fahrzeug gepflegt (Fahrzeug „Bearbeiten“).
+        </p>
+    </div>
+    <?php if ($vehicleRows !== []): ?>
+        <p class="mb-3 text-sm text-slate-700 dark:text-slate-300">
+            Auf der Liste: <?= e(implode(', ', array_map(static fn ($r) => $r->manufacturerModel . ($r->inventoryNumber !== null ? ' (' . $r->inventoryNumber . ')' : ''), $vehicleRows))) ?>
+        </p>
+    <?php endif; ?>
+    <?php if ($vehicleCandidates === []): ?>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+            <?= $vehicleRows === [] ? 'Es sind noch keine Fahrzeuge angelegt. <a href="/fahrzeuge/neu" class="text-brand-700 underline dark:text-brand-400">Fahrzeug anlegen</a>' : 'Alle Fahrzeuge stehen bereits auf der Liste.' ?>
+        </p>
+    <?php else: ?>
+        <div class="flex flex-wrap items-end gap-2">
+            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste/fahrzeuge" class="flex flex-wrap items-end gap-2">
+                <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                <input type="hidden" name="unissued" value="<?= $includeUnissued ? '1' : '0' ?>">
+                <div>
+                    <label for="insurance_vehicle_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Fahrzeug</label>
+                    <select id="insurance_vehicle_id" name="vehicle_id" required class="mt-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                        <?php foreach ($vehicleCandidates as $vehicle): ?>
+                            <option value="<?= e($vehicle->id) ?>">
+                                <?= e($vehicle->name . ($vehicle->licensePlate !== null ? ' (' . $vehicle->licensePlate . ')' : '') . ' – ' . $vehicle->category->label() . (isset($loadingListVehicleIds[$vehicle->id]) ? ' · in Beladungsliste' : '')) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Zur Liste hinzufügen</button>
+            </form>
+            <?php if ($suggestedVehicleIds !== []): ?>
+                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/versicherungsliste/fahrzeuge">
+                    <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
+                    <input type="hidden" name="unissued" value="<?= $includeUnissued ? '1' : '0' ?>">
+                    <input type="hidden" name="from_loading_list" value="1">
+                    <button type="submit" class="<?= $secondaryButtonClass ?>">Fahrzeuge der Beladungsliste übernehmen (<?= count($suggestedVehicleIds) ?>)</button>
+                </form>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 </div>

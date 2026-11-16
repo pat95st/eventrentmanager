@@ -21,6 +21,9 @@ final class CreateVehicle implements CommandInterface
         public readonly ?string $towCapacityKg,
         public readonly ?string $emptyWeightKg,
         public readonly ?string $notes = null,
+        public readonly ?string $acquisitionYear = null,
+        public readonly ?string $purchasePrice = null,
+        public readonly ?string $currentValue = null,
     ) {
     }
 }

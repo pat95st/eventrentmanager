@@ -11,11 +11,14 @@ use App\Domain\Insurance\InsuranceField;
  * ausgegebene Posten mit Inventarnummer, für noch nicht ausgegebene
  * (nur geplante) Stückzahlen ohne Inventarnummer. Fehlende Werte sind null
  * und bleiben im Export leer.
+ *
+ * Vehicles put on the list (migration 170) are rows with vehicleId set and
+ * articleId null; the license plate is shown in the inventory number column.
  */
 final class InsuranceListRow
 {
     public function __construct(
-        public readonly string $articleId,
+        public readonly ?string $articleId,
         public readonly ?string $inventoryNumberId,
         public readonly ?string $category,
         public readonly string $manufacturerModel,
@@ -25,7 +28,13 @@ final class InsuranceListRow
         public readonly ?string $currentValueOrigin, // siehe CurrentValueResolver::ORIGIN_*
         public readonly ?string $purchasePrice,
         public readonly ?string $currentValueNote = null, // Begründung einer KI-Schätzung
+        public readonly ?string $vehicleId = null,
     ) {
+    }
+
+    public function isVehicle(): bool
+    {
+        return $this->vehicleId !== null;
     }
 
     public function isIssued(): bool

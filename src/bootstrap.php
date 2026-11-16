@@ -1553,9 +1553,13 @@ $queryBus->register(\App\Application\Rental\Query\GetRental::class, $getRentalHa
 $currentValueRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCurrentValueRepository($pdo);
 $currentValueEstimator = new \App\Infrastructure\Integration\Insurance\OpenAiCurrentValueEstimator($aiAdImageSettingsRepository);
 \App\Infrastructure\Http\CurrentValueLookup::set($currentValueRepository, [$currentValueEstimator, 'isAvailable']);
-$getRentalInsuranceListHandler = new \App\Application\Insurance\Query\GetRentalInsuranceListHandler($getRentalHandler, $categoryRepository, $currentValueRepository);
+$rentalInsuranceVehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalInsuranceVehicleRepository($pdo);
+$getRentalInsuranceListHandler = new \App\Application\Insurance\Query\GetRentalInsuranceListHandler($getRentalHandler, $categoryRepository, $currentValueRepository, $vehicleRepository, $rentalInsuranceVehicleRepository);
 $queryBus->register(\App\Application\Insurance\Query\GetRentalInsuranceList::class, $getRentalInsuranceListHandler);
 $insuranceHandler = new \App\Application\Insurance\Command\InsuranceHandler($currentValueRepository, $inventoryNumberRepository, $articleRepository, $manufacturerRepository, $categoryRepository, $currentValueEstimator, $getRentalInsuranceListHandler);
+$rentalInsuranceVehicleHandler = new \App\Application\Insurance\Command\RentalInsuranceVehicleHandler($rentalRepository, $vehicleRepository, $rentalInsuranceVehicleRepository);
+$commandBus->register(\App\Application\Insurance\Command\AddRentalInsuranceVehicle::class, $rentalInsuranceVehicleHandler);
+$commandBus->register(\App\Application\Insurance\Command\RemoveRentalInsuranceVehicle::class, $rentalInsuranceVehicleHandler);
 foreach (['SetArticleFixedCurrentValue', 'SaveInsuranceExportFields', 'EstimateCurrentValue', 'EstimateMissingCurrentValues'] as $insuranceCommand) {
     $commandBus->register('App\\Application\\Insurance\\Command\\' . $insuranceCommand, $insuranceHandler);
 }
@@ -1845,7 +1849,7 @@ $aiAdImageSettingsController = new \App\Infrastructure\Http\Controllers\AiAdImag
 $messageTemplateSettingsController = new \App\Infrastructure\Http\Controllers\MessageTemplateSettingsController($commandBus, $queryBus);
 $receiptInboxController = new ReceiptInboxController($commandBus, $queryBus, $receiptInboxAttachmentRepository, $fileStorage);
 $calendarController = new CalendarController($queryBus);
-$insuranceListController = new \App\Infrastructure\Http\Controllers\InsuranceListController($commandBus, $queryBus, $currentValueRepository, $currentValueEstimator, new \App\Infrastructure\Csv\InsuranceListCsvExporter(), new \App\Infrastructure\Pdf\InsuranceListPdfGenerator($fileStorage, $pdfAmountFormatter));
+$insuranceListController = new \App\Infrastructure\Http\Controllers\InsuranceListController($commandBus, $queryBus, $currentValueRepository, $currentValueEstimator, new \App\Infrastructure\Csv\InsuranceListCsvExporter(), new \App\Infrastructure\Pdf\InsuranceListPdfGenerator($fileStorage, $pdfAmountFormatter), $vehicleRepository, $rentalVehicleLoadRepository, $rentalVehicleTowRepository);
 $inventoryNumberController = new InventoryNumberController($queryBus, $commandBus, $supplierRepository, $rmaRepository, $electricalInspectionRepository, $customerRepository, $saleRepository);
 $labelPrinterController = new LabelPrinterController($commandBus, $queryBus);
 $documentStorageSettingsController = new \App\Infrastructure\Http\Controllers\DocumentStorageSettingsController($commandBus, $queryBus);
@@ -2300,6 +2304,8 @@ $router->get('/veranstaltungen/{id}/versicherungsliste', $auth->guard(Permission
 $router->get('/veranstaltungen/{id}/versicherungsliste.csv', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportCsv']));
 $router->get('/veranstaltungen/{id}/versicherungsliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'exportPdf']));
 $router->post('/veranstaltungen/{id}/versicherungsliste/ki-schaetzen', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'estimateMissing']));
+$router->post('/veranstaltungen/{id}/versicherungsliste/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'addVehicle']));
+$router->post('/veranstaltungen/{id}/versicherungsliste/fahrzeuge/{vehicleId}/entfernen', $auth->guard(Permission::AusgabeRuecknahme, [$insuranceListController, 'removeVehicle']));
 $router->post('/veranstaltungen/{id}/rechnung-erstellen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'createInvoice']));
 $router->get('/veranstaltungen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'edit']));
 $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'update']));

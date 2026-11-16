@@ -80,6 +80,9 @@ final class VehicleController
             towCapacityKg: $this->nullIfEmpty($request->input('tow_capacity_kg')),
             emptyWeightKg: $this->nullIfEmpty($request->input('empty_weight_kg')),
             notes: $this->nullIfEmpty($request->input('notes')),
+            acquisitionYear: $this->nullIfEmpty($request->input('acquisition_year')),
+            purchasePrice: $this->nullIfEmpty($request->input('purchase_price')),
+            currentValue: $this->nullIfEmpty($request->input('current_value')),
         );
 
         try {
@@ -124,6 +127,9 @@ final class VehicleController
             towCapacityKg: $this->nullIfEmpty($request->input('tow_capacity_kg')),
             emptyWeightKg: $this->nullIfEmpty($request->input('empty_weight_kg')),
             notes: $this->nullIfEmpty($request->input('notes')),
+            acquisitionYear: $this->nullIfEmpty($request->input('acquisition_year')),
+            purchasePrice: $this->nullIfEmpty($request->input('purchase_price')),
+            currentValue: $this->nullIfEmpty($request->input('current_value')),
         );
 
         try {
@@ -179,6 +185,9 @@ final class VehicleController
             'tow_capacity_kg' => $command->towCapacityKg,
             'empty_weight_kg' => $command->emptyWeightKg,
             'notes' => $command->notes,
+            'acquisition_year' => $command->acquisitionYear,
+            'purchase_price' => $command->purchasePrice,
+            'current_value' => $command->currentValue,
         ];
     }
 

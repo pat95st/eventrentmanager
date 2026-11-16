@@ -16,6 +16,12 @@ interface VehicleRepositoryInterface
     /** @return Vehicle[] */
     public function findByCategory(VehicleCategory $category): array;
 
+    /**
+     * @param string[] $ids
+     * @return Vehicle[] sorted by name, unknown ids are skipped
+     */
+    public function findByIds(array $ids): array;
+
     public function countAll(?string $search = null): int;
 
     /** Ist dieses Fahrzeug einer Beladungsliste zugeordnet (rental_vehicle_loads)? */

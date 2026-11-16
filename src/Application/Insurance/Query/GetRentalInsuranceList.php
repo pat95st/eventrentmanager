@@ -9,6 +9,7 @@ use App\Application\Query\QueryInterface;
 /**
  * Versicherungsliste einer Veranstaltung: alle ausgegebenen Exemplare und —
  * optional — die noch nicht ausgegebenen, nur geplanten Stückzahlen.
+ * Vehicles put on the list are always included (after the equipment).
  */
 final class GetRentalInsuranceList implements QueryInterface
 {

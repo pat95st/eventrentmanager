@@ -9,7 +9,11 @@ use App\Application\Query\QueryBus;
 use App\Application\Rental\Query\ListRentalsForVenue;
 use App\Application\Venue\Command\AddStageRiser;
 use App\Application\Venue\Command\AddVenuePowerConnection;
+use App\Application\Venue\Command\AddVenueImage;
+use App\Application\Venue\Command\AddVenueImageHandler;
 use App\Application\Venue\Command\AddVenueStage;
+use App\Application\Venue\Command\DeleteVenueImage;
+use App\Application\Venue\Command\UpdateVenueImage;
 use App\Application\Venue\Command\CreateVenue;
 use App\Application\Venue\Command\DeleteStageRiser;
 use App\Application\Venue\Command\DeleteVenue;
@@ -23,6 +27,7 @@ use App\Application\Venue\Command\UpdateVenueStage;
 use App\Application\Settings\Query\GetCompanySettings;
 use App\Application\Venue\Query\GetVenue;
 use App\Application\Venue\Query\GetVenuesNeedDistributorFlags;
+use App\Application\Venue\Query\ListVenueImages;
 use App\Application\Venue\Query\ListVenuePowerConnections;
 use App\Application\Venue\Query\ListVenueStageRisers;
 use App\Application\Venue\Query\ListVenueStages;
@@ -47,6 +52,7 @@ final class VenueController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        private readonly ?\App\Infrastructure\FileStorage\LocalFileStorage $fileStorage = null,
     ) {
     }
 
@@ -168,7 +174,9 @@ final class VenueController
 
         $stages = $this->queries->ask(new ListVenueStages($venue->id));
 
-        $this->renderForm($venue, [], [], $venue->id, $upcomingRentals, $pastRentals, $powerConnections, $stages);
+        $images = $this->queries->ask(new ListVenueImages($venue->id));
+
+        $this->renderForm($venue, [], [], $venue->id, $upcomingRentals, $pastRentals, $powerConnections, $stages, $images);
     }
 
     /** Baut die einzeilige Firmenadresse (für den Google-Maps-Routen-Button) aus den Firmeneinstellungen. */
@@ -207,7 +215,8 @@ final class VenueController
             $venue = $this->queries->ask(new GetVenue($id));
             $powerConnections = $this->queries->ask(new ListVenuePowerConnections($id));
             $stages = $this->queries->ask(new ListVenueStages($id));
-            $this->renderForm($venue, $e->errors(), $this->oldFromCommand($command), $id, powerConnections: $powerConnections, stages: $stages);
+            $images = $this->queries->ask(new ListVenueImages($id));
+            $this->renderForm($venue, $e->errors(), $this->oldFromCommand($command), $id, powerConnections: $powerConnections, stages: $stages, images: $images);
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
         }
@@ -296,6 +305,111 @@ final class VenueController
         }
 
         Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten');
+    }
+
+    /** Upload one or more venue photos; the description applies to all of them. */
+    public function addImages(Request $request): void
+    {
+        $venueId = $request->param('id');
+        $redirect = '/veranstaltungsorte/' . $venueId . '/bearbeiten#bilder';
+
+        $files = $request->fileList('images');
+        if ($files === [] && ($single = $request->file('images')) !== null) {
+            $files = [$single];
+        }
+        if ($files === []) {
+            Flash::error(t('venues.images.flash.none_selected'));
+            Response::redirect($redirect);
+
+            return;
+        }
+
+        $description = $this->nullIfEmpty($request->input('description'));
+        $added = 0;
+        $errors = [];
+        foreach ($files as $file) {
+            try {
+                $this->commands->dispatch(new AddVenueImage($venueId, $file, $description));
+                $added++;
+            } catch (ValidationException $e) {
+                $errors[] = $file['name'] . ': ' . implode(' ', $e->errors());
+            } catch (NotFoundException $e) {
+                Response::notFound($e->getMessage());
+
+                return;
+            }
+        }
+
+        if ($added > 0) {
+            Flash::success($added === 1 ? t('venues.images.flash.added_one') : t('venues.images.flash.added_many', ['count' => (string) $added]));
+        }
+        if ($errors !== []) {
+            Flash::error(implode(' ', $errors));
+        }
+        Response::redirect($redirect);
+    }
+
+    public function updateImage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        try {
+            $this->commands->dispatch(new UpdateVenueImage(
+                id: $request->param('imageId'),
+                venueId: $venueId,
+                description: $request->input('description'),
+            ));
+            Flash::success(t('venues.images.flash.updated'));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#bilder');
+    }
+
+    public function deleteImage(Request $request): void
+    {
+        $venueId = $request->param('id');
+
+        try {
+            $this->commands->dispatch(new DeleteVenueImage($request->param('imageId'), $venueId));
+            Flash::success(t('venues.images.flash.deleted'));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/veranstaltungsorte/' . $venueId . '/bearbeiten#bilder');
+    }
+
+    /** Serves a venue photo: /veranstaltungsorte/{id}/bilder/{imageId} */
+    public function showImage(Request $request): void
+    {
+        $imageId = $request->param('imageId');
+        $image = null;
+        foreach ($this->queries->ask(new ListVenueImages($request->param('id'))) as $candidate) {
+            if ($candidate->id === $imageId) {
+                $image = $candidate;
+                break;
+            }
+        }
+
+        if ($image === null || $this->fileStorage === null) {
+            Response::notFound('Bild wurde nicht gefunden.');
+
+            return;
+        }
+
+        $absolutePath = $this->fileStorage->absolutePath(AddVenueImageHandler::STORAGE_DIRECTORY, $image->filePath);
+        if (!is_file($absolutePath)) {
+            Response::notFound('Bild wurde nicht gefunden.');
+
+            return;
+        }
+        $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'application/octet-stream') : 'application/octet-stream';
+        header('Cache-Control: private, max-age=86400');
+        Response::file($absolutePath, basename($image->filePath), $mimeType);
     }
 
     public function addStage(Request $request): void
@@ -482,6 +596,7 @@ final class VenueController
      * @param \App\Application\Rental\Query\VenueRentalEntry[] $pastRentals
      * @param PowerConnection[] $powerConnections
      * @param Stage[] $stages
+     * @param \App\Domain\Venue\VenueImage[] $images
      */
     private function renderForm(
         ?Venue $venue,
@@ -492,6 +607,7 @@ final class VenueController
         array $pastRentals = [],
         array $powerConnections = [],
         array $stages = [],
+        array $images = [],
     ): void {
         echo View::page('venues/form', [
             'venue' => $venue,
@@ -502,6 +618,7 @@ final class VenueController
             'pastRentals' => $pastRentals,
             'powerConnections' => $powerConnections,
             'stages' => $stages,
+            'images' => $images,
             // Riser je Bühne — eine Abfrage für alle Bühnen des Veranstaltungsorts.
             'stageRisers' => $venue !== null && $stages !== [] ? $this->queries->ask(new ListVenueStageRisers($venue->id)) : [],
             'needsDistributorWithRcd' => PowerConnection::anyNeedsDistributorWithRcd($powerConnections),

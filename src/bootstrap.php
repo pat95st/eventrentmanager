@@ -478,6 +478,7 @@ $companyHolidayRepository = new \App\Infrastructure\Persistence\Pdo\MariadbCompa
 $rentalScheduleRules = new \App\Application\Rental\RentalScheduleRules($rentalRepository, $companyHolidayRepository);
 $venueRepository = new MariadbVenueRepository($pdo);
 $venuePowerConnectionRepository = new MariadbVenuePowerConnectionRepository($pdo);
+$venueImageRepository = new \App\Infrastructure\Persistence\Pdo\MariadbVenueImageRepository($pdo);
 $venueStageRepository = new MariadbVenueStageRepository($pdo);
 $venueStageRiserRepository = new MariadbVenueStageRiserRepository($pdo);
 $warehouseRepository = new MariadbWarehouseRepository($pdo);
@@ -902,7 +903,10 @@ $commandBus->register(\App\Application\Rental\Command\UpdateRental::class, new U
 
 $commandBus->register(\App\Application\Venue\Command\CreateVenue::class, new CreateVenueHandler($venueRepository, $geocoder));
 $commandBus->register(\App\Application\Venue\Command\UpdateVenue::class, new UpdateVenueHandler($venueRepository, $geocoder));
-$commandBus->register(\App\Application\Venue\Command\DeleteVenue::class, new DeleteVenueHandler($venueRepository));
+$commandBus->register(\App\Application\Venue\Command\DeleteVenue::class, new DeleteVenueHandler($venueRepository, $venueImageRepository, $fileStorage));
+$commandBus->register(\App\Application\Venue\Command\AddVenueImage::class, new \App\Application\Venue\Command\AddVenueImageHandler($venueRepository, $venueImageRepository, $fileStorage));
+$commandBus->register(\App\Application\Venue\Command\UpdateVenueImage::class, new \App\Application\Venue\Command\UpdateVenueImageHandler($venueImageRepository));
+$commandBus->register(\App\Application\Venue\Command\DeleteVenueImage::class, new \App\Application\Venue\Command\DeleteVenueImageHandler($venueImageRepository, $fileStorage));
 $commandBus->register(\App\Application\Venue\Command\AddVenuePowerConnection::class, new AddVenuePowerConnectionHandler($venuePowerConnectionRepository, $venueRepository));
 $commandBus->register(\App\Application\Venue\Command\UpdateVenuePowerConnection::class, new UpdateVenuePowerConnectionHandler($venuePowerConnectionRepository));
 $commandBus->register(\App\Application\Venue\Command\DeleteVenuePowerConnection::class, new DeleteVenuePowerConnectionHandler($venuePowerConnectionRepository));
@@ -1510,6 +1514,7 @@ $queryBus->register(\App\Application\Venue\Query\ListVenues::class, new ListVenu
 $queryBus->register(\App\Application\Venue\Query\GetVenue::class, new GetVenueHandler($venueRepository));
 $queryBus->register(\App\Application\Venue\Query\ListVenuePowerConnections::class, new ListVenuePowerConnectionsHandler($venuePowerConnectionRepository));
 $queryBus->register(\App\Application\Venue\Query\ListVenueStages::class, new ListVenueStagesHandler($venueStageRepository));
+$queryBus->register(\App\Application\Venue\Query\ListVenueImages::class, new \App\Application\Venue\Query\ListVenueImagesHandler($venueImageRepository));
 $queryBus->register(\App\Application\Venue\Query\ListVenueStageRisers::class, new ListVenueStageRisersHandler($venueStageRiserRepository));
 $queryBus->register(\App\Application\Venue\Query\GetVenuesNeedDistributorFlags::class, new GetVenuesNeedDistributorFlagsHandler($venuePowerConnectionRepository));
 $queryBus->register(\App\Application\Warehouse\Query\ListWarehouses::class, new ListWarehousesHandler($warehouseRepository));
@@ -1703,7 +1708,7 @@ $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
 $salesController = new \App\Infrastructure\Http\Controllers\SalesController($queryBus);
 $vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus);
-$venueController = new VenueController($commandBus, $queryBus);
+$venueController = new VenueController($commandBus, $queryBus, $fileStorage);
 $warehouseController = new WarehouseController($commandBus, $queryBus);
 $packingListPdfGenerator = new PackingListPdfGenerator($fileStorage);
 $commandBus->register(\App\Application\Rental\Command\EmailPackingListPdf::class, new EmailPackingListPdfHandler(
@@ -2238,6 +2243,10 @@ $router->post('/veranstaltungsorte', $auth->guard(Permission::AusgabeRuecknahme,
 $router->get('/veranstaltungsorte/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'edit']));
 $router->post('/veranstaltungsorte/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'update']));
 $router->post('/veranstaltungsorte/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'destroy']));
+$router->post('/veranstaltungsorte/{id}/bilder', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'addImages']));
+$router->get('/veranstaltungsorte/{id}/bilder/{imageId}', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'showImage']));
+$router->post('/veranstaltungsorte/{id}/bilder/{imageId}', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'updateImage']));
+$router->post('/veranstaltungsorte/{id}/bilder/{imageId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'deleteImage']));
 $router->post('/veranstaltungsorte/{id}/stromanschluesse', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'addPowerConnection']));
 $router->post('/veranstaltungsorte/{id}/stromanschluesse/{connectionId}', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'updatePowerConnection']));
 $router->post('/veranstaltungsorte/{id}/stromanschluesse/{connectionId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$venueController, 'deletePowerConnection']));

@@ -11,7 +11,7 @@ Stand: Migration 158 „Ablauf am FOH“. Diese Beschreibung ist die Vorlage fü
 - Nach einem Start bleibt dieser Punkt **aktuell**, bis der nächste gestartet wird („FOH-Modus“, `live.tracking = true`). Überzieht er, wächst der **prognostizierte Verzug** (`live.projectedDelaySeconds`) sekündlich mit, ohne dass jemand etwas eingeben muss.
 - Ohne Start gilt der „Uhr-Modus“: aktuell ist der letzte Punkt, dessen verschobene Startzeit erreicht ist.
 - **Programm beenden** markiert das Programm als beendet (`live.state = "finished"`), **Zurücksetzen** stellt den ursprünglichen Plan wieder her.
-- **Nachrichten** (Migration 167): Der Veranstalter kann über die Live-Oberfläche „Audio & Durchsagen“ (`/live/{id}`) kurze Texte an das Stagedisplay und/oder den FOH schicken. Das Stagedisplay erhält in `messages` alle aktiven Nachrichten, die an die Bühne gerichtet sind. Eine Nachricht bleibt aktiv, bis der Absender sie beendet oder der FOH sie ausblendet – dann fehlt sie in der nächsten Antwort.
+- **Nachrichten** (Migration 167): Der Veranstalter kann über die Live-Oberfläche „Audio & Durchsagen“ (`/live/{id}`) kurze Texte an das Stagedisplay und/oder den FOH schicken. Das Stagedisplay erhält in `messages` alle aktiven Nachrichten, die an die Bühne gerichtet sind. Eine Nachricht bleibt aktiv, bis der Absender sie beendet oder der FOH sie ausblendet – dann fehlt sie in der nächsten Antwort. Auch der **FOH** kann auf der Seite „Ablauf am FOH“ Nachrichten an die Bühne schicken (`fromFoh = true`); sie bleiben aktiv, bis sie zurückgezogen werden.
 
 ## Zugang (Token)
 
@@ -136,6 +136,7 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
       "allPrograms": true,
       "sentAt": "2026-11-15T20:09:30+01:00",
       "sentBy": "Max Muster (Veranstalter)",
+      "fromFoh": false,
       "acknowledgedAt": null, "acknowledgedBy": null
     }
   ]
@@ -164,10 +165,11 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
 | `notes` | `general`: allgemeiner Hinweis. `sound`, `light`, `video`, `stage`: Kompatibilitätsfelder aus der Zeit fester Gewerke – gefüllt mit dem Hinweis des Gewerks namens „Ton“, „Licht“, „Video“ bzw. „Bühne“ (sonst `null`). Hinweise anderer Gewerke stehen nur in `tradeNotes`. |
 | `event.noStrobe` | `true`: Bei der gesamten Veranstaltung darf kein Stroboskop-Licht eingesetzt werden. |
 | `noStrobe` (bei `current`, `next`, `items[]`) | `true`: Bei diesem Programmpunkt darf kein Stroboskop-Licht eingesetzt werden. Gilt zusätzlich zu `event.noStrobe` – ein Display sollte den Hinweis zeigen, wenn eines der beiden `true` ist. |
-| `messages` | Aktive Nachrichten des Veranstalters an die Bühne, älteste zuerst (leeres Array, wenn keine). Über die API kommen nur Nachrichten mit `stage = true`; reine FOH-Nachrichten erscheinen nur auf der FOH-Seite. |
+| `messages` | Aktive Nachrichten des Veranstalters und des FOH an die Bühne, älteste zuerst (leeres Array, wenn keine). Über die API kommen nur Nachrichten mit `stage = true`; reine FOH-Nachrichten erscheinen nur auf der FOH-Seite. |
 | `messages[].text` | Nachrichtentext (max. 500 Zeichen, kann Zeilenumbrüche enthalten). |
 | `messages[].urgent` | Als dringend markiert – auffällig darstellen (z. B. rot, blinkend). |
 | `messages[].stage` / `foh` | Ziele, an die die Nachricht geschickt wurde. |
+| `messages[].sentBy` / `fromFoh` | Anzeigename des Absenders; `fromFoh = true`: am FOH geschrieben (sonst vom Veranstalter bzw. aus der Live-Oberfläche). |
 | `messages[].allPrograms` | `true`: gilt für alle Minutenprogramme der Veranstaltung, `false`: nur für dieses. |
 | `messages[].acknowledgedAt` / `acknowledgedBy` | Wann/von wem der FOH die Nachricht als gesehen markiert hat (sonst `null`). Sie bleibt trotzdem aktiv. |
 

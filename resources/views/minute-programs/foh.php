@@ -46,7 +46,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     * { box-sizing: border-box; }
     html, body { margin: 0; background: var(--bg); color: var(--text); }
     body { min-height: 100vh; padding-bottom: calc(2rem + env(safe-area-inset-bottom)); -webkit-tap-highlight-color: transparent; }
-    button, input, select { font: inherit; color: inherit; }
+    button, input, select, textarea { font: inherit; color: inherit; }
     button { cursor: pointer; }
     a { color: inherit; }
     .num { font-variant-numeric: tabular-nums; }
@@ -174,6 +174,14 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .msg .mt .tag { display: inline-block; font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin-right: 4px; color: var(--text); }
     .msg .ma { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
     @media (max-width: 520px) { .msg { grid-template-columns: 1fr; } .msg .ma { justify-content: flex-start; } }
+    /* Messages written at FOH for the stage */
+    .msg.own, .msg.own.seen { background: var(--panel); border-color: rgba(245,180,60,.55); border-left-color: var(--accent); }
+    .msg.own.urgent { border-color: rgba(239,68,68,.7); border-left-color: var(--stop); }
+    .msg.own .tx { font-size: 1.05rem; }
+    .compose textarea { display: block; width: 100%; resize: vertical; min-height: 3.4rem; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 1.05rem; line-height: 1.35; }
+    .compose textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .compose label { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; }
+    .compose .sp { flex: 1; }
 
     .toast { position: fixed; left: 50%; bottom: calc(1.5rem + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); opacity: 0; z-index: 40; max-width: calc(100% - 32px); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: .9rem; font-weight: 600; transition: all .2s; pointer-events: none; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -238,6 +246,27 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
             </section>
 
             <?php if ($canControl): ?>
+            <section class="card compose">
+                <h2>Nachricht an die Bühne <span class="sp"></span><span class="num" id="send-count"></span></h2>
+                <form id="send-form">
+                    <textarea id="send-text" name="text" rows="2" maxlength="<?= \App\Domain\EventMessage\EventMessage::MAX_LENGTH ?>" placeholder="Text für das Stagedisplay …" aria-label="Nachricht an die Bühne"></textarea>
+                    <div class="chips" style="margin-top: 10px;" role="group" aria-label="Textvorschläge">
+                        <?php foreach (['Bitte näher ans Mikrofon', 'Bitte lauter sprechen', 'Noch 5 Minuten', 'Bitte zum Ende kommen', 'Kurze technische Pause'] as $preset): ?>
+                            <button class="chip" type="button" data-preset="<?= e($preset) ?>"><?= e($preset) ?></button>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="row" style="margin-top: 12px;">
+                        <label><input type="checkbox" id="send-urgent"> Dringend</label>
+                        <?php if ($otherPrograms !== []): ?>
+                            <label title="Auch auf den Stagedisplays der anderen Minutenprogramme dieser Veranstaltung zeigen"><input type="checkbox" id="send-all"> Alle Minutenprogramme</label>
+                        <?php endif; ?>
+                        <span class="sp"></span>
+                        <button class="btn primary" type="submit">Senden</button>
+                    </div>
+                    <p class="hint" style="margin: 8px 0 0;">Erscheint auf dem Stagedisplay, bis sie zurückgezogen wird. Enter sendet, Umschalt+Enter fügt eine Zeile ein.</p>
+                </form>
+            </section>
+
             <section class="card">
                 <h2>Verzug einstellen</h2>
                 <form class="row" id="delay-form">
@@ -447,16 +476,19 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         msgs.forEach(function (m) { if (knownMsgs && !knownMsgs[m.id]) { fresh[m.id] = true; hasFresh = true; } });
         knownMsgs = {}; msgs.forEach(function (m) { knownMsgs[m.id] = true; });
         $('msgs').innerHTML = msgs.slice().reverse().map(function (m) {
-            var tags = (m.stage ? '<span class="tag">Stagedisplay</span>' : '') + (m.foh ? '<span class="tag">FOH</span>' : '');
+            // Messages written at FOH go to the stage: nothing to acknowledge here, only to withdraw.
+            var own = !!m.fromFoh;
+            var tags = own ? '<span class="tag">An die Bühne</span>' : (m.stage ? '<span class="tag">Stagedisplay</span>' : '') + (m.foh ? '<span class="tag">FOH</span>' : '');
             var meta = hm(m.sentAt) + ' · ' + esc(m.sentBy) + (m.acknowledgedAt ? ' · gesehen ' + hm(m.acknowledgedAt) + (m.acknowledgedBy ? ' (' + esc(m.acknowledgedBy) + ')' : '') : '');
             var acts = CAN_CONTROL
-                ? '<div class="ma">' + (m.acknowledgedAt ? '' : '<button class="btn sm primary" type="button" data-msg-ack="' + esc(m.id) + '">✓ Gesehen</button>')
-                  + '<button class="btn sm" type="button" data-msg-close="' + esc(m.id) + '" title="' + (m.stage ? 'Auch vom Stagedisplay entfernen' : 'Ausblenden') + '">Ausblenden</button></div>'
+                ? '<div class="ma">' + (m.acknowledgedAt || own ? '' : '<button class="btn sm primary" type="button" data-msg-ack="' + esc(m.id) + '">✓ Gesehen</button>')
+                  + '<button class="btn sm" type="button" data-msg-close="' + esc(m.id) + '" title="' + (m.stage ? 'Auch vom Stagedisplay entfernen' : 'Ausblenden') + '">' + (own ? 'Zurückziehen' : 'Ausblenden') + '</button></div>'
                 : '<div></div>';
-            return '<div class="msg' + (m.urgent ? ' urgent' : '') + (m.acknowledgedAt ? ' seen' : '') + (fresh[m.id] ? ' fresh' : '') + '">'
-                + '<div><div class="tx">' + (m.urgent ? '⚠ ' : '✉ ') + esc(m.text) + '</div><div class="mt">' + tags + meta + '</div></div>' + acts + '</div>';
+            return '<div class="msg' + (own ? ' own' : '') + (m.urgent ? ' urgent' : '') + (m.acknowledgedAt ? ' seen' : '') + (fresh[m.id] && !own ? ' fresh' : '') + '">'
+                + '<div><div class="tx">' + (own ? '➜ ' : m.urgent ? '⚠ ' : '✉ ') + esc(m.text) + '</div><div class="mt">' + tags + meta + '</div></div>' + acts + '</div>';
         }).join('');
-        var open = msgs.filter(function (m) { return !m.acknowledgedAt; }).length;
+        hasFresh = msgs.some(function (m) { return fresh[m.id] && !m.fromFoh; });
+        var open = msgs.filter(function (m) { return !m.acknowledgedAt && !m.fromFoh; }).length;
         document.title = (open ? '(' + open + ') ' : '') + TITLE;
         if (hasFresh) { beep(); }
     }
@@ -605,7 +637,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.className = 'toast'; }, 2600);
     }
 
-    function act(path, fields, okMsg) {
+    function act(path, fields, okMsg, onOk) {
         if (busy) { return; }
         busy = true;
         var fd = new FormData();
@@ -619,6 +651,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
                 openTimeForm = null; listKey = '';
                 apply(res.d, sentAt);
                 if (okMsg) { toast(okMsg); }
+                if (onOk) { onOk(); }
             })
             .catch(function () { toast('Keine Verbindung zum Server.', true); })
             .finally(function () { busy = false; });
@@ -638,8 +671,11 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
             act('nachricht-gesehen/' + encodeURIComponent(b.dataset.msgAck), {}, 'Als gesehen markiert.');
         } else if (b.dataset.msgClose) {
             var msg = (state.messages || []).filter(function (m) { return m.id === b.dataset.msgClose; })[0];
+            if (msg && msg.fromFoh) { act('nachricht-ausblenden/' + encodeURIComponent(b.dataset.msgClose), {}, 'Nachricht zurückgezogen.'); return; }
             if (msg && msg.stage && !confirm('Nachricht ausblenden? Sie verschwindet auch vom Stagedisplay.')) { return; }
             act('nachricht-ausblenden/' + encodeURIComponent(b.dataset.msgClose), {}, 'Nachricht ausgeblendet.');
+        } else if (b.dataset.preset) {
+            var box = $('send-text'); box.value = b.dataset.preset; box.focus(); updateSendCount();
         } else if (b.dataset.start) {
             var it = itemById(b.dataset.start);
             var isNext = state.next && state.next.id === b.dataset.start;
@@ -667,7 +703,15 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
 
     document.addEventListener('submit', function (ev) {
         var f = ev.target;
-        if (f.id === 'delay-form') {
+        if (f.id === 'send-form') {
+            ev.preventDefault();
+            var text = $('send-text').value.trim();
+            if (text === '') { $('send-text').focus(); return; }
+            var all = $('send-all');
+            act('nachricht', { text: text, urgent: $('send-urgent').checked ? '1' : '0', all_programs: all && all.checked ? '1' : '0' }, 'Nachricht an die Bühne gesendet.', function () {
+                $('send-text').value = ''; $('send-urgent').checked = false; updateSendCount();
+            });
+        } else if (f.id === 'delay-form') {
             ev.preventDefault();
             var v = $('delay-input').value.trim();
             if (v === '') { return; }
@@ -678,6 +722,18 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
             act('start/' + encodeURIComponent(f.dataset.tform), { started_at: f.querySelector('input').value }, 'Startzeit übernommen.');
         }
     });
+
+    // Message to the stage: character counter, Enter sends (Shift+Enter = new line).
+    function updateSendCount() {
+        var box = $('send-text'); if (!box) { return; }
+        $('send-count').textContent = box.value.length ? box.value.length + ' / ' + box.maxLength : '';
+    }
+    if ($('send-text')) {
+        $('send-text').addEventListener('input', updateSendCount);
+        $('send-text').addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) { ev.preventDefault(); $('send-form').requestSubmit(); }
+        });
+    }
 
     // Keep the screen awake at FOH (where supported).
     function wake() { try { if (navigator.wakeLock && document.visibilityState === 'visible') { navigator.wakeLock.request('screen').catch(function () {}); } } catch (e) {} }

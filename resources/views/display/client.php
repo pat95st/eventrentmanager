@@ -257,7 +257,7 @@
         if (!list.length) { return ''; }
         return '<div class="messages">' + list.map(function (msg) {
             var meta = foh ? '<span class="meta">' + esc(msg.sentBy || '') + ' · ' + hm(msg.sentAt) + (msg.stage ? ' · auch auf der Bühne' : ' · nur FOH') + (msg.acknowledgedAt ? ' · gesehen ' + hm(msg.acknowledgedAt) : '') + '</span>' : '';
-            var buttons = foh && rs.live.canControl ? (msg.acknowledgedAt ? '' : '<button class="btn small" data-msg-seen="' + esc(msg.id) + '">Gesehen</button>') + '<button class="btn small" data-msg-hide="' + esc(msg.id) + '">Ausblenden</button>' : '';
+            var buttons = foh && rs.live.canControl ? (msg.acknowledgedAt || msg.fromFoh ? '' : '<button class="btn small" data-msg-seen="' + esc(msg.id) + '">Gesehen</button>') + '<button class="btn small" data-msg-hide="' + esc(msg.id) + '">Ausblenden</button>' : '';
             return '<div class="msg' + (msg.urgent ? ' urgent' : '') + '"><span class="text">' + (msg.urgent ? '⚠ ' : '') + esc(msg.text) + meta + '</span>' + buttons + '</div>';
         }).join('') + '</div>';
     }

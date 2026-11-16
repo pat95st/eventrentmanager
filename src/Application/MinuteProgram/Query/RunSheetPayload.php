@@ -226,6 +226,8 @@ final class RunSheetPayload
             'allPrograms' => $m->minuteProgramId === null,
             'sentAt' => self::time($m->createdAt),
             'sentBy' => $m->sentByName,
+            // Written at FOH (to the stage) rather than by the organizer.
+            'fromFoh' => $m->sentByType === 'foh',
             'acknowledgedAt' => self::time($m->acknowledgedAt),
             'acknowledgedBy' => $m->acknowledgedBy,
         ];

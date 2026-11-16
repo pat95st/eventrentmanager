@@ -140,6 +140,9 @@ $canTechnicianRentals = !$canRentals && \App\Domain\Technician\TechnicianAccess:
 $canContacts = $canCustomers || $canArticles;
 $canProcurement = $canArticles;
 $canDocuments = $canRentals;
+// Global search (Ctrl+K): button in the header plus the dialog in
+// partials/global_search.php, for everyone who may search at least one area.
+$canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearchHandler::searchableTypes($currentUser) !== [];
 ?>
 <!DOCTYPE html>
 <html lang="<?= e($activeLocale) ?>">
@@ -153,6 +156,9 @@ $canDocuments = $canRentals;
   siehe package.json ("npm run build:css") und README.
 -->
 <link rel="stylesheet" href="/assets/css/app.css?v=<?= (string) (@filemtime(dirname(__DIR__, 2) . '/public/assets/css/app.css') ?: 1) ?>">
+<?php if ($canSearch): ?>
+<link rel="stylesheet" href="/assets/css/global-search.css?v=<?= (string) (@filemtime(dirname(__DIR__, 2) . '/public/assets/css/global-search.css') ?: 1) ?>">
+<?php endif; ?>
 <?= class_exists(\App\Infrastructure\Http\UiFonts::class) ? \App\Infrastructure\Http\UiFonts::styles() : '' /* Schriftarten der Oberfläche */ ?>
 <style>
   /* Einblendfenster (Modals): einheitliches Aussehen für beide Arten —
@@ -574,6 +580,17 @@ $canDocuments = $canRentals;
         <?php endif; ?>
       </nav>
 
+      <?php if ($canSearch): ?>
+      <!-- Global search: opens the dialog from partials/global_search.php
+           (also via Ctrl+K / Cmd+K). Icon only on small screens, with the
+           shortcut hint and label as the bar gets wider (see global-search.css). -->
+      <button type="button" class="gs-trigger" data-global-search-open aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" aria-label="<?= e(t('search.open')) ?>" title="<?= e(t('search.open') . ' (' . t('search.shortcut_modifier') . '+K)') ?>">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+        <span class="gs-trigger-label"><?= e(t('search.trigger')) ?></span>
+        <kbd class="gs-kbd gs-trigger-kbd"><span data-gs-modifier><?= e(t('search.shortcut_modifier')) ?></span><span data-gs-plus>+</span>K</kbd>
+      </button>
+      <?php endif; ?>
+
       <?php if ($currentUser !== null): ?>
       <!-- Mobiles Einstellungsmenü: ab < lg (1024px) sichtbar, ganz rechts
            im Header (ml-auto, da desktop-nav/Zahnrad+Benutzermenü hier auf
@@ -585,7 +602,7 @@ $canDocuments = $canRentals;
            <details data-dropdown>, also dieselbe Dropdown-Mechanik (inkl.
            Positionierung/Escape/Klick-außerhalb) wie die Zeilen-Aktions-
            Menüs in Tabellen (siehe JS weiter unten). -->
-      <details class="relative ml-auto lg:hidden" data-dropdown>
+      <details class="relative <?= $canSearch ? '' : 'ml-auto ' ?>lg:hidden" data-dropdown>
         <summary
           data-tour="settings-mobile"
           aria-label="<?= e(t('nav.user_menu')) ?>"
@@ -1604,6 +1621,7 @@ $canDocuments = $canRentals;
   <script src="/assets/js/dry-hire.js" defer></script>
   <!-- Set-Auswahl in Angebot/AB/Rechnung (Migration 113), siehe public/assets/js/set-picker.js -->
   <script src="/assets/js/set-picker.js" defer></script>
+  <?php /* Global search dialog (Ctrl+K) */ require __DIR__ . '/partials/global_search.php'; ?>
   <?php /* Onboarding tour after the first login (migration 161) */ require __DIR__ . '/partials/onboarding_tour.php'; ?>
 </body>
 </html>

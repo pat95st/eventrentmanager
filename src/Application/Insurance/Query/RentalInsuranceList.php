@@ -17,6 +17,18 @@ final class RentalInsuranceList
     ) {
     }
 
+    /** @return list<InsuranceListRow> rows of equipment (without vehicles) */
+    public function deviceRows(): array
+    {
+        return array_values(array_filter($this->rows, static fn (InsuranceListRow $r) => !$r->isVehicle()));
+    }
+
+    /** @return list<InsuranceListRow> rows of vehicles put on the list */
+    public function vehicleRows(): array
+    {
+        return array_values(array_filter($this->rows, static fn (InsuranceListRow $r) => $r->isVehicle()));
+    }
+
     /** Summe der vorhandenen Zeitwerte (fehlende zählen nicht mit), als "1234.50". */
     public function totalCurrentValue(): string
     {

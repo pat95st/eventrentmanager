@@ -28,7 +28,8 @@ trait ValidatesVehicleInput
      *     loadAreaWidthCm: string|null, loadAreaHeightCm: string|null,
      *     loadAreaOpenTop: bool,
      *     towHitchAvailable: bool|null, towCapacityKg: string|null,
-     *     emptyWeightKg: string|null, notes: string|null
+     *     emptyWeightKg: string|null, notes: string|null,
+     *     acquisitionYear: int|null, purchasePrice: string|null, currentValue: string|null
      * }}
      */
     private function validateVehicleInput(
@@ -44,6 +45,9 @@ trait ValidatesVehicleInput
         ?string $towCapacityKg,
         ?string $emptyWeightKg,
         ?string $notes,
+        ?string $acquisitionYear = null,
+        ?string $purchasePrice = null,
+        ?string $currentValue = null,
     ): array {
         $errors = [];
 
@@ -102,6 +106,19 @@ trait ValidatesVehicleInput
             $notes = null;
         }
 
+        // Insurance list values (optional).
+        $year = null;
+        $acquisitionYear = $acquisitionYear !== null ? trim($acquisitionYear) : '';
+        if ($acquisitionYear !== '') {
+            if (preg_match('/^\d{4}$/', $acquisitionYear) !== 1 || (int) $acquisitionYear < 1900 || (int) $acquisitionYear > (int) date('Y') + 1) {
+                $errors['acquisitionYear'] = 'Bitte das Anschaffungsjahr vierstellig angeben (z. B. 2021).';
+            } else {
+                $year = (int) $acquisitionYear;
+            }
+        }
+        $purchasePrice = $this->parseOptionalAmount($purchasePrice, 'purchasePrice', 'Bitte den Anschaffungspreis als Betrag in Euro angeben.', $errors);
+        $currentValue = $this->parseOptionalAmount($currentValue, 'currentValue', 'Bitte den Zeitwert als Betrag in Euro angeben.', $errors);
+
         return [$errors, [
             'category' => $category,
             'name' => $name,
@@ -115,7 +132,39 @@ trait ValidatesVehicleInput
             'towCapacityKg' => $towCapacityKg,
             'emptyWeightKg' => $emptyWeightKg,
             'notes' => $notes,
+            'acquisitionYear' => $year,
+            'purchasePrice' => $purchasePrice,
+            'currentValue' => $currentValue,
         ]];
+    }
+
+    /**
+     * Euro amount with optional thousands separators ("1.234,50"), stored as "1234.50".
+     *
+     * @param array<string, string> $errors
+     */
+    private function parseOptionalAmount(?string $value, string $field, string $message, array &$errors): ?string
+    {
+        $value = $value !== null ? trim(str_replace(['€', ' '], '', $value)) : null;
+        if ($value === null || $value === '') {
+            return null;
+        }
+        // German notation: "." is a thousands separator if a decimal comma
+        // follows or if it only groups digits in threes ("38.500").
+        if (str_contains($value, ',') || preg_match('/^\d{1,3}(\.\d{3})+$/', $value) === 1) {
+            $value = str_replace('.', '', $value);
+        }
+        $normalized = $this->parseOptionalDecimal($value, $field, $message, $errors);
+        if ($normalized === null) {
+            return null;
+        }
+        if ((float) $normalized > 99999999.99) {
+            $errors[$field] = $message;
+
+            return null;
+        }
+
+        return number_format((float) $normalized, 2, '.', '');
     }
 
     /** @param array<string, string> $errors */

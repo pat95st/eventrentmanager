@@ -10,6 +10,7 @@ use function App\Infrastructure\Http\e;
 $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, $old) ? ($old[$field] ?? '') : ($fallback ?? '');
 $selectedCategory = $val('category', $vehicle?->category->value) ?: VehicleCategory::Auto->value;
 $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['tow_hitch_available'] : ($vehicle?->towHitchAvailable ?? false);
+$amount = static fn (?string $v): ?string => $v === null ? null : number_format((float) $v, 2, ',', '.');
 $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) $old['load_area_open_top'] : ($vehicle?->loadAreaOpenTop ?? false);
 ?>
 
@@ -122,6 +123,36 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
                    value="<?= e($val('empty_weight_kg', $vehicle?->emptyWeightKg)) ?>"
                    class="mt-1 w-full max-w-xs rounded-md border <?= isset($errors['emptyWeightKg']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
             <?php if (isset($errors['emptyWeightKg'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['emptyWeightKg']) ?></p><?php endif; ?>
+        </div>
+    </div>
+
+    <div class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Versicherung</h3>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Werte für die Versicherungsliste einer Veranstaltung, auf die das Fahrzeug gesetzt wird. Leere Felder bleiben im Export leer.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+                <label for="acquisition_year" class="block text-[11px] text-slate-500 dark:text-slate-400">Anschaffungsjahr</label>
+                <input type="text" id="acquisition_year" name="acquisition_year" inputmode="numeric" placeholder="z. B. 2021"
+                       value="<?= e($val('acquisition_year', $vehicle?->acquisitionYear !== null ? (string) $vehicle->acquisitionYear : null)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['acquisitionYear']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['acquisitionYear'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['acquisitionYear']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="purchase_price" class="block text-[11px] text-slate-500 dark:text-slate-400">Anschaffungspreis (€)</label>
+                <input type="text" id="purchase_price" name="purchase_price" inputmode="decimal" placeholder="z. B. 38.500,00"
+                       value="<?= e($val('purchase_price', $amount($vehicle?->purchasePrice))) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['purchasePrice']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['purchasePrice'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['purchasePrice']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="current_value" class="block text-[11px] text-slate-500 dark:text-slate-400">Zeitwert (€)</label>
+                <input type="text" id="current_value" name="current_value" inputmode="decimal" placeholder="z. B. 24.000,00"
+                       value="<?= e($val('current_value', $amount($vehicle?->currentValue))) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['currentValue']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['currentValue'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['currentValue']) ?></p><?php endif; ?>
+            </div>
         </div>
     </div>
 

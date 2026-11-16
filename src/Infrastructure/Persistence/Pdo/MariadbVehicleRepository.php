@@ -22,11 +22,13 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'INSERT INTO vehicles (
                 id, category, name, license_plate, payload_kg,
                 load_area_length_cm, load_area_width_cm, load_area_height_cm, load_area_open_top,
-                tow_hitch_available, tow_capacity_kg, empty_weight_kg, notes, created_at, updated_at
+                tow_hitch_available, tow_capacity_kg, empty_weight_kg,
+                acquisition_year, purchase_price, current_value, notes, created_at, updated_at
              ) VALUES (
                 :id, :category, :name, :license_plate, :payload_kg,
                 :load_area_length_cm, :load_area_width_cm, :load_area_height_cm, :load_area_open_top,
-                :tow_hitch_available, :tow_capacity_kg, :empty_weight_kg, :notes, :created_at, :updated_at
+                :tow_hitch_available, :tow_capacity_kg, :empty_weight_kg,
+                :acquisition_year, :purchase_price, :current_value, :notes, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 category = :category2, name = :name2, license_plate = :license_plate2,
@@ -34,7 +36,9 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
                 load_area_length_cm = :load_area_length_cm2, load_area_width_cm = :load_area_width_cm2,
                 load_area_height_cm = :load_area_height_cm2, load_area_open_top = :load_area_open_top2,
                 tow_hitch_available = :tow_hitch_available2, tow_capacity_kg = :tow_capacity_kg2,
-                empty_weight_kg = :empty_weight_kg2, notes = :notes2, updated_at = :updated_at2'
+                empty_weight_kg = :empty_weight_kg2, acquisition_year = :acquisition_year2,
+                purchase_price = :purchase_price2, current_value = :current_value2,
+                notes = :notes2, updated_at = :updated_at2'
         );
 
         $stmt->execute([
@@ -50,6 +54,9 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'tow_hitch_available' => $vehicle->towHitchAvailable === null ? null : (int) $vehicle->towHitchAvailable,
             'tow_capacity_kg' => $vehicle->towCapacityKg,
             'empty_weight_kg' => $vehicle->emptyWeightKg,
+            'acquisition_year' => $vehicle->acquisitionYear,
+            'purchase_price' => $vehicle->purchasePrice,
+            'current_value' => $vehicle->currentValue,
             'notes' => $vehicle->notes,
             'created_at' => $vehicle->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $vehicle->updatedAt->format('Y-m-d H:i:s'),
@@ -64,6 +71,9 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'tow_hitch_available2' => $vehicle->towHitchAvailable === null ? null : (int) $vehicle->towHitchAvailable,
             'tow_capacity_kg2' => $vehicle->towCapacityKg,
             'empty_weight_kg2' => $vehicle->emptyWeightKg,
+            'acquisition_year2' => $vehicle->acquisitionYear,
+            'purchase_price2' => $vehicle->purchasePrice,
+            'current_value2' => $vehicle->currentValue,
             'notes2' => $vehicle->notes,
             'updated_at2' => $vehicle->updatedAt->format('Y-m-d H:i:s'),
         ]);
@@ -118,6 +128,18 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
         return (int) $stmt->fetchColumn();
     }
 
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        $stmt = $this->pdo->prepare('SELECT * FROM vehicles WHERE id IN (' . $placeholders . ') ORDER BY name ASC');
+        $stmt->execute(array_values($ids));
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
     /** @return array{0: string, 1: array<string, string>} */
     private function buildSearchWhere(?string $search): array
     {
@@ -170,6 +192,9 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             notes: $row['notes'],
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
+            acquisitionYear: isset($row['acquisition_year']) ? (int) $row['acquisition_year'] : null,
+            purchasePrice: $row['purchase_price'] ?? null,
+            currentValue: $row['current_value'] ?? null,
         );
     }
 }

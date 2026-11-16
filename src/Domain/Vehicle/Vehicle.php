@@ -39,6 +39,10 @@ final class Vehicle
         public ?string $notes,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
+        // Values for the insurance list of an event (see migration 170), all optional.
+        public ?int $acquisitionYear = null,
+        public ?string $purchasePrice = null, // purchase price in EUR
+        public ?string $currentValue = null, // estimated current value in EUR
     ) {
     }
 

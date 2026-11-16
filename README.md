@@ -198,6 +198,12 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Exemplare (gleicher Artikel, gleiches Anschaffungsjahr, gleicher Preis)
   werden dabei nur einmal angefragt. Der Anschaffungspreis ist der abweichende
   Einkaufspreis der Inventarnummer, sonst der des Artikels.
+  Zusätzlich lassen sich **Fahrzeuge** aus dem Fuhrpark auf die Liste setzen
+  (Abschnitt „Fahrzeuge“ der Versicherungsliste, einzeln oder alle Fahrzeuge
+  der Beladungsliste auf einmal; Migration 170, Tabelle
+  `rental_insurance_vehicles`). Sie erscheinen nach den Geräten, mit dem
+  Kennzeichen in der Spalte Inventarnummer; Anschaffungsjahr,
+  Anschaffungspreis und Zeitwert werden im Fahrzeugformular gepflegt.
 - **Startseite anordnen** (Profil › Dashboard, `/profil/dashboard`, Migration
   147): Jeder Benutzer ordnet die Bereiche seiner Startseite selbst an –
   Hauptbereich (breite Spalte), Seitenleiste, untere Reihe oder ausgeblendet –

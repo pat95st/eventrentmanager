@@ -37,12 +37,16 @@ use App\Domain\Manufacturer\ManufacturerRepositoryInterface;
 use App\Domain\Rental\Rental;
 use App\Domain\Rental\RentalIssuedItem;
 use App\Domain\Rental\RentalItem;
+use App\Domain\Vehicle\Vehicle;
+use App\Domain\Vehicle\VehicleCategory;
+use App\Domain\Vehicle\VehicleRepositoryInterface;
 use App\Infrastructure\Csv\InsuranceListCsvExporter;
 use App\Infrastructure\Integration\Insurance\OpenAiCurrentValueEstimator;
 use App\Infrastructure\Pdf\InsuranceListPdfGenerator;
 use Codeception\Test\Unit;
 use DateTimeImmutable;
 use Tests\Support\Fakes\InMemoryCurrentValueRepository;
+use Tests\Support\Fakes\InMemoryRentalInsuranceVehicleRepository;
 
 /**
  * Versicherungsliste: Zusammenstellung der Zeilen, Zeitwert-Auflösung,
@@ -51,6 +55,9 @@ use Tests\Support\Fakes\InMemoryCurrentValueRepository;
 final class RentalInsuranceListTest extends Unit
 {
     private InMemoryCurrentValueRepository $values;
+    private InMemoryRentalInsuranceVehicleRepository $insuranceVehicles;
+    /** @var array<string, Vehicle> */
+    private array $vehicles = [];
     /** @var array<string, Article> */
     private array $articles = [];
     /** @var array<string, InventoryNumber> */
@@ -63,6 +70,11 @@ final class RentalInsuranceListTest extends Unit
     {
         $now = new DateTimeImmutable('2026-01-01');
         $this->values = new InMemoryCurrentValueRepository();
+        $this->insuranceVehicles = new InMemoryRentalInsuranceVehicleRepository();
+        $this->vehicles = [
+            'veh-1' => $this->vehicle('veh-1', 'Sprinter', 'B-ER 123', VehicleCategory::Auto, 2020, '42000.00', '28000.00'),
+            'veh-2' => $this->vehicle('veh-2', 'Anhänger klein', null, VehicleCategory::Anhaenger, null, null, null),
+        ];
         $this->manufacturer = new Manufacturer('man-1', 'Shure', 'SHU', $now, $now);
         $this->category = new Category('cat-1', 'Mikrofone', null, $now, $now);
 
@@ -136,6 +148,58 @@ final class RentalInsuranceListTest extends Unit
         $list = $this->listHandler()->handle(new GetRentalInsuranceList('rent-1', includeUnissued: false));
 
         $this->assertCount(3, $list->rows);
+    }
+
+    public function testVehiclesOnTheListAreAppendedAfterTheDevices(): void
+    {
+        $this->values->setArticleFixedValue('art-xlr', '15.00');
+        $this->insuranceVehicles->add('rent-1', 'veh-1');
+        $this->insuranceVehicles->add('rent-1', 'veh-2');
+
+        $list = $this->listHandler()->handle(new GetRentalInsuranceList('rent-1', includeUnissued: false));
+
+        $this->assertCount(5, $list->rows);
+        $this->assertCount(3, $list->deviceRows());
+        [$trailer, $van] = $list->vehicleRows();
+        $this->assertSame($trailer, $list->rows[3], 'Fahrzeuge nach den Geräten, nach Name sortiert');
+
+        $this->assertTrue($van->isVehicle());
+        $this->assertFalse($van->isIssued());
+        $this->assertNull($van->articleId);
+        $this->assertSame('veh-1', $van->vehicleId);
+        $this->assertSame('Fahrzeug (Auto)', $van->category);
+        $this->assertSame('Sprinter', $van->manufacturerModel);
+        $this->assertSame('B-ER 123', $van->inventoryNumber);
+        $this->assertSame(2020, $van->acquisitionYear);
+        $this->assertSame('28000.00', $van->currentValue);
+        $this->assertSame('42000.00', $van->purchasePrice);
+
+        $this->assertSame('Fahrzeug (Anhänger)', $trailer->category);
+        $this->assertNull($trailer->currentValue);
+
+        $this->assertSame('28015.00', $list->totalCurrentValue());
+        $this->assertSame('42188.00', $list->totalPurchasePrice());
+
+        $csv = (new InsuranceListCsvExporter())->generate($list, [InsuranceField::ManufacturerModel, InsuranceField::InventoryNumber, InsuranceField::CurrentValue]);
+        $this->assertStringContainsString('Sprinter;"B-ER 123";28000,00', $csv);
+        $this->assertStringStartsWith('%PDF', (new InsuranceListPdfGenerator())->generate($list, InsuranceField::cases()));
+    }
+
+    public function testVehiclesAreAddedAndRemovedViaCommands(): void
+    {
+        $rentals = $this->createMock(\App\Domain\Rental\RentalRepositoryInterface::class);
+        $rentals->method('findById')->willReturnCallback(fn (string $id) => $id === 'rent-1' ? $this->detail->rental : null);
+        $handler = new \App\Application\Insurance\Command\RentalInsuranceVehicleHandler($rentals, $this->vehicleRepository(), $this->insuranceVehicles);
+
+        $this->assertSame('Sprinter', $handler->handle(new \App\Application\Insurance\Command\AddRentalInsuranceVehicle('rent-1', 'veh-1')));
+        $handler->handle(new \App\Application\Insurance\Command\AddRentalInsuranceVehicle('rent-1', 'veh-1'));
+        $this->assertSame(['veh-1'], $this->insuranceVehicles->vehicleIdsForRental('rent-1'));
+
+        $handler->handle(new \App\Application\Insurance\Command\RemoveRentalInsuranceVehicle('rent-1', 'veh-1'));
+        $this->assertSame([], $this->insuranceVehicles->vehicleIdsForRental('rent-1'));
+
+        $this->expectException(\App\Domain\Exception\NotFoundException::class);
+        $handler->handle(new \App\Application\Insurance\Command\AddRentalInsuranceVehicle('rent-1', 'unknown'));
     }
 
     public function testCsvContainsOnlyTheSelectedColumnsAndLeavesMissingValuesEmpty(): void
@@ -270,7 +334,80 @@ final class RentalInsuranceListTest extends Unit
             }
         };
 
-        return new GetRentalInsuranceListHandler($getRental, $this->categories(), $this->values);
+        return new GetRentalInsuranceListHandler($getRental, $this->categories(), $this->values, $this->vehicleRepository(), $this->insuranceVehicles);
+    }
+
+    private function vehicle(string $id, string $name, ?string $plate, VehicleCategory $category, ?int $year, ?string $purchasePrice, ?string $currentValue): Vehicle
+    {
+        $now = new DateTimeImmutable('2026-01-01');
+
+        return new Vehicle(
+            id: $id,
+            category: $category,
+            name: $name,
+            licensePlate: $plate,
+            payloadKg: null,
+            loadAreaLengthCm: null,
+            loadAreaWidthCm: null,
+            loadAreaHeightCm: null,
+            loadAreaOpenTop: false,
+            towHitchAvailable: null,
+            towCapacityKg: null,
+            emptyWeightKg: null,
+            notes: null,
+            createdAt: $now,
+            updatedAt: $now,
+            acquisitionYear: $year,
+            purchasePrice: $purchasePrice,
+            currentValue: $currentValue,
+        );
+    }
+
+    private function vehicleRepository(): VehicleRepositoryInterface
+    {
+        return new class ($this->vehicles) implements VehicleRepositoryInterface {
+            /** @param array<string, Vehicle> $items */
+            public function __construct(private readonly array $items)
+            {
+            }
+
+            public function findById(string $id): ?Vehicle
+            {
+                return $this->items[$id] ?? null;
+            }
+
+            public function findByIds(array $ids): array
+            {
+                return array_values(array_intersect_key($this->items, array_flip($ids)));
+            }
+
+            public function save(Vehicle $vehicle): void
+            {
+            }
+            public function findAll(?string $search = null, ?int $limit = null, ?int $offset = null): array
+            {
+                return array_values($this->items);
+            }
+            public function findByCategory(VehicleCategory $category): array
+            {
+                return [];
+            }
+            public function countAll(?string $search = null): int
+            {
+                return count($this->items);
+            }
+            public function isUsedByVehicleLoads(string $id): bool
+            {
+                return false;
+            }
+            public function isUsedByVehicleTows(string $id): bool
+            {
+                return false;
+            }
+            public function delete(string $id): void
+            {
+            }
+        };
     }
 
     /** @return CurrentValueEstimatorInterface&object{calls: int} */

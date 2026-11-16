@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
+use App\Application\Insurance\Command\AddRentalInsuranceVehicle;
 use App\Application\Insurance\Command\EstimateCurrentValue;
 use App\Application\Insurance\Command\EstimateMissingCurrentValues;
 use App\Application\Insurance\Command\EstimationSummary;
+use App\Application\Insurance\Command\RemoveRentalInsuranceVehicle;
 use App\Application\Insurance\Command\SaveInsuranceExportFields;
 use App\Application\Insurance\Estimation\CurrentValueEstimationException;
 use App\Application\Insurance\Estimation\CurrentValueEstimatorInterface;
@@ -18,6 +20,9 @@ use App\Application\Settings\Query\GetCompanySettings;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Insurance\CurrentValueRepositoryInterface;
 use App\Domain\Insurance\InsuranceField;
+use App\Domain\Vehicle\RentalVehicleLoadRepositoryInterface;
+use App\Domain\Vehicle\RentalVehicleTowRepositoryInterface;
+use App\Domain\Vehicle\VehicleRepositoryInterface;
 use App\Infrastructure\Csv\InsuranceListCsvExporter;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
@@ -40,6 +45,9 @@ final class InsuranceListController
         private readonly CurrentValueEstimatorInterface $estimator,
         private readonly InsuranceListCsvExporter $csvExporter,
         private readonly InsuranceListPdfGenerator $pdfGenerator,
+        private readonly VehicleRepositoryInterface $vehicles,
+        private readonly RentalVehicleLoadRepositoryInterface $vehicleLoads,
+        private readonly RentalVehicleTowRepositoryInterface $vehicleTows,
     ) {
     }
 
@@ -57,8 +65,19 @@ final class InsuranceListController
         }
         assert($list instanceof RentalInsuranceList);
 
+        // Vehicles that can still be put on the list; those used in the
+        // loading list of this event are suggested first.
+        $onList = array_flip(array_map(static fn ($r) => (string) $r->vehicleId, $list->vehicleRows()));
+        $loadingListIds = $this->loadingListVehicleIds($id);
+        $vehicleCandidates = array_values(array_filter($this->vehicles->findAll(), static fn ($v) => !isset($onList[$v->id])));
+        usort($vehicleCandidates, static fn ($a, $b): int => (isset($loadingListIds[$b->id]) <=> isset($loadingListIds[$a->id])) ?: strnatcasecmp($a->name, $b->name));
+        $suggestedVehicleIds = array_values(array_filter(array_keys($loadingListIds), static fn ($vid) => !isset($onList[$vid])));
+
         echo View::page('rentals/insurance-list', [
             'list' => $list,
+            'vehicleCandidates' => $vehicleCandidates,
+            'loadingListVehicleIds' => $loadingListIds,
+            'suggestedVehicleIds' => $suggestedVehicleIds,
             'includeUnissued' => $includeUnissued,
             'selectedFields' => $this->currentValues->exportFields(),
             'aiAvailable' => $this->estimator->isAvailable(),
@@ -105,6 +124,69 @@ final class InsuranceListController
         }
 
         Response::redirect($this->listUrl($id, $request));
+    }
+
+    /**
+     * POST /veranstaltungen/{id}/versicherungsliste/fahrzeuge — puts one
+     * vehicle (vehicle_id) or all vehicles of the loading list
+     * (from_loading_list=1) on the insurance list.
+     */
+    public function addVehicle(Request $request): void
+    {
+        $id = $request->param('id');
+        $vehicleIds = $request->input('from_loading_list') === '1'
+            ? array_map('strval', array_keys($this->loadingListVehicleIds($id)))
+            : array_filter([(string) $request->input('vehicle_id', '')], static fn (string $v) => $v !== '');
+
+        if ($vehicleIds === []) {
+            Flash::error('Bitte ein Fahrzeug auswählen.');
+            Response::redirect($this->listUrl($id, $request));
+
+            return;
+        }
+
+        try {
+            $names = [];
+            foreach ($vehicleIds as $vehicleId) {
+                $names[] = $this->commands->dispatch(new AddRentalInsuranceVehicle($id, $vehicleId));
+            }
+            Flash::success(count($names) === 1
+                ? 'Fahrzeug „' . $names[0] . '“ wurde zur Versicherungsliste hinzugefügt.'
+                : count($names) . ' Fahrzeuge wurden zur Versicherungsliste hinzugefügt.');
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect($this->listUrl($id, $request));
+    }
+
+    /** POST /veranstaltungen/{id}/versicherungsliste/fahrzeuge/{vehicleId}/entfernen */
+    public function removeVehicle(Request $request): void
+    {
+        $id = $request->param('id');
+        try {
+            $name = $this->commands->dispatch(new RemoveRentalInsuranceVehicle($id, $request->param('vehicleId')));
+            Flash::success('Fahrzeug „' . $name . '“ wurde von der Versicherungsliste entfernt.');
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect($this->listUrl($id, $request));
+    }
+
+    /** @return array<string, true> ids of vehicles used in the loading list (loads and towing vehicles) of the event */
+    private function loadingListVehicleIds(string $rentalId): array
+    {
+        $ids = [];
+        foreach ($this->vehicleLoads->findByRental($rentalId) as $load) {
+            $ids[$load->vehicleId] = true;
+        }
+        foreach ($this->vehicleTows->findByRental($rentalId) as $tow) {
+            $ids[$tow->towedVehicleId] = true;
+            $ids[$tow->towingVehicleId] = true;
+        }
+
+        return $ids;
     }
 
     /** POST /inventurnummern/{id}/zeitwert/ki — Zeitwert eines Exemplars per KI schätzen. */

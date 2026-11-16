@@ -66,7 +66,7 @@ final class InsuranceListPdfGenerator
         $y = $this->drawTableHeader($writer, $y, $pageWidth, $columns);
 
         if ($list->rows === []) {
-            $writer->text(self::MARGIN, $y - self::TABLE_LINE_HEIGHT, 'Für diese Veranstaltung sind keine Geräte erfasst.', 10);
+            $writer->text(self::MARGIN, $y - self::TABLE_LINE_HEIGHT, 'Für diese Veranstaltung sind keine Geräte oder Fahrzeuge erfasst.', 10);
             $y -= 2 * self::TABLE_LINE_HEIGHT;
         }
 
@@ -131,7 +131,10 @@ final class InsuranceListPdfGenerator
                 $lines[] = 'Ort: ' . $rental->eventLocation;
             }
             $lines[] = 'Zeitraum: ' . $rental->startDate->format('d.m.Y') . ' - ' . $rental->endDate->format('d.m.Y');
-            $lines[] = 'Anzahl Geräte: ' . count($list->rows) . ' · Stand: ' . (new \DateTimeImmutable('today'))->format('d.m.Y');
+            $vehicleCount = count($list->vehicleRows());
+            $lines[] = 'Anzahl Geräte: ' . count($list->deviceRows())
+                . ($vehicleCount > 0 ? ' · Fahrzeuge: ' . $vehicleCount : '')
+                . ' · Stand: ' . (new \DateTimeImmutable('today'))->format('d.m.Y');
             foreach ($lines as $line) {
                 $writer->text(self::MARGIN, $y, $line, 10);
                 $y -= 14;

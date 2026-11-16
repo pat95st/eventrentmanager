@@ -37,6 +37,9 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             $command->towCapacityKg,
             $command->emptyWeightKg,
             $command->notes,
+            $command->acquisitionYear,
+            $command->purchasePrice,
+            $command->currentValue,
         );
 
         if ($errors !== []) {
@@ -60,6 +63,9 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             notes: $data['notes'],
             createdAt: $now,
             updatedAt: $now,
+            acquisitionYear: $data['acquisitionYear'],
+            purchasePrice: $data['purchasePrice'],
+            currentValue: $data['currentValue'],
         );
 
         $this->vehicles->save($vehicle);

@@ -68,9 +68,11 @@ $hasNetworkInterface = array_key_exists('has_network_interface', $old)
 $requiresDhcp = array_key_exists('requires_dhcp', $old)
     ? (bool) $old['requires_dhcp']
     : ($networkOverview?->settings?->requiresDhcp ?? false);
-// Power planning (migration 159): input power in watts (not for cables, power distributors and bundles).
-$inputPowerW ??= null;
-$inputPowerValue = array_key_exists('input_power_w', $old) ? (string) $old['input_power_w'] : ($inputPowerW !== null ? (string) $inputPowerW : '');
+// Power planning (migrations 159, 173): peak and average power in watts (not for cables, power distributors and bundles).
+/** @var \App\Domain\PowerPlan\ArticlePower|null $articlePower */
+$articlePower ??= null;
+$inputPowerValue = array_key_exists('input_power_w', $old) ? (string) $old['input_power_w'] : (string) ($articlePower?->peakW ?? '');
+$avgPowerValue = array_key_exists('avg_power_w', $old) ? (string) $old['avg_power_w'] : (string) ($articlePower?->averageW ?? '');
 $hasFirmware = array_key_exists('has_firmware', $old)
     ? (bool) $old['has_firmware']
     : ($article?->hasFirmware ?? false);
@@ -468,11 +470,20 @@ $bundleComponentRows ??= [];
         <?php if (!$isBundle): ?>
         <div id="input_power_section" class="<?= $isCable || $isPowerDistributor ? 'hidden' : '' ?>" data-cable-category="<?= e($cableCategoryId) ?>" data-power-distributor-category="<?= e((string) $powerDistributorCategoryId) ?>">
             <input type="hidden" name="input_power_section" value="1">
-            <label for="input_power_w" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Eingangsleistung (W)</label>
-            <input type="number" min="0" max="500000" step="1" id="input_power_w" name="input_power_w" value="<?= e($inputPowerValue) ?>" placeholder="z. B. 1200"
-                   class="mt-1 w-full rounded-md border <?= isset($errors['inputPower']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                    <label for="input_power_w" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Spitzenleistung (W)</label>
+                    <input type="number" min="0" max="500000" step="1" id="input_power_w" name="input_power_w" value="<?= e($inputPowerValue) ?>" placeholder="z. B. 1200"
+                           class="mt-1 w-full rounded-md border <?= isset($errors['inputPower']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label for="avg_power_w" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Durchschnittliche Leistung (W)</label>
+                    <input type="number" min="0" max="500000" step="1" id="avg_power_w" name="avg_power_w" value="<?= e($avgPowerValue) ?>" placeholder="z. B. 400"
+                           class="mt-1 w-full rounded-md border <?= isset($errors['averagePower']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                </div>
+            </div>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                Maximale Leistungsaufnahme laut Typenschild. Grundlage der Stromplanung von Veranstaltungen (Last je Phase). Leer lassen, wenn unbekannt.
+                Spitzenleistung = maximale Leistungsaufnahme laut Typenschild. Ist eine durchschnittliche Leistung angegeben, wird nur diese ausgewiesen und der Stromplanung von Veranstaltungen (Last je Phase) zugrunde gelegt – sonst die Spitzenleistung. Leer lassen, wenn unbekannt.
             </p>
         </div>
         <script>

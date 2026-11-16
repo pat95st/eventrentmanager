@@ -6,6 +6,7 @@ namespace App\Application\PowerPlan\Query;
 
 use App\Application\Query\QueryHandlerInterface;
 use App\Application\Query\QueryInterface;
+use App\Domain\PowerPlan\ArticlePower;
 use App\Domain\PowerPlan\RentalPowerPlanRepositoryInterface;
 
 final class GetArticleInputPowerHandler implements QueryHandlerInterface
@@ -14,10 +15,10 @@ final class GetArticleInputPowerHandler implements QueryHandlerInterface
     {
     }
 
-    public function handle(QueryInterface $query): ?int
+    public function handle(QueryInterface $query): ArticlePower
     {
         assert($query instanceof GetArticleInputPower);
 
-        return $this->plans->inputPowerOf($query->articleId);
+        return $this->plans->articlePowerOf($query->articleId);
     }
 }

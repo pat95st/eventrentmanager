@@ -4796,6 +4796,17 @@ ALTER TABLE minute_program_template_items
     DROP COLUMN note_video,
     DROP COLUMN note_stage;
 
+-- --- 173_article_average_power.sql ---
+-- Migration 173: average power of a device in addition to its peak power.
+--
+-- articles.input_power_w (migration 159) stays the peak power (maximum
+-- consumption per type plate). articles.avg_power_w is the average
+-- consumption in watts (NULL = unknown). When an average is recorded, the
+-- application states and plans with it instead of the peak power.
+
+ALTER TABLE articles
+    ADD COLUMN avg_power_w INT UNSIGNED NULL AFTER input_power_w;
+
 -- =======================================================================
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
@@ -4990,4 +5001,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('169_venue_images.sql', NOW()),
     ('170_vehicle_insurance.sql', NOW()),
     ('171_external_login.sql', NOW()),
-    ('172_minute_program_trades.sql', NOW());
+    ('172_minute_program_trades.sql', NOW()),
+    ('173_article_average_power.sql', NOW());

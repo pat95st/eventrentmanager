@@ -11,6 +11,9 @@ use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Infrastructure\Http\Auth\RecordUserSession;
 use App\Infrastructure\Http\Auth\Session;
+use App\Application\Query\QueryBus;
+use App\Application\Settings\Query\GetExternalLoginSettings;
+use App\Domain\User\UserRepositoryInterface;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
@@ -30,6 +33,8 @@ final class SetupPasswordController
         private readonly CommandBus $commands,
         private readonly PasswordSetupTokenRepositoryInterface $tokens,
         private readonly RecordUserSession $recordUserSession,
+        private readonly QueryBus $queries,
+        private readonly UserRepositoryInterface $users,
     ) {
     }
 
@@ -62,6 +67,16 @@ final class SetupPasswordController
             return;
         } catch (ValidationException $e) {
             echo View::render('auth/setup-password', ['token' => $token, 'errors' => $e->errors()]);
+
+            return;
+        }
+
+        // While LDAP or OAuth is the login method, a local password must
+        // not open a session for anybody but administrators.
+        $user = $this->users->findById($userId);
+        if ($user === null || !$this->queries->ask(new GetExternalLoginSettings())->allowsLocalLogin($user)) {
+            Flash::error('Das Passwort wurde festgelegt. Bitte melde dich über die normale Anmeldung an.');
+            Response::redirect('/login');
 
             return;
         }

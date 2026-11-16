@@ -18,6 +18,7 @@ use App\Application\Settings\Query\GetExternalLoginSettings;
 use App\Domain\Auth\UserSessionRepositoryInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Settings\ExternalLoginSettings;
+use App\Domain\Settings\LoginMethod;
 use App\Domain\User\TwoFactorMethod;
 use App\Domain\User\User;
 use App\Domain\User\UserRepositoryInterface;
@@ -52,31 +53,72 @@ final class AuthController
         }
 
         // Hinweis z. B. nach automatischer Abmeldung wegen Inaktivität (AuthGuard).
-        $this->renderLogin([], '', false, Flash::consumeError());
+        $this->renderLogin($this->externalLoginSettings()->activeMethod()->value, [], '', false, Flash::consumeError());
     }
 
+    /** Login form of the active method: local password or LDAP (OAuth has no form). */
     public function login(Request $request): void
     {
         $email = $request->input('email', '') ?? '';
         $password = $request->input('password', '') ?? '';
         $trustDevice = ($request->input('trust_device', '') ?? '') === '1';
+        $method = $this->externalLoginSettings()->activeMethod();
+
+        if ($method === LoginMethod::Oauth) {
+            Response::redirect('/login');
+
+            return;
+        }
 
         try {
-            $user = $this->commands->dispatch(new AuthenticatePassword($email, $password));
+            $user = $this->commands->dispatch($method === LoginMethod::Ldap
+                ? new AuthenticateLdap($email, $password)
+                : new AuthenticatePassword($email, $password));
         } catch (ValidationException $e) {
-            // Local accounts come first, so a broken directory never locks
-            // out the administrators. Only if the local check fails, the
-            // same input is tried against LDAP (if configured).
-            try {
-                if (!$this->externalLoginSettings()->ldapActive()) {
-                    throw $e;
-                }
-                $user = $this->commands->dispatch(new AuthenticateLdap($email, $password));
-            } catch (ValidationException $e) {
-                $this->renderLogin($e->errors(), $email, $trustDevice);
+            $this->renderLogin($method->value, $e->errors(), $email, $trustDevice);
 
-                return;
+            return;
+        }
+
+        $this->continueAfterFirstFactor($user, $trustDevice, skipTwoFactor: false);
+    }
+
+    /**
+     * Emergency access while LDAP or OAuth replaces the local login: the
+     * local password form, usable by administrators only.
+     */
+    public function showLocalLogin(Request $request): void
+    {
+        if (Session::userId() !== null || $this->externalLoginSettings()->activeMethod() === LoginMethod::Local) {
+            Response::redirect(Session::userId() !== null ? '/' : '/login');
+
+            return;
+        }
+
+        $this->renderLogin('fallback', [], '', false);
+    }
+
+    public function localLogin(Request $request): void
+    {
+        $settings = $this->externalLoginSettings();
+        if ($settings->activeMethod() === LoginMethod::Local) {
+            Response::redirect('/login');
+
+            return;
+        }
+
+        $email = $request->input('email', '') ?? '';
+        $trustDevice = ($request->input('trust_device', '') ?? '') === '1';
+
+        try {
+            $user = $this->commands->dispatch(new AuthenticatePassword($email, $request->input('password', '') ?? ''));
+            if (!$settings->allowsLocalLogin($user)) {
+                throw new ValidationException(['credentials' => t('auth.login.error_local_admin_only')]);
             }
+        } catch (ValidationException $e) {
+            $this->renderLogin('fallback', $e->errors(), $email, $trustDevice);
+
+            return;
         }
 
         $this->continueAfterFirstFactor($user, $trustDevice, skipTwoFactor: false);
@@ -136,18 +178,19 @@ final class AuthController
         return $this->queries->ask(new GetExternalLoginSettings());
     }
 
-    /** @param array<string, string> $errors */
-    private function renderLogin(array $errors, string $email, bool $trustDevice, ?string $notice = null): void
+    /**
+     * @param string $mode 'local', 'ldap', 'oauth' (the active LoginMethod) or 'fallback'
+     * @param array<string, string> $errors
+     */
+    private function renderLogin(string $mode, array $errors, string $email, bool $trustDevice, ?string $notice = null): void
     {
-        $settings = $this->externalLoginSettings();
-
         echo View::render('auth/login', [
+            'mode' => $mode,
             'errors' => $errors,
             'email' => $email,
             'trustDevice' => $trustDevice,
             'notice' => $notice,
-            'ldapEnabled' => $settings->ldapActive(),
-            'oauthLabel' => $settings->oauthActive() ? $settings->oauthLabel : null,
+            'oauthLabel' => $this->externalLoginSettings()->oauthLabel,
         ]);
     }
 

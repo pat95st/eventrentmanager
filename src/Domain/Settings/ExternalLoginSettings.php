@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Domain\Settings;
 
 use App\Domain\User\Permission;
+use App\Domain\User\User;
 
 /**
  * Login through an external directory or identity provider (migration 171,
- * singleton row): LDAP / Active Directory and OAuth 2.0 / OpenID Connect.
- * Both are optional and independent; the local password login always stays
- * available so that a misconfiguration cannot lock everybody out.
+ * singleton row): LDAP / Active Directory or OAuth 2.0 / OpenID Connect as
+ * an alternative to the local login. The administrator picks exactly one
+ * login method. While an external one is active, the local login (password,
+ * passkey) only remains as an emergency access for administrators, so that
+ * a misconfiguration or an outage cannot lock everybody out.
  *
  * An external identity is mapped to a local user by its e-mail address.
  */
@@ -25,7 +28,7 @@ final class ExternalLoginSettings
      *        created automatically on their first external login
      */
     public function __construct(
-        public bool $ldapEnabled = false,
+        public LoginMethod $loginMethod = LoginMethod::Local,
         public ?string $ldapHost = null,
         public int $ldapPort = 389,
         public LdapEncryption $ldapEncryption = LdapEncryption::None,
@@ -38,7 +41,6 @@ final class ExternalLoginSettings
         public string $ldapEmailAttribute = 'mail',
         public string $ldapFirstNameAttribute = 'givenName',
         public string $ldapLastNameAttribute = 'sn',
-        public bool $oauthEnabled = false,
         // Text of the button on the login page.
         public string $oauthLabel = self::DEFAULT_OAUTH_LABEL,
         public ?string $oauthClientId = null,
@@ -60,19 +62,42 @@ final class ExternalLoginSettings
     ) {
     }
 
-    /** LDAP login is offered on the login form. */
+    /** The login form checks user name and password against the directory. */
     public function ldapActive(): bool
     {
-        return $this->ldapEnabled && $this->ldapHost !== null && $this->ldapBaseDn !== null;
+        return $this->loginMethod === LoginMethod::Ldap && $this->ldapHost !== null && $this->ldapBaseDn !== null;
     }
 
-    /** The OAuth button is shown on the login page. */
+    /** The login page sends users to the identity provider. */
     public function oauthActive(): bool
     {
-        return $this->oauthEnabled
+        return $this->loginMethod === LoginMethod::Oauth
             && $this->oauthClientId !== null
             && $this->oauthAuthorizationUrl !== null
             && $this->oauthTokenUrl !== null
             && $this->oauthUserinfoUrl !== null;
+    }
+
+    /**
+     * The method that is really in effect. An external method with
+     * incomplete settings (should not be storable) falls back to local.
+     */
+    public function activeMethod(): LoginMethod
+    {
+        return match (true) {
+            $this->ldapActive() => LoginMethod::Ldap,
+            $this->oauthActive() => LoginMethod::Oauth,
+            default => LoginMethod::Local,
+        };
+    }
+
+    /**
+     * May this user log in with the local password or a passkey? Always
+     * while the local login is the active method; otherwise only
+     * administrators (emergency access).
+     */
+    public function allowsLocalLogin(User $user): bool
+    {
+        return $this->activeMethod() === LoginMethod::Local || $user->isAdministrator();
     }
 }

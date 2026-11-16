@@ -4,10 +4,12 @@
 /** @var array<string, mixed> $old */
 /** @var bool $ldapAvailable */
 /** @var string $redirectUri */
+/** @var string $localLoginUrl address of the local emergency login for administrators */
 /** @var \App\Domain\User\Permission[] $permissions */
 
 use App\Domain\Settings\ExternalLoginSettings;
 use App\Domain\Settings\LdapEncryption;
+use App\Domain\Settings\LoginMethod;
 
 use function App\Infrastructure\Http\e;
 
@@ -39,41 +41,60 @@ $checkbox = 'mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500
 <div class="mb-6">
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Anmeldung (LDAP/OAuth)</h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
-        Benutzer können sich zusätzlich über ein Verzeichnis (LDAP, Active Directory) oder einen Identitätsanbieter
-        (OAuth 2.0 / OpenID Connect, z. B. Keycloak, Authentik, Microsoft Entra ID, Google) anmelden.
-        Die Zuordnung zum Benutzerkonto erfolgt über die E-Mail-Adresse.
+        Legt fest, wie sich Benutzer anmelden: mit dem hier gespeicherten Passwort (Standard) oder stattdessen über ein Verzeichnis
+        (LDAP, Active Directory) bzw. einen Identitätsanbieter (OAuth 2.0 / OpenID Connect, z. B. Keycloak, Authentik, Microsoft Entra ID, Google).
     </p>
 </div>
-
-<p class="mb-5 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-    Die Anmeldung mit lokalem Passwort und Passkey bleibt immer möglich – so kommt ein Administrator auch dann noch hinein,
-    wenn der externe Dienst ausfällt oder falsch eingerichtet ist.
-</p>
 
 <form method="post" action="/einstellungen/anmeldung" class="space-y-5">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
 
     <section class="<?= $card ?>">
         <div>
-            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">LDAP / Active Directory</h2>
-            <p class="<?= $hintClass ?>">
-                Benutzer geben im normalen Anmeldeformular ihren Verzeichnis-Benutzernamen (oder ihre E-Mail-Adresse) und ihr Verzeichnis-Passwort ein.
-                Ein eingerichteter zweiter Faktor wird danach wie gewohnt abgefragt.
-            </p>
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Anmeldeverfahren</h2>
+            <p class="<?= $hintClass ?>">Es ist immer genau ein Verfahren aktiv. Die Angaben zu LDAP und OAuth weiter unten können vorbereitet werden, ohne dass sich etwas ändert, solange hier „Lokale Anmeldung“ gewählt ist.</p>
+        </div>
+
+        <div class="space-y-2">
+            <?php
+            $methodHints = [
+                'local' => 'Wie bisher: E-Mail-Adresse und das in dieser Anwendung gespeicherte Passwort, optional Passkey.',
+                'ldap' => 'Benutzer melden sich im Anmeldeformular mit Benutzername (oder E-Mail-Adresse) und Passwort aus dem Verzeichnis an.',
+                'oauth' => 'Die Anmeldeseite zeigt nur noch einen Button, der zum Identitätsanbieter weiterleitet.',
+            ];
+            foreach (LoginMethod::cases() as $method): ?>
+                <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="radio" name="login_method" value="<?= e($method->value) ?>" <?= $val('login_method', $settings->loginMethod->value) === $method->value ? 'checked' : '' ?>
+                           <?= $method === LoginMethod::Ldap && !$ldapAvailable ? 'disabled' : '' ?>
+                           class="mt-0.5 border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+                    <span>
+                        <?= e($method->label()) ?>
+                        <span class="block text-xs text-slate-400 dark:text-slate-500"><?= e($methodHints[$method->value]) ?></span>
+                    </span>
+                </label>
+            <?php endforeach; ?>
+            <?= $error('login_method') ?>
         </div>
 
         <?php if (!$ldapAvailable): ?>
             <p class="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
-                Auf diesem Server fehlt die PHP-Erweiterung „ldap“ (z. B. Paket <span class="font-mono">php-ldap</span>). Ohne sie lässt sich die LDAP-Anmeldung nicht aktivieren.
+                Auf diesem Server fehlt die PHP-Erweiterung „ldap“ (z. B. Paket <span class="font-mono">php-ldap</span>). Ohne sie lässt sich die LDAP-Anmeldung nicht auswählen.
             </p>
         <?php endif; ?>
 
+        <div class="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+            <p><strong>Mit LDAP oder OAuth ersetzt das gewählte Verfahren die lokale Anmeldung:</strong> Passwort, Passkey und „Passwort vergessen“ stehen normalen Benutzern dann nicht mehr zur Verfügung. Benutzerkonten werden über die E-Mail-Adresse zugeordnet.</p>
+            <p class="mt-1">Notfallzugang: Administratoren können sich weiterhin mit ihrem lokalen Passwort oder Passkey unter <span class="font-mono"><?= e($localLoginUrl) ?></span> anmelden – auch wenn der externe Dienst ausfällt oder falsch eingerichtet ist. Dafür sollte mindestens ein Administrator ein lokales Passwort behalten.</p>
+        </div>
+    </section>
+
+    <section class="<?= $card ?>">
         <div>
-            <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-                <input type="checkbox" name="ldap_enabled" value="1" <?= $on('ldap_enabled', $settings->ldapEnabled) ? 'checked' : '' ?> class="<?= $checkbox ?>">
-                <span>Anmeldung über LDAP erlauben</span>
-            </label>
-            <?= $error('ldap_enabled') ?>
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">LDAP / Active Directory</h2>
+            <p class="<?= $hintClass ?>">
+                Verbindung zum Verzeichnis. Ein hier eingerichteter zweiter Faktor wird nach der LDAP-Anmeldung wie gewohnt abgefragt.
+                Beim Aktivieren wird die Verbindung geprüft.
+            </p>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-3">
@@ -116,15 +137,8 @@ $checkbox = 'mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500
         <div>
             <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">OAuth 2.0 / OpenID Connect</h2>
             <p class="<?= $hintClass ?>">
-                Auf der Anmeldeseite erscheint ein zusätzlicher Button, der zum Identitätsanbieter weiterleitet.
+                Zugangsdaten der Anwendung (Client) beim Identitätsanbieter.
             </p>
-        </div>
-
-        <div>
-            <label class="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
-                <input type="checkbox" name="oauth_enabled" value="1" <?= $on('oauth_enabled', $settings->oauthEnabled) ? 'checked' : '' ?> class="<?= $checkbox ?>">
-                <span>Anmeldung über OAuth / OpenID Connect erlauben</span>
-            </label>
         </div>
 
         <div>

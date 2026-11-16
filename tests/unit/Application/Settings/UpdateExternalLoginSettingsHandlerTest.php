@@ -9,6 +9,7 @@ use App\Application\Settings\Command\UpdateExternalLoginSettingsHandler;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Settings\ExternalLoginSettings;
 use App\Domain\Settings\LdapEncryption;
+use App\Domain\Settings\LoginMethod;
 use App\Domain\User\Permission;
 use Codeception\Test\Unit;
 use Tests\Support\Fakes\FakeLdapDirectory;
@@ -31,7 +32,7 @@ final class UpdateExternalLoginSettingsHandlerTest extends Unit
     public function testStoresLdapSettingsWithDefaultsForEmptyFields(): void
     {
         $this->handle(new UpdateExternalLoginSettings(
-            ldapEnabled: true,
+            loginMethod: 'ldap',
             ldapHost: ' ldap.example.org ',
             ldapEncryption: 'ldaps',
             ldapBindDn: 'cn=reader,dc=example,dc=org',
@@ -40,7 +41,7 @@ final class UpdateExternalLoginSettingsHandlerTest extends Unit
         ));
 
         $saved = $this->repository->get();
-        $this->assertTrue($saved->ldapActive());
+        $this->assertSame(LoginMethod::Ldap, $saved->activeMethod());
         $this->assertSame('ldap.example.org', $saved->ldapHost);
         $this->assertSame(LdapEncryption::Ldaps, $saved->ldapEncryption);
         $this->assertSame(636, $saved->ldapPort);
@@ -48,6 +49,35 @@ final class UpdateExternalLoginSettingsHandlerTest extends Unit
         $this->assertSame('mail', $saved->ldapEmailAttribute);
         $this->assertSame('geheim', $saved->ldapBindPassword);
         $this->assertFalse($saved->oauthActive());
+    }
+
+    public function testLdapCannotBecomeTheLoginMethodWhileTheDirectoryIsUnreachable(): void
+    {
+        $this->directory->unreachable = true;
+
+        $errors = $this->errors(new UpdateExternalLoginSettings(
+            loginMethod: 'ldap',
+            ldapHost: 'ldap.example.org',
+            ldapBaseDn: 'dc=example,dc=org',
+        ));
+
+        $this->assertSame(['login_method'], array_keys($errors));
+        $this->assertSame(LoginMethod::Local, $this->repository->get()->loginMethod);
+    }
+
+    public function testExternalSettingsCanBePreparedWhileTheLocalLoginStaysActive(): void
+    {
+        $this->directory->unreachable = true;
+
+        $this->handle(new UpdateExternalLoginSettings(ldapHost: 'ldap.example.org', ldapBaseDn: 'dc=example,dc=org'));
+
+        $this->assertSame('ldap.example.org', $this->repository->get()->ldapHost);
+        $this->assertSame(LoginMethod::Local, $this->repository->get()->activeMethod());
+    }
+
+    public function testRejectsAnUnknownLoginMethod(): void
+    {
+        $this->assertArrayHasKey('login_method', $this->errors(new UpdateExternalLoginSettings(loginMethod: 'saml')));
     }
 
     public function testEmptySecretsKeepTheStoredValues(): void
@@ -73,9 +103,9 @@ final class UpdateExternalLoginSettingsHandlerTest extends Unit
     {
         $this->directory->available = false;
 
-        $errors = $this->errors(new UpdateExternalLoginSettings(ldapEnabled: true));
+        $errors = $this->errors(new UpdateExternalLoginSettings(loginMethod: 'ldap'));
 
-        $this->assertArrayHasKey('ldap_enabled', $errors);
+        $this->assertArrayHasKey('login_method', $errors);
         $this->assertArrayHasKey('ldap_host', $errors);
         $this->assertArrayHasKey('ldap_base_dn', $errors);
     }
@@ -91,7 +121,7 @@ final class UpdateExternalLoginSettingsHandlerTest extends Unit
     public function testDiscoversMissingOAuthEndpointsFromTheIssuer(): void
     {
         $this->handle(new UpdateExternalLoginSettings(
-            oauthEnabled: true,
+            loginMethod: 'oauth',
             oauthClientId: 'client',
             oauthIssuerUrl: 'https://idp.example.org',
             oauthTokenUrl: 'https://other.example.org/token',
@@ -121,14 +151,14 @@ final class UpdateExternalLoginSettingsHandlerTest extends Unit
     {
         $this->oauthClient->discoveryFails = true;
 
-        $errors = $this->errors(new UpdateExternalLoginSettings(oauthEnabled: true, oauthClientId: 'client', oauthIssuerUrl: 'https://idp.example.org'));
+        $errors = $this->errors(new UpdateExternalLoginSettings(loginMethod: 'oauth', oauthClientId: 'client', oauthIssuerUrl: 'https://idp.example.org'));
 
         $this->assertSame(['oauth_issuer_url'], array_keys($errors));
     }
 
     public function testEnablingOAuthRequiresClientIdAndEndpoints(): void
     {
-        $errors = $this->errors(new UpdateExternalLoginSettings(oauthEnabled: true, oauthTokenUrl: 'javascript:alert(1)'));
+        $errors = $this->errors(new UpdateExternalLoginSettings(loginMethod: 'oauth', oauthTokenUrl: 'javascript:alert(1)'));
 
         $this->assertArrayHasKey('oauth_client_id', $errors);
         $this->assertArrayHasKey('oauth_authorization_url', $errors);

@@ -7,6 +7,7 @@ namespace App\Infrastructure\Persistence\Pdo;
 use App\Domain\Settings\ExternalLoginSettings;
 use App\Domain\Settings\ExternalLoginSettingsRepositoryInterface;
 use App\Domain\Settings\LdapEncryption;
+use App\Domain\Settings\LoginMethod;
 use App\Domain\User\Permission;
 use PDO;
 use PDOException;
@@ -14,9 +15,9 @@ use PDOException;
 final class MariadbExternalLoginSettingsRepository implements ExternalLoginSettingsRepositoryInterface
 {
     private const COLUMNS = [
-        'ldap_enabled', 'ldap_host', 'ldap_port', 'ldap_encryption', 'ldap_bind_dn', 'ldap_bind_password',
+        'login_method', 'ldap_host', 'ldap_port', 'ldap_encryption', 'ldap_bind_dn', 'ldap_bind_password',
         'ldap_base_dn', 'ldap_user_filter', 'ldap_email_attribute', 'ldap_first_name_attribute',
-        'ldap_last_name_attribute', 'oauth_enabled', 'oauth_label', 'oauth_client_id', 'oauth_client_secret',
+        'ldap_last_name_attribute', 'oauth_label', 'oauth_client_id', 'oauth_client_secret',
         'oauth_issuer_url', 'oauth_authorization_url', 'oauth_token_url', 'oauth_userinfo_url', 'oauth_scopes',
         'oauth_email_claim', 'oauth_first_name_claim', 'oauth_last_name_claim', 'oauth_skip_two_factor',
         'auto_create_users', 'default_permissions',
@@ -29,8 +30,8 @@ final class MariadbExternalLoginSettingsRepository implements ExternalLoginSetti
     public function get(): ExternalLoginSettings
     {
         // Read on the (public) login page. If the table does not exist yet
-        // (migration 171 not applied), external login is simply off instead
-        // of breaking the login for everybody.
+        // (migration 171 not applied), the local login stays in effect
+        // instead of breaking the login for everybody.
         try {
             $row = $this->pdo->query('SELECT * FROM external_login_settings WHERE id = 1')->fetch();
         } catch (PDOException) {
@@ -49,7 +50,7 @@ final class MariadbExternalLoginSettingsRepository implements ExternalLoginSetti
         }
 
         return new ExternalLoginSettings(
-            ldapEnabled: (bool) $row['ldap_enabled'],
+            loginMethod: LoginMethod::tryFrom((string) $row['login_method']) ?? LoginMethod::Local,
             ldapHost: $row['ldap_host'],
             ldapPort: (int) $row['ldap_port'],
             ldapEncryption: LdapEncryption::tryFrom((string) $row['ldap_encryption']) ?? LdapEncryption::None,
@@ -60,7 +61,6 @@ final class MariadbExternalLoginSettingsRepository implements ExternalLoginSetti
             ldapEmailAttribute: (string) $row['ldap_email_attribute'],
             ldapFirstNameAttribute: (string) $row['ldap_first_name_attribute'],
             ldapLastNameAttribute: (string) $row['ldap_last_name_attribute'],
-            oauthEnabled: (bool) $row['oauth_enabled'],
             oauthLabel: (string) $row['oauth_label'],
             oauthClientId: $row['oauth_client_id'],
             oauthClientSecret: $row['oauth_client_secret'],
@@ -87,7 +87,7 @@ final class MariadbExternalLoginSettingsRepository implements ExternalLoginSetti
             'INSERT INTO external_login_settings (id, ' . implode(', ', self::COLUMNS) . ') VALUES (1, ' . $placeholders . ')
              ON DUPLICATE KEY UPDATE ' . $assignments
         )->execute([
-            'ldap_enabled' => (int) $settings->ldapEnabled,
+            'login_method' => $settings->loginMethod->value,
             'ldap_host' => $settings->ldapHost,
             'ldap_port' => $settings->ldapPort,
             'ldap_encryption' => $settings->ldapEncryption->value,
@@ -98,7 +98,6 @@ final class MariadbExternalLoginSettingsRepository implements ExternalLoginSetti
             'ldap_email_attribute' => $settings->ldapEmailAttribute,
             'ldap_first_name_attribute' => $settings->ldapFirstNameAttribute,
             'ldap_last_name_attribute' => $settings->ldapLastNameAttribute,
-            'oauth_enabled' => (int) $settings->oauthEnabled,
             'oauth_label' => $settings->oauthLabel,
             'oauth_client_id' => $settings->oauthClientId,
             'oauth_client_secret' => $settings->oauthClientSecret,

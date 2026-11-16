@@ -40,7 +40,7 @@ final class ExternalLoginSettingsController
 
         try {
             $this->commands->dispatch(new UpdateExternalLoginSettings(
-                ldapEnabled: $checked('ldap_enabled'),
+                loginMethod: $text('login_method'),
                 ldapHost: $text('ldap_host'),
                 ldapPort: $text('ldap_port'),
                 ldapEncryption: $text('ldap_encryption'),
@@ -51,7 +51,6 @@ final class ExternalLoginSettingsController
                 ldapEmailAttribute: $text('ldap_email_attribute'),
                 ldapFirstNameAttribute: $text('ldap_first_name_attribute'),
                 ldapLastNameAttribute: $text('ldap_last_name_attribute'),
-                oauthEnabled: $checked('oauth_enabled'),
                 oauthLabel: $text('oauth_label'),
                 oauthClientId: $text('oauth_client_id'),
                 oauthClientSecret: $text('oauth_client_secret'),
@@ -98,6 +97,7 @@ final class ExternalLoginSettingsController
             'old' => $old,
             'ldapAvailable' => $this->directory->isAvailable(),
             'redirectUri' => Origin::current() . '/login/oauth/callback',
+            'localLoginUrl' => Origin::current() . '/login/lokal',
             'permissions' => array_values(array_filter(
                 Permission::all(),
                 static fn (Permission $p): bool => $p !== Permission::Administration,

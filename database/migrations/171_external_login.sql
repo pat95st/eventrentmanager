@@ -1,6 +1,9 @@
--- Migration 171: login through LDAP / Active Directory and through
--- OAuth 2.0 / OpenID Connect (singleton row, Einstellungen › Anmeldung).
--- Both are off by default; the local password login always stays available.
+-- Migration 171: login through LDAP / Active Directory or through
+-- OAuth 2.0 / OpenID Connect as an alternative to the local login
+-- (singleton row, Einstellungen › Anmeldung).
+--  * login_method: the one active method. 'local' (default) is the login
+--    with a password stored here and passkeys. With 'ldap' or 'oauth' the
+--    local login only remains as emergency access for administrators.
 -- An external identity is mapped to a local user by its e-mail address.
 --  * ldap_user_filter: "%s" is replaced by the escaped login name.
 --  * oauth_issuer_url: optional, only used to discover the three endpoints.
@@ -12,7 +15,7 @@
 
 CREATE TABLE external_login_settings (
     id                        TINYINT           NOT NULL PRIMARY KEY DEFAULT 1,
-    ldap_enabled              TINYINT(1)        NOT NULL DEFAULT 0,
+    login_method              ENUM('local', 'ldap', 'oauth') NOT NULL DEFAULT 'local',
     ldap_host                 VARCHAR(255)      NULL,
     ldap_port                 SMALLINT UNSIGNED NOT NULL DEFAULT 389,
     ldap_encryption           ENUM('none', 'starttls', 'ldaps') NOT NULL DEFAULT 'none',
@@ -23,7 +26,6 @@ CREATE TABLE external_login_settings (
     ldap_email_attribute      VARCHAR(100)      NOT NULL DEFAULT 'mail',
     ldap_first_name_attribute VARCHAR(100)      NOT NULL DEFAULT 'givenName',
     ldap_last_name_attribute  VARCHAR(100)      NOT NULL DEFAULT 'sn',
-    oauth_enabled             TINYINT(1)        NOT NULL DEFAULT 0,
     oauth_label               VARCHAR(100)      NOT NULL DEFAULT 'Single Sign-On',
     oauth_client_id           VARCHAR(255)      NULL,
     oauth_client_secret       TEXT              NULL,

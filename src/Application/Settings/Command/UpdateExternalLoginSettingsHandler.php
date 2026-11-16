@@ -13,6 +13,7 @@ use App\Domain\Exception\ValidationException;
 use App\Domain\Settings\ExternalLoginSettings;
 use App\Domain\Settings\ExternalLoginSettingsRepositoryInterface;
 use App\Domain\Settings\LdapEncryption;
+use App\Domain\Settings\LoginMethod;
 use App\Domain\User\Permission;
 
 final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterface
@@ -30,6 +31,12 @@ final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterfac
 
         $current = $this->settings->get();
         $errors = [];
+
+        $method = LoginMethod::tryFrom($command->loginMethod);
+        if ($method === null) {
+            $errors['login_method'] = 'Ungültiges Anmeldeverfahren ausgewählt.';
+            $method = LoginMethod::Local;
+        }
 
         // --- LDAP ---------------------------------------------------------
         $encryption = LdapEncryption::tryFrom($command->ldapEncryption);
@@ -84,9 +91,9 @@ final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterfac
         $firstNameAttribute = self::identifier($command->ldapFirstNameAttribute, 'givenName', '/^[A-Za-z][A-Za-z0-9-]*$/', 'ldap_first_name_attribute', $errors);
         $lastNameAttribute = self::identifier($command->ldapLastNameAttribute, 'sn', '/^[A-Za-z][A-Za-z0-9-]*$/', 'ldap_last_name_attribute', $errors);
 
-        if ($command->ldapEnabled) {
+        if ($method === LoginMethod::Ldap) {
             if (!$this->directory->isAvailable()) {
-                $errors['ldap_enabled'] = 'Auf diesem Server fehlt die PHP-Erweiterung „ldap“. Bitte zuerst installieren (z. B. Paket php-ldap).';
+                $errors['login_method'] = 'Auf diesem Server fehlt die PHP-Erweiterung „ldap“. Bitte zuerst installieren (z. B. Paket php-ldap).';
             }
             if ($host === '') {
                 $errors['ldap_host'] = 'Bitte den LDAP-Server angeben.';
@@ -143,7 +150,7 @@ final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterfac
         $firstNameClaim = self::identifier($command->oauthFirstNameClaim, 'given_name', '/^[A-Za-z0-9_.:\/-]+$/', 'oauth_first_name_claim', $errors);
         $lastNameClaim = self::identifier($command->oauthLastNameClaim, 'family_name', '/^[A-Za-z0-9_.:\/-]+$/', 'oauth_last_name_claim', $errors);
 
-        if ($command->oauthEnabled) {
+        if ($method === LoginMethod::Oauth) {
             if ($clientId === '') {
                 $errors['oauth_client_id'] = 'Bitte die Client-ID angeben.';
             }
@@ -179,8 +186,8 @@ final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterfac
             throw new ValidationException($errors);
         }
 
-        $this->settings->save(new ExternalLoginSettings(
-            ldapEnabled: $command->ldapEnabled,
+        $settings = new ExternalLoginSettings(
+            loginMethod: $method,
             ldapHost: $host !== '' ? $host : null,
             ldapPort: $port,
             ldapEncryption: $encryption,
@@ -191,7 +198,6 @@ final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterfac
             ldapEmailAttribute: $emailAttribute,
             ldapFirstNameAttribute: $firstNameAttribute,
             ldapLastNameAttribute: $lastNameAttribute,
-            oauthEnabled: $command->oauthEnabled,
             oauthLabel: $label,
             oauthClientId: $clientId !== '' ? $clientId : null,
             oauthClientSecret: $clientSecret,
@@ -206,7 +212,22 @@ final class UpdateExternalLoginSettingsHandler implements CommandHandlerInterfac
             oauthSkipTwoFactor: $command->oauthSkipTwoFactor,
             autoCreateUsers: $command->autoCreateUsers,
             defaultPermissions: $permissions,
-        ));
+        );
+
+        // Switching everybody over to a directory that cannot be reached
+        // would lock all non-administrators out, so the connection has to
+        // work before LDAP can become the login method.
+        if ($method === LoginMethod::Ldap) {
+            try {
+                $this->directory->test($settings);
+            } catch (ExternalLoginException $e) {
+                throw new ValidationException([
+                    'login_method' => 'LDAP kann nicht aktiviert werden, die Verbindung funktioniert nicht: ' . $e->getMessage(),
+                ]);
+            }
+        }
+
+        $this->settings->save($settings);
 
         return null;
     }

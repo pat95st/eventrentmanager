@@ -13,6 +13,7 @@ use App\Application\Auth\OAuthAuthorizationRequest;
 use App\Domain\Auth\ExternalIdentity;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Settings\ExternalLoginSettings;
+use App\Domain\Settings\LoginMethod;
 use App\Domain\User\Permission;
 use App\Domain\User\TwoFactorMethod;
 use App\Domain\User\User;
@@ -35,10 +36,9 @@ final class ExternalLoginTest extends Unit
         class_exists(\App\Infrastructure\Http\Translator::class);
         $this->users = new InMemoryUserRepository();
         $this->settings = new InMemoryExternalLoginSettingsRepository(new ExternalLoginSettings(
-            ldapEnabled: true,
+            loginMethod: LoginMethod::Ldap,
             ldapHost: 'ldap.example.org',
             ldapBaseDn: 'ou=people,dc=example,dc=org',
-            oauthEnabled: true,
             oauthClientId: 'client',
             oauthAuthorizationUrl: 'https://idp.example.org/authorize',
             oauthTokenUrl: 'https://idp.example.org/token',
@@ -72,9 +72,9 @@ final class ExternalLoginTest extends Unit
         $this->assertSame([], $this->directory->attempts);
     }
 
-    public function testLdapIsNotAskedWhileItIsSwitchedOff(): void
+    public function testLdapIsNotAskedWhileItIsNotTheLoginMethod(): void
     {
-        $this->settings->settings->ldapEnabled = false;
+        $this->settings->settings->loginMethod = LoginMethod::Local;
 
         $this->ldapError('lena', 'geheim');
 
@@ -158,9 +158,47 @@ final class ExternalLoginTest extends Unit
         $this->assertSame('Jonas Brandt', $user->displayName());
     }
 
+    public function testOAuthLoginIsRejectedWhileItIsNotTheLoginMethod(): void
+    {
+        $this->addUser('jonas@example.org');
+        $handler = new CompleteOAuthLoginHandler($this->settings, new FakeOAuthClient(['email' => 'jonas@example.org']), new ExternalUserProvisioner($this->users));
+
+        $this->expectException(ValidationException::class);
+        $handler->handle(new CompleteOAuthLogin(FakeOAuthClient::VALID_CODE, 'https://app.example.org/login/oauth/callback', 'verifier'));
+    }
+
+    public function testExactlyOneLoginMethodIsActive(): void
+    {
+        $settings = $this->settings->get();
+
+        $this->assertSame(LoginMethod::Ldap, $settings->activeMethod());
+        $this->assertFalse($settings->oauthActive());
+
+        $settings->loginMethod = LoginMethod::Oauth;
+        $this->assertSame(LoginMethod::Oauth, $settings->activeMethod());
+        $this->assertFalse($settings->ldapActive());
+
+        $this->assertSame(LoginMethod::Local, (new ExternalLoginSettings())->activeMethod());
+    }
+
+    public function testAnExternalMethodLeavesTheLocalLoginToAdministratorsOnly(): void
+    {
+        $this->addUser('lena@example.org');
+        $this->addUser('chef@example.org', permissions: [Permission::Administration]);
+        $lena = $this->users->findByEmail('lena@example.org');
+        $chef = $this->users->findByEmail('chef@example.org');
+        $this->assertNotNull($lena);
+        $this->assertNotNull($chef);
+
+        $this->assertFalse($this->settings->get()->allowsLocalLogin($lena));
+        $this->assertTrue($this->settings->get()->allowsLocalLogin($chef));
+        $this->assertTrue((new ExternalLoginSettings())->allowsLocalLogin($lena));
+    }
+
     public function testAuthorizationUrlCarriesStateAndPkceChallenge(): void
     {
         $settings = $this->settings->get();
+        $settings->loginMethod = LoginMethod::Oauth;
         $settings->oauthAuthorizationUrl = 'https://idp.example.org/authorize?tenant=a';
 
         $request = OAuthAuthorizationRequest::create($settings, 'https://app.example.org/login/oauth/callback');
@@ -200,11 +238,14 @@ final class ExternalLoginTest extends Unit
     /** @param array<string, mixed> $claims */
     private function oauth(array $claims, string $code = FakeOAuthClient::VALID_CODE): User
     {
+        $this->settings->settings->loginMethod = LoginMethod::Oauth;
+
         return (new CompleteOAuthLoginHandler($this->settings, new FakeOAuthClient($claims), new ExternalUserProvisioner($this->users)))
             ->handle(new CompleteOAuthLogin($code, 'https://app.example.org/login/oauth/callback', 'verifier'));
     }
 
-    private function addUser(string $email, bool $active = true): void
+    /** @param Permission[] $permissions */
+    private function addUser(string $email, bool $active = true, array $permissions = [Permission::Artikelverwaltung]): void
     {
         $now = new DateTimeImmutable();
         $this->users->save(new User(
@@ -213,7 +254,7 @@ final class ExternalLoginTest extends Unit
             passwordHash: null,
             firstName: null,
             lastName: null,
-            permissions: [Permission::Artikelverwaltung],
+            permissions: $permissions,
             twoFactorMethod: TwoFactorMethod::None,
             totpSecret: null,
             mustChangePassword: false,

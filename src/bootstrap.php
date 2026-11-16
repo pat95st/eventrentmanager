@@ -1865,7 +1865,7 @@ $labelPrinterController = new LabelPrinterController($commandBus, $queryBus);
 $documentStorageSettingsController = new \App\Infrastructure\Http\Controllers\DocumentStorageSettingsController($commandBus, $queryBus);
 $authController = new AuthController($commandBus, $userRepository, $userSessionRepository, $recordUserSession, $trustedDeviceService, $queryBus);
 $externalLoginSettingsController = new \App\Infrastructure\Http\Controllers\ExternalLoginSettingsController($commandBus, $queryBus, $ldapDirectory);
-$setupPasswordController = new SetupPasswordController($commandBus, $passwordSetupTokenRepository, $recordUserSession);
+$setupPasswordController = new SetupPasswordController($commandBus, $passwordSetupTokenRepository, $recordUserSession, $queryBus, $userRepository);
 $passkeyController = new PasskeyController($commandBus, $queryBus, $recordUserSession);
 $calDavSigningCertificateProvider = new \App\Infrastructure\Http\CalDav\CalDavSigningCertificateProvider($calDavSigningSettingsRepository, $fileStorage, $companySettingsRepository);
 $mobileConfigBuilder = new \App\Infrastructure\Http\CalDav\MobileConfigBuilder($calDavSigningCertificateProvider);
@@ -1940,8 +1940,11 @@ $router->post('/login', [$authController, 'login']);
 $router->get('/login/zwei-faktor', [$authController, 'showTwoFactor']);
 $router->post('/login/zwei-faktor', [$authController, 'verifyTwoFactor']);
 $router->post('/login/zwei-faktor/code-erneut-senden', [$authController, 'resendEmailCode']);
-// Login through an OAuth 2.0 / OpenID Connect identity provider (public,
+// Login through an OAuth 2.0 / OpenID Connect identity provider, if it is the active login method (public,
 // see AuthGuard::PUBLIC_PATHS; the callback is protected by "state").
+// Emergency access for administrators while LDAP or OAuth replaces the local login.
+$router->get('/login/lokal', [$authController, 'showLocalLogin']);
+$router->post('/login/lokal', [$authController, 'localLogin']);
 $router->get('/login/oauth', [$authController, 'startOAuthLogin']);
 $router->get('/login/oauth/callback', [$authController, 'oauthCallback']);
 $router->post('/logout', [$authController, 'logout']);

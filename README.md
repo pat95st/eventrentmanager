@@ -930,31 +930,39 @@ nichts.
 ### Anmeldung über LDAP oder OAuth 2.0 / OpenID Connect
 
 Unter **Einstellungen › System & Integrationen › Anmeldung (LDAP/OAuth)**
-(nur Administratoren, Migration 171) lassen sich zwei zusätzliche
-Anmeldewege einrichten. Beide sind unabhängig voneinander und standardmäßig
-aus. Die Anmeldung mit lokalem Passwort und Passkey bleibt immer möglich,
-damit ein Administrator auch bei ausgefallenem oder falsch eingerichtetem
-Dienst noch hineinkommt.
+(nur Administratoren, Migration 171) wählt der Administrator das
+**Anmeldeverfahren**. Es ist immer genau eines aktiv:
 
+- **Lokale Anmeldung** (Standard): wie bisher mit dem hier gespeicherten
+  Passwort und optional Passkey.
 - **LDAP / Active Directory** (benötigt die PHP-Erweiterung `ldap`): Der
-  Benutzer gibt im normalen Anmeldeformular seinen Verzeichnis-Benutzernamen
-  (oder seine E-Mail-Adresse) und sein Verzeichnis-Passwort ein. Zuerst wird
-  das lokale Passwort geprüft, erst danach das Verzeichnis: Das Dienstkonto
+  Benutzer gibt im Anmeldeformular seinen Verzeichnis-Benutzernamen (oder
+  seine E-Mail-Adresse) und sein Verzeichnis-Passwort ein. Das Dienstkonto
   (Bind-DN) sucht den Eintrag über den Benutzerfilter (`%s` = Anmeldename,
   z. B. `(sAMAccountName=%s)` für Active Directory), anschließend wird das
   Passwort durch eine Anmeldung als dieser Eintrag geprüft. Verschlüsselung:
-  STARTTLS oder LDAPS; „LDAP-Verbindung testen“ prüft die gespeicherten
-  Einstellungen. Ein eingerichteter zweiter Faktor wird danach wie gewohnt
-  abgefragt.
+  STARTTLS oder LDAPS. LDAP lässt sich nur aktivieren, wenn die Verbindung
+  funktioniert; „LDAP-Verbindung testen“ prüft die gespeicherten
+  Einstellungen.
 - **OAuth 2.0 / OpenID Connect** (z. B. Keycloak, Authentik, Microsoft Entra
-  ID, Google): Auf der Anmeldeseite erscheint ein zusätzlicher Button.
-  Verwendet wird der Authorization-Code-Flow mit PKCE; die Benutzerdaten
-  kommen vom Userinfo-Endpunkt. Wird die Aussteller-URL (Issuer) angegeben,
-  werden die drei Endpunkte beim Speichern automatisch ermittelt. Beim
-  Identitätsanbieter muss die auf der Einstellungsseite angezeigte
-  Weiterleitungs-Adresse `…/login/oauth/callback` eingetragen werden. Der
-  lokale zweite Faktor wird weiterhin abgefragt, außer die Option „Zweiten
-  Faktor nach OAuth-Anmeldung nicht erneut abfragen“ ist gesetzt.
+  ID, Google): Die Anmeldeseite zeigt nur noch einen Button zum
+  Identitätsanbieter. Verwendet wird der Authorization-Code-Flow mit PKCE;
+  die Benutzerdaten kommen vom Userinfo-Endpunkt. Wird die Aussteller-URL
+  (Issuer) angegeben, werden die drei Endpunkte beim Speichern automatisch
+  ermittelt. Beim Identitätsanbieter muss die auf der Einstellungsseite
+  angezeigte Weiterleitungs-Adresse `…/login/oauth/callback` eingetragen
+  werden.
+
+Die Angaben zu LDAP und OAuth können vorbereitet werden, solange noch die
+lokale Anmeldung gewählt ist. Ist LDAP oder OAuth aktiv, **ersetzt** es die
+lokale Anmeldung: Passwort, Passkey und „Passwort vergessen“ stehen normalen
+Benutzern nicht mehr zur Verfügung.
+
+- **Notfallzugang**: Administratoren können sich weiterhin mit lokalem
+  Passwort oder Passkey unter `/login/lokal` anmelden (auf der Anmeldeseite
+  verlinkt), damit ein ausgefallener oder falsch eingerichteter Dienst
+  niemanden endgültig aussperrt. Mindestens ein Administrator sollte dafür
+  ein lokales Passwort behalten.
 - **Zuordnung**: Das externe Konto wird über die **E-Mail-Adresse** dem
   Benutzerkonto zugeordnet (LDAP-Attribut bzw. Userinfo-Feld einstellbar).
   Eine vom Identitätsanbieter als unbestätigt gemeldete Adresse
@@ -963,6 +971,9 @@ Dienst noch hineinkommt.
   erste erfolgreiche Anmeldung das Benutzerkonto automatisch an, mit den
   dafür ausgewählten Rechten (nie „Administration“) und ohne lokales
   Passwort.
+- **Zweiter Faktor**: Ein hier eingerichteter zweiter Faktor wird auch nach
+  LDAP- und OAuth-Anmeldung abgefragt, bei OAuth außer die Option „Zweiten
+  Faktor nach OAuth-Anmeldung nicht erneut abfragen“ ist gesetzt.
 
 ## Progressive Web App (PWA)
 

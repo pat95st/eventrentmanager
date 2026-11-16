@@ -33,6 +33,7 @@ final class AuthGuard
         '/login/zwei-faktor/code-erneut-senden',
         '/passkeys/login/options',
         '/passkeys/login/complete',
+        '/login/lokal',
         '/login/oauth',
         '/login/oauth/callback',
     ];

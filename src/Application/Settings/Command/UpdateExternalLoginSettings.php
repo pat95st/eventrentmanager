@@ -7,7 +7,8 @@ namespace App\Application\Settings\Command;
 use App\Application\Command\CommandInterface;
 
 /**
- * Raw form values of Einstellungen › Anmeldung (LDAP/OAuth). The two secrets
+ * Raw form values of Einstellungen › Anmeldung (LDAP/OAuth). $loginMethod
+ * selects the one active login method (LoginMethod). The two secrets
  * (LDAP bind password, OAuth client secret) keep their stored value when
  * submitted empty.
  */
@@ -15,7 +16,7 @@ final class UpdateExternalLoginSettings implements CommandInterface
 {
     /** @param string[] $defaultPermissions */
     public function __construct(
-        public readonly bool $ldapEnabled = false,
+        public readonly string $loginMethod = 'local',
         public readonly string $ldapHost = '',
         public readonly string $ldapPort = '',
         public readonly string $ldapEncryption = 'none',
@@ -26,7 +27,6 @@ final class UpdateExternalLoginSettings implements CommandInterface
         public readonly string $ldapEmailAttribute = '',
         public readonly string $ldapFirstNameAttribute = '',
         public readonly string $ldapLastNameAttribute = '',
-        public readonly bool $oauthEnabled = false,
         public readonly string $oauthLabel = '',
         public readonly string $oauthClientId = '',
         public readonly string $oauthClientSecret = '',

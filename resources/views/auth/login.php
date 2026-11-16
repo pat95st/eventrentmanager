@@ -2,8 +2,14 @@
 /** @var array<string, string> $errors */
 /** @var string $email */
 /** @var bool $trustDevice */
-/** @var bool $ldapEnabled LDAP login is configured: the first field also accepts a directory user name */
-/** @var string|null $oauthLabel button text of the OAuth / OpenID Connect login, null = not configured */
+/**
+ * @var string $mode which login this page offers (see AuthController::renderLogin()):
+ *      'local' = password/passkey of this application, 'ldap' = directory
+ *      password, 'oauth' = only the button to the identity provider,
+ *      'fallback' = local emergency login for administrators while LDAP or
+ *      OAuth is the active method
+ */
+/** @var string|null $oauthLabel name of the identity provider on the OAuth button */
 
 use App\Infrastructure\Http\CompanyBranding;
 use App\Infrastructure\Http\Locale;
@@ -11,6 +17,8 @@ use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
 $activeLocale = Locale::get();
+$mode = $mode ?? 'local';
+$localForm = $mode === 'local' || $mode === 'fallback';
 $companyLogoUrl = CompanyBranding::logoUrl();
 $companyDarkLogoUrl = CompanyBranding::darkLogoUrl();
 $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
@@ -114,7 +122,7 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
 
     <div class="rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
       <h1 class="mb-1 text-lg font-semibold text-slate-900 dark:text-slate-100"><?= e(t('auth.login.heading')) ?></h1>
-      <p class="mb-5 text-sm text-slate-500 dark:text-slate-400"><?= e(t('auth.login.subheading')) ?></p>
+      <p class="mb-5 text-sm text-slate-500 dark:text-slate-400"><?= e(t($mode === 'fallback' ? 'auth.login.fallback_subheading' : 'auth.login.subheading')) ?></p>
 
       <?php if (($notice ?? null) !== null): ?>
         <div class="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300" role="status">
@@ -128,11 +136,16 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
         </div>
       <?php endif; ?>
 
-      <form method="post" action="/login" class="space-y-4">
+      <?php if ($mode === 'oauth'): ?>
+      <a href="/login/oauth" class="block w-full rounded-md bg-brand-600 px-4 py-2 text-center text-sm font-medium text-white hover:bg-brand-700">
+        <?= e(t('auth.login.oauth_button', ['provider' => $oauthLabel ?? ''])) ?>
+      </a>
+      <?php else: ?>
+      <form method="post" action="<?= $mode === 'fallback' ? '/login/lokal' : '/login' ?>" class="space-y-4">
         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
         <div>
-          <label for="email" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t(($ldapEnabled ?? false) ? 'auth.login.login_label' : 'auth.login.email_label')) ?></label>
-          <input type="<?= ($ldapEnabled ?? false) ? 'text' : 'email' ?>" id="email" name="email" required autofocus autocomplete="username" autocapitalize="none" value="<?= e($email) ?>"
+          <label for="email" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t($mode === 'ldap' ? 'auth.login.login_label' : 'auth.login.email_label')) ?></label>
+          <input type="<?= $mode === 'ldap' ? 'text' : 'email' ?>" id="email" name="email" required autofocus autocomplete="username" autocapitalize="none" value="<?= e($email) ?>"
                  class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
         </div>
         <div>
@@ -152,23 +165,13 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
         </button>
       </form>
 
-      <a href="/passwort-vergessen" class="mt-3 block text-center text-sm text-slate-500 hover:underline dark:text-slate-400">Passwort vergessen?</a>
-
-      <?php if (($oauthLabel ?? null) !== null): ?>
-      <div class="mt-4">
-        <div class="my-4 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
-          <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
-          <?= e(t('auth.login.or')) ?>
-          <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
-        </div>
-        <a href="/login/oauth" class="block w-full rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-          <?= e(t('auth.login.oauth_button', ['provider' => $oauthLabel])) ?>
-        </a>
-      </div>
       <?php endif; ?>
 
-      <div id="passkey-login-block" class="<?= ($oauthLabel ?? null) !== null ? 'mt-2' : 'mt-4' ?> hidden">
-        <div class="my-4 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500<?= ($oauthLabel ?? null) !== null ? ' hidden' : '' ?>">
+      <?php if ($localForm): ?>
+      <a href="/passwort-vergessen" class="mt-3 block text-center text-sm text-slate-500 hover:underline dark:text-slate-400">Passwort vergessen?</a>
+
+      <div id="passkey-login-block" class="mt-4 hidden">
+        <div class="my-4 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
           <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
           <?= e(t('auth.login.or')) ?>
           <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
@@ -180,6 +183,15 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
           <?= e(t('auth.login.passkey_button')) ?>
         </button>
       </div>
+
+      <?php endif; ?>
+
+      <?php if ($mode === 'fallback'): ?>
+        <a href="/login" class="mt-4 block text-center text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('auth.login.fallback_back')) ?></a>
+      <?php elseif ($mode !== 'local'): ?>
+        <!-- Emergency access while LDAP/OAuth replaces the local login, see AuthController::localLogin(). -->
+        <a href="/login/lokal" class="mt-4 block text-center text-xs text-slate-400 hover:underline dark:text-slate-500"><?= e(t('auth.login.fallback_link')) ?></a>
+      <?php endif; ?>
 
       <!-- Sprachumschalter, auch vor der Anmeldung nutzbar (siehe
            App\Infrastructure\Http\Controllers\LocaleController). -->
@@ -227,7 +239,8 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
 
   // Feature-Detection: Passkey-Button nur anzeigen, wenn der Browser die
   // WebAuthn-API überhaupt unterstützt (native Browser-API, kein Polyfill).
-  if (!window.PublicKeyCredential) {
+  // The block is missing while LDAP or OAuth replaces the local login.
+  if (!block || !window.PublicKeyCredential) {
     return;
   }
   block.classList.remove('hidden');

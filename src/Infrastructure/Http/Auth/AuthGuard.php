@@ -33,6 +33,8 @@ final class AuthGuard
         '/login/zwei-faktor/code-erneut-senden',
         '/passkeys/login/options',
         '/passkeys/login/complete',
+        '/login/oauth',
+        '/login/oauth/callback',
     ];
 
     /** Pfad der erzwungenen Passwortänderung — bleibt erreichbar, auch wenn mustChangePassword aktiv ist. */

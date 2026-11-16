@@ -2,6 +2,8 @@
 /** @var array<string, string> $errors */
 /** @var string $email */
 /** @var bool $trustDevice */
+/** @var bool $ldapEnabled LDAP login is configured: the first field also accepts a directory user name */
+/** @var string|null $oauthLabel button text of the OAuth / OpenID Connect login, null = not configured */
 
 use App\Infrastructure\Http\CompanyBranding;
 use App\Infrastructure\Http\Locale;
@@ -129,8 +131,8 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
       <form method="post" action="/login" class="space-y-4">
         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
         <div>
-          <label for="email" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t('auth.login.email_label')) ?></label>
-          <input type="email" id="email" name="email" required autofocus value="<?= e($email) ?>"
+          <label for="email" class="block text-xs font-medium text-slate-600 dark:text-slate-400"><?= e(t(($ldapEnabled ?? false) ? 'auth.login.login_label' : 'auth.login.email_label')) ?></label>
+          <input type="<?= ($ldapEnabled ?? false) ? 'text' : 'email' ?>" id="email" name="email" required autofocus autocomplete="username" autocapitalize="none" value="<?= e($email) ?>"
                  class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-slate-700">
         </div>
         <div>
@@ -152,8 +154,21 @@ $companyLogoMaxHeightPx = CompanyBranding::logoMaxHeightPx();
 
       <a href="/passwort-vergessen" class="mt-3 block text-center text-sm text-slate-500 hover:underline dark:text-slate-400">Passwort vergessen?</a>
 
-      <div id="passkey-login-block" class="mt-4 hidden">
+      <?php if (($oauthLabel ?? null) !== null): ?>
+      <div class="mt-4">
         <div class="my-4 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500">
+          <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
+          <?= e(t('auth.login.or')) ?>
+          <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
+        </div>
+        <a href="/login/oauth" class="block w-full rounded-md border border-slate-300 px-4 py-2 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+          <?= e(t('auth.login.oauth_button', ['provider' => $oauthLabel])) ?>
+        </a>
+      </div>
+      <?php endif; ?>
+
+      <div id="passkey-login-block" class="<?= ($oauthLabel ?? null) !== null ? 'mt-2' : 'mt-4' ?> hidden">
+        <div class="my-4 flex items-center gap-3 text-xs text-slate-400 dark:text-slate-500<?= ($oauthLabel ?? null) !== null ? ' hidden' : '' ?>">
           <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>
           <?= e(t('auth.login.or')) ?>
           <span class="h-px flex-1 bg-slate-200 dark:bg-slate-800"></span>

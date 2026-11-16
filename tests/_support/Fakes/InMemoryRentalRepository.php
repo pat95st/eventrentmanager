@@ -36,7 +36,10 @@ final class InMemoryRentalRepository implements RentalRepositoryInterface
 
     public function findOverlapping(DateTimeImmutable $from, DateTimeImmutable $to): array
     {
-        return [];
+        return array_values(array_filter(
+            $this->rentals,
+            static fn (Rental $r): bool => $r->startDate->format('Y-m-d') <= $to->format('Y-m-d') && $r->endDate->format('Y-m-d') >= $from->format('Y-m-d'),
+        ));
     }
 
     public function findByVenue(string $venueId): array

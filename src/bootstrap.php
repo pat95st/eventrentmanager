@@ -732,6 +732,15 @@ $scheduledPlaybackHandler = new \App\Application\EventAudio\Command\ScheduledPla
 $commandBus->register(\App\Application\EventAudio\Command\SchedulePlayback::class, $scheduledPlaybackHandler);
 $commandBus->register(\App\Application\EventAudio\Command\CancelScheduledPlayback::class, $scheduledPlaybackHandler);
 $scheduledPlaybackDispatcher = new \App\Application\EventAudio\ScheduledPlaybackDispatcher($scheduledPlaybackRepository, $playbackHandler);
+
+// Stage & FOH displays (migration 167)
+$displayClientRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDisplayClientRepository($pdo);
+$displaySettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDisplaySettingsRepository($pdo);
+$displayAdminHandler = new \App\Application\Display\Command\DisplayAdminHandler($displayClientRepository, $displaySettingsRepository, $rentalRepository, $minuteProgramRepository);
+foreach (['SaveDisplayClient', 'RegenerateDisplayClientToken', 'DeleteDisplayClient', 'SaveDisplaySettings'] as $displayCommand) {
+    $commandBus->register('App\\Application\\Display\\Command\\' . $displayCommand, $displayAdminHandler);
+}
+$displayProgramResolver = new \App\Application\Display\DisplayProgramResolver($minuteProgramRepository, $rentalRepository, $minuteProgramDetailBuilder);
 // Kontoführung (Migration 131)
 $commandBus->register(\App\Application\Banking\Command\SaveOpeningBalance::class, new \App\Application\Banking\Command\SaveOpeningBalanceHandler($accountLedgerRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\Banking\Command\AddAccountTransaction::class, new \App\Application\Banking\Command\AddAccountTransactionHandler($accountLedgerRepository, $bankAccountRepository));
@@ -1797,6 +1806,8 @@ $minuteProgramShareController = new \App\Infrastructure\Http\Controllers\MinuteP
 $runSheetActions = new \App\Infrastructure\Http\Controllers\RunSheetActions($commandBus, $rentalRepository, $rentalAudioFileRepository);
 $minuteProgramFohController = new \App\Infrastructure\Http\Controllers\MinuteProgramFohController($queryBus, $runSheetActions, $rentalRepository, $minuteProgramRepository, $minuteProgramShareLinkRepository, $rentalTechnicianRepository);
 $runSheetApiController = new \App\Infrastructure\Http\Controllers\RunSheetApiController($queryBus, $runSheetActions);
+$displaySettingsController = new \App\Infrastructure\Http\Controllers\DisplaySettingsController($commandBus, $displayClientRepository, $displaySettingsRepository, new \App\Application\Display\DisplayTargets($rentalRepository, $minuteProgramRepository), $displayProgramResolver, $rentalRepository);
+$displayApiController = new \App\Infrastructure\Http\Controllers\DisplayApiController($displayClientRepository, $displaySettingsRepository, $displayProgramResolver, $runSheetActions);
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
 $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository, $voucherRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
@@ -2710,6 +2721,24 @@ $router->post('/api/runsheet/v1/{token}/finish', [$runSheetApiController, 'finis
 $router->post('/api/runsheet/v1/{token}/reset', [$runSheetApiController, 'reset']);
 foreach (['/api/runsheet/v1/{token}', '/api/runsheet/v1/{token}/delay', '/api/runsheet/v1/{token}/items/{itemId}/start', '/api/runsheet/v1/{token}/finish', '/api/runsheet/v1/{token}/reset'] as $runSheetPath) {
     $router->options($runSheetPath, [$runSheetApiController, 'preflight']);
+}
+
+// Stage & FOH displays (migration 167): settings page, built-in browser client and
+// display API (bearer device token, CSRF-exempt, see docs/display-api.md).
+$router->get('/einstellungen/displays', $auth->guard(Permission::Administration, [$displaySettingsController, 'index']));
+$router->post('/einstellungen/displays', $auth->guard(Permission::Administration, [$displaySettingsController, 'store']));
+$router->post('/einstellungen/displays/einstellungen', $auth->guard(Permission::Administration, [$displaySettingsController, 'saveSettings']));
+$router->post('/einstellungen/displays/{id}', $auth->guard(Permission::Administration, [$displaySettingsController, 'update']));
+$router->post('/einstellungen/displays/{id}/token', $auth->guard(Permission::Administration, [$displaySettingsController, 'regenerateToken']));
+$router->post('/einstellungen/displays/{id}/loeschen', $auth->guard(Permission::Administration, [$displaySettingsController, 'delete']));
+$router->get('/display', [$displayApiController, 'clientPage']);
+$router->get('/api/display/v1/state', [$displayApiController, 'state']);
+$router->post('/api/display/v1/delay', [$displayApiController, 'delay']);
+$router->post('/api/display/v1/items/{itemId}/start', [$displayApiController, 'start']);
+$router->post('/api/display/v1/finish', [$displayApiController, 'finish']);
+$router->post('/api/display/v1/reset', [$displayApiController, 'reset']);
+foreach (['/api/display/v1/state', '/api/display/v1/delay', '/api/display/v1/items/{itemId}/start', '/api/display/v1/finish', '/api/display/v1/reset'] as $displayApiPath) {
+    $router->options($displayApiPath, [$displayApiController, 'preflight']);
 }
 
 $router->get('/einstellungen/rechtliches', $auth->guard(Permission::Administration, [$legalSettingsController, 'edit']));

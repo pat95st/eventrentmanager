@@ -2,6 +2,8 @@
 
 Stand: Migration 158 „Ablauf am FOH“. Diese Beschreibung ist die Vorlage für ein separat entwickeltes Stagedisplay (Bühnenmonitor, Konfidenzmonitor, Countdown-Anzeige o. Ä.). Dieselben Daten zeigt die FOH-Oberfläche **Ablauf am FOH** (`/minutenprogramme/{id}/foh`).
 
+> Für fest installierte Displays mit eigenem Geräte-Token, zentraler Zuordnung und Rolle (Stagedisplay/FOH-Display) gibt es seit Migration 167 die Display-Schnittstelle, siehe [display-api.md](display-api.md). Sie liefert die Ablaufdaten im selben Format.
+
 ## Überblick
 
 - Ein **Minutenprogramm** besteht aus Programmpunkten mit Dauer. Die geplante Startzeit eines Punkts ergibt sich aus dem Programmbeginn plus der Summe der Dauern davor.

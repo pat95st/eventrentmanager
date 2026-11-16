@@ -6,7 +6,7 @@ namespace App\Domain\MinuteProgram;
 
 /**
  * Helpers for the per-trade notes of minute program (template) items and the
- * trade selection of programs/templates (migration 171).
+ * trade selection of programs/templates (migration 172).
  *
  * Notes are stored as a JSON object {"<trade id>": "<note>"}, the trade
  * selection as a comma-separated list of trade IDs (NULL = automatic).

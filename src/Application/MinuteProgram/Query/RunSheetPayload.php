@@ -76,7 +76,7 @@ final class RunSheetPayload
                 'headsetMicCount' => $program->headsetMicCount,
                 'itemCount' => count($items),
             ],
-            // Migration 171: trades the program offers notes for (with display color).
+            // Migration 172: trades the program offers notes for (with display color).
             'trades' => array_map(static fn (MinuteProgramTrade $t): array => $t->toArray(), $detail->trades),
             'live' => [
                 'state' => $state,
@@ -154,7 +154,7 @@ final class RunSheetPayload
     }
 
     /**
-     * Legacy note keys of API v1 (before migration 171 the notes were fixed
+     * Legacy note keys of API v1 (before migration 172 the notes were fixed
      * columns). sound/light/video/stage are filled from the offered trade
      * whose name matches (see LEGACY_TRADE_NAMES), otherwise null.
      *
@@ -176,7 +176,7 @@ final class RunSheetPayload
     }
 
     /**
-     * Migration 171: non-empty notes of the offered trades, in trade order.
+     * Migration 172: non-empty notes of the offered trades, in trade order.
      *
      * @param list<MinuteProgramTrade> $trades
      *

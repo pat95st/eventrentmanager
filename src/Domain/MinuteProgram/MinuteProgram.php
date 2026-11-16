@@ -40,7 +40,7 @@ final class MinuteProgram
         public ?DateTimeImmutable $liveItemStartedAt = null,
         // Migration 158: program marked as finished at FOH.
         public ?DateTimeImmutable $liveFinishedAt = null,
-        // Migration 171: trades (IDs) whose notes this program offers.
+        // Migration 172: trades (IDs) whose notes this program offers.
         // null = automatic (trades of the event and its technicians).
         public ?array $tradeIds = null,
     ) {

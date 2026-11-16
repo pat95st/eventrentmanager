@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\MinuteProgram\Query;
 
-/** A trade (Gewerk) as offered by a minute program, with its display color (migration 171). */
+/** A trade (Gewerk) as offered by a minute program, with its display color (migration 172). */
 final class MinuteProgramTrade
 {
     public function __construct(

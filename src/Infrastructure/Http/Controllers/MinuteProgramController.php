@@ -55,7 +55,7 @@ final class MinuteProgramController
     }
 
     /**
-     * View data for the trade selection of the program form (migration 171).
+     * View data for the trade selection of the program form (migration 172).
      *
      * @return array{allTrades: list<\App\Application\MinuteProgram\Query\MinuteProgramTrade>, tradesAuto: bool, selectedTradeIds: list<string>}
      */

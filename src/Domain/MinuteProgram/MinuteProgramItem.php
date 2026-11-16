@@ -19,7 +19,7 @@ final class MinuteProgramItem
         public string $name,
         public ?string $description,
         public ?string $noteGeneral,
-        // Migration 171: notes per trade, trade ID => note (replaces the
+        // Migration 172: notes per trade, trade ID => note (replaces the
         // fixed sound/light/video/stage notes), see MinuteProgramTradeNotes.
         public array $tradeNotes,
         public ?int $durationMinutes,

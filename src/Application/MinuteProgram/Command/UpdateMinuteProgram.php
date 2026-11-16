@@ -18,7 +18,7 @@ final class UpdateMinuteProgram implements CommandInterface
         public readonly int $handheldMicCount,
         public readonly int $headsetMicCount,
         public readonly ?string $jingleAudioFileId = null,
-        // Migration 171: only applied when $setTrades is true; null = automatic.
+        // Migration 172: only applied when $setTrades is true; null = automatic.
         public readonly bool $setTrades = false,
         public readonly ?array $tradeIds = null,
     ) {

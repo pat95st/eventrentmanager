@@ -97,7 +97,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     .bar.over i { background: var(--stop); }
     .empty { color: var(--muted); font-size: .95rem; }
 
-    /* Notes: one card per trade (migration 171), colored by trade */
+    /* Notes: one card per trade (migration 172), colored by trade */
     .notes { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
     .tcard { --c: #94a3b8; background: var(--panel-2); background: color-mix(in srgb, var(--c) 14%, var(--panel-2)); border: 1px solid var(--line); border-color: color-mix(in srgb, var(--c) 45%, var(--line)); border-top: 4px solid var(--c); border-radius: 12px; padding: 10px 12px; min-width: 0; }
     .tcard h3 { margin: 0 0 6px; font-size: .74rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--c); color: color-mix(in srgb, var(--c) 70%, #fff); display: flex; align-items: center; gap: 6px; }
@@ -309,7 +309,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     var openTimeForm = null;
     var $ = function (id) { return document.getElementById(id); };
 
-    // ---------------------------------------------------------------- trade filter (per viewer, migration 171)
+    // ---------------------------------------------------------------- trade filter (per viewer, migration 172)
     // Keys: "general" or a trade ID. Trades not stored yet are shown.
     var shown = {};
     try { var saved = JSON.parse(localStorage.getItem('foh-trades') || 'null'); if (saved && typeof saved === 'object') { shown = saved; } } catch (e) {}
@@ -352,7 +352,7 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
     function noStrobeBanner(item) { return noStrobe(item) ? '<div class="nostrobe-banner">Kein Strobo</div>' : ''; }
     function itemById(id) { for (var i = 0; i < state.items.length; i++) { if (state.items[i].id === id) { return state.items[i]; } } return null; }
 
-    // General note plus one colored card per trade note (migration 171).
+    // General note plus one colored card per trade note (migration 172).
     function notesHtml(item) {
         var html = '';
         if (item && item.notes && item.notes.general && isShown('general')) {

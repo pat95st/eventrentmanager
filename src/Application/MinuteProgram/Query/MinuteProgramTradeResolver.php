@@ -14,7 +14,7 @@ use App\Domain\Technician\TradeRepositoryInterface;
 
 /**
  * Determines which trades (Gewerke, migration 134) a minute program offers
- * notes for (migration 171):
+ * notes for (migration 172):
  *  - explicitly chosen trades (MinuteProgram::$tradeIds), or
  *  - automatically: the trades needed at the event, the trades of its
  *    (not declined) technicians and every trade an item has a note for.

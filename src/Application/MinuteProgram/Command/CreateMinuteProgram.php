@@ -18,7 +18,7 @@ final class CreateMinuteProgram implements CommandInterface
         public readonly int $handheldMicCount,
         public readonly int $headsetMicCount,
         public readonly ?string $jingleAudioFileId = null,
-        // Migration 171: chosen trade IDs, null = automatic.
+        // Migration 172: chosen trade IDs, null = automatic.
         public readonly ?array $tradeIds = null,
     ) {
     }

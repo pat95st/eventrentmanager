@@ -15,7 +15,7 @@ final class CreateMinuteProgramFromTemplate implements CommandInterface
         public readonly string $name,
         public readonly ?string $room,
         public readonly string $startAt,
-        // Migration 171: chosen trade IDs, null = take over the template's selection.
+        // Migration 172: chosen trade IDs, null = take over the template's selection.
         public readonly ?array $tradeIds = null,
     ) {
     }

@@ -24,7 +24,7 @@ final class MinuteProgramTemplate
         public int $headsetMicCount,
         public readonly DateTimeImmutable $createdAt,
         public DateTimeImmutable $updatedAt,
-        // Migration 171: trades (IDs) whose notes the template offers.
+        // Migration 172: trades (IDs) whose notes the template offers.
         // null = automatic (all trades).
         public ?array $tradeIds = null,
     ) {

@@ -8,7 +8,7 @@ use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
 $program = $detail->program;
-$trades = $detail->trades; // migration 171
+$trades = $detail->trades; // migration 172
 ?>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">

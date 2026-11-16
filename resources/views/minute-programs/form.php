@@ -101,7 +101,7 @@ $action = $isEditing ? '/minutenprogramme/' . e($program->id) : '/veranstaltunge
         </div>
     </div>
 
-    <?php /* Migration 171: trades whose notes this program offers */
+    <?php /* Migration 172: trades whose notes this program offers */
         $allTrades = $allTrades ?? [];
         $tradesAuto = $tradesAuto ?? true;
         $selectedTradeIds = $selectedTradeIds ?? [];

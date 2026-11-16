@@ -1,4 +1,4 @@
--- Migration 171: notes per trade (Gewerk) in minute programs.
+-- Migration 172: notes per trade (Gewerk) in minute programs.
 --
 --  - minute_programs.trade_ids / minute_program_templates.trade_ids:
 --    comma-separated trade IDs (table trades, migration 134) whose notes the

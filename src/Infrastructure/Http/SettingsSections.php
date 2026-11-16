@@ -124,6 +124,7 @@ final class SettingsSections
                 'desc' => 'Sicherheit, Schnittstellen, Partner-Instanzen, Datensicherung',
                 'pages' => [
                     $page('settings-sicherheit', '/einstellungen/sicherheit', 'Sicherheit', 'Automatische Abmeldung'),
+                    $page('settings-anmeldung', '/einstellungen/anmeldung', 'Anmeldung (LDAP/OAuth)', 'Anmeldeverfahren: lokal, LDAP / Active Directory oder OAuth 2.0 / OpenID Connect'),
                     $page('settings-integrationen', '/einstellungen/integrationen', t('nav.integration_settings'), 'Google, WhatsApp, DATEV und Basis-URL'),
                     $page('settings-api', '/einstellungen/api', t('nav.api_settings'), 'REST-API und Zugriffs-Tokens'),
                     $page('settings-partner', '/einstellungen/partner', 'Partner-Instanzen', 'Mit anderen Firmen befreunden: Materialpool, Anfragen, Techniker und Rabatte'),

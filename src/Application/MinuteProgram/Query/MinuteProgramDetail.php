@@ -22,7 +22,7 @@ final class MinuteProgramDetail
         // How far the current item has run past the next item's start.
         public readonly int $overrunSeconds = 0,
         public readonly bool $finished = false,
-        // Migration 171: trades this program offers notes for (global order).
+        // Migration 172: trades this program offers notes for (global order).
         public readonly array $trades = [],
     ) {
     }

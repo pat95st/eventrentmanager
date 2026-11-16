@@ -14,7 +14,7 @@ final class UpdateMinuteProgramTemplateItem implements CommandInterface
         public readonly string $name,
         public readonly ?string $description,
         public readonly ?string $noteGeneral,
-        // submitted notes, trade ID => note (migration 171); notes of trades not submitted are kept
+        // submitted notes, trade ID => note (migration 172); notes of trades not submitted are kept
         public readonly array $tradeNotes,
         public readonly ?int $durationMinutes,
         // Migration 166: no strobe lighting may be used during this item.

@@ -15,7 +15,7 @@ final class MinuteProgramTemplateDetail
     public function __construct(
         public readonly MinuteProgramTemplate $template,
         public readonly array $items,
-        // Migration 171: trades the template offers notes for.
+        // Migration 172: trades the template offers notes for.
         public readonly array $trades = [],
     ) {
     }

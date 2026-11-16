@@ -14,7 +14,7 @@ final class AddMinuteProgramItem implements CommandInterface
         public readonly string $name,
         public readonly ?string $description,
         public readonly ?string $noteGeneral,
-        // trade ID => note (migration 171)
+        // trade ID => note (migration 172)
         public readonly array $tradeNotes,
         public readonly ?int $durationMinutes,
         // Migration 166: no strobe lighting may be used during this item.

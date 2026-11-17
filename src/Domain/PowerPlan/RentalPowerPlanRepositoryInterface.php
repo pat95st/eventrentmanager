@@ -15,14 +15,14 @@ interface RentalPowerPlanRepositoryInterface
     /** Saves a single assignment (insert or replace). */
     public function saveAssignment(string $rentalId, PowerAssignment $assignment): void;
 
-    /** Input power of an article in watts (null = none/unknown). */
-    public function inputPowerOf(string $articleId): ?int;
+    /** Peak and average power of an article (both null = none/unknown). */
+    public function articlePowerOf(string $articleId): ArticlePower;
 
     /**
      * @param string[] $articleIds
-     * @return array<string, int> article ID => input power in watts (only articles with a value)
+     * @return array<string, ArticlePower> article ID => power (only articles with at least one value)
      */
-    public function inputPowers(array $articleIds): array;
+    public function articlePowers(array $articleIds): array;
 
-    public function saveInputPower(string $articleId, ?int $watts): void;
+    public function saveArticlePower(string $articleId, ArticlePower $power): void;
 }

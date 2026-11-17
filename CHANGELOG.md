@@ -4,6 +4,7 @@ All notable user-visible changes to this project are documented in this file.
 
 ## Unreleased
 
+- **New:** Average power for articles. In addition to the peak power (formerly "Eingangsleistung"), an article can now have an average power in watts. If an average is recorded, only it is shown on the article and used in the power planning of events (marked "Ø"); otherwise the peak power is used as before.
 - **New:** Large loading spinner in the centre of the page. Whenever opening a page or submitting a form takes noticeably long (more than about 0.4 s), a big spinner with "Wird geladen …" now covers the page until the next page appears, in addition to the thin bar at the top. It also shows on the login pages, can be dismissed with a click or Escape, and is skipped for file downloads.
 - **Fixed:** Drop-down panels such as the "Dokumente" menu of an event no longer stick out past the right edge of the screen on small devices; they are moved back into the visible area.
 - **New:** Global search. Ctrl+K (⌘K on a Mac) or the new search button in the header opens a search field in the middle of the screen that finds events, articles (also by inventory number), customers, suppliers, technicians, venues, purchase orders, receipts and — by their number — offers, order confirmations, invoices and invoice corrections. Suggestions are grouped by type with a matching icon and can be opened with the arrow keys and Enter. Each user only finds what their permissions allow; users who are technicians only find the events they work on.

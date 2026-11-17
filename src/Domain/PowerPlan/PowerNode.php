@@ -9,6 +9,8 @@ use App\Domain\PowerDistributor\PowerDistributor;
 /**
  * One physical unit in the power plan of an event: a consumer with its
  * input power or a power distributor (whose own consumption is ignored).
+ * The input power is the article's average power if one is recorded
+ * (migration 173), otherwise its peak power.
  * Planned articles have a quantity, so each unit is addressed by article ID
  * and running number.
  */
@@ -20,6 +22,7 @@ final class PowerNode
         public readonly string $label,
         public readonly ?int $inputPowerW,
         public readonly ?PowerDistributor $distributor = null,
+        public readonly bool $inputPowerIsAverage = false,
     ) {
     }
 

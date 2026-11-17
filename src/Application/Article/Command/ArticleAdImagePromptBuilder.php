@@ -13,9 +13,13 @@ use App\Domain\Manufacturer\Manufacturer;
  * Builds the prompt for AI ad images (see GenerateArticleAdImageHandler).
  *
  * By default the image must not contain any text. Optionally the article's
- * display name and/or a short list of key properties (manufacturer,
- * category, weight, dimensions, rack data, daily rental price) are rendered
+ * display name, a short list of key properties (manufacturer, category,
+ * weight, dimensions, rack data) and/or the daily rental price are rendered
  * into the image as a text overlay.
+ *
+ * With reference images (gallery photos of the article) the model is told to
+ * reproduce the product exactly as shown; with several photos they are
+ * described as views of the same product from different angles.
  */
 final class ArticleAdImagePromptBuilder
 {
@@ -27,10 +31,19 @@ final class ArticleAdImagePromptBuilder
         bool $includeArticleName,
         bool $includeProperties,
         ?string $additionalInstructions,
+        bool $includePrice = false,
+        int $referenceImageCount = 1,
     ): string {
         $details = $this->productDetailsText($article, $manufacturer?->name, $category?->name);
 
-        if ($fromReferenceImage) {
+        if ($fromReferenceImage && $referenceImageCount > 1) {
+            $prompt = 'Erstelle aus diesen ' . $referenceImageCount . ' Produktfotos ein professionelles Werbebild für Social Media (z. B. Instagram). '
+                . 'Alle Fotos zeigen dasselbe Produkt aus einem Veranstaltungstechnik-Verleih aus verschiedenen Blickwinkeln: ' . $details . ' '
+                . 'Nutze die Fotos als verbindliche Vorlage für die korrekte Darstellung: Form, Proportionen, Farben, Bedienelemente, '
+                . 'Anschlüsse und Beschriftungen des Produkts müssen exakt den Fotos entsprechen, erfinde keine Details hinzu. '
+                . 'Zeige das Produkt einmal in einer ansprechenden Perspektive vor einem modernen, stimmungsvollen Bühnen- oder '
+                . 'Veranstaltungshintergrund (z. B. Lichtstrahlen, Bokeh) mit professioneller Beleuchtung.';
+        } elseif ($fromReferenceImage) {
             $prompt = 'Style dieses Produktfoto zu einem professionellen Werbebild für Social Media (z. B. Instagram) um. '
                 . 'Es zeigt folgendes Produkt aus einem Veranstaltungstechnik-Verleih: ' . $details . ' '
                 . 'Behalte das Produkt und sein Erscheinungsbild exakt bei, verändere nur Hintergrund, Beleuchtung und Stimmung: '
@@ -43,9 +56,10 @@ final class ArticleAdImagePromptBuilder
         }
 
         $properties = $includeProperties ? $this->propertyLines($article, $manufacturer, $category) : [];
+        $price = $includePrice ? $this->priceText($article) : null;
         $showName = $includeArticleName;
 
-        if (!$showName && $properties === []) {
+        if (!$showName && $properties === [] && $price === null) {
             $prompt .= ' Keine Logos, kein Text und keine Wasserzeichen im Bild.';
         } else {
             $prompt .= ' Gestalte das Bild als Werbegrafik mit einem gut lesbaren, modernen Text-Overlay, '
@@ -59,6 +73,10 @@ final class ArticleAdImagePromptBuilder
                     . 'wörtlich und ohne weitere Angaben zu erfinden: '
                     . implode('; ', array_map(fn (string $line): string => '"' . $this->quote($line) . '"', $properties)) . '.';
             }
+            if ($price !== null) {
+                $prompt .= ' Zeige den Mietpreis gut sichtbar als Preis-Hinweis (z. B. als Preis-Etikett), '
+                    . 'wörtlich und ohne ihn zu verändern: "' . $this->quote($price) . '".';
+            }
             $prompt .= ' Achte auf korrekte Rechtschreibung. Darüber hinaus keine weiteren Texte, keine Logos und keine Wasserzeichen im Bild.';
         }
 
@@ -70,7 +88,8 @@ final class ArticleAdImagePromptBuilder
     }
 
     /**
-     * Key properties rendered into the image; empty fields are skipped.
+     * Key properties rendered into the image; empty fields are skipped. The
+     * rental price is a separate option, see priceText().
      *
      * @return list<string>
      */
@@ -96,11 +115,20 @@ final class ArticleAdImagePromptBuilder
             }
             $lines[] = $rack;
         }
-        if ($article->isBillable && $article->dailyRentalPrice !== null && trim($article->dailyRentalPrice) !== '') {
-            $lines[] = 'Miete: ' . number_format((float) $article->dailyRentalPrice, 2, ',', '.') . ' € pro Tag';
+        return $lines;
+    }
+
+    /**
+     * Daily rental price as rendered into the image, or null when the article
+     * has no (billable) price.
+     */
+    public function priceText(Article $article): ?string
+    {
+        if (!$article->isBillable || $article->dailyRentalPrice === null || trim($article->dailyRentalPrice) === '') {
+            return null;
         }
 
-        return $lines;
+        return 'Miete: ' . number_format((float) $article->dailyRentalPrice, 2, ',', '.') . ' € pro Tag';
     }
 
     private function productDetailsText(Article $article, ?string $manufacturerName, ?string $categoryName): string

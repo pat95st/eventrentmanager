@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\Integration\OpenAi;
 
 use App\Infrastructure\Integration\HttpJsonRequest;
-use CURLStringFile;
 
 /**
  * Dünner curl-Client für OpenAIs Bild-API (Modell konfigurierbar, siehe
@@ -16,11 +15,11 @@ use CURLStringFile;
  *
  * Reine Text-zu-Bild-Generierung ("images/generations") ist ein normaler
  * JSON-Request und nutzt daher App\Infrastructure\Integration\HttpJsonRequest.
- * Die Bild-zu-Bild-Variante ("images/edits", genutzt wenn ein vorhandenes
- * Artikelfoto als Referenz dient) benötigt dagegen multipart/form-data mit
- * einem echten Datei-Teil — das kann HttpJsonRequest nicht (nur JSON-Bodies),
- * daher hier ein eigener curl-Aufbau mit CURLStringFile (PHP 8.1+), das die
- * Bilddaten direkt aus dem Speicher ohne Zwischen-Temp-Datei hochladen kann.
+ * Die Bild-zu-Bild-Variante ("images/edits", genutzt wenn vorhandene
+ * Artikelfotos als Referenz dienen) benötigt dagegen multipart/form-data mit
+ * echten Datei-Teilen — das kann HttpJsonRequest nicht (nur JSON-Bodies).
+ * The multipart body is assembled in memory (no temp files), which also
+ * allows several "image[]" parts for multiple reference images.
  *
  * Generierte Bilder werden von OpenAI standardmäßig als Base64 ("b64_json")
  * zurückgegeben; eine temporär gehostete URL wäre eine zweite Option, aber
@@ -76,14 +75,58 @@ final class OpenAiImageClient
      */
     public function generateFromImage(string $apiKey, string $model, string $prompt, string $size, string $referenceImageBytes, string $referenceImageMimeType, string $referenceImageFilename, int $count = 1): array
     {
+        return $this->generateFromImages($apiKey, $model, $prompt, $size, [[
+            'bytes' => $referenceImageBytes,
+            'mimeType' => $referenceImageMimeType,
+            'filename' => $referenceImageFilename,
+        ]], $count);
+    }
+
+    /**
+     * Image-to-image generation with one or more reference images (e.g.
+     * several gallery photos of the same product from different angles).
+     * gpt-image models accept several images (sent as repeated "image[]"
+     * parts); older models (dall-e-2) only take a single image, so for them
+     * only the first reference is sent.
+     *
+     * @param non-empty-list<array{bytes: string, mimeType: string, filename: string}> $referenceImages
+     * @param int $count number of images to generate (>= 1)
+     * @return list<string> Base64-kodierte PNG-Bilddaten, eines je Bild
+     */
+    public function generateFromImages(string $apiKey, string $model, string $prompt, string $size, array $referenceImages, int $count = 1): array
+    {
         if (!$this->supportsMultipleImagesPerRequest($model) && $count > 1) {
             $images = [];
             for ($i = 0; $i < $count; $i++) {
-                $images = [...$images, ...$this->generateFromImage($apiKey, $model, $prompt, $size, $referenceImageBytes, $referenceImageMimeType, $referenceImageFilename, 1)];
+                $images = [...$images, ...$this->generateFromImages($apiKey, $model, $prompt, $size, $referenceImages, 1)];
             }
 
             return $images;
         }
+
+        if (!$this->supportsMultipleReferenceImages($model)) {
+            $referenceImages = [$referenceImages[0]];
+        }
+
+        // The multipart body is built by hand: curl's array form cannot repeat
+        // a field name, but the API expects one "image[]" part per reference.
+        $boundary = '----erm' . bin2hex(random_bytes(12));
+        $fields = ['model' => $model, 'prompt' => $prompt, 'size' => $size, 'n' => (string) $count];
+        $body = '';
+        foreach ($fields as $name => $value) {
+            $body .= "--{$boundary}\r\n"
+                . "Content-Disposition: form-data; name=\"{$name}\"\r\n\r\n"
+                . $value . "\r\n";
+        }
+        $imageFieldName = count($referenceImages) > 1 ? 'image[]' : 'image';
+        foreach ($referenceImages as $reference) {
+            $filename = str_replace(['"', "\r", "\n"], '', basename($reference['filename']));
+            $body .= "--{$boundary}\r\n"
+                . "Content-Disposition: form-data; name=\"{$imageFieldName}\"; filename=\"{$filename}\"\r\n"
+                . 'Content-Type: ' . $reference['mimeType'] . "\r\n\r\n"
+                . $reference['bytes'] . "\r\n";
+        }
+        $body .= "--{$boundary}--\r\n";
 
         $ch = curl_init(self::EDITS_URL);
         if ($ch === false) {
@@ -97,17 +140,9 @@ final class OpenAiImageClient
             CURLOPT_TIMEOUT => $this->timeoutFor($count),
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer ' . $apiKey,
+                'Content-Type: multipart/form-data; boundary=' . $boundary,
             ],
-            CURLOPT_POSTFIELDS => [
-                'model' => $model,
-                'prompt' => $prompt,
-                'size' => $size,
-                'n' => $count,
-                // CURLStringFile lädt die Bilddaten direkt aus dem Speicher
-                // als multipart-Datei-Teil hoch, ohne eine Temp-Datei
-                // anlegen zu müssen (seit PHP 8.1).
-                'image' => new CURLStringFile($referenceImageBytes, $referenceImageFilename, $referenceImageMimeType),
-            ],
+            CURLOPT_POSTFIELDS => $body,
         ]);
 
         $raw = curl_exec($ch);
@@ -120,9 +155,9 @@ final class OpenAiImageClient
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        $json = json_decode($raw, true);
+        $json = json_decode(is_string($raw) ? $raw : '', true);
 
-        return $this->extractBase64Images(['status' => $status, 'json' => is_array($json) ? $json : null, 'raw' => $raw], $count);
+        return $this->extractBase64Images(['status' => $status, 'json' => is_array($json) ? $json : null, 'raw' => is_string($raw) ? $raw : ''], $count);
     }
 
     /**
@@ -165,6 +200,12 @@ final class OpenAiImageClient
     private function supportsMultipleImagesPerRequest(string $model): bool
     {
         return !str_starts_with($model, 'dall-e-3');
+    }
+
+    /** Only the gpt-image models accept several reference images per edit. */
+    private function supportsMultipleReferenceImages(string $model): bool
+    {
+        return str_starts_with($model, 'gpt-image');
     }
 
     private function timeoutFor(int $count): int

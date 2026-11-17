@@ -19,6 +19,11 @@
 //  - window.loadingIndicator.setButtonLoading(btn, on) spinner in a button
 //  - window.loadingIndicator.spinnerHtml(extraClass)   markup of a spinner
 //    (element with class "loading-spinner", size follows the font size)
+//  - window.loadingIndicator.showOverlay({label, detail, maxMs}) / .hideOverlay()
+//    large centred spinner for long-running actions of own scripts (e.g. a
+//    form with data-no-loading-indicator); label/detail replace the default
+//    text, maxMs replaces the 30 s limit. The returned element's
+//    ".page-loading-detail" can be updated (e.g. with an elapsed time).
 (function () {
   'use strict';
 
@@ -63,7 +68,9 @@
     '  border: 0.375rem solid rgb(var(--color-brand-500, 59 130 246) / 0.2);',
     '  border-top-color: rgb(var(--color-brand-500, 59 130 246));',
     '  animation: loading-spinner-rotate 0.8s linear infinite, page-loading-materialize 0.3s ease-out both; }',
-    '.page-loading-label { font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.01em; }',
+    '.page-loading-label { font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.01em; text-align: center; }',
+    '.page-loading-detail { font-size: 0.8125rem; opacity: 0.75; text-align: center; max-width: 28rem; font-variant-numeric: tabular-nums; }',
+    '.page-loading-detail:empty { display: none; }',
     '.is-loading-button { cursor: progress !important; }',
     '.is-loading-button > .loading-spinner { margin-right: 0.375rem; }',
     '@media (prefers-reduced-motion: reduce) {',
@@ -143,8 +150,11 @@
       var label = document.createElement('span');
       label.className = 'page-loading-label';
       label.textContent = loadingLabel();
+      var detail = document.createElement('span');
+      detail.className = 'page-loading-detail';
       overlay.appendChild(spinner);
       overlay.appendChild(label);
+      overlay.appendChild(detail);
       // Never trap the user behind the spinner.
       overlay.addEventListener('click', hideOverlay);
       if (typeof overlay.showPopover === 'function') {
@@ -156,10 +166,18 @@
     return overlay;
   }
 
-  function showOverlay() {
+  function setOverlayText(label, detail) {
+    overlay.querySelector('.page-loading-label').textContent = label || loadingLabel();
+    overlay.querySelector('.page-loading-detail').textContent = detail || '';
+  }
+
+  function showOverlay(options) {
     if (!ensureOverlay()) {
-      return;
+      return null;
     }
+    // Called from a timer with no options for page navigations.
+    var opts = options && typeof options === 'object' ? options : {};
+    setOverlayText(opts.label, opts.detail);
     overlay.classList.add('is-active');
     if (overlay.hasAttribute('popover')) {
       try {
@@ -169,7 +187,8 @@
       }
     }
     clearTimeout(overlayHideTimer);
-    overlayHideTimer = setTimeout(hideOverlay, OVERLAY_MAX_MS);
+    overlayHideTimer = setTimeout(hideOverlay, opts.maxMs > 0 ? opts.maxMs : OVERLAY_MAX_MS);
+    return overlay;
   }
 
   function hideOverlay() {
@@ -191,7 +210,9 @@
 
   function scheduleOverlay() {
     hideOverlay();
-    overlayShowTimer = setTimeout(showOverlay, DELAY_MS);
+    overlayShowTimer = setTimeout(function () {
+      showOverlay();
+    }, DELAY_MS);
   }
 
   window.addEventListener('keydown', function (e) {
@@ -434,5 +455,7 @@
     stop: stop,
     setButtonLoading: setButtonLoading,
     spinnerHtml: spinnerHtml,
+    showOverlay: showOverlay,
+    hideOverlay: hideOverlay,
   };
 })();

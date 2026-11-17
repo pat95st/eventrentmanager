@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Article\Command\AddArticleAccessory;
+use App\Application\Article\Command\AddArticleAdImageToGallery;
 use App\Application\Article\Command\AddArticleImage;
 use App\Application\Article\Command\AddArticlePreIssueCheck;
 use App\Application\Article\Command\AddFirmwareVersion;
@@ -1207,9 +1208,25 @@ final class ArticleController
         $count = (int) ($request->input('count', '1') ?? '1');
         $includeArticleName = $request->input('include_article_name') === '1';
         $includeProperties = $request->input('include_properties') === '1';
+        $includePrice = $request->input('include_price') === '1';
+        $useGalleryImages = $request->input('use_gallery_images') === '1';
+        // The photo selection only applies while gallery images are used.
+        if (!$useGalleryImages) {
+            $sourceArticleImageId = null;
+        }
 
         try {
-            $ids = $this->commands->dispatch(new GenerateArticleAdImage($articleId, $format, $sourceArticleImageId, $additionalInstructions, $count, $includeArticleName, $includeProperties));
+            $ids = $this->commands->dispatch(new GenerateArticleAdImage(
+                $articleId,
+                $format,
+                $sourceArticleImageId,
+                $additionalInstructions,
+                $count,
+                $includeArticleName,
+                $includeProperties,
+                $includePrice,
+                $useGalleryImages,
+            ));
             $generated = is_array($ids) ? count($ids) : 1;
             Flash::success($generated === 1
                 ? t('articles.show.ad_images_flash_generated')
@@ -1238,6 +1255,23 @@ final class ArticleController
             Flash::success($generated === 1
                 ? t('articles.show.ad_images_flash_refined')
                 : t('articles.show.ad_images_flash_refined_many', ['count' => (string) $generated]));
+        } catch (ValidationException $e) {
+            Flash::error(implode(' ', $e->errors()));
+        } catch (NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+
+        Response::redirect('/artikel/' . $articleId);
+    }
+
+    public function addAdImageToGallery(Request $request): void
+    {
+        $imageId = $request->param('id');
+        $articleId = $request->input('article_id', '') ?? '';
+
+        try {
+            $this->commands->dispatch(new AddArticleAdImageToGallery($imageId));
+            Flash::success(t('articles.show.ad_images_flash_added_to_gallery'));
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
         } catch (NotFoundException $e) {

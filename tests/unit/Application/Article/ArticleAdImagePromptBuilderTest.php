@@ -44,9 +44,42 @@ final class ArticleAdImagePromptBuilderTest extends Unit
         $this->assertStringContainsString('"Gewicht: 36,5 kg"', $prompt);
         $this->assertStringContainsString('"Maße: 1053 x 299 x 667 mm"', $prompt);
         $this->assertStringContainsString('"Rackeinbau: 19 Zoll, 3 HE"', $prompt);
-        $this->assertStringContainsString('"Miete: 1.250,00 € pro Tag"', $prompt);
+        $this->assertStringNotContainsString('Miete', $prompt);
         $this->assertStringNotContainsString('Produktbezeichnung', $prompt);
         $this->assertStringEndsWith('Zusätzliche Anweisungen: Blauer Hintergrund', $prompt);
+    }
+
+    public function testIncludesPriceOnlyWhenRequested(): void
+    {
+        $builder = new ArticleAdImagePromptBuilder();
+
+        $withPrice = $builder->build($this->article(), $this->manufacturer(), null, false, false, false, null, true);
+        $this->assertStringContainsString('Text-Overlay', $withPrice);
+        $this->assertStringContainsString('"Miete: 1.250,00 € pro Tag"', $withPrice);
+        $this->assertStringNotContainsString('Eigenschaften', $withPrice);
+
+        $withoutPrice = $builder->build($this->article(), $this->manufacturer(), null, false, false, true, null, false);
+        $this->assertStringNotContainsString('Miete', $withoutPrice);
+    }
+
+    public function testPriceIsSkippedWhenArticleHasNoPrice(): void
+    {
+        $prompt = (new ArticleAdImagePromptBuilder())->build($this->article(billable: false), $this->manufacturer(), null, false, false, false, null, true);
+
+        $this->assertStringContainsString('kein Text', $prompt);
+        $this->assertStringNotContainsString('Miete', $prompt);
+    }
+
+    public function testMultipleReferenceImagesAreDescribedAsViewsOfTheSameProduct(): void
+    {
+        $builder = new ArticleAdImagePromptBuilder();
+
+        $multi = $builder->build($this->article(), $this->manufacturer(), null, true, false, false, null, false, 3);
+        $this->assertStringContainsString('diesen 3 Produktfotos', $multi);
+        $this->assertStringContainsString('verschiedenen Blickwinkeln', $multi);
+
+        $single = $builder->build($this->article(), $this->manufacturer(), null, true, false, false, null, false, 1);
+        $this->assertStringContainsString('dieses Produktfoto', $single);
     }
 
     public function testSkipsEmptyPropertiesAndGenericManufacturer(): void

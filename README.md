@@ -846,6 +846,15 @@ Muster wie der Dark-Mode:
   Benutzerkonten hat, gilt die Wahl je Gerät/Browser, genau wie der
   Dark-Mode.
 
+## API-Dokumentation
+
+Alle maschinenlesbaren Schnittstellen (Artikel-REST-API, Abspielgerät,
+Run-Sheet, Stage-/FOH-Displays, Partner-Instanzen, SumUp-Webhook) sind in
+`docs/openapi.yaml` (OpenAPI 3) beschrieben. Die daraus mit Redoc erzeugte,
+eigenständige Doku liegt als `api-docs.html` im Wurzelverzeichnis und lässt
+sich direkt im Browser öffnen. Nach Änderungen an der Spezifikation neu bauen
+mit `bin/build-api-docs.sh` (benötigt Node.js/npx).
+
 ## Statische Analyse (PHPStan)
 
 Das Projekt ist auf PHPStan **Level max** konfiguriert (`phpstan.neon`,

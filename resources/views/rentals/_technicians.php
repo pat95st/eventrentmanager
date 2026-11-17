@@ -60,7 +60,11 @@ $uncovered = $technicianTeam->uncoveredTradeNames();
                 <div class="py-3">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                            <span class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($u?->displayName() ?? 'Gelöschter Benutzer') ?></span>
+                            <?php if ($u !== null): ?>
+                                <a href="/techniker/<?= e(rawurlencode($u->id)) ?>" class="text-sm font-medium text-slate-800 hover:underline dark:text-slate-200"><?= e($u->displayName()) ?></a>
+                            <?php else: ?>
+                                <span class="text-sm font-medium text-slate-800 dark:text-slate-200">Gelöschter Benutzer</span>
+                            <?php endif; ?>
                             <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-medium" style="<?= $a->status->badgeStyle() ?>"><?= e($a->status->label()) ?></span>
                             <span class="block text-xs text-slate-400 dark:text-slate-500">
                                 <?= $a->status === RentalTechnicianStatus::Requested ? 'angefragt am ' . e($a->requestedAt->format('d.m.Y H:i')) . ($a->reminderCount > 0 ? ' · ' . $a->reminderCount . '× erinnert' : '') : '' ?>

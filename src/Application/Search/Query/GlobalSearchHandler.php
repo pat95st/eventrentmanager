@@ -42,9 +42,9 @@ final class GlobalSearchHandler implements QueryHandlerInterface
             SearchResultType::Article->value => $canArticles,
             SearchResultType::Customer->value => $user->has(Permission::Kundenverwaltung),
             SearchResultType::Supplier->value => $canArticles,
-            // Technicians are user accounts; the only page showing one is
-            // the user form, which is reserved for administrators.
-            SearchResultType::Technician->value => $user->isAdministrator(),
+            // Planners assign technicians to events, so they may look them
+            // up; hits open the read-only page /techniker/{id}.
+            SearchResultType::Technician->value => $canRentals,
             SearchResultType::Venue->value => $canRentals,
             SearchResultType::PurchaseOrder->value => $canArticles,
             SearchResultType::Receipt->value => $canArticles,

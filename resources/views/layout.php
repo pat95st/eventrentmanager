@@ -386,7 +386,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
     </div>
   </dialog>
   <header class="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" style="position:sticky;top:0;z-index:30">
-    <div class="app-container app-container-bar flex items-center gap-3 py-3 lg:gap-8">
+    <div class="app-container app-container-bar flex items-center gap-3 py-3 xl:gap-8">
       <button
         type="button"
         id="mobile-menu-toggle"
@@ -425,14 +425,17 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
       </a>
 
       <!-- Desktop-Navigation: ab lg (1024px) sichtbar, siehe mobile-nav weiter
-           unten für die schmale Variante darunter. -->
+           unten für die schmale Variante darunter.
+           Between lg and xl the items, the bar gap and the user button
+           (icon only, name from 2xl) are kept compact so that an administrator's
+           full menu fits from 1024px on without overflowing. -->
       <nav class="hidden flex-1 gap-1 lg:flex">
         <?php if ($canArticles): ?>
         <div class="group relative">
           <a
             data-tour="nav-articles"
             href="/artikel"
-            class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isArticlesGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            class="flex items-center gap-1 rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $isArticlesGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
             <?= e(t('nav.articles')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -453,7 +456,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
           <a
             data-tour="nav-contacts"
             href="/kunden"
-            class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            class="flex items-center gap-1 rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $isContactsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
             <?= e(t('nav.contacts')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -474,7 +477,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
           <a
             data-tour="nav-procurement"
             href="/belege"
-            class="relative flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            class="relative flex items-center gap-1 rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $isProcurementGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
             <?= e(t('nav.procurement')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -501,7 +504,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         <a
           data-tour="nav-sales"
           href="/verkaeufe"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'sales' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.sales')) ?></a>
         <?php endif; ?>
 
@@ -509,7 +512,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         <a
           data-tour="nav-technician-rentals"
           href="/veranstaltungen"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'rentals' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'rentals' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         >Meine Veranstaltungen</a>
         <?php endif; ?>
 
@@ -517,7 +520,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         <a
           data-tour="nav-inspections"
           href="/elektropruefung"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'electrical-inspection' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'electrical-inspection' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         >Elektroprüfung</a>
         <?php endif; ?>
 
@@ -526,7 +529,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
           <a
             data-tour="nav-documents"
             href="/angebote"
-            class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            class="flex items-center gap-1 rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $isDocumentsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
             <?= e(t('nav.documents')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -547,7 +550,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
           <a
             data-tour="nav-rentals"
             href="/veranstaltungen"
-            class="flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium <?= $isRentalsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            class="flex items-center gap-1 rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $isRentalsGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
           >
             <?= e(t('nav.rentals')) ?>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
@@ -567,7 +570,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         <a
           data-tour="nav-vehicles"
           href="/fahrzeuge"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'vehicles' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'vehicles' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.vehicles')) ?></a>
         <?php endif; ?>
 
@@ -575,7 +578,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         <a
           data-tour="nav-vouchers"
           href="/gutscheine"
-          class="rounded-md px-3 py-1.5 text-sm font-medium <?= $activeNav === 'vouchers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'vouchers' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
         ><?= e(t('nav.vouchers')) ?></a>
         <?php endif; ?>
       </nav>
@@ -670,7 +673,8 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
             aria-label="<?= e(t('nav.user_menu')) ?>"
             class="flex items-center gap-1 rounded-md border border-slate-300 py-1.5 pl-2 pr-1.5 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
           >
-            <span class="hidden max-w-[10rem] truncate sm:inline"><?= e($currentUser->displayName()) ?></span>
+            <svg class="h-4 w-4 2xl:hidden" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z"/></svg>
+            <span class="hidden max-w-[10rem] truncate 2xl:inline"><?= e($currentUser->displayName()) ?></span>
             <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
           </button>
           <div class="nav-flyout invisible absolute right-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">

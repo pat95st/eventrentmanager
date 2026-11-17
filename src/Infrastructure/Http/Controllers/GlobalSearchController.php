@@ -61,7 +61,7 @@ final class GlobalSearchController
             SearchTarget::InventoryNumber => '/inventurnummern/' . $id,
             SearchTarget::Customer => '/kunden/' . $id . '/bearbeiten',
             SearchTarget::Supplier => '/lieferanten/' . $id . '/bearbeiten',
-            SearchTarget::Technician => '/benutzer/' . $id . '/bearbeiten',
+            SearchTarget::Technician => '/techniker/' . $id,
             SearchTarget::Venue => '/veranstaltungsorte/' . $id . '/bearbeiten',
             SearchTarget::PurchaseOrder => '/bestellungen/' . $id,
             SearchTarget::Receipt => '/belege/' . $id,

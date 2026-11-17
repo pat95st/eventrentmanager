@@ -1400,6 +1400,11 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         // des geklickten Absenden-Buttons (sofern kurz genug für einen Button).
         var submitter = e.submitter || form.querySelector('button[type="submit"]');
         var submitterText = submitter ? (submitter.textContent || submitter.value || '').replace(/\s+/g, ' ').trim() : '';
+        // Icon-only buttons (e.g. "×", "🗑"): use their aria-label/title instead,
+        // otherwise fall back to the default title and OK label.
+        if (submitter && !/\p{L}/u.test(submitterText)) {
+          submitterText = (submitter.getAttribute('aria-label') || submitter.getAttribute('title') || '').replace(/\s+/g, ' ').trim();
+        }
         var okLabel = form.getAttribute('data-confirm-ok') || (submitterText.length > 0 && submitterText.length <= 40 ? submitterText : '');
 
         window.confirmModal(message, style, { okLabel: okLabel, hint: confirmHint(key, shift) }).then(function (confirmed) {

@@ -460,7 +460,7 @@ $availabilityStatusMeta = [
                         <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm-key="articles.image.delete" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                            <button type="submit" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
+                            <button type="submit" aria-label="<?= e(t('common.delete')) ?>" title="<?= e(t('common.delete')) ?>" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
                         </form>
                     </div>
                     <!-- Dokumentbild (Migration 109): erscheint klein links neben dem Artikelnamen auf Angebot, AB und Rechnung -->

@@ -1,4 +1,4 @@
--- Migration 173: skipping confirmations by holding Shift becomes configurable.
+-- Migration 174: skipping confirmations by holding Shift becomes configurable.
 --  * security_settings.confirm_bypass_enabled: company-wide switch
 --    (Einstellungen › Sicherheit). Default on, the behaviour so far.
 --  * security_settings.confirm_overrides: JSON object "confirmation key =>

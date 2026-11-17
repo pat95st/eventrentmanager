@@ -66,7 +66,7 @@ final class User
         // 161). NULL = not seen yet, the layout starts the tour automatically.
         public ?DateTimeImmutable $onboardingTourCompletedAt = null,
         // Whether holding Shift skips confirmations for this user (migration
-        // 173, /profil/darstellung). Only effective while the company-wide
+        // 174, /profil/darstellung). Only effective while the company-wide
         // switch under Einstellungen › Sicherheit is on.
         public bool $confirmBypassEnabled = true,
     ) {

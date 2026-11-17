@@ -6,8 +6,11 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Dashboard\DashboardTileCatalog;
 use App\Application\OrderConfirmation\Query\ListOrderConfirmations;
+use App\Application\OrderConfirmation\Query\OrderConfirmationListEntry;
 use App\Application\Offer\Query\ListOffers;
+use App\Application\Offer\Query\OfferListEntry;
 use App\Application\Purchase\Query\ListPurchaseOrders;
+use App\Application\Purchase\Query\PurchaseOrderListEntry;
 use App\Application\Query\QueryBus;
 use App\Application\Reporting\Query\GetIncomeExpenseOverview;
 use App\Application\Rma\Query\ListRmas;
@@ -21,12 +24,12 @@ use App\Domain\OrderConfirmation\OrderConfirmationStatus;
 use App\Domain\Purchase\PurchaseOrderStatus;
 use App\Domain\Rental\RentalRepositoryInterface;
 use App\Domain\Rma\RmaStatus;
-use App\Domain\Supplier\SupplierRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\ReceiptInboxBadge;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\View;
 use DateTimeImmutable;
+
 use function App\Infrastructure\Http\t;
 
 /**
@@ -48,7 +51,6 @@ final class DashboardController
         private readonly RentalRepositoryInterface $rentals,
         private readonly InvoiceRepositoryInterface $invoices,
         private readonly CustomerRepositoryInterface $customers,
-        private readonly SupplierRepositoryInterface $suppliers,
     ) {
     }
 
@@ -175,7 +177,9 @@ final class DashboardController
         $result = $this->queries->ask(new ListOffers(status: OfferStatus::Sent, page: 1, pageSize: self::MAX_ITEMS_PER_WIDGET));
 
         $items = [];
-        foreach ($result->items as $offer) {
+        foreach ($result->items as $entry) {
+            assert($entry instanceof OfferListEntry);
+            $offer = $entry->offer;
             $items[] = [
                 'label' => $this->customerLabel($offer->customerId, $offer->eventLocation),
                 // Zeitraum optional (siehe Migration 102).
@@ -194,7 +198,9 @@ final class DashboardController
         $result = $this->queries->ask(new ListOrderConfirmations(status: OrderConfirmationStatus::Sent, page: 1, pageSize: self::MAX_ITEMS_PER_WIDGET));
 
         $items = [];
-        foreach ($result->items as $orderConfirmation) {
+        foreach ($result->items as $entry) {
+            assert($entry instanceof OrderConfirmationListEntry);
+            $orderConfirmation = $entry->orderConfirmation;
             $items[] = [
                 'label' => $this->customerLabel($orderConfirmation->customerId, $orderConfirmation->eventLocation),
                 // Zeitraum optional (siehe Migration 102).
@@ -247,10 +253,12 @@ final class DashboardController
         $result = $this->queries->ask(new ListPurchaseOrders(status: PurchaseOrderStatus::Ordered, page: 1, pageSize: self::MAX_ITEMS_PER_WIDGET));
 
         $items = [];
-        foreach ($result->items as $purchaseOrder) {
-            $supplier = $this->suppliers->findById($purchaseOrder->supplierId);
+        foreach ($result->items as $entry) {
+            // ListPurchaseOrders yields PurchaseOrderListEntry (order + resolved supplier), not PurchaseOrder.
+            assert($entry instanceof PurchaseOrderListEntry);
+            $purchaseOrder = $entry->order;
             $items[] = [
-                'label' => $supplier?->name ?? 'Unbekannter Lieferant',
+                'label' => $entry->supplier?->name ?? 'Unbekannter Lieferant',
                 'sub' => $purchaseOrder->orderedAt !== null ? 'Bestellt am ' . $purchaseOrder->orderedAt->format('d.m.Y') : '',
                 'href' => '/bestellungen/' . $purchaseOrder->id,
             ];

@@ -17,7 +17,7 @@ final class SecuritySettings
 
     public function __construct(
         public int $sessionTimeoutMinutes = self::DEFAULT_SESSION_TIMEOUT_MINUTES,
-        // Whether holding Shift may skip confirmations at all (migration 173).
+        // Whether holding Shift may skip confirmations at all (migration 174).
         // Users can additionally switch it off for themselves (User::$confirmBypassEnabled).
         public bool $confirmBypassEnabled = true,
         /**

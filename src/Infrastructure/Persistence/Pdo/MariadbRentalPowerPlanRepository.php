@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Persistence\Pdo;
 
+use App\Domain\PowerPlan\ArticlePower;
 use App\Domain\PowerPlan\PowerAssignment;
 use App\Domain\PowerPlan\RentalPowerPlan;
 use App\Domain\PowerPlan\RentalPowerPlanRepositoryInterface;
@@ -86,30 +87,34 @@ final class MariadbRentalPowerPlanRepository implements RentalPowerPlanRepositor
         ]);
     }
 
-    public function inputPowerOf(string $articleId): ?int
+    public function articlePowerOf(string $articleId): ArticlePower
     {
-        return $this->inputPowers([$articleId])[$articleId] ?? null;
+        return $this->articlePowers([$articleId])[$articleId] ?? new ArticlePower(null, null);
     }
 
-    public function inputPowers(array $articleIds): array
+    public function articlePowers(array $articleIds): array
     {
         $articleIds = array_values(array_unique($articleIds));
         if ($articleIds === []) {
             return [];
         }
         $placeholders = implode(',', array_fill(0, count($articleIds), '?'));
-        $stmt = $this->pdo->prepare("SELECT id, input_power_w FROM articles WHERE input_power_w IS NOT NULL AND id IN ($placeholders)");
+        $stmt = $this->pdo->prepare("SELECT id, input_power_w, avg_power_w FROM articles WHERE (input_power_w IS NOT NULL OR avg_power_w IS NOT NULL) AND id IN ($placeholders)");
         $stmt->execute($articleIds);
         $powers = [];
         foreach ($stmt->fetchAll() as $row) {
-            $powers[$row['id']] = (int) $row['input_power_w'];
+            $powers[$row['id']] = new ArticlePower(
+                $row['input_power_w'] !== null ? (int) $row['input_power_w'] : null,
+                $row['avg_power_w'] !== null ? (int) $row['avg_power_w'] : null,
+            );
         }
 
         return $powers;
     }
 
-    public function saveInputPower(string $articleId, ?int $watts): void
+    public function saveArticlePower(string $articleId, ArticlePower $power): void
     {
-        $this->pdo->prepare('UPDATE articles SET input_power_w = :watts WHERE id = :id')->execute(['watts' => $watts, 'id' => $articleId]);
+        $this->pdo->prepare('UPDATE articles SET input_power_w = :peak, avg_power_w = :average WHERE id = :id')
+            ->execute(['peak' => $power->peakW, 'average' => $power->averageW, 'id' => $articleId]);
     }
 }

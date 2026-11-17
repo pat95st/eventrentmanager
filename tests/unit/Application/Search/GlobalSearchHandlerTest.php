@@ -40,7 +40,7 @@ final class GlobalSearchHandlerTest extends Unit
         );
         $this->assertSame(['customer'], $this->searchedTypes($this->user(Permission::Kundenverwaltung)));
         $this->assertSame(
-            ['rental', 'venue', 'document'],
+            ['rental', 'technician', 'venue', 'document'],
             $this->searchedTypes($this->user(Permission::AusgabeRuecknahme))
         );
         $this->assertSame([], $this->searchedTypes($this->user(Permission::Minutenprogramme)));
@@ -59,7 +59,7 @@ final class GlobalSearchHandlerTest extends Unit
         $readModel = $this->readModel();
         (new GlobalSearchHandler($readModel))->handle(new GlobalSearch('fest', $this->user(Permission::Techniker, Permission::AusgabeRuecknahme)));
 
-        $this->assertSame(['rental', 'venue', 'document'], array_column($readModel->calls, 'group'));
+        $this->assertSame(['rental', 'technician', 'venue', 'document'], array_column($readModel->calls, 'group'));
         $this->assertNull($readModel->calls[0]['technician']);
     }
 

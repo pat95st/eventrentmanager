@@ -4,7 +4,13 @@
 // long (after a short delay, so fast actions do not flicker):
 //  - a thin progress bar at the top of the page while a page navigation
 //    (link click, form submit) or a fetch()/XMLHttpRequest is pending,
+//  - a large spinner in the centre of the page while a page navigation is
+//    pending (not for background requests, which must not block the page),
 //  - a spinner inside the submit button of a form that was submitted.
+//
+// The large spinner never traps the user: a click on it or Escape dismisses
+// it, and it hides itself after a while (e.g. when the "navigation" turned
+// out to be a file download and the page never unloads).
 //
 // Opt out per element with data-no-loading-indicator on a form or link.
 //
@@ -24,6 +30,10 @@
   // A form submit or link may answer with a download, in which case the page
   // never unloads. Reset the indicator after this time at the latest.
   var NAVIGATION_RESET_MS = 120000;
+  // The large spinner covers the page, so it gives up much earlier.
+  var OVERLAY_MAX_MS = 30000;
+  // Targets that usually answer with a file instead of a page.
+  var DOWNLOAD_URL_PATTERN = /(\.(csv|pdf|zip|xml|ics|xlsx?|json|txt|vcf|mobileconfig|png|jpe?g|gif|webp|svg)|\/(download|export))$/i;
 
   var style = document.createElement('style');
   style.textContent = [
@@ -37,11 +47,34 @@
     '.loading-bar.is-active { opacity: 1; }',
     '.loading-bar::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%;',
     '  background-color: rgb(var(--color-brand-500, 59 130 246)); animation: loading-bar-slide 1.1s ease-in-out infinite; }',
+    '@keyframes page-loading-in { from { opacity: 0; } to { opacity: 1; } }',
+    '@keyframes page-loading-materialize { from { transform: scale(0.9); } to { transform: scale(1); } }',
+    // The resets (inset, size, margin, border, padding) override the browser
+    // defaults of [popover], see showOverlay().
+    '.page-loading { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none;',
+    '  margin: 0; border: 0; padding: 1rem; z-index: 9999; display: none; flex-direction: column;',
+    '  align-items: center; justify-content: center; gap: 1rem; cursor: progress; overflow: hidden;',
+    '  color: rgb(51 65 85); background-color: rgb(248 250 252 / 0.6);',
+    '  -webkit-backdrop-filter: blur(6px) saturate(140%); backdrop-filter: blur(6px) saturate(140%); }',
+    '.page-loading::backdrop { background: transparent; }',
+    '.page-loading.is-active { display: flex; animation: page-loading-in 0.2s ease-out both; }',
+    '.dark .page-loading { color: rgb(226 232 240); background-color: rgb(2 6 23 / 0.6); }',
+    '.page-loading-spinner { width: 4.5rem; height: 4.5rem; border-radius: 9999px;',
+    '  border: 0.375rem solid rgb(var(--color-brand-500, 59 130 246) / 0.2);',
+    '  border-top-color: rgb(var(--color-brand-500, 59 130 246));',
+    '  animation: loading-spinner-rotate 0.8s linear infinite, page-loading-materialize 0.3s ease-out both; }',
+    '.page-loading-label { font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.01em; }',
     '.is-loading-button { cursor: progress !important; }',
     '.is-loading-button > .loading-spinner { margin-right: 0.375rem; }',
     '@media (prefers-reduced-motion: reduce) {',
     '  .loading-spinner { animation-duration: 1.6s; }',
     '  .loading-bar::before { animation-duration: 2.5s; }',
+    '  .page-loading.is-active { animation: none; }',
+    '  .page-loading-spinner { animation: loading-spinner-rotate 1.6s linear infinite; }',
+    '}',
+    '@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {',
+    '  .page-loading { background-color: rgb(248 250 252); -webkit-backdrop-filter: none; backdrop-filter: none; }',
+    '  .dark .page-loading { background-color: rgb(2 6 23); }',
     '}',
   ].join('\n');
   document.head.appendChild(style);
@@ -88,6 +121,96 @@
     }
   }
 
+  // --- Large spinner in the centre of the page -----------------------------
+  var overlay = null;
+  var overlayShowTimer = null;
+  var overlayHideTimer = null;
+
+  function loadingLabel() {
+    var lang = (document.documentElement.getAttribute('lang') || 'de').toLowerCase();
+    return lang.indexOf('en') === 0 ? 'Loading …' : 'Wird geladen …';
+  }
+
+  function ensureOverlay() {
+    if (!overlay && document.body) {
+      overlay = document.createElement('div');
+      overlay.className = 'page-loading';
+      overlay.setAttribute('role', 'status');
+      overlay.setAttribute('aria-live', 'polite');
+      var spinner = document.createElement('span');
+      spinner.className = 'page-loading-spinner';
+      spinner.setAttribute('aria-hidden', 'true');
+      var label = document.createElement('span');
+      label.className = 'page-loading-label';
+      label.textContent = loadingLabel();
+      overlay.appendChild(spinner);
+      overlay.appendChild(label);
+      // Never trap the user behind the spinner.
+      overlay.addEventListener('click', hideOverlay);
+      if (typeof overlay.showPopover === 'function') {
+        // Top layer: also covers modal dialogs opened with showModal().
+        overlay.setAttribute('popover', 'manual');
+      }
+      document.body.appendChild(overlay);
+    }
+    return overlay;
+  }
+
+  function showOverlay() {
+    if (!ensureOverlay()) {
+      return;
+    }
+    overlay.classList.add('is-active');
+    if (overlay.hasAttribute('popover')) {
+      try {
+        overlay.showPopover();
+      } catch (err) {
+        // Already open or not connected: the class alone still shows it.
+      }
+    }
+    clearTimeout(overlayHideTimer);
+    overlayHideTimer = setTimeout(hideOverlay, OVERLAY_MAX_MS);
+  }
+
+  function hideOverlay() {
+    clearTimeout(overlayShowTimer);
+    clearTimeout(overlayHideTimer);
+    overlayShowTimer = null;
+    if (!overlay) {
+      return;
+    }
+    overlay.classList.remove('is-active');
+    if (overlay.hasAttribute('popover')) {
+      try {
+        overlay.hidePopover();
+      } catch (err) {
+        // Was not open.
+      }
+    }
+  }
+
+  function scheduleOverlay() {
+    hideOverlay();
+    overlayShowTimer = setTimeout(showOverlay, DELAY_MS);
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && overlay && overlay.classList.contains('is-active')) {
+      hideOverlay();
+    }
+  });
+
+  function looksLikeDownload(url) {
+    if (!url) {
+      return false;
+    }
+    try {
+      return DOWNLOAD_URL_PATTERN.test(new URL(url, window.location.href).pathname);
+    } catch (err) {
+      return false;
+    }
+  }
+
   // --- Buttons ------------------------------------------------------------
   function setButtonLoading(button, on) {
     if (!button || button.tagName !== 'BUTTON') {
@@ -114,10 +237,21 @@
   var navigationButton = null;
   var navigationButtonTimer = null;
   var navigationResetTimer = null;
+  // Set while an opted-out link/form is being handled, so the Navigation API
+  // listener below does not start the indicator for it after all.
+  var suppressed = false;
+
+  function suppressBriefly() {
+    suppressed = true;
+    setTimeout(function () {
+      suppressed = false;
+    }, 0);
+  }
 
   function endNavigation() {
     clearTimeout(navigationButtonTimer);
     clearTimeout(navigationResetTimer);
+    hideOverlay();
     setButtonLoading(navigationButton, false);
     navigationButton = null;
     if (navigating) {
@@ -126,10 +260,13 @@
     }
   }
 
-  function beginNavigation(button) {
+  function beginNavigation(button, url) {
     endNavigation();
     navigating = true;
     start();
+    if (!looksLikeDownload(url)) {
+      scheduleOverlay();
+    }
     navigationButton = button || null;
     if (navigationButton) {
       navigationButtonTimer = setTimeout(function () {
@@ -151,7 +288,11 @@
   }
 
   function handleFormSubmit(form, submitter) {
-    if (!(form instanceof HTMLFormElement) || form.hasAttribute('data-no-loading-indicator')) {
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    if (form.hasAttribute('data-no-loading-indicator')) {
+      suppressBriefly();
       return;
     }
     var target = (submitter && submitter.getAttribute('formtarget')) || form.getAttribute('target');
@@ -161,7 +302,8 @@
     if ((form.getAttribute('method') || '').toLowerCase() === 'dialog') {
       return;
     }
-    beginNavigation(submitterFor(form, submitter));
+    var action = (submitter && submitter.getAttribute('formaction')) || form.getAttribute('action') || '';
+    beginNavigation(submitterFor(form, submitter), action);
   }
 
   // Bubbling phase on window: runs after all other submit handlers, so a
@@ -185,7 +327,14 @@
       return;
     }
     var link = e.target.closest && e.target.closest('a[href]');
-    if (!link || link.hasAttribute('download') || link.hasAttribute('data-no-loading-indicator') || opensElsewhere(link.getAttribute('target'))) {
+    if (!link) {
+      return;
+    }
+    if (link.hasAttribute('download') || link.hasAttribute('data-no-loading-indicator')) {
+      suppressBriefly();
+      return;
+    }
+    if (opensElsewhere(link.getAttribute('target'))) {
       return;
     }
     var href = link.getAttribute('href');
@@ -205,8 +354,31 @@
     if (url.hash !== '' && url.pathname === window.location.pathname && url.search === window.location.search) {
       return;
     }
-    beginNavigation(null);
+    beginNavigation(null, url.href);
   });
+
+  // Navigations started by scripts (clickable table rows, redirects via
+  // location.href, ...) fire neither a link click nor a submit event; the
+  // Navigation API reports them where the browser supports it.
+  if (window.navigation && typeof window.navigation.addEventListener === 'function') {
+    window.navigation.addEventListener('navigate', function (e) {
+      if (navigating || suppressed || e.hashChange || e.downloadRequest != null) {
+        return;
+      }
+      var destination = e.destination;
+      if (!destination || destination.sameDocument) {
+        return;
+      }
+      try {
+        if (new URL(destination.url).origin !== window.location.origin) {
+          return;
+        }
+      } catch (err) {
+        return;
+      }
+      beginNavigation(null, destination.url);
+    });
+  }
 
   // Back/forward cache: the restored page must not keep showing the indicator.
   window.addEventListener('pageshow', function (e) {

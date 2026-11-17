@@ -56,12 +56,13 @@ html.dark .gs-trigger:hover { background: rgb(30 41 59); color: rgb(226 232 240)
 /* The navigation of a user with every permission fills the bar on smaller
    desktops, so the button grows in steps: icon, then shortcut, then label. */
 @media (min-width: 1024px) {
-  /* The bar uses a wide gap between navigation and tools from here on;
-     pull the tools (settings, user menu) next to the button. */
-  .gs-trigger { margin-left: 0; margin-right: -1.25rem; }
+  .gs-trigger { margin-left: 0; }
 }
 @media (min-width: 1280px) {
-  .gs-trigger { width: auto; padding: 0 0.5rem 0 0.625rem; }
+  /* The bar uses a wide gap between navigation and tools from here on
+     (xl:gap-8 in layout.php); pull the tools (settings, user menu) next to
+     the button. */
+  .gs-trigger { margin-right: -1.25rem; width: auto; padding: 0 0.5rem 0 0.625rem; }
   .gs-trigger-kbd { display: inline-flex; }
 }
 @media (min-width: 1440px) {

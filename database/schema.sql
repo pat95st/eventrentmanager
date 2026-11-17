@@ -4796,8 +4796,19 @@ ALTER TABLE minute_program_template_items
     DROP COLUMN note_video,
     DROP COLUMN note_stage;
 
--- --- 173_confirm_bypass.sql ---
--- Migration 173: skipping confirmations by holding Shift becomes configurable.
+-- --- 173_article_average_power.sql ---
+-- Migration 173: average power of a device in addition to its peak power.
+--
+-- articles.input_power_w (migration 159) stays the peak power (maximum
+-- consumption per type plate). articles.avg_power_w is the average
+-- consumption in watts (NULL = unknown). When an average is recorded, the
+-- application states and plans with it instead of the peak power.
+
+ALTER TABLE articles
+    ADD COLUMN avg_power_w INT UNSIGNED NULL AFTER input_power_w;
+
+-- --- 174_confirm_bypass.sql ---
+-- Migration 174: skipping confirmations by holding Shift becomes configurable.
 --  * security_settings.confirm_bypass_enabled: company-wide switch
 --    (Einstellungen › Sicherheit). Default on, the behaviour so far.
 --  * security_settings.confirm_overrides: JSON object "confirmation key =>
@@ -5008,4 +5019,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('170_vehicle_insurance.sql', NOW()),
     ('171_external_login.sql', NOW()),
     ('172_minute_program_trades.sql', NOW()),
-    ('173_confirm_bypass.sql', NOW());
+    ('173_article_average_power.sql', NOW()),
+    ('174_confirm_bypass.sql', NOW());

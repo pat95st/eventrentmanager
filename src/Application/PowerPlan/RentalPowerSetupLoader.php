@@ -40,7 +40,7 @@ final class RentalPowerSetupLoader
     {
         $rental = $this->rentals->findById($rentalId) ?? throw new NotFoundException('Veranstaltung wurde nicht gefunden.');
         $items = $this->rentalItems->findByRental($rentalId);
-        $powers = $this->plans->inputPowers(array_map(static fn ($item) => $item->articleId, $items));
+        $powers = $this->plans->articlePowers(array_map(static fn ($item) => $item->articleId, $items));
         $cableCategoryId = $this->categories->findCableCategoryId();
 
         $distributorNodes = [];
@@ -54,14 +54,15 @@ final class RentalPowerSetupLoader
             $manufacturer = $article->manufacturerId !== null ? $this->manufacturers->findById($article->manufacturerId) : null;
             $name = ArticleDisplayName::of($article, $manufacturer);
             $distributor = $this->distributors->findByArticle($article->id);
-            $power = $powers[$article->id] ?? null;
+            $articlePower = $powers[$article->id] ?? null;
+            $power = $articlePower?->statedW();
             if ($distributor === null && ($power ?? 0) <= 0) {
                 $withoutPower += $item->quantity;
                 continue;
             }
             for ($unit = 1; $unit <= $item->quantity; $unit++) {
                 $label = $name . ($item->quantity > 1 ? ' #' . $unit : '');
-                $node = new PowerNode($article->id, $unit, $label, $distributor === null ? $power : null, $distributor);
+                $node = new PowerNode($article->id, $unit, $label, $distributor === null ? $power : null, $distributor, $distributor === null && ($articlePower?->isAverage() ?? false));
                 if ($distributor !== null) {
                     $distributorNodes[] = $node;
                 } else {

@@ -9,7 +9,7 @@ use App\Domain\User\User;
 
 /**
  * What the views need to know about skipping confirmations with Shift
- * (migration 173). Set in bootstrap.php like StorageFolderForm; without
+ * (migration 174). Set in bootstrap.php like StorageFolderForm; without
  * configuration (e.g. tests) the defaults of SecuritySettings apply.
  */
 final class ConfirmPolicy

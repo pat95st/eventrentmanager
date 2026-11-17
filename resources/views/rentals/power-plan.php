@@ -89,7 +89,7 @@ $renderPhases = static function (array $vector) use ($fmtW, $fmtA): void {
     <a href="/veranstaltungen/<?= e($rental->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">&larr; Zurück zur Veranstaltung</a>
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">Stromplanung: <?= e($rental->eventName) ?></h1>
     <p class="text-sm text-slate-500 dark:text-slate-400">
-        Lege fest, wo welches Gerät und welcher Stromverteiler steckt. Berechnet wird mit 230 V je Phase (cos φ = 1) und der Eingangsleistung der Geräte × Gleichzeitigkeitsfaktor.
+        Lege fest, wo welches Gerät und welcher Stromverteiler steckt. Berechnet wird mit 230 V je Phase (cos φ = 1) und der Leistung der Geräte × Gleichzeitigkeitsfaktor – der durchschnittlichen Leistung (Ø), wenn sie am Artikel angegeben ist, sonst der Spitzenleistung.
     </p>
 </div>
 
@@ -166,8 +166,8 @@ $renderPhases = static function (array $vector) use ($fmtW, $fmtA): void {
 
 <?php if ($setup->nodes === []): ?>
     <div class="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-        In dieser Veranstaltung sind weder Stromverteiler noch Geräte mit Eingangsleistung eingeplant.
-        Die Eingangsleistung wird am Artikel erfasst (Artikel bearbeiten › Eingangsleistung).
+        In dieser Veranstaltung sind weder Stromverteiler noch Geräte mit hinterlegter Leistung eingeplant.
+        Die Leistung wird am Artikel erfasst (Artikel bearbeiten › Spitzenleistung / Durchschnittliche Leistung).
     </div>
 <?php endif; ?>
 
@@ -226,7 +226,7 @@ $renderPhases = static function (array $vector) use ($fmtW, $fmtA): void {
             <thead class="text-left text-xs text-slate-500 dark:text-slate-400">
                 <tr>
                     <th class="py-1.5 pr-2 font-medium">Gerät / Stromverteiler</th>
-                    <th class="py-1.5 pr-2 text-right font-medium">Eingangsleistung</th>
+                    <th class="py-1.5 pr-2 text-right font-medium">Leistung</th>
                     <th class="py-1.5 pr-2 font-medium">steckt in</th>
                     <th class="w-24 py-1.5 pr-2 font-medium">Phase</th>
                     <th class="w-28 py-1.5 font-medium">eigener Faktor</th>
@@ -247,7 +247,7 @@ $renderPhases = static function (array $vector) use ($fmtW, $fmtA): void {
                         <?php if ($node->distributor !== null): ?><span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Verteiler</span><?php endif; ?>
                         <?php if ($unplugged): ?><span class="ml-1 text-[11px] text-amber-700 dark:text-amber-400">nicht eingesteckt</span><?php endif; ?>
                     </td>
-                    <td class="py-1.5 pr-2 text-right tabular-nums text-slate-600 dark:text-slate-300"><?= $node->inputPowerW !== null ? e($fmtW((float) $node->inputPowerW)) : '–' ?></td>
+                    <td class="py-1.5 pr-2 text-right tabular-nums text-slate-600 dark:text-slate-300"><?= $node->inputPowerW !== null ? e(($node->inputPowerIsAverage ? 'Ø ' : '') . $fmtW((float) $node->inputPowerW)) : '–' ?></td>
                     <td class="py-1.5 pr-2">
                         <select name="<?= e($name('target')) ?>" class="<?= $input ?>">
                             <option value="">– nicht eingesteckt –</option>
@@ -280,7 +280,7 @@ $renderPhases = static function (array $vector) use ($fmtW, $fmtA): void {
         </table>
     </div>
     <?php if ($setup->unitsWithoutPower > 0): ?>
-        <p class="mt-3 text-xs text-slate-500 dark:text-slate-400"><?= e((string) $setup->unitsWithoutPower) ?> eingeplante(s) Gerät(e) ohne hinterlegte Eingangsleistung werden nicht berücksichtigt (Leitungen haben keine Leistung).</p>
+        <p class="mt-3 text-xs text-slate-500 dark:text-slate-400"><?= e((string) $setup->unitsWithoutPower) ?> eingeplante(s) Gerät(e) ohne hinterlegte Leistung werden nicht berücksichtigt (Leitungen haben keine Leistung).</p>
     <?php endif; ?>
     <div class="mt-4 flex justify-end">
         <button class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern und neu berechnen</button>

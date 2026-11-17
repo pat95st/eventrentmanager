@@ -30,7 +30,7 @@ final class MariadbSecuritySettingsRepository implements SecuritySettingsReposit
             return new SecuritySettings();
         }
 
-        // The confirm columns are missing until migration 173 has run.
+        // The confirm columns are missing until migration 174 has run.
         $overrides = [];
         $decoded = json_decode((string) ($row['confirm_overrides'] ?? ''), true);
         if (is_array($decoded)) {

@@ -41,7 +41,7 @@ final class SecuritySettingsController
         }
     }
 
-    /** Which confirmations holding Shift may skip (migration 173). */
+    /** Which confirmations holding Shift may skip (migration 174). */
     public function updateConfirmations(Request $request): void
     {
         $reset = $request->input('reset') !== null;

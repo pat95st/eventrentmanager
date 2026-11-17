@@ -26,6 +26,8 @@ final class GenerateArticleAdImage implements CommandInterface
         public readonly bool $includePrice = false,
         // Use the article's gallery photos as references so the product is depicted correctly.
         public readonly bool $useGalleryImages = false,
+        // Phrase the price as a starting price ("ab 25,00 €").
+        public readonly bool $priceAsFrom = true,
     ) {
     }
 }

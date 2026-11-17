@@ -15,7 +15,8 @@ use App\Domain\Manufacturer\Manufacturer;
  * By default the image must not contain any text. Optionally the article's
  * display name, a short list of key properties (manufacturer, category,
  * weight, dimensions, rack data) and/or the daily rental price are rendered
- * into the image as a text overlay.
+ * into the image as a text overlay. The price is shown as a starting price
+ * ("ab …") by default.
  *
  * With reference images (gallery photos of the article) the model is told to
  * reproduce the product exactly as shown; with several photos they are
@@ -33,6 +34,7 @@ final class ArticleAdImagePromptBuilder
         ?string $additionalInstructions,
         bool $includePrice = false,
         int $referenceImageCount = 1,
+        bool $priceAsFrom = true,
     ): string {
         $details = $this->productDetailsText($article, $manufacturer?->name, $category?->name);
 
@@ -56,7 +58,7 @@ final class ArticleAdImagePromptBuilder
         }
 
         $properties = $includeProperties ? $this->propertyLines($article, $manufacturer, $category) : [];
-        $price = $includePrice ? $this->priceText($article) : null;
+        $price = $includePrice ? $this->priceText($article, $priceAsFrom) : null;
         $showName = $includeArticleName;
 
         if (!$showName && $properties === [] && $price === null) {
@@ -120,15 +122,16 @@ final class ArticleAdImagePromptBuilder
 
     /**
      * Daily rental price as rendered into the image, or null when the article
-     * has no (billable) price.
+     * has no (billable) price. With $asFrom (default) it is phrased as a
+     * starting price ("ab 25,00 €").
      */
-    public function priceText(Article $article): ?string
+    public function priceText(Article $article, bool $asFrom = true): ?string
     {
         if (!$article->isBillable || $article->dailyRentalPrice === null || trim($article->dailyRentalPrice) === '') {
             return null;
         }
 
-        return 'Miete: ' . number_format((float) $article->dailyRentalPrice, 2, ',', '.') . ' € pro Tag';
+        return 'Miete: ' . ($asFrom ? 'ab ' : '') . number_format((float) $article->dailyRentalPrice, 2, ',', '.') . ' € pro Tag';
     }
 
     private function productDetailsText(Article $article, ?string $manufacturerName, ?string $categoryName): string

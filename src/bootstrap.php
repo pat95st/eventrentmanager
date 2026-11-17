@@ -1696,7 +1696,7 @@ $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageAssignment
 $queryBus->register(\App\Application\DocumentStorage\Query\ListStorageUploadLog::class, new \App\Application\DocumentStorage\Query\ListStorageUploadLogHandler($documentStorageUploadLogRepository));
 
 // --- Controller --------------------------------------------------------
-$dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository, $supplierRepository);
+$dashboardController = new DashboardController($queryBus, $rentalRepository, $invoiceRepository, $customerRepository);
 // Umsatzziele je Jahr und Abschreibungen (Migration 146)
 $revenueGoalRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRevenueGoalRepository($pdo);
 $depreciationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbDepreciationRepository($pdo);
@@ -1880,6 +1880,7 @@ $profileController = new ProfileController($commandBus, $queryBus, $mobileConfig
 $userController = new UserController($commandBus, $queryBus, $technicianProfileRepository);
 $rentalPowerPlanController = new \App\Infrastructure\Http\Controllers\RentalPowerPlanController($commandBus, $queryBus);
 $rentalTechnicianController = new \App\Infrastructure\Http\Controllers\RentalTechnicianController($commandBus, $queryBus, $rentalTechnicianRepository);
+$technicianController = new \App\Infrastructure\Http\Controllers\TechnicianController($queryBus, $userRepository, $technicianProfileRepository);
 $technicianSettingsController = new \App\Infrastructure\Http\Controllers\TechnicianSettingsController($commandBus, $tradeRepository, $technicianSettingsRepository);
 $smtpSettingsController = new SmtpSettingsController($commandBus, $queryBus);
 $priceTierSettingsController = new PriceTierSettingsController($commandBus, $queryBus);
@@ -2425,6 +2426,7 @@ $router->post('/api/player/v1/requests/{id}/status', [$audioPlayerApiController,
 $router->get('/api/player/v1/requests/{id}/recording', [$audioPlayerApiController, 'recording']);
 $router->get('/api/player/v1/files/{id}', [$audioPlayerApiController, 'file']);
 $router->get('/api/player/v1/gong', [$audioPlayerApiController, 'gong']);
+$router->get('/techniker/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$technicianController, 'show']));
 $router->post('/veranstaltungen/{id}/techniker', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'assign']));
 $router->post('/veranstaltungs-techniker/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'update']));
 $router->post('/veranstaltungs-techniker/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalTechnicianController, 'remove']));

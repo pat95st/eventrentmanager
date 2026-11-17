@@ -4,6 +4,10 @@ All notable user-visible changes to this project are documented in this file.
 
 ## Unreleased
 
+- **Fixed:** The start page no longer crashes when the tiles "Offene Bestellungen", "Offene Angebote" or "Offene Auftragsbestätigungen" contain at least one entry (for example a purchase order with status "Bestellt").
+- **New:** Technician page for planners. Users with "Ausgabe und Rücknahme" now find technicians in the global search; a hit opens a read-only page `/techniker/{id}` with e-mail, phone and upcoming assignments (administrators get a link to the user form). Technician names in the technician section of an event link to this page.
+- **Fixed:** The header no longer overflows for administrators with every menu item between 1024 and about 1280 px window width. Below 1536 px the user menu shows an icon instead of the name (the name stays at the top of the menu), and between 1024 and 1280 px the menu items are spaced more tightly.
+
 - **New:** Average power for articles. In addition to the peak power (formerly "Eingangsleistung"), an article can now have an average power in watts. If an average is recorded, only it is shown on the article and used in the power planning of events (marked "Ø"); otherwise the peak power is used as before.
 - **New:** Large loading spinner in the centre of the page. Whenever opening a page or submitting a form takes noticeably long (more than about 0.4 s), a big spinner with "Wird geladen …" now covers the page until the next page appears, in addition to the thin bar at the top. It also shows on the login pages, can be dismissed with a click or Escape, and is skipped for file downloads.
 - **Fixed:** Drop-down panels such as the "Dokumente" menu of an event no longer stick out past the right edge of the screen on small devices; they are moved back into the visible area.

@@ -1555,11 +1555,25 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
             details._popoverZ = popover.style.zIndex;
             popover.style.zIndex = '60';
             liftAncestors(details);
+            // Keep the panel inside the viewport horizontally: fixed-width
+            // panels (e.g. w-80) anchored to a trigger near the right edge
+            // would otherwise stick out on narrow screens.
+            details._popoverMaxWidth = popover.style.maxWidth;
+            details._popoverTransform = popover.style.transform;
+            var viewportWidth = document.documentElement.clientWidth;
+            popover.style.maxWidth = (viewportWidth - 16) + 'px';
+            var box = popover.getBoundingClientRect();
+            var shift = 0;
+            if (box.right > viewportWidth - 8) { shift = viewportWidth - 8 - box.right; }
+            if (box.left + shift < 8) { shift = 8 - box.left; }
+            if (shift !== 0) { popover.style.transform = 'translateX(' + Math.round(shift) + 'px)'; }
             // Unten aus dem Fenster ragend: Seite so weit scrollen, dass das Panel sichtbar ist.
             var rect = popover.getBoundingClientRect();
             if (rect.bottom > window.innerHeight) { popover.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
           } else {
             popover.style.zIndex = details._popoverZ || '';
+            popover.style.maxWidth = details._popoverMaxWidth || '';
+            popover.style.transform = details._popoverTransform || '';
             restoreAncestors(details);
           }
           return;

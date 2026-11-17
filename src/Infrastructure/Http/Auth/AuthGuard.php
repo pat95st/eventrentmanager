@@ -273,6 +273,11 @@ final class AuthGuard
         if (str_starts_with($path, '/profil/caldav') || str_starts_with($path, '/profil/carddav')) {
             return false; // Kalender-/Adressbuch-Abos zeigen alle Veranstaltungen bzw. Kontakte
         }
+        // Global search: limited to the technician's own events, without
+        // customer data (see App\Application\Search\Query\GlobalSearchHandler).
+        if ($path === '/suche') {
+            return true;
+        }
         foreach (['/profil', '/passkeys', '/sitzung/', '/benutzer/impersonation/'] as $prefix) {
             if (str_starts_with($path, $prefix)) {
                 return true;

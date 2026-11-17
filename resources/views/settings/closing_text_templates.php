@@ -72,7 +72,7 @@ $renderNode = function (?string $parentId, int $depth) use (&$renderNode, &$byPa
             <span class="text-sm text-slate-800 dark:text-slate-200">📄 <?= e($template->name) ?></span>
             <span class="flex items-center gap-3">
                 <a href="/einstellungen/textvorlagen/vorlagen/<?= e($template->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                <form method="post" action="/einstellungen/textvorlagen/vorlagen/<?= e($template->id) ?>/loeschen" data-confirm="Diese Textvorlage wirklich löschen?" data-confirm-style="danger">
+                <form method="post" action="/einstellungen/textvorlagen/vorlagen/<?= e($template->id) ?>/loeschen" data-confirm-key="settings.text_templates.delete" data-confirm="Diese Textvorlage wirklich löschen?" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                 </form>
@@ -87,7 +87,7 @@ $renderNode = function (?string $parentId, int $depth) use (&$renderNode, &$byPa
             <span class="text-sm font-medium text-slate-700 dark:text-slate-300">📁 <?= e($folder->name) ?></span>
             <span class="flex items-center gap-3">
                 <a href="/einstellungen/textvorlagen/ordner/<?= e($folder->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                <form method="post" action="/einstellungen/textvorlagen/ordner/<?= e($folder->id) ?>/loeschen" data-confirm="Diesen Ordner wirklich löschen?" data-confirm-style="danger">
+                <form method="post" action="/einstellungen/textvorlagen/ordner/<?= e($folder->id) ?>/loeschen" data-confirm-key="settings.text_templates.folder.delete" data-confirm="Diesen Ordner wirklich löschen?" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                 </form>

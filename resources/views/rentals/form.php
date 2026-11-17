@@ -259,13 +259,14 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
             var list = overlapping(start.value, end.value);
             var box = form.querySelector('[data-holiday-confirm-box]');
             var needs = list.filter(function (h) { return isNew || initialIds.indexOf(h.id) === -1; });
-            if (needs.length === 0 || confirmed.value === '1' || (box && box.checked) || typeof window.confirmModal !== 'function') { return; }
+            if (needs.length === 0 || confirmed.value === '1' || (box && box.checked) || typeof window.confirmGate !== 'function') { return; }
             event.preventDefault();
             var message = 'Achtung, Betriebsurlaub: ' + needs.map(function (h) { return h.label; }).join(', ')
                 + '. In dieser Zeit gibt es keine Ausgabe und keine Rücknahme – die Veranstaltung ist nur mit Abholung bis '
                 + needs[0].lastPickupLabel + ' und Rückgabe ab ' + needs[needs.length - 1].firstReturnLabel
                 + ' möglich. Möchtest du die Veranstaltung trotzdem ' + (isNew ? 'anlegen' : 'speichern') + '?';
-            window.confirmModal(message).then(function (ok) {
+            // event is the submit event: Shift counts when the submit button was clicked with it.
+            window.confirmGate('rentals.company_holiday', event, message).then(function (ok) {
                 if (ok) { confirmed.value = '1'; form.submit(); }
             });
         });

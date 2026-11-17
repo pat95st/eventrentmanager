@@ -23,12 +23,12 @@ $gross = $correction->grossTotal();
     </div>
     <div class="flex flex-wrap items-center gap-2">
         <?php if ($correction->isDraft()): ?>
-            <form method="post" action="/rechnungskorrekturen/<?= e($correction->id) ?>/ausstellen" data-confirm="<?= e($correction->type->label()) ?> jetzt ausstellen? Danach wird eine Nummer vergeben und das Dokument kann nicht mehr geändert werden.">
+            <form method="post" action="/rechnungskorrekturen/<?= e($correction->id) ?>/ausstellen" data-confirm-key="invoice_corrections.issue" data-confirm="<?= e($correction->type->label()) ?> jetzt ausstellen? Danach wird eine Nummer vergeben und das Dokument kann nicht mehr geändert werden.">
                 <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Ausstellen</button>
             </form>
             <a href="/rechnungskorrekturen/<?= e($correction->id) ?>/bearbeiten" class="<?= $btn ?>">Bearbeiten</a>
-            <form method="post" action="/rechnungskorrekturen/<?= e($correction->id) ?>/loeschen" data-confirm="Diesen Entwurf löschen?" data-confirm-style="danger">
+            <form method="post" action="/rechnungskorrekturen/<?= e($correction->id) ?>/loeschen" data-confirm-key="invoice_corrections.delete" data-confirm="Diesen Entwurf löschen?" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">Löschen</button>
             </form>

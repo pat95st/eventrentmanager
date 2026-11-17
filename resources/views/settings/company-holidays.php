@@ -50,7 +50,7 @@ $fields = function (?\App\Domain\CompanyHoliday\CompanyHoliday $holiday) use ($i
                     <?php $fields($holiday); ?>
                     <button type="submit" class="<?= $btn ?>">Speichern</button>
                 </form>
-                <form method="post" action="/einstellungen/betriebsurlaub/<?= e($holiday->id) ?>/loeschen" data-confirm="Betriebsurlaub <?= e($holiday->label()) ?> löschen?" data-confirm-style="danger">
+                <form method="post" action="/einstellungen/betriebsurlaub/<?= e($holiday->id) ?>/loeschen" data-confirm-key="settings.company_holidays.delete" data-confirm="Betriebsurlaub <?= e($holiday->label()) ?> löschen?" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                     <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40">Löschen</button>
                 </form>

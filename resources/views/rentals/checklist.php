@@ -289,7 +289,7 @@ foreach ($detail->issuedItems as $issued) {
                                 <?php if (isset($fixedRacks[$issuedEntry->inventoryNumber->id])): ?>
                                     <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 font-sans text-xs font-medium text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700" title="Fest zugeordnetes Rack – geht mit diesem Gerät mit">+ Rack <?= e($fixedRacks[$issuedEntry->inventoryNumber->id]->name) ?> (<?= e($fixedRacks[$issuedEntry->inventoryNumber->id]->rackNumber) ?>)</span>
                                 <?php endif; ?></span>
-                                <form method="post" action="/ausgaben/<?= e($issuedEntry->issuedItem->id) ?>/loeschen" data-confirm="<?= e(t('rentals.checklist.confirm_undo_issue')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/ausgaben/<?= e($issuedEntry->issuedItem->id) ?>/loeschen" data-confirm-key="rentals.issue.undo" data-confirm="<?= e(t('rentals.checklist.confirm_undo_issue')) ?>" data-confirm-style="danger">
                                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
                                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.checklist.undo')) ?></button>

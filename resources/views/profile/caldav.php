@@ -77,7 +77,7 @@ use function App\Infrastructure\Http\t;
                                 : e(t('profile.caldav.passwords.never_used')) ?>
                         </p>
                     </div>
-                    <form method="post" action="/profil/caldav/<?= e($credential->id) ?>/loeschen" data-confirm="<?= e(t('profile.caldav.passwords.confirm_delete')) ?>" data-confirm-style="danger">
+                    <form method="post" action="/profil/caldav/<?= e($credential->id) ?>/loeschen" data-confirm-key="profile.caldav.delete" data-confirm="<?= e(t('profile.caldav.passwords.confirm_delete')) ?>" data-confirm-style="danger">
                         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                         <button type="submit" class="whitespace-nowrap rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('profile.caldav.passwords.delete')) ?></button>
                     </form>

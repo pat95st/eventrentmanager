@@ -75,7 +75,7 @@ use function App\Infrastructure\Http\t;
                     <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-700">
                         <?= e(t('settings.integrations.google_merchant.service_account_present')) ?>
                     </span>
-                    <form method="post" action="/einstellungen/integrationen/google-merchant/zugangsdaten/loeschen" data-confirm="<?= e(t('settings.integrations.google_merchant.confirm_remove_service_account')) ?>" data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/integrationen/google-merchant/zugangsdaten/loeschen" data-confirm-key="settings.integrations.google_merchant.delete" data-confirm="<?= e(t('settings.integrations.google_merchant.confirm_remove_service_account')) ?>" data-confirm-style="danger">
                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                     </form>
@@ -125,7 +125,7 @@ use function App\Infrastructure\Http\t;
                     <?php if ($googleBusinessSettings->locationId === null): ?>
                         <span class="text-xs text-amber-600 dark:text-amber-400"><?= e(t('settings.integrations.google_business.no_location')) ?></span>
                     <?php endif; ?>
-                    <form method="post" action="/einstellungen/integrationen/google-business/trennen" data-confirm="<?= e(t('settings.integrations.google_business.confirm_disconnect')) ?>" data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/integrationen/google-business/trennen" data-confirm-key="settings.integrations.google_business.disconnect" data-confirm="<?= e(t('settings.integrations.google_business.confirm_disconnect')) ?>" data-confirm-style="danger">
                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('settings.integrations.google_business.disconnect')) ?></button>
                     </form>

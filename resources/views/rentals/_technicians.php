@@ -86,7 +86,7 @@ $uncovered = $technicianTeam->uncoveredTradeNames();
                                     <button type="submit" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Erneut anfragen</button>
                                 </form>
                             <?php endif; ?>
-                            <form method="post" action="/veranstaltungs-techniker/<?= e($a->id) ?>/loeschen" data-confirm="<?= e(($u?->displayName() ?? 'Techniker') . ' von der Veranstaltung entfernen?') ?>" data-confirm-style="danger">
+                            <form method="post" action="/veranstaltungs-techniker/<?= e($a->id) ?>/loeschen" data-confirm-key="rentals.technician.delete" data-confirm="<?= e(($u?->displayName() ?? 'Techniker') . ' von der Veranstaltung entfernen?') ?>" data-confirm-style="danger">
                                 <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
                             </form>

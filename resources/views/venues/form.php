@@ -177,7 +177,7 @@ $formatMeters = static function (float $meters): string {
                             <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="venue-images" data-gallery-src="<?= e($imageUrl) ?>" data-gallery-caption="<?= e($image->description ?? $venue->name) ?>" aria-label="<?= e(t('gallery.open')) ?>">
                                 <img src="<?= e($imageUrl) ?>" alt="<?= e($image->description ?? '') ?>" loading="lazy" class="h-full w-full object-cover">
                             </button>
-                            <form method="post" action="<?= e($imageUrl) ?>/loeschen" data-confirm="<?= e(t('venues.images.confirm_delete')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
+                            <form method="post" action="<?= e($imageUrl) ?>/loeschen" data-confirm-key="venues.image.delete" data-confirm="<?= e(t('venues.images.confirm_delete')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="rounded bg-white/90 px-1.5 py-0.5 text-xs font-medium text-red-700 shadow hover:bg-white dark:bg-slate-900/90 dark:text-red-400" title="<?= e(t('venues.images.delete')) ?>" aria-label="<?= e(t('venues.images.delete')) ?>">&times;</button>
                             </form>
@@ -293,7 +293,7 @@ $formatMeters = static function (float $meters): string {
                                         <button type="submit" class="rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('venues.power.save')) ?></button>
                                     </form>
                                 </details>
-                                <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/stromanschluesse/<?= e($connection->id) ?>/loeschen" data-confirm="<?= e(t('venues.power.confirm_delete')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/stromanschluesse/<?= e($connection->id) ?>/loeschen" data-confirm-key="venues.power_connection.delete" data-confirm="<?= e(t('venues.power.confirm_delete')) ?>" data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('venues.power.delete')) ?></button>
                                 </form>
@@ -418,7 +418,7 @@ $formatMeters = static function (float $meters): string {
                                         <button type="submit" class="rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('venues.stages.save')) ?></button>
                                     </form>
                                 </details>
-                                <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/buehnen/<?= e($stage->id) ?>/loeschen" data-confirm="<?= e(t('venues.stages.confirm_delete')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/buehnen/<?= e($stage->id) ?>/loeschen" data-confirm-key="venues.stage.delete" data-confirm="<?= e(t('venues.stages.confirm_delete')) ?>" data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('venues.stages.delete')) ?></button>
                                 </form>

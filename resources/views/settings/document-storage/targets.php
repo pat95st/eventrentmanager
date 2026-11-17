@@ -65,7 +65,7 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
                                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('settings.document_storage.targets.test_connection')) ?></button>
                                 </form>
                                 <a href="/einstellungen/speicherziele/<?= e($target->id) ?>/bearbeiten" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-                                <form method="post" action="/einstellungen/speicherziele/<?= e($target->id) ?>/loeschen" data-confirm="<?= e(t('settings.document_storage.targets.confirm_delete')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/einstellungen/speicherziele/<?= e($target->id) ?>/loeschen" data-confirm-key="settings.document_storage.target.delete" data-confirm="<?= e(t('settings.document_storage.targets.confirm_delete')) ?>" data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
                                 </form>
@@ -104,7 +104,7 @@ $selectedProtocol = StorageProtocol::tryFrom((string) ($old['protocol'] ?? $edit
                         <?= $editing->isOAuthConnected() ? e(t('settings.document_storage.targets.oauth.reconnect')) : e(t('settings.document_storage.targets.oauth.connect', ['service' => $editing->protocol->label()])) ?>
                     </a>
                     <?php if ($editing->isOAuthConnected()): ?>
-                        <form method="post" action="/einstellungen/speicherziele/<?= e($editing->id) ?>/trennen" data-confirm="<?= e(t('settings.document_storage.targets.oauth.confirm_disconnect')) ?>" data-confirm-style="danger">
+                        <form method="post" action="/einstellungen/speicherziele/<?= e($editing->id) ?>/trennen" data-confirm-key="settings.document_storage.target.disconnect" data-confirm="<?= e(t('settings.document_storage.targets.oauth.confirm_disconnect')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <button type="submit" class="rounded-md px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('settings.document_storage.targets.oauth.disconnect')) ?></button>
                         </form>

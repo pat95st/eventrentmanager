@@ -57,7 +57,7 @@ $hostRange = static function (int $version) use ($network): ?string {
                 </div>
             </form>
             <?php if ($detail->addresses === []): ?>
-                <form method="post" action="/einstellungen/netzwerke/<?= e($network->id) ?>/loeschen" class="mt-3 text-right" data-confirm="Netzwerk „<?= e($network->name) ?>“ löschen? Die Adressbereiche der Kategorien werden mit entfernt." data-confirm-style="danger">
+                <form method="post" action="/einstellungen/netzwerke/<?= e($network->id) ?>/loeschen" class="mt-3 text-right" data-confirm-key="settings.networks.delete" data-confirm="Netzwerk „<?= e($network->name) ?>“ löschen? Die Adressbereiche der Kategorien werden mit entfernt." data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Netzwerk löschen</button>
                 </form>
@@ -83,7 +83,7 @@ $hostRange = static function (int $version) use ($network): ?string {
                                 <?php if (($label6 = $range->label(6)) !== null): ?><?= $range->label(4) !== null ? ' · ' : '' ?>IPv6 <?= e($label6) ?><?php endif; ?>
                             </p>
                         </div>
-                        <form method="post" action="/einstellungen/netzwerke/<?= e($network->id) ?>/kategorien/<?= e($range->categoryId) ?>/loeschen" data-confirm="Adressbereich der Kategorie „<?= e($entry['category']) ?>“ entfernen?" data-confirm-style="danger">
+                        <form method="post" action="/einstellungen/netzwerke/<?= e($network->id) ?>/kategorien/<?= e($range->categoryId) ?>/loeschen" data-confirm-key="settings.networks.category.delete" data-confirm="Adressbereich der Kategorie „<?= e($entry['category']) ?>“ entfernen?" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
                         </form>

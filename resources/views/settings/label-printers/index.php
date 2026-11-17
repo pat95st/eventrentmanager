@@ -43,7 +43,7 @@ use function App\Infrastructure\Http\t;
                                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('settings.label_printers.test_print')) ?></button>
                                 </form>
                                 <a href="/einstellungen/etikettendrucker/<?= e($printer->id) ?>/bearbeiten" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-                                <form method="post" action="/einstellungen/etikettendrucker/<?= e($printer->id) ?>/loeschen" data-confirm="<?= e(t('settings.label_printers.confirm_delete')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/einstellungen/etikettendrucker/<?= e($printer->id) ?>/loeschen" data-confirm-key="settings.label_printers.delete" data-confirm="<?= e(t('settings.label_printers.confirm_delete')) ?>" data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
                                 </form>

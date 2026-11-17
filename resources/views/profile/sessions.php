@@ -14,7 +14,7 @@ use function App\Infrastructure\Http\t;
     <div class="mb-4 flex items-center justify-between">
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('profile.sessions.hint')) ?></p>
         <?php if (count($sessions) > 1): ?>
-            <form method="post" action="/profil/sitzungen/andere-beenden" data-confirm="<?= e(t('profile.sessions.confirm_revoke_others')) ?>" data-confirm-style="danger">
+            <form method="post" action="/profil/sitzungen/andere-beenden" data-confirm-key="profile.sessions.revoke_others" data-confirm="<?= e(t('profile.sessions.confirm_revoke_others')) ?>" data-confirm-style="danger">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="whitespace-nowrap rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     <?= e(t('profile.sessions.revoke_others')) ?>
@@ -44,7 +44,7 @@ use function App\Infrastructure\Http\t;
                     </p>
                 </div>
                 <?php if (!$entry->isCurrent): ?>
-                    <form method="post" action="/profil/sitzungen/<?= e($session->id) ?>/beenden" data-confirm="<?= e(t('profile.sessions.confirm_revoke')) ?>" data-confirm-style="danger">
+                    <form method="post" action="/profil/sitzungen/<?= e($session->id) ?>/beenden" data-confirm-key="profile.sessions.revoke" data-confirm="<?= e(t('profile.sessions.confirm_revoke')) ?>" data-confirm-style="danger">
                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                         <button type="submit" class="whitespace-nowrap rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                             <?= e(t('profile.sessions.revoke')) ?>

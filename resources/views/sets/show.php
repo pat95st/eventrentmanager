@@ -17,7 +17,7 @@ $set = $detail->set;
     </div>
     <div class="flex items-center gap-3">
         <a href="/sets/<?= e($set->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-        <form method="post" action="/sets/<?= e($set->id) ?>/loeschen" data-confirm="<?= e(t('sets.confirm_delete')) ?>" data-confirm-style="danger">
+        <form method="post" action="/sets/<?= e($set->id) ?>/loeschen" data-confirm-key="sets.delete" data-confirm="<?= e(t('sets.confirm_delete')) ?>" data-confirm-style="danger">
             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
         </form>

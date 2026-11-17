@@ -42,7 +42,7 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
                 </form>
                 <span class="text-xs text-slate-500 dark:text-slate-400" style="min-width:5.5rem"><?= $used ?> Stagebox<?= $used === 1 ? '' : 'en' ?><?php if ($usedByConsoles > 0): ?> · <?= $usedByConsoles ?> Mischpult<?= $usedByConsoles === 1 ? '' : 'e' ?><?php endif; ?></span>
                 <?php if ($used === 0 && $usedByConsoles === 0): ?>
-                    <form method="post" action="/einstellungen/digitale-protokolle/<?= e($protocol->id) ?>/loeschen" data-confirm="Digitales Protokoll „<?= e($protocol->name) ?>“ löschen?" data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/digitale-protokolle/<?= e($protocol->id) ?>/loeschen" data-confirm-key="settings.digital_protocols.delete" data-confirm="Digitales Protokoll „<?= e($protocol->name) ?>“ löschen?" data-confirm-style="danger">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                     </form>

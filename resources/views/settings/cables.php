@@ -77,7 +77,7 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
                 </div>
             </form>
             <?php if ($used === 0): ?>
-                <form method="post" action="/einstellungen/leitungen/typen/<?= e($type->id) ?>/loeschen" class="mt-2 text-right" data-confirm="Leitungstyp „<?= e($type->name) ?>“ löschen?" data-confirm-style="danger">
+                <form method="post" action="/einstellungen/leitungen/typen/<?= e($type->id) ?>/loeschen" class="mt-2 text-right" data-confirm-key="settings.cables.type.delete" data-confirm="Leitungstyp „<?= e($type->name) ?>“ löschen?" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                 </form>
@@ -129,7 +129,7 @@ $typeFields = function (?\App\Domain\Cable\CableType $type) use ($settings, $inp
                 </form>
                 <span class="text-xs text-slate-500 dark:text-slate-400" style="min-width:4.5rem"><?= $used ?> Artikel</span>
                 <?php if ($used === 0): ?>
-                    <form method="post" action="/einstellungen/leitungen/steckverbinder/<?= e($connector->id) ?>/loeschen" data-confirm="Steckverbinder „<?= e($connector->name) ?>“ löschen?" data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/leitungen/steckverbinder/<?= e($connector->id) ?>/loeschen" data-confirm-key="settings.cables.connector.delete" data-confirm="Steckverbinder „<?= e($connector->name) ?>“ löschen?" data-confirm-style="danger">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                     </form>

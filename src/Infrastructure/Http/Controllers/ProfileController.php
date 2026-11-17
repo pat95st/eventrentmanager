@@ -32,6 +32,7 @@ use App\Application\User\Command\EnableEmailOtp;
 use App\Application\User\Command\EnableTotp;
 use App\Application\User\Command\UpdateDefaultPageSize;
 use App\Application\User\Command\UpdateLocale;
+use App\Application\User\Command\UpdateConfirmBypass;
 use App\Application\User\Command\UpdateNotifyOnNewReceiptEmail;
 use App\Domain\AddressBook\AddressBook;
 use App\Domain\Exception\NotFoundException;
@@ -41,6 +42,7 @@ use App\Domain\User\User;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Auth\Session;
 use App\Infrastructure\Http\CalDav\MobileConfigBuilder;
+use App\Infrastructure\Http\ConfirmPolicy;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Locale;
 use App\Infrastructure\Http\Origin;
@@ -250,6 +252,14 @@ final class ProfileController
                 userId: $user->id,
                 notify: $request->input('notify_on_new_receipt_email') !== null,
             ));
+            // The checkbox is not rendered while the company-wide switch is
+            // off, so a missing field must not overwrite the preference then.
+            if (ConfirmPolicy::companyBypassEnabled()) {
+                $this->commands->dispatch(new UpdateConfirmBypass(
+                    userId: $user->id,
+                    enabled: $request->input('confirm_bypass_enabled') !== null,
+                ));
+            }
         } catch (ValidationException $e) {
             echo View::page('profile/display', $this->displaySettingsViewData($user, $e->errors()), activeNav: 'profile', title: t('profile.display.title'));
 
@@ -525,6 +535,8 @@ final class ProfileController
             'allowedPageSizes' => Pagination::ALLOWED_PAGE_SIZES,
             'locale' => $user->locale,
             'notifyOnNewReceiptEmail' => $user->notifyOnNewReceiptEmail,
+            'confirmBypassEnabled' => $user->confirmBypassEnabled,
+            'confirmBypassAllowed' => ConfirmPolicy::companyBypassEnabled(),
             'isAdministrator' => $user->isAdministrator(),
             'errors' => $errors,
             'vapidPublicKey' => $pushSettings->vapidPublicKey,

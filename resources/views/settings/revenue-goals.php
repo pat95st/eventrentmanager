@@ -154,7 +154,7 @@ $rows[] = [
 
 <?php foreach ($goals as $goal): ?>
     <form id="delete-goal-<?= e($goal->id) ?>" method="post" action="/einstellungen/umsatzziele/<?= e($goal->id) ?>/loeschen"
-          onsubmit="return confirm(<?= e(json_encode(t('settings.revenue_goals.delete_confirm', ['name' => $goal->name]), JSON_UNESCAPED_UNICODE)) ?>)">
+          data-confirm-key="settings.revenue_goals.delete" data-confirm="<?= e(t('settings.revenue_goals.delete_confirm', ['name' => $goal->name])) ?>" data-confirm-style="danger">
         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
         <input type="hidden" name="jahr" value="<?= $year ?>">
     </form>

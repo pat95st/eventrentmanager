@@ -15,7 +15,7 @@ use function App\Infrastructure\Http\e;
     <div class="mb-4 flex items-center justify-between">
         <p class="text-sm text-slate-500 dark:text-slate-400">Hier sehen Sie, auf welchen Geräten dieser Benutzer aktuell angemeldet ist, und können einzelne oder alle Sitzungen beenden.</p>
         <?php if ($sessions !== []): ?>
-            <form method="post" action="/benutzer/<?= e($targetUser->id) ?>/sitzungen/alle-beenden" data-confirm="Wirklich ALLE Sitzungen dieses Benutzers beenden? Der Benutzer wird auf allen Geräten abgemeldet." data-confirm-style="danger">
+            <form method="post" action="/benutzer/<?= e($targetUser->id) ?>/sitzungen/alle-beenden" data-confirm-key="users.sessions.revoke_all" data-confirm="Wirklich ALLE Sitzungen dieses Benutzers beenden? Der Benutzer wird auf allen Geräten abgemeldet." data-confirm-style="danger">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="whitespace-nowrap rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     Alle Sitzungen beenden
@@ -44,7 +44,7 @@ use function App\Infrastructure\Http\e;
                         <?php endif; ?>
                     </p>
                 </div>
-                <form method="post" action="/benutzer/<?= e($targetUser->id) ?>/sitzungen/<?= e($session->id) ?>/beenden" data-confirm="<?= e($entry->isCurrent ? 'Dies ist Ihre eigene, gerade benutzte Sitzung. Sie werden dabei sofort abgemeldet. Fortfahren?' : 'Diese Sitzung wirklich beenden?') ?>" data-confirm-style="danger">
+                <form method="post" action="/benutzer/<?= e($targetUser->id) ?>/sitzungen/<?= e($session->id) ?>/beenden" data-confirm-key="users.sessions.revoke" data-confirm="<?= e($entry->isCurrent ? 'Dies ist Ihre eigene, gerade benutzte Sitzung. Sie werden dabei sofort abgemeldet. Fortfahren?' : 'Diese Sitzung wirklich beenden?') ?>" data-confirm-style="danger">
                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="whitespace-nowrap rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                         Beenden

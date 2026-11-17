@@ -4,6 +4,7 @@ All notable user-visible changes to this project are documented in this file.
 
 ## Unreleased
 
+- **New:** Skipping confirmations with Shift everywhere, and configurable. Holding Shift while clicking (or pressing Shift+Enter on the focused button) now skips every confirmation, including those in the minute program pages, the FOH live screen, the display client and the event audio live view; while Shift is held, the affected buttons are outlined, and the confirmation dialog shows a tip. Administrators switch the shortcut on or off under Settings > Security and choose there which confirmations can never be skipped (by default: security actions such as deleting users, API tokens and passkeys, and sending, cancelling or deleting invoices and invoice corrections). Each user can switch it off for themselves under Profile > Display. When an event or customer is deleted and its storage folder is kept, a notice now says so. Requires migration 174.
 - **New:** AI ad images can be added to the regular product gallery of an article ("In Galerie" below each ad image); a copy is appended to the gallery, the ad image stays.
 - **New:** Option "Preis ins Bild einfügen" when generating AI ad images renders the daily rental price into the image. The price is no longer part of "Weitere Eigenschaften".
 - **New:** Option "Galeriebilder als Vorlage verwenden" (on by default when the article has photos) sends up to four gallery photos to the AI so the article is depicted correctly; with several photos a single photo can still be chosen instead.

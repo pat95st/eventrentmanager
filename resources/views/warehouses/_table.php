@@ -67,7 +67,7 @@ use function App\Infrastructure\Http\t;
                                 <div data-dropdown-menu class="absolute right-0 z-10 <?= $openUpward ? 'bottom-full mb-1' : 'top-full mt-1' ?> w-40 rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
                                     <a href="/lagerorte/<?= e($warehouse->id) ?>/bearbeiten" class="block px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
                                     <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($warehouse->fullAddress()) ?>&travelmode=driving" target="_blank" rel="noopener" class="block px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.route')) ?></a>
-                                    <form method="post" action="/lagerorte/<?= e($warehouse->id) ?>/loeschen" data-confirm="<?= e(t('warehouses.confirm_delete')) ?>" data-confirm-style="danger">
+                                    <form method="post" action="/lagerorte/<?= e($warehouse->id) ?>/loeschen" data-confirm-key="warehouses.delete" data-confirm="<?= e(t('warehouses.confirm_delete')) ?>" data-confirm-style="danger">
                                         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <button type="submit" class="block w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-slate-50 dark:text-red-400 dark:hover:bg-slate-800"><?= e(t('common.delete')) ?></button>
                                     </form>

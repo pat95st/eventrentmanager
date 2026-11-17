@@ -6,6 +6,13 @@
  * the hits grouped by type, each with the icon of its type. Arrow keys move
  * through the list, Enter opens the selected hit, Escape closes.
  *
+ * Motion (see also public/assets/css/global-search.css): opening and closing
+ * are CSS transitions driven by the class "gs-open", so pressing the shortcut
+ * again while the dialog is still closing simply reverses the motion from
+ * where it is. The panel grows out of the control that opened it, and its
+ * height follows the content instead of jumping. Loading hints are delayed
+ * so that fast searches do not flicker.
+ *
  * Configuration comes from window.GLOBAL_SEARCH (url, minChars, types with
  * their translated labels, message texts).
  */
@@ -18,8 +25,18 @@
         return;
     }
 
-    var DEBOUNCE_MS = 150;
+    // Short pause so that a burst of key presses is one request; stale
+    // requests are aborted anyway.
+    var DEBOUNCE_MS = 90;
+    // Longest exit transition in the stylesheet.
+    var CLOSE_MS = 150;
+    // A search that answers faster than this shows no loading hint at all.
+    var LOADING_HINT_MS = 250;
 
+    var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var panel = dialog.querySelector('.gs-panel');
+    var body = dialog.querySelector('.gs-body');
     var input = dialog.querySelector('#global-search-input');
     var intro = dialog.querySelector('[data-gs-intro]');
     var message = dialog.querySelector('[data-gs-message]');
@@ -36,6 +53,8 @@
     var request = null;     // AbortController of the running request
     var shownTerm = '';     // term the visible results belong to
     var returnFocusTo = null;
+    var closeTimer = null;
+    var loadingTimer = null;
 
     // Apple keyboards: show ⌘K instead of Ctrl+K on the header button.
     var isApple = /Mac|iPhone|iPad|iPod/.test(navigator.platform || '') || /Mac OS X/.test(navigator.userAgent || '');
@@ -53,26 +72,94 @@
         });
     }
 
-    function open() {
-        if (dialog.open) {
-            input.focus();
-            return;
+    function isOpen() {
+        return dialog.open && dialog.classList.contains('gs-open');
+    }
+
+    /**
+     * @param {Element=} source control that opened the dialog; the panel
+     *     grows out of it (and shrinks back into it on close)
+     */
+    function open(source) {
+        clearTimeout(closeTimer);
+        if (!dialog.open) {
+            returnFocusTo = document.activeElement;
+            dialog.showModal();
+            var origin = '50% 0';
+            if (source && source.getBoundingClientRect) {
+                var rect = source.getBoundingClientRect();
+                if (rect.width > 0) {
+                    origin = (rect.left + rect.width / 2 - panel.offsetLeft) + 'px ' + (rect.top + rect.height / 2 - panel.offsetTop) + 'px';
+                }
+            }
+            panel.style.transformOrigin = origin;
+            void panel.offsetWidth; // commit the closed state so that the transition runs
+            input.select();
         }
-        returnFocusTo = document.activeElement;
-        dialog.showModal();
+        // Also reverses a close that is still running, from its current state.
+        dialog.classList.add('gs-open');
         input.focus();
-        input.select();
     }
 
     function close() {
-        if (dialog.open) {
-            dialog.close();
+        if (!isOpen()) {
+            return;
         }
+        dialog.classList.remove('gs-open');
+        clearTimeout(closeTimer);
+        closeTimer = setTimeout(function () {
+            if (dialog.open && !dialog.classList.contains('gs-open')) {
+                dialog.close();
+            }
+        }, CLOSE_MS);
     }
 
+    /**
+     * Changes the content of the result area and lets its height follow
+     * smoothly, starting from the height it currently has on screen.
+     */
+    function swap(render) {
+        if (reducedMotion || !dialog.open) {
+            render();
+            return;
+        }
+        var from = body.offsetHeight;
+        body.style.height = '';
+        render();
+        var to = body.offsetHeight;
+        if (from === to) {
+            body.classList.remove('gs-resizing');
+            return;
+        }
+        body.classList.add('gs-resizing');
+        body.style.height = from + 'px';
+        void body.offsetHeight;
+        body.style.height = to + 'px';
+    }
+
+    body.addEventListener('transitionend', function (event) {
+        if (event.target === body && event.propertyName === 'height') {
+            body.style.height = '';
+            body.classList.remove('gs-resizing');
+        }
+    });
+
+    // Soft edge under the field only while the list is scrolled under it.
+    body.addEventListener('scroll', function () {
+        panel.classList.toggle('gs-scrolled', body.scrollTop > 2);
+    }, { passive: true });
+
     function setLoading(on) {
-        spinner.hidden = !on;
-        resultsEl.classList.toggle('gs-stale', on);
+        clearTimeout(loadingTimer);
+        if (on) {
+            loadingTimer = setTimeout(function () {
+                spinner.hidden = false;
+                resultsEl.classList.add('gs-stale');
+            }, LOADING_HINT_MS);
+            return;
+        }
+        spinner.hidden = true;
+        resultsEl.classList.remove('gs-stale');
     }
 
     function show(part) {
@@ -102,7 +189,7 @@
         if (scroll) {
             // The first hit sits below its group heading: keep that visible too.
             if (index === 0) {
-                resultsEl.parentNode.scrollTop = 0;
+                body.scrollTop = 0;
             } else {
                 options[index].scrollIntoView({ block: 'nearest' });
             }
@@ -187,11 +274,14 @@
         enter.textContent = '↵';
         link.appendChild(enter);
 
-        link.addEventListener('mousemove', function () {
+        // Highlight on hover and already on press (touch), not only on release.
+        var activate = function () {
             if (activeIndex !== index) {
                 setActive(index, false);
             }
-        });
+        };
+        link.addEventListener('mousemove', activate);
+        link.addEventListener('pointerdown', activate);
 
         return link;
     }
@@ -199,8 +289,10 @@
     function renderResults(items, term) {
         shownTerm = term;
         if (items.length === 0) {
-            message.textContent = text(config.labels.empty, { term: term });
-            show('message');
+            swap(function () {
+                message.textContent = text(config.labels.empty, { term: term });
+                show('message');
+            });
             live.textContent = message.textContent;
             return;
         }
@@ -229,9 +321,11 @@
             group.appendChild(option);
         });
 
-        show('results');
-        resultsEl.textContent = '';
-        resultsEl.appendChild(fragment);
+        swap(function () {
+            show('results');
+            resultsEl.textContent = '';
+            resultsEl.appendChild(fragment);
+        });
         options = newOptions;
         activeIndex = -1;
         setActive(0, true);
@@ -274,8 +368,10 @@
                 request = null;
                 setLoading(false);
                 shownTerm = '';
-                message.textContent = config.labels.error;
-                show('message');
+                swap(function () {
+                    message.textContent = config.labels.error;
+                    show('message');
+                });
                 live.textContent = config.labels.error;
             });
     }
@@ -292,7 +388,9 @@
             setLoading(false);
             shownTerm = '';
             live.textContent = '';
-            show('intro');
+            if (intro.hidden) {
+                swap(function () { show('intro'); });
+            }
             return;
         }
         if (term === shownTerm && !request) {
@@ -339,14 +437,24 @@
 
     dialog.querySelector('[data-gs-close]').addEventListener('click', close);
 
-    // Click on the dimmed area around the panel closes.
-    dialog.addEventListener('mousedown', function (event) {
+    // Press on the dimmed area around the panel closes.
+    dialog.addEventListener('pointerdown', function (event) {
         if (event.target === dialog) {
             close();
         }
     });
 
+    // Escape: animate out like every other way of closing.
+    dialog.addEventListener('cancel', function (event) {
+        event.preventDefault();
+        close();
+    });
+
     dialog.addEventListener('close', function () {
+        dialog.classList.remove('gs-open');
+        panel.classList.remove('gs-scrolled');
+        body.style.height = '';
+        body.classList.remove('gs-resizing');
         if (returnFocusTo && typeof returnFocusTo.focus === 'function' && document.contains(returnFocusTo)) {
             returnFocusTo.focus();
         }
@@ -357,7 +465,7 @@
         var trigger = event.target.closest ? event.target.closest('[data-global-search-open]') : null;
         if (trigger) {
             event.preventDefault();
-            open();
+            open(trigger);
         }
     });
 
@@ -365,7 +473,7 @@
         if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && (event.key === 'k' || event.key === 'K')) {
             // Also keeps the browser from focusing its own search/address bar.
             event.preventDefault();
-            if (dialog.open) {
+            if (isOpen()) {
                 close();
             } else {
                 open();

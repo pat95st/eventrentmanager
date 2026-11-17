@@ -117,7 +117,8 @@
         HTMLDialogElement.prototype.close = function (returnValue) {
             var dialog = this;
             var args = arguments;
-            if (!dialog.open || dialog.__modalClosing) {
+            // data-modal-fade="off": the dialog animates itself (global search).
+            if (!dialog.open || dialog.__modalClosing || dialog.getAttribute('data-modal-fade') === 'off') {
                 return nativeClose.apply(dialog, args);
             }
             dialog.__modalClosing = true;
@@ -130,7 +131,7 @@
         };
         document.addEventListener('cancel', function (event) {
             var dialog = event.target;
-            if (dialog instanceof HTMLDialogElement && dialog.open) {
+            if (dialog instanceof HTMLDialogElement && dialog.open && dialog.getAttribute('data-modal-fade') !== 'off') {
                 event.preventDefault();
                 dialog.close();
             }

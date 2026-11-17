@@ -57,7 +57,7 @@ $searchConfig = [
     ],
 ];
 ?>
-<dialog id="global-search" class="gs-dialog" aria-label="<?= e(t('search.title')) ?>">
+<dialog id="global-search" class="gs-dialog" data-modal-fade="off" aria-label="<?= e(t('search.title')) ?>">
   <div class="gs-panel">
     <div class="gs-input-row">
       <svg class="gs-input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
@@ -78,7 +78,7 @@ $searchConfig = [
         placeholder="<?= e(t('search.placeholder')) ?>"
       >
       <span class="gs-spinner" data-gs-spinner hidden aria-hidden="true"></span>
-      <button type="button" class="gs-close" data-gs-close aria-label="<?= e(t('common.close')) ?>"><kbd class="gs-kbd">Esc</kbd><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <button type="button" class="gs-close" data-gs-close aria-label="<?= e(t('common.close')) ?>"><kbd class="gs-kbd">Esc</kbd><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
 
     <div class="gs-body">

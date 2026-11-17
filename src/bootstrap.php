@@ -1820,6 +1820,10 @@ $commandBus->register(\App\Application\Backup\Command\UpdateBackupSettings::clas
 $commandBus->register(\App\Application\Backup\Command\RunAutomaticBackup::class, new \App\Application\Backup\Command\RunAutomaticBackupHandler($backupSettingsRepository, $documentStorageTargetRepository, $documentStorageClientFactory, $backupArchiveBuilder, $backupRunRepository));
 $queryBus->register(\App\Application\Backup\Query\GetBackupSettings::class, new \App\Application\Backup\Query\GetBackupSettingsHandler($backupSettingsRepository));
 $queryBus->register(\App\Application\Backup\Query\ListBackupRuns::class, new \App\Application\Backup\Query\ListBackupRunsHandler($backupRunRepository));
+// Global search (Ctrl+K), see GlobalSearchController.
+$queryBus->register(\App\Application\Search\Query\GlobalSearch::class, new \App\Application\Search\Query\GlobalSearchHandler(
+    new \App\Infrastructure\Persistence\Pdo\MariadbGlobalSearchReadModel($pdo)
+));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory, $queryBus);
 
 $rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
@@ -2172,6 +2176,11 @@ $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen', $auth->g
 $router->get('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}/bearbeiten', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'edit']));
 $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'update']));
 $router->post('/inventurnummern/{inventoryNumberId}/elektropruefungen/{id}/loeschen', $auth->guard(Permission::Artikelverwaltung, [$electricalInspectionController, 'destroy']));
+
+// Global search (Ctrl+K, JSON): open to every signed-in user; which result
+// groups are searched depends on the user's permissions, see
+// App\Application\Search\Query\GlobalSearchHandler.
+$router->get('/suche', $auth->guard(null, [new \App\Infrastructure\Http\Controllers\GlobalSearchController($queryBus), 'search']));
 
 $router->get('/kunden', $auth->guard(Permission::Kundenverwaltung, [$customerController, 'index']));
 // Live-Suche (JSON) für die Kundenauswahl in Angebots-/Rechnungs-/

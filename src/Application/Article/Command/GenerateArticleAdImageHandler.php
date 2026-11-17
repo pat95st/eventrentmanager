@@ -6,9 +6,11 @@ namespace App\Application\Article\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Domain\Article\Article;
 use App\Domain\Article\ArticleAdImage;
 use App\Domain\Article\ArticleAdImageFormat;
 use App\Domain\Article\ArticleAdImageRepositoryInterface;
+use App\Domain\Article\ArticleImage;
 use App\Domain\Article\ArticleRepositoryInterface;
 use App\Domain\Category\CategoryRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
@@ -24,14 +26,20 @@ use DateTimeImmutable;
 /**
  * Generiert ein KI-Werbebild für einen Artikel (siehe ArticleAdImage) über
  * OpenAIs gpt-image-1 (Anthropic/Claude bietet keine Bildgenerierung an).
- * Nutzt bevorzugt ein vorhandenes Artikelfoto als Referenz ("images/edits"),
- * sonst reine Text-zu-Bild-Generierung ("images/generations") — siehe
+ * Nutzt auf Wunsch vorhandene Galeriebilder des Artikels (alle oder ein
+ * ausgewähltes) als Referenz ("images/edits"), damit das Produkt korrekt
+ * dargestellt wird, sonst reine Text-zu-Bild-Generierung
+ * ("images/generations") — siehe
  * App\Infrastructure\Integration\OpenAi\OpenAiImageClient.
  */
 final class GenerateArticleAdImageHandler implements CommandHandlerInterface
 {
     private const MAX_ADDITIONAL_INSTRUCTIONS_LENGTH = 500;
     public const MAX_COUNT = 4;
+    // Upper bound of gallery photos sent as references (keeps the upload small).
+    public const MAX_REFERENCE_IMAGES = 4;
+    // Formats accepted by the images/edits endpoint.
+    private const REFERENCE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
     public function __construct(
         private readonly ArticleRepositoryInterface $articles,
@@ -74,46 +82,38 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
             throw new ValidationException(['format' => 'Bitte zuerst einen OpenAI-API-Key unter Einstellungen > KI-Werbebilder hinterlegen.']);
         }
 
-        $sourceArticleImageId = $this->nullIfEmpty($command->sourceArticleImageId);
-        $sourceImage = null;
-        if ($sourceArticleImageId !== null) {
-            foreach ($article->images as $image) {
-                if ($image->id === $sourceArticleImageId) {
-                    $sourceImage = $image;
-                }
-            }
-            if ($sourceImage === null) {
-                throw new ValidationException(['sourceArticleImageId' => 'Das ausgewählte Referenzfoto wurde nicht gefunden.']);
-            }
-        }
+        $referenceImages = $this->referenceImages($article, $this->nullIfEmpty($command->sourceArticleImageId), $command->useGalleryImages);
 
         $manufacturer = $this->manufacturers->findById(($article->manufacturerId ?? ''));
         $category = $article->categoryId !== null ? $this->categories->findById($article->categoryId) : null;
 
+        $prompt = $this->promptBuilder->build(
+            $article,
+            $manufacturer,
+            $category,
+            $referenceImages !== [],
+            $command->includeArticleName,
+            $command->includeProperties,
+            $additionalInstructions,
+            $command->includePrice,
+            count($referenceImages),
+        );
+
         try {
-            if ($sourceImage !== null) {
-                $prompt = $this->promptBuilder->build($article, $manufacturer, $category, true, $command->includeArticleName, $command->includeProperties, $additionalInstructions);
-
-                $absolutePath = $this->fileStorage->absolutePath('articles', $sourceImage->filePath);
-                $referenceBytes = file_get_contents($absolutePath);
-                if ($referenceBytes === false) {
-                    throw new ValidationException(['sourceArticleImageId' => 'Das Referenzfoto konnte nicht gelesen werden.']);
-                }
-                $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'image/jpeg') : 'image/jpeg';
-
-                $base64Images = $this->openAiImageClient->generateFromImage(
+            if ($referenceImages !== []) {
+                $base64Images = $this->openAiImageClient->generateFromImages(
                     apiKey: $settings->openaiApiKey,
                     model: $settings->effectiveImageModel(),
                     prompt: $prompt,
                     size: $format->openAiSize(),
-                    referenceImageBytes: $referenceBytes,
-                    referenceImageMimeType: $mimeType,
-                    referenceImageFilename: basename($sourceImage->filePath),
+                    referenceImages: array_map(static fn (array $r): array => [
+                        'bytes' => $r['bytes'],
+                        'mimeType' => $r['mimeType'],
+                        'filename' => $r['filename'],
+                    ], $referenceImages),
                     count: $command->count,
                 );
             } else {
-                $prompt = $this->promptBuilder->build($article, $manufacturer, $category, false, $command->includeArticleName, $command->includeProperties, $additionalInstructions);
-
                 $base64Images = $this->openAiImageClient->generateFromText(
                     apiKey: $settings->openaiApiKey,
                     model: $settings->effectiveImageModel(),
@@ -153,13 +153,74 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
                 filePath: $article->id . '/' . $stored['storedFilename'],
                 format: $format,
                 prompt: $prompt,
-                sourceArticleImageId: $sourceImage?->id,
+                sourceArticleImageId: $referenceImages !== [] ? $referenceImages[0]['id'] : null,
                 createdAt: new DateTimeImmutable(),
             ));
             $ids[] = $imageId;
         }
 
         return $ids;
+    }
+
+    /**
+     * Loads the gallery photos used as references: the explicitly selected
+     * photo, or (with $useGalleryImages) the first MAX_REFERENCE_IMAGES photos
+     * in a supported format.
+     *
+     * @return list<array{id: string, bytes: string, mimeType: string, filename: string}>
+     */
+    private function referenceImages(Article $article, ?string $sourceArticleImageId, bool $useGalleryImages): array
+    {
+        if ($sourceArticleImageId !== null) {
+            foreach ($article->images as $image) {
+                if ($image->id === $sourceArticleImageId) {
+                    $reference = $this->loadReference($image);
+                    if ($reference === null) {
+                        throw new ValidationException(['sourceArticleImageId' => 'Das Referenzfoto konnte nicht gelesen werden.']);
+                    }
+
+                    return [$reference];
+                }
+            }
+            throw new ValidationException(['sourceArticleImageId' => 'Das ausgewählte Referenzfoto wurde nicht gefunden.']);
+        }
+
+        if (!$useGalleryImages) {
+            return [];
+        }
+
+        $images = $article->images;
+        usort($images, static fn (ArticleImage $a, ArticleImage $b): int => $a->position <=> $b->position);
+
+        $references = [];
+        foreach ($images as $image) {
+            if (count($references) >= self::MAX_REFERENCE_IMAGES) {
+                break;
+            }
+            $reference = $this->loadReference($image);
+            if ($reference !== null && in_array($reference['mimeType'], self::REFERENCE_MIME_TYPES, true)) {
+                $references[] = $reference;
+            }
+        }
+
+        if ($references === []) {
+            throw new ValidationException(['useGalleryImages' => 'Der Artikel hat keine Galeriebilder (PNG, JPEG oder WebP), die als Vorlage dienen können.']);
+        }
+
+        return $references;
+    }
+
+    /** @return array{id: string, bytes: string, mimeType: string, filename: string}|null */
+    private function loadReference(ArticleImage $image): ?array
+    {
+        $absolutePath = $this->fileStorage->absolutePath('articles', $image->filePath);
+        $bytes = is_file($absolutePath) ? file_get_contents($absolutePath) : false;
+        if ($bytes === false) {
+            return null;
+        }
+        $mimeType = function_exists('mime_content_type') ? (mime_content_type($absolutePath) ?: 'image/jpeg') : 'image/jpeg';
+
+        return ['id' => $image->id, 'bytes' => $bytes, 'mimeType' => $mimeType, 'filename' => basename($image->filePath)];
     }
 
     private function nullIfEmpty(?string $value): ?string

@@ -513,6 +513,11 @@ $availabilityStatusMeta = [
                                     data-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>"
                                     data-format="<?= e($adImage->format->label()) ?>"
                                     class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_refine')) ?></button>
+                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/in-galerie">
+                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <button type="submit" title="<?= e(t('articles.show.ad_images_add_to_gallery_title')) ?>" class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_add_to_gallery')) ?></button>
+                            </form>
                             <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm-key="articles.ad_image.delete" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
@@ -536,6 +541,8 @@ $availabilityStatusMeta = [
                   data-status-one="<?= e(t('articles.show.ad_images_generating_status_one')) ?>"
                   data-status-many="<?= e(t('articles.show.ad_images_generating_status_many')) ?>"
                   data-tile-label="<?= e(t('articles.show.ad_images_generating_tile')) ?>"
+                  data-overlay-one="<?= e(t('articles.show.ad_images_overlay_one')) ?>"
+                  data-overlay-many="<?= e(t('articles.show.ad_images_overlay_many')) ?>"
                   class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <div>
@@ -554,13 +561,13 @@ $availabilityStatusMeta = [
                         <?php endfor; ?>
                     </select>
                 </div>
-                <?php if ($article->images !== []): ?>
-                    <div>
+                <?php if (count($article->images) > 1): ?>
+                    <div data-ad-image-source-wrapper>
                         <label for="ad_image_source" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_source_photo')) ?></label>
                         <select id="ad_image_source" name="source_article_image_id" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
-                            <option value=""><?= e(t('articles.show.ad_images_source_photo_none')) ?></option>
+                            <option value=""><?= e(t('articles.show.ad_images_source_all', ['count' => (string) \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_REFERENCE_IMAGES])) ?></option>
                             <?php foreach ($article->images as $image): ?>
-                                <option value="<?= e($image->id) ?>"><?= e(t('articles.show.ad_images_source_photo')) ?> <?= $image->position + 1 ?></option>
+                                <option value="<?= e($image->id) ?>"><?= e(t('articles.show.ad_images_source_single', ['number' => (string) ($image->position + 1)])) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -579,6 +586,16 @@ $availabilityStatusMeta = [
                         <input type="checkbox" name="include_properties" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
                         <?= e(t('articles.show.ad_images_include_properties')) ?>
                     </label>
+                    <?php $adImageHasPrice = $article->isBillable && $article->dailyRentalPrice !== null && trim($article->dailyRentalPrice) !== ''; ?>
+                    <label class="flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasPrice ? 'articles.show.ad_images_include_price_hint' : 'articles.show.ad_images_include_price_unavailable')) ?>">
+                        <input type="checkbox" name="include_price" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? '' : ' disabled data-ad-image-unavailable' ?>>
+                        <?= e(t('articles.show.ad_images_include_price')) ?>
+                    </label>
+                    <?php $adImageHasGallery = $article->images !== []; ?>
+                    <label class="flex items-center gap-2 text-sm <?= $adImageHasGallery ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasGallery ? 'articles.show.ad_images_use_gallery_hint' : 'articles.show.ad_images_use_gallery_unavailable')) ?>">
+                        <input type="checkbox" name="use_gallery_images" value="1" data-ad-image-use-gallery class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasGallery ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
+                        <?= e(t('articles.show.ad_images_use_gallery')) ?>
+                    </label>
                 </div>
                 <div>
                     <button type="submit" data-ad-image-submit
@@ -596,7 +613,7 @@ $availabilityStatusMeta = [
             </form>
 
             <dialog data-ad-image-refine-dialog aria-labelledby="ad_image_refine_title" class="modal-panel w-full max-w-lg rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
-                <form method="post" action="" data-ad-image-refine-form class="space-y-3 p-4">
+                <form method="post" action="" data-ad-image-refine-form data-no-loading-indicator data-overlay-label="<?= e(t('articles.show.ad_images_overlay_refine')) ?>" class="space-y-3 p-4">
                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                     <h3 id="ad_image_refine_title" class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('articles.show.ad_images_refine_title')) ?></h3>
@@ -621,7 +638,7 @@ $availabilityStatusMeta = [
                             <?php endfor; ?>
                         </select>
                     </div>
-                    <p class="text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
+                    <p data-ad-image-refine-hint class="text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
                     <div class="flex justify-end gap-2">
                         <button type="button" data-ad-image-refine-cancel
                                 class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
@@ -629,6 +646,7 @@ $availabilityStatusMeta = [
                         </button>
                         <button type="submit" data-ad-image-refine-submit
                                 class="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
+                            <span data-ad-image-refine-spinner class="hidden"><?= $adImageSpinner ?></span>
                             <span data-ad-image-refine-label><?= e(t('articles.show.ad_images_refine_submit')) ?></span>
                             <span data-ad-image-refine-busy class="hidden"><?= e(t('articles.show.ad_images_refining')) ?></span>
                         </button>
@@ -642,10 +660,12 @@ $availabilityStatusMeta = [
                 var form = dialog.querySelector('[data-ad-image-refine-form]');
                 var submit = form.querySelector('[data-ad-image-refine-submit]');
                 var instructions = form.querySelector('[name="instructions"]');
+                var hint = form.querySelector('[data-ad-image-refine-hint]');
 
                 function setBusy(busy) {
                     submit.disabled = busy;
                     submit.toggleAttribute('aria-busy', busy);
+                    form.querySelector('[data-ad-image-refine-spinner]').classList.toggle('hidden', !busy);
                     form.querySelector('[data-ad-image-refine-label]').classList.toggle('hidden', busy);
                     form.querySelector('[data-ad-image-refine-busy]').classList.toggle('hidden', !busy);
                 }
@@ -665,11 +685,23 @@ $availabilityStatusMeta = [
                 dialog.addEventListener('cancel', function (event) { if (submit.disabled) event.preventDefault(); });
                 form.addEventListener('submit', function (event) {
                     if (event.defaultPrevented || submit.disabled) return;
+                    var li = window.loadingIndicator;
+                    var count = parseInt(form.querySelector('[name="count"]').value, 10) || 1;
+                    if (li) li.start();
+                    if (li && typeof li.showOverlay === 'function') {
+                        li.showOverlay({ label: form.dataset.overlayLabel, detail: hint.textContent, maxMs: (150 + 60 * (count - 1)) * 1000 });
+                    }
                     // Disable only after the browser has collected the form data.
                     setTimeout(function () { setBusy(true); }, 0);
                 });
                 window.addEventListener('pageshow', function (event) {
-                    if (event.persisted) { setBusy(false); dialog.close(); }
+                    if (!event.persisted) return;
+                    if (submit.disabled && window.loadingIndicator) {
+                        window.loadingIndicator.stop();
+                        if (typeof window.loadingIndicator.hideOverlay === 'function') window.loadingIndicator.hideOverlay();
+                    }
+                    setBusy(false);
+                    dialog.close();
                 });
             })();
             </script>
@@ -712,14 +744,39 @@ $availabilityStatusMeta = [
                 countSelect.addEventListener('change', updateLabel);
                 updateLabel();
 
+                // The photo choice only matters while gallery images are used.
+                var useGallery = form.querySelector('[data-ad-image-use-gallery]');
+                var sourceWrapper = form.querySelector('[data-ad-image-source-wrapper]');
+                function updateSource() {
+                    if (sourceWrapper) sourceWrapper.classList.toggle('hidden', !useGallery.checked);
+                }
+                if (useGallery) {
+                    useGallery.addEventListener('change', updateSource);
+                    updateSource();
+                }
+
+                var overlayDetail = null;
+                function formatElapsed(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
                 form.addEventListener('submit', function (event) {
                     if (event.defaultPrevented || button.disabled) return;
                     var n = count();
                     var formatLabel = formatSelect.options[formatSelect.selectedIndex].text;
 
                     // The form opts out of the global loading indicator (it would add a
-                    // second spinner to the button); keep its top progress bar, though.
-                    if (window.loadingIndicator) window.loadingIndicator.start();
+                    // second spinner to the button and hide its large spinner after 30 s);
+                    // show its top bar and large spinner here, for as long as the request
+                    // may take (server timeout: 120 s + 60 s per additional image).
+                    var li = window.loadingIndicator;
+                    if (li) li.start();
+                    if (li && typeof li.showOverlay === 'function') {
+                        var shown = li.showOverlay({
+                            label: n === 1 ? form.dataset.overlayOne : fill(form.dataset.overlayMany, n),
+                            detail: form.querySelector('[data-ad-image-hint]').textContent,
+                            maxMs: (150 + 60 * (n - 1)) * 1000,
+                        });
+                        overlayDetail = shown ? shown.querySelector('.page-loading-detail') : null;
+                    }
 
                     // Disable only after the browser has collected the form data,
                     // otherwise disabled fields would be missing from the request.
@@ -732,6 +789,7 @@ $availabilityStatusMeta = [
                         toggle('[data-ad-image-hint]', false);
                         form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = true; });
 
+                        var hintText = form.querySelector('[data-ad-image-hint]').textContent;
                         form.querySelector('[data-ad-image-status-text]').textContent =
                             n === 1 ? form.dataset.statusOne : fill(form.dataset.statusMany, n);
                         status.classList.remove('hidden');
@@ -749,7 +807,8 @@ $availabilityStatusMeta = [
                         var start = Date.now();
                         var tick = function () {
                             var s = Math.floor((Date.now() - start) / 1000);
-                            elapsed.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+                            elapsed.textContent = formatElapsed(s);
+                            if (overlayDetail) overlayDetail.textContent = hintText + ' (' + formatElapsed(s) + ')';
                         };
                         tick();
                         timer = setInterval(tick, 1000);
@@ -761,7 +820,10 @@ $availabilityStatusMeta = [
                 window.addEventListener('pageshow', function (event) {
                     if (!event.persisted) return;
                     clearInterval(timer);
-                    if (button.disabled && window.loadingIndicator) window.loadingIndicator.stop();
+                    if (button.disabled && window.loadingIndicator) {
+                        window.loadingIndicator.stop();
+                        if (typeof window.loadingIndicator.hideOverlay === 'function') window.loadingIndicator.hideOverlay();
+                    }
                     button.disabled = false;
                     button.removeAttribute('aria-busy');
                     toggle('[data-ad-image-spinner]', false);
@@ -769,7 +831,9 @@ $availabilityStatusMeta = [
                     toggle('[data-ad-image-busy-label]', false);
                     toggle('[data-ad-image-hint]', true);
                     status.classList.add('hidden');
-                    form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = false; });
+                    form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) {
+                        if (!field.hasAttribute('data-ad-image-unavailable')) field.disabled = false;
+                    });
                     gallery.querySelectorAll('[data-ad-image-placeholder]').forEach(function (tile) { tile.remove(); });
                     if (emptyText && !gallery.children.length) {
                         emptyText.classList.remove('hidden');

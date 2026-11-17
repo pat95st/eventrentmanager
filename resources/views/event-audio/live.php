@@ -455,6 +455,7 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
 </div>
 <div class="toast" id="toast" role="status"></div>
 
+<?php require __DIR__ . '/../partials/confirm_shift_live.php'; ?>
 <script>
 (function () {
     'use strict';
@@ -578,6 +579,8 @@ $period = $rental->startDate->format('d.m.Y') . ($rental->endDate->format('Y-m-d
     // ---------- Rückfrage-Dialog (Abspielen, Einspieler abbrechen)
     var confirmBox = $('confirm'), onYes = null, lastFocus = null;
     function askConfirm(kind, what, sub, yesLabel, cb) {
+        // Click made with Shift: skip the question (see partials/confirm_shift_live.php).
+        if (window.skipConfirm()) { cb(); return; }
         onYes = cb;
         lastFocus = document.activeElement;
         $('confirm-kind').textContent = kind;

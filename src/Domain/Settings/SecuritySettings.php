@@ -17,7 +17,45 @@ final class SecuritySettings
 
     public function __construct(
         public int $sessionTimeoutMinutes = self::DEFAULT_SESSION_TIMEOUT_MINUTES,
+        // Whether holding Shift may skip confirmations at all (migration 174).
+        // Users can additionally switch it off for themselves (User::$confirmBypassEnabled).
+        public bool $confirmBypassEnabled = true,
+        /**
+         * Deviations from ConfirmCatalog's defaults: key => true (confirmation
+         * is required, Shift does not skip it) or false (skippable). Only
+         * deviations are stored, so new catalog entries get their default.
+         *
+         * @var array<string, bool>
+         */
+        public array $confirmOverrides = [],
     ) {
+    }
+
+    public function isConfirmRequired(string $key): bool
+    {
+        return $this->confirmOverrides[$key] ?? ConfirmCatalog::requiredByDefault($key);
+    }
+
+    /** @return list<string> keys of all confirmations Shift must not skip */
+    public function requiredConfirmKeys(): array
+    {
+        return array_values(array_filter(ConfirmCatalog::keys(), fn (string $key): bool => $this->isConfirmRequired($key)));
+    }
+
+    /**
+     * Replaces the overrides so that exactly $requiredKeys are required.
+     *
+     * @param list<string> $requiredKeys unknown keys are ignored
+     */
+    public function setRequiredConfirmKeys(array $requiredKeys): void
+    {
+        $this->confirmOverrides = [];
+        foreach (ConfirmCatalog::keys() as $key) {
+            $required = in_array($key, $requiredKeys, true);
+            if ($required !== ConfirmCatalog::requiredByDefault($key)) {
+                $this->confirmOverrides[$key] = $required;
+            }
+        }
     }
 
     public function sessionTimeoutSeconds(): int

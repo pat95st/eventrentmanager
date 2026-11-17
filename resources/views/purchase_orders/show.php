@@ -25,16 +25,16 @@ $status = $order->status;
     <div class="flex flex-wrap items-center gap-3">
         <?php if ($status === \App\Domain\Purchase\PurchaseOrderStatus::Draft): ?>
             <a href="/bestellungen/<?= e($order->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-            <form method="post" action="/bestellungen/<?= e($order->id) ?>/bestellt" data-confirm="<?= e(t('purchase_orders.show.confirm_order')) ?>">
+            <form method="post" action="/bestellungen/<?= e($order->id) ?>/bestellt" data-confirm-key="purchase_orders.mark_ordered" data-confirm="<?= e(t('purchase_orders.show.confirm_order')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('purchase_orders.show.mark_ordered')) ?></button>
             </form>
-            <form method="post" action="/bestellungen/<?= e($order->id) ?>/loeschen" data-confirm="<?= e(t('purchase_orders.show.confirm_delete')) ?>" data-confirm-style="danger">
+            <form method="post" action="/bestellungen/<?= e($order->id) ?>/loeschen" data-confirm-key="purchase_orders.delete" data-confirm="<?= e(t('purchase_orders.show.confirm_delete')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
             </form>
         <?php elseif ($status === \App\Domain\Purchase\PurchaseOrderStatus::Ordered): ?>
-            <form method="post" action="/bestellungen/<?= e($order->id) ?>/storniert" data-confirm="<?= e(t('purchase_orders.show.confirm_cancel')) ?>" data-confirm-style="danger">
+            <form method="post" action="/bestellungen/<?= e($order->id) ?>/storniert" data-confirm-key="purchase_orders.cancel" data-confirm="<?= e(t('purchase_orders.show.confirm_cancel')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('purchase_orders.show.cancel_button')) ?></button>
             </form>

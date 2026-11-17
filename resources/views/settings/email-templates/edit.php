@@ -107,7 +107,7 @@ use function App\Infrastructure\Http\t;
     </div>
 </form>
 
-<form method="post" action="/einstellungen/email-vorlagen/<?= e($key->value) ?>/zuruecksetzen" data-confirm="<?= e(t('settings.email_templates.confirm_reset')) ?>" data-confirm-style="danger">
+<form method="post" action="/einstellungen/email-vorlagen/<?= e($key->value) ?>/zuruecksetzen" data-confirm-key="settings.email_templates.reset" data-confirm="<?= e(t('settings.email_templates.confirm_reset')) ?>" data-confirm-style="danger">
   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
         <?= e(t('settings.email_templates.reset')) ?>

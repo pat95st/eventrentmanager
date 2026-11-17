@@ -148,7 +148,7 @@ foreach ($detail->issuedItems as $issued) {
                                         </span>
                                     <?php endif; ?>
                                 </span>
-                                <form method="post" action="/ausgaben/<?= e($entryReturned->issuedItem->id) ?>/rueckgabe-rueckgaengig" data-confirm="<?= e(t('rentals.return_checklist.confirm_undo_return')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/ausgaben/<?= e($entryReturned->issuedItem->id) ?>/rueckgabe-rueckgaengig" data-confirm-key="rentals.return.undo" data-confirm="<?= e(t('rentals.return_checklist.confirm_undo_return')) ?>" data-confirm-style="danger">
                                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
                                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.return_checklist.undo_short')) ?></button>

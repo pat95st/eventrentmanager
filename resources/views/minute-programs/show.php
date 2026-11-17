@@ -39,7 +39,7 @@ $trades = $detail->trades; // migration 172
            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('minute_programs.show.fullscreen')) ?></a>
         <a href="/minutenprogramme/<?= e($program->id) ?>/bearbeiten"
            class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-        <form method="post" action="/minutenprogramme/<?= e($program->id) ?>/loeschen" onsubmit="return confirm('<?= e(t('minute_programs.show.delete_confirm')) ?>')">
+        <form method="post" action="/minutenprogramme/<?= e($program->id) ?>/loeschen" data-confirm-key="minute_programs.delete" data-confirm="<?= e(t('minute_programs.show.delete_confirm')) ?>" data-confirm-style="danger">
             <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
         </form>
@@ -110,7 +110,7 @@ $trades = $detail->trades; // migration 172
                         </form>
                         <button type="button" onclick="document.getElementById('edit-item-<?= e($item->id) ?>').classList.toggle('hidden')"
                                 class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"><?= e(t('common.edit')) ?></button>
-                        <form method="post" action="/minutenprogramm-punkte/<?= e($item->id) ?>/loeschen" onsubmit="return confirm('<?= e(t('minute_programs.show.delete_item_confirm')) ?>')">
+                        <form method="post" action="/minutenprogramm-punkte/<?= e($item->id) ?>/loeschen" data-confirm-key="minute_programs.item.delete" data-confirm="<?= e(t('minute_programs.show.delete_item_confirm')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                             <input type="hidden" name="minute_program_id" value="<?= e($program->id) ?>">
                             <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400">×</button>

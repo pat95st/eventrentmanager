@@ -76,7 +76,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
                     </div>
                     <div class="flex items-center gap-3 text-xs">
                         <a href="<?= e($basePath) ?>/<?= e($rma->id) ?>/bearbeiten" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
-                        <form method="post" action="<?= e($basePath) ?>/<?= e($rma->id) ?>/loeschen" data-confirm="Diesen RMA-Vorgang inkl. aller Dokumente wirklich löschen?" data-confirm-style="danger">
+                        <form method="post" action="<?= e($basePath) ?>/<?= e($rma->id) ?>/loeschen" data-confirm-key="rma.delete" data-confirm="Diesen RMA-Vorgang inkl. aller Dokumente wirklich löschen?" data-confirm-style="danger">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                         </form>
@@ -115,7 +115,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
                                     </a>
                                     <span class="flex shrink-0 items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
                                         <?= e($document->humanReadableSize()) ?>
-                                        <form method="post" action="<?= e($basePath) ?>-dokumente/<?= e($document->id) ?>/loeschen" data-confirm="Dokument löschen?" data-confirm-style="danger">
+                                        <form method="post" action="<?= e($basePath) ?>-dokumente/<?= e($document->id) ?>/loeschen" data-confirm-key="rma.document.delete" data-confirm="Dokument löschen?" data-confirm-style="danger">
                                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                             <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                                         </form>
@@ -148,7 +148,7 @@ $val = fn (string $field, ?string $fallback = null) => $old[$field] ?? $fallback
                                              alt="<?= e($photo->originalFilename) ?>"
                                              class="h-20 w-20 rounded-md border border-slate-200 object-cover dark:border-slate-700">
                                     </a>
-                                    <form method="post" action="<?= e($basePath) ?>-versandfotos/<?= e($photo->id) ?>/loeschen" data-confirm="Foto löschen?" data-confirm-style="danger"
+                                    <form method="post" action="<?= e($basePath) ?>-versandfotos/<?= e($photo->id) ?>/loeschen" data-confirm-key="rma.photo.delete" data-confirm="Foto löschen?" data-confirm-style="danger"
                                           class="absolute -right-1.5 -top-1.5 opacity-0 transition-opacity group-hover:opacity-100">
                                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <button type="submit" title="Foto löschen"

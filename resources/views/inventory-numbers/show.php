@@ -338,7 +338,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                     Diese Inventarnummer wurde verkauft und steht daher nicht mehr für die Vermietung zur Verfügung. Sie bleibt dauerhaft erhalten und wird nie wieder neu vergeben.
                 </p>
             <?php else: ?>
-                <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/verkaufen" class="space-y-3" data-confirm="Dieses Exemplar unwiderruflich aus dem Bestand verkaufen?" data-confirm-style="danger">
+                <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/verkaufen" class="space-y-3" data-confirm-key="inventory_numbers.sell" data-confirm="Dieses Exemplar unwiderruflich aus dem Bestand verkaufen?" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <div>
                         <label for="sale_customer_id" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Kunde (optional)</label>

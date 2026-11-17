@@ -3,6 +3,8 @@
 /** @var int[] $allowedPageSizes */
 /** @var string $locale */
 /** @var bool $notifyOnNewReceiptEmail */
+/** @var bool $confirmBypassEnabled */
+/** @var bool $confirmBypassAllowed */
 /** @var bool $isAdministrator */
 /** @var array<string, string> $errors */
 /** @var ?string $vapidPublicKey */
@@ -67,6 +69,17 @@ use function App\Infrastructure\Http\t;
                 <span><?= e(t('profile.display.notify_receipt_inbox_label')) ?></span>
             </label>
             <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('profile.display.notify_receipt_inbox_hint')) ?></p>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($confirmBypassAllowed): /* hidden while switched off under Einstellungen › Sicherheit */ ?>
+        <div class="mt-4">
+            <label class="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <input type="checkbox" name="confirm_bypass_enabled" value="1" <?= $confirmBypassEnabled ? 'checked' : '' ?>
+                       class="mt-0.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 dark:border-slate-700">
+                <span><?= e(t('profile.display.confirm_bypass_label')) ?></span>
+            </label>
+            <p class="mt-1 text-xs text-slate-400 dark:text-slate-500"><?= e(t('profile.display.confirm_bypass_hint')) ?></p>
         </div>
         <?php endif; ?>
 
@@ -200,7 +213,7 @@ use function App\Infrastructure\Http\t;
                     <p class="truncate text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($subscription->userAgent ?? t('profile.display.push.unnamed_device')) ?></p>
                     <p class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('profile.display.push.registered_on', ['date' => $subscription->createdAt->format('d.m.Y H:i')])) ?></p>
                 </div>
-                <button type="button" class="push-remove-button flex-shrink-0 rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+                <button type="button" data-confirm-key="profile.push.remove" class="push-remove-button flex-shrink-0 rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     <?= e(t('profile.display.push.remove')) ?>
                 </button>
             </li>
@@ -313,10 +326,7 @@ use function App\Infrastructure\Http\t;
     list.addEventListener('click', async function (event) {
         var button = event.target.closest('.push-remove-button');
         if (!button) { return; }
-        if (!event.shiftKey) {
-            var confirmed = await window.confirmModal(confirmRemove);
-            if (!confirmed) { return; }
-        }
+        if (!(await window.confirmGate('profile.push.remove', event, confirmRemove))) { return; }
 
         var item = button.closest('[data-push-subscription-id]');
         var id = item.getAttribute('data-push-subscription-id');

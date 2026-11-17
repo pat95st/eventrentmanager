@@ -34,7 +34,7 @@ use function App\Infrastructure\Http\e;
                         <span class="flex items-center gap-3">
                             <a href="/hersteller/<?= e($manufacturer->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                             <?php if (!$manufacturer->isGeneric): ?>
-                            <form method="post" action="/hersteller/<?= e($manufacturer->id) ?>/loeschen" data-confirm="Diesen Hersteller wirklich löschen?" data-confirm-style="danger">
+                            <form method="post" action="/hersteller/<?= e($manufacturer->id) ?>/loeschen" data-confirm-key="manufacturers.delete" data-confirm="Diesen Hersteller wirklich löschen?" data-confirm-style="danger">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                             </form>

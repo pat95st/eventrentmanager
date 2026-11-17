@@ -110,7 +110,7 @@ if (!function_exists('formatVehicleDimension')) {
                         </td>
                         <td class="break-words px-4 py-3 text-right">
                             <a href="/fahrzeuge/<?= e($vehicle->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
-                            <form method="post" action="/fahrzeuge/<?= e($vehicle->id) ?>/loeschen" data-confirm="Dieses Fahrzeug wirklich löschen?" data-confirm-style="danger" class="mt-1">
+                            <form method="post" action="/fahrzeuge/<?= e($vehicle->id) ?>/loeschen" data-confirm-key="vehicles.delete" data-confirm="Dieses Fahrzeug wirklich löschen?" data-confirm-style="danger" class="mt-1">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                             </form>

@@ -24,7 +24,7 @@ $prefixPattern = $detail->manufacturer?->prefix !== null && $rack->prefix !== nu
     </div>
     <div class="flex items-center gap-3">
         <a href="/racks/<?= e($rack->id) ?>/bearbeiten" class="<?= $btn ?>">Rack-Typ bearbeiten</a>
-        <form method="post" action="/racks/<?= e($rack->id) ?>/loeschen" data-confirm="Diesen Rack-Typ mit allen <?= count($detail->exemplars) ?> Exemplaren löschen? Die eingebauten Geräte bleiben erhalten." data-confirm-style="danger">
+        <form method="post" action="/racks/<?= e($rack->id) ?>/loeschen" data-confirm-key="racks.delete" data-confirm="Diesen Rack-Typ mit allen <?= count($detail->exemplars) ?> Exemplaren löschen? Die eingebauten Geräte bleiben erhalten." data-confirm-style="danger">
             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">Löschen</button>
         </form>
@@ -57,7 +57,7 @@ $prefixPattern = $detail->manufacturer?->prefix !== null && $rack->prefix !== nu
                         <a href="/rack-exemplare/<?= e($exemplar->id) ?>/beschriftung-front.pdf" target="_blank" class="<?= $smallBtn ?>" title="Für den vorderen Deckel (A6)">FRONT</a>
                         <a href="/rack-exemplare/<?= e($exemplar->id) ?>/beschriftung-rear.pdf" target="_blank" class="<?= $smallBtn ?>" title="Für den hinteren Deckel (A6)">REAR</a>
                         <a href="/rack-exemplare/<?= e($exemplar->id) ?>/beschriftung-inhalt.pdf" target="_blank" class="<?= $smallBtn ?>" title="Inhaltsliste für oben auf dem Rack (A5)">Inhalt (oben)</a>
-                        <form method="post" action="/rack-exemplare/<?= e($exemplar->id) ?>/loeschen" data-confirm="Rack <?= e($exemplar->rackNumber) ?> löschen? Die eingebauten Geräte bleiben erhalten, die Nummer wird nicht erneut vergeben." data-confirm-style="danger">
+                        <form method="post" action="/rack-exemplare/<?= e($exemplar->id) ?>/loeschen" data-confirm-key="racks.exemplar.delete" data-confirm="Rack <?= e($exemplar->rackNumber) ?> löschen? Die eingebauten Geräte bleiben erhalten, die Nummer wird nicht erneut vergeben." data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                         </form>
@@ -99,7 +99,7 @@ $prefixPattern = $detail->manufacturer?->prefix !== null && $rack->prefix !== nu
                                             <span class="rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">fest zugeordnet</span>
                                         <?php endif; ?>
                                     </div>
-                                    <form method="post" action="/rack-einbauten/<?= e($slot['slotId']) ?>/loeschen" data-confirm="Dieses Gerät aus dem Rack ausbauen?" data-row-actions="off">
+                                    <form method="post" action="/rack-einbauten/<?= e($slot['slotId']) ?>/loeschen" data-confirm-key="racks.slot.delete" data-confirm="Dieses Gerät aus dem Rack ausbauen?" data-row-actions="off">
                                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                         <input type="hidden" name="rack_id" value="<?= e($rack->id) ?>">
                                         <input type="hidden" name="exemplar_id" value="<?= e($exemplar->id) ?>">

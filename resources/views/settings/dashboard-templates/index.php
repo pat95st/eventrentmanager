@@ -34,7 +34,7 @@ use function App\Infrastructure\Http\t;
                 <?= View::render('dashboard/_layout_summary', ['tiles' => $tiles, 'layout' => $template->layout->only(array_keys($tiles))]) ?>
                 <div class="mt-auto flex items-center gap-4 pt-4">
                     <a href="/einstellungen/dashboard-vorlagen/<?= e($template->id) ?>/bearbeiten" class="text-sm font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                    <form method="post" action="/einstellungen/dashboard-vorlagen/<?= e($template->id) ?>/loeschen" data-confirm="<?= e(t('settings.dashboard_templates.confirm_delete', ['name' => $template->name])) ?>" data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/dashboard-vorlagen/<?= e($template->id) ?>/loeschen" data-confirm-key="settings.dashboard_templates.delete" data-confirm="<?= e(t('settings.dashboard_templates.confirm_delete', ['name' => $template->name])) ?>" data-confirm-style="danger">
                         <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                         <button type="submit" class="text-sm font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                     </form>

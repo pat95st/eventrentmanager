@@ -60,7 +60,7 @@ $rows = $detail->orderedRows();
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('order_confirmations.show.mark_sent')) ?></button>
             </form>
             <a href="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-            <form method="post" action="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/loeschen" data-confirm="<?= e(t('order_confirmations.show.confirm_delete')) ?>" data-confirm-style="danger">
+            <form method="post" action="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/loeschen" data-confirm-key="order_confirmations.delete" data-confirm="<?= e(t('order_confirmations.show.confirm_delete')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
             </form>
@@ -72,7 +72,7 @@ $rows = $detail->orderedRows();
         <?php endif; ?>
 
         <?php if (in_array($status, [OrderConfirmationStatus::Draft, OrderConfirmationStatus::Sent], true)): ?>
-            <form method="post" action="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/storniert" data-confirm="<?= e(t('order_confirmations.show.confirm_cancel')) ?>" data-confirm-style="danger">
+            <form method="post" action="/auftragsbestaetigungen/<?= e($orderConfirmation->id) ?>/storniert" data-confirm-key="order_confirmations.cancel" data-confirm="<?= e(t('order_confirmations.show.confirm_cancel')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('order_confirmations.show.mark_cancelled')) ?></button>
             </form>

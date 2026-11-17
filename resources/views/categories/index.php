@@ -30,7 +30,7 @@ $renderNode = function (?string $parentId, int $depth) use (&$renderNode, &$byPa
             <span class="flex items-center gap-3">
                 <a href="/kategorien/<?= e($category->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                 <?php if ($category->id !== $powerDistributorCategoryId && $category->id !== $cableCategoryId && $category->id !== $digitalStageboxCategoryId && $category->id !== $mixingConsoleCategoryId): ?>
-                <form method="post" action="/kategorien/<?= e($category->id) ?>/loeschen" data-confirm="Diese Kategorie wirklich löschen?" data-confirm-style="danger">
+                <form method="post" action="/kategorien/<?= e($category->id) ?>/loeschen" data-confirm-key="categories.delete" data-confirm="Diese Kategorie wirklich löschen?" data-confirm-style="danger">
                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                 </form>

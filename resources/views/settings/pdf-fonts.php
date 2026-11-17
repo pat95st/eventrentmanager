@@ -121,7 +121,7 @@ $card = 'rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 d
                                 <?php endforeach; ?>
                             </p>
                         </div>
-                        <form method="post" action="/einstellungen/schriften/<?= e($font->id) ?>/loeschen" data-confirm="Die Schrift „<?= e($font->family) ?>“ entfernen? Bereiche mit dieser Schrift fallen auf den Standard zurück." data-confirm-style="danger">
+                        <form method="post" action="/einstellungen/schriften/<?= e($font->id) ?>/loeschen" data-confirm-key="settings.pdf_fonts.delete" data-confirm="Die Schrift „<?= e($font->family) ?>“ entfernen? Bereiche mit dieser Schrift fallen auf den Standard zurück." data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
                         </form>

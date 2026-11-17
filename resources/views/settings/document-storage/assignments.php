@@ -50,7 +50,7 @@ use function App\Infrastructure\Http\t;
                                     <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400"><?= e(t('common.disabled')) ?></span>
                                 <?php endif; ?>
                             </div>
-                            <form method="post" action="/einstellungen/speicherziele/zuordnungen/<?= e($assignment->id) ?>/loeschen" data-confirm="<?= e(t('settings.document_storage.assignments.confirm_delete')) ?>" data-confirm-style="danger">
+                            <form method="post" action="/einstellungen/speicherziele/zuordnungen/<?= e($assignment->id) ?>/loeschen" data-confirm-key="settings.document_storage.assignment.delete" data-confirm="<?= e(t('settings.document_storage.assignments.confirm_delete')) ?>" data-confirm-style="danger">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                             </form>

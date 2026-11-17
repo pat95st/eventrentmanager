@@ -118,7 +118,7 @@ $filterLabel = function (\App\Domain\Calendar\Calendar $calendar) use ($categori
                                     </form>
                                 <?php endif; ?>
                                 <?php if ($calendar->kind === CalendarKind::Rental): ?>
-                                    <form method="post" action="/einstellungen/kalender/<?= e($calendar->id) ?>/loeschen" data-confirm="<?= e(t('settings.calendars.confirm_delete')) ?>" data-confirm-style="danger">
+                                    <form method="post" action="/einstellungen/kalender/<?= e($calendar->id) ?>/loeschen" data-confirm-key="settings.calendars.delete" data-confirm="<?= e(t('settings.calendars.confirm_delete')) ?>" data-confirm-style="danger">
                                         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('settings.calendars.delete')) ?></button>
                                     </form>
@@ -234,7 +234,7 @@ $filterLabel = function (\App\Domain\Calendar\Calendar $calendar) use ($categori
         </form>
 
         <?php if ($signingSettings->certificateFilename !== null && !$signingSettings->isSelfSigned): ?>
-            <form method="post" action="/einstellungen/kalender/signatur/loeschen" class="mt-3" data-confirm="<?= e(t('settings.calendars.signing.confirm_delete')) ?>" data-confirm-style="danger">
+            <form method="post" action="/einstellungen/kalender/signatur/loeschen" class="mt-3" data-confirm-key="settings.calendars.signature.delete" data-confirm="<?= e(t('settings.calendars.signing.confirm_delete')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('settings.calendars.signing.delete')) ?></button>
             </form>

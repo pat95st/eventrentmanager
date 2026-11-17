@@ -37,7 +37,7 @@ use function App\Infrastructure\Http\t;
                 <?= e(t('profile.dashboard.save')) ?>
             </button>
             <?php if ($isCustomized): ?>
-                <form method="post" action="/profil/dashboard/zuruecksetzen" data-confirm="<?= e(t('profile.dashboard.reset_confirm')) ?>">
+                <form method="post" action="/profil/dashboard/zuruecksetzen" data-confirm-key="profile.dashboard.reset" data-confirm="<?= e(t('profile.dashboard.reset_confirm')) ?>">
                     <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                     <button type="submit" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
                         <?= e(t('profile.dashboard.reset')) ?>
@@ -69,7 +69,7 @@ use function App\Infrastructure\Http\t;
                                 <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400"><?= e($entry['template']->description) ?></p>
                             <?php endif; ?>
                             <?= View::render('dashboard/_layout_summary', ['tiles' => $tiles, 'layout' => $entry['layout']]) ?>
-                            <form method="post" action="/profil/dashboard/vorlage/<?= e($entry['template']->id) ?>" class="mt-auto pt-4" data-confirm="<?= e(t('profile.dashboard.templates.apply_confirm', ['name' => $entry['template']->name])) ?>">
+                            <form method="post" action="/profil/dashboard/vorlage/<?= e($entry['template']->id) ?>" class="mt-auto pt-4" data-confirm-key="profile.dashboard.apply_template" data-confirm="<?= e(t('profile.dashboard.templates.apply_confirm', ['name' => $entry['template']->name])) ?>">
                                 <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                                 <button type="submit" class="rounded-md border border-brand-600 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950/40">
                                     <?= e(t('profile.dashboard.templates.apply')) ?>

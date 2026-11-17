@@ -40,7 +40,7 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
                         </div>
                         <span class="flex items-center gap-3">
                             <a href="/einstellungen/zahlungsarten/<?= e($method->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                            <form method="post" action="/einstellungen/zahlungsarten/<?= e($method->id) ?>/loeschen" data-confirm="<?= e(t('settings.payment_methods.confirm_delete')) ?>" data-confirm-style="danger">
+                            <form method="post" action="/einstellungen/zahlungsarten/<?= e($method->id) ?>/loeschen" data-confirm-key="settings.payment_methods.delete" data-confirm="<?= e(t('settings.payment_methods.confirm_delete')) ?>" data-confirm-style="danger">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                             </form>

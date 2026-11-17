@@ -25,7 +25,7 @@ $respondCsrf = e(Csrf::token());
             <button type="submit" class="rounded-md px-3 py-1.5 text-sm font-medium text-white" style="background:#059669">Zusagen</button>
         </form>
     <?php endif; ?>
-    <form method="post" action="/veranstaltungs-techniker/<?= e($respondAssignment->id) ?>/antwort" data-confirm="Für diese Veranstaltung absagen? Du siehst sie danach nicht mehr in deiner Liste.">
+    <form method="post" action="/veranstaltungs-techniker/<?= e($respondAssignment->id) ?>/antwort" data-confirm-key="rentals.technician.decline" data-confirm="Für diese Veranstaltung absagen? Du siehst sie danach nicht mehr in deiner Liste.">
         <input type="hidden" name="csrf_token" value="<?= $respondCsrf ?>">
         <input type="hidden" name="answer" value="absagen">
         <input type="hidden" name="back" value="<?= e($respondBack) ?>">

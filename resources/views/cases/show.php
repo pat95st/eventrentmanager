@@ -59,7 +59,7 @@ if (!function_exists('renderCaseNoticeField')) {
         <a href="/cases/<?= e($case->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             Bearbeiten
         </a>
-        <form method="post" action="/cases/<?= e($case->id) ?>/loeschen" data-confirm="Diesen Case inklusive aller Exemplare und deren Inhalt wirklich löschen?" data-confirm-style="danger">
+        <form method="post" action="/cases/<?= e($case->id) ?>/loeschen" data-confirm-key="cases.delete" data-confirm="Diesen Case inklusive aller Exemplare und deren Inhalt wirklich löschen?" data-confirm-style="danger">
           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                 Löschen
@@ -113,7 +113,7 @@ if (!function_exists('renderCaseNoticeField')) {
                                     <?php if ($editInventoryId !== $inv->id): ?>
                                         <a href="/cases/<?= e($case->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                                     <?php endif; ?>
-                                    <form method="post" action="/case-inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm="Dieses Case-Exemplar inklusive Inhalt löschen?" data-confirm-style="danger">
+                                    <form method="post" action="/case-inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm-key="cases.inventory_number.delete" data-confirm="Dieses Case-Exemplar inklusive Inhalt löschen?" data-confirm-style="danger">
                                         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <input type="hidden" name="case_id" value="<?= e($case->id) ?>">
                                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
@@ -153,7 +153,7 @@ if (!function_exists('renderCaseNoticeField')) {
                                                                class="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700">
                                                         <button type="submit" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Ändern</button>
                                                     </form>
-                                                    <form method="post" action="/case-inhalt/<?= e($contentEntry->item->id) ?>/loeschen" data-confirm="Artikel aus diesem Case entfernen?" data-confirm-style="danger">
+                                                    <form method="post" action="/case-inhalt/<?= e($contentEntry->item->id) ?>/loeschen" data-confirm-key="cases.content.delete" data-confirm="Artikel aus diesem Case entfernen?" data-confirm-style="danger">
                                                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                                         <input type="hidden" name="case_id" value="<?= e($case->id) ?>">
                                                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
@@ -197,7 +197,7 @@ if (!function_exists('renderCaseNoticeField')) {
                                                 <a href="/cases/<?= e($case->id) ?>/bild?image=<?= e($image->id) ?>" target="_blank">
                                                     <img src="/cases/<?= e($case->id) ?>/bild?image=<?= e($image->id) ?>" alt="Foto des befüllten Cases" loading="lazy" class="object-cover" style="width:100%;height:100%">
                                                 </a>
-                                                <form method="post" action="/case-bilder/<?= e($image->id) ?>/loeschen" data-confirm="Dieses Foto entfernen?" data-confirm-style="danger" class="absolute right-1 top-1">
+                                                <form method="post" action="/case-bilder/<?= e($image->id) ?>/loeschen" data-confirm-key="cases.image.delete" data-confirm="Dieses Foto entfernen?" data-confirm-style="danger" class="absolute right-1 top-1">
                                                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                                     <input type="hidden" name="case_id" value="<?= e($case->id) ?>">
                                                     <input type="hidden" name="inventory_number_id" value="<?= e($inv->id) ?>">

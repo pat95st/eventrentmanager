@@ -11,6 +11,8 @@ return [
     // --- Common / recurring actions -------------------------------------
     'confirm.title' => 'Please confirm',
     'confirm.ok' => 'Confirm',
+    'confirm.hint_skip' => 'Tip: hold Shift while clicking to skip confirmations.',
+    'confirm.hint_locked' => 'This confirmation cannot be skipped.',
     'common.save' => 'Save',
     'common.cancel' => 'Cancel',
     'common.delete' => 'Delete',
@@ -2466,6 +2468,8 @@ return [
 
     'profile.display.notify_receipt_inbox_label' => 'Notify me by email when a new receipt arrives in the inbox',
     'profile.display.notify_receipt_inbox_hint' => 'Only effective while you hold the "Administration" permission. Applies to the receipt inbox collected automatically via cron job.',
+    'profile.display.confirm_bypass_label' => 'Skip confirmations while holding Shift',
+    'profile.display.confirm_bypass_hint' => 'Holding Shift while clicking "Delete" and similar buttons runs the action right away. Security-critical confirmations still appear.',
 
     'receipts.inbox.tab_label' => 'Inbox',
     'receipts.inbox.title' => 'Receipt inbox',

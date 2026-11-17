@@ -139,7 +139,7 @@ $modeLabels = [AccountPeriod::MONTH => 'Monat', AccountPeriod::YEAR => 'Jahr', A
                         <td class="acct-num px-4 py-2 text-right font-medium <?= $t->amountCents >= 0 ? 'acct-in' : 'acct-out' ?>"><?= e($money($t->amountCents, true)) ?></td>
                         <td class="acct-num px-4 py-2 text-right text-slate-600 dark:text-slate-400"><?= e($money($row['balanceCents'])) ?></td>
                         <td class="px-4 py-2 text-right">
-                            <form method="post" action="/konten/buchungen/<?= e($t->id) ?>/loeschen" data-confirm="Buchung „<?= e($t->description) ?>“ löschen?<?= $t->kind !== AccountTransactionKind::Manual && ($t->receiptId !== null || $t->invoiceId !== null) ? ' Der zugehörige Beleg bzw. die Rechnung wird wieder auf offen gesetzt.' : '' ?>" data-confirm-style="danger">
+                            <form method="post" action="/konten/buchungen/<?= e($t->id) ?>/loeschen" data-confirm-key="accounts.transaction.delete" data-confirm="Buchung „<?= e($t->description) ?>“ löschen?<?= $t->kind !== AccountTransactionKind::Manual && ($t->receiptId !== null || $t->invoiceId !== null) ? ' Der zugehörige Beleg bzw. die Rechnung wird wieder auf offen gesetzt.' : '' ?>" data-confirm-style="danger">
                                 <?= $hidden ?>
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                             </form>

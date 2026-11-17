@@ -71,7 +71,7 @@ use function App\Infrastructure\Http\t;
 </form>
 
 <form method="post" action="/einstellungen/messenger-vorlagen/<?= e($channel->value) ?>/<?= e($key->value) ?>/zuruecksetzen" class="mt-3"
-      onsubmit="return confirm('<?= e(t('settings.messaging_templates.confirm_reset')) ?>')">
+      data-confirm-key="settings.messaging_templates.reset" data-confirm="<?= e(t('settings.messaging_templates.confirm_reset')) ?>" data-confirm-style="danger">
     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
     <button type="submit" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('settings.messaging_templates.reset')) ?></button>
 </form>

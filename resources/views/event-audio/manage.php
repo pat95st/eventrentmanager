@@ -136,7 +136,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                                     <button type="submit" class="<?= $btn ?>">Speichern</button>
                                 </form>
                                 <form method="post" action="<?= e($base) ?>/dateien/<?= e($file->id) ?>/loeschen" class="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800"
-                                      data-confirm="„<?= e($file->title) ?>“ löschen? Minutenprogramme, die diesen Jingle nutzen, haben danach keinen Jingle mehr." data-confirm-style="danger">
+                                      data-confirm-key="event_audio.file.delete" data-confirm="„<?= e($file->title) ?>“ löschen? Minutenprogramme, die diesen Jingle nutzen, haben danach keinen Jingle mehr." data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Datei löschen</button>
                                 </form>
@@ -173,13 +173,13 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                                 <td class="py-2 pr-3"><span class="ea-pill" style="<?= e($s->status->badgeStyle()) ?>"><?= e($s->status->label()) ?></span></td>
                                 <td class="py-2 text-right">
                                     <?php if ($s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Triggered || $s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Missed): ?>
-                                        <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/erneut" data-confirm="„<?= e($fileTitles[$s->audioFileId] ?? 'Audio-Datei') ?>“ jetzt erneut einspielen?">
+                                        <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/erneut" data-confirm-key="event_audio.schedule.repeat" data-confirm="„<?= e($fileTitles[$s->audioFileId] ?? 'Audio-Datei') ?>“ jetzt erneut einspielen?">
                                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                             <button type="submit" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">Erneut einspielen</button>
                                         </form>
                                     <?php endif; ?>
                                     <?php if ($s->status === \App\Domain\EventAudio\ScheduledPlaybackStatus::Pending): ?>
-                                        <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/loeschen" data-confirm="Geplanten Einspieler um <?= e($s->playAt->format('H:i')) ?> Uhr abbrechen?">
+                                        <form method="post" action="<?= e($base) ?>/planung/<?= e($s->id) ?>/loeschen" data-confirm-key="event_audio.schedule.delete" data-confirm="Geplanten Einspieler um <?= e($s->playAt->format('H:i')) ?> Uhr abbrechen?">
                                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Abbrechen</button>
                                         </form>
@@ -322,7 +322,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                 <button type="submit" class="<?= $btn ?>"><?= $rentalSettings->logoFilename !== null ? 'Ersetzen' : 'Hochladen' ?></button>
             </form>
             <?php if ($rentalSettings->logoFilename !== null): ?>
-                <form method="post" action="<?= e($base) ?>/logo/loeschen" data-confirm="Logo entfernen? Veranstalter sehen dann wieder das Firmenlogo.">
+                <form method="post" action="<?= e($base) ?>/logo/loeschen" data-confirm-key="event_audio.logo.delete" data-confirm="Logo entfernen? Veranstalter sehen dann wieder das Firmenlogo.">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Entfernen</button>
                 </form>
@@ -379,7 +379,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                     </div>
                 </form>
                 <form method="post" id="ea-del-<?= e($login->id) ?>" action="<?= e($base) ?>/zugaenge/<?= e($login->id) ?>/loeschen" hidden
-                      data-confirm="Zugang „<?= e($login->username) ?>“ löschen?" data-confirm-style="danger">
+                      data-confirm-key="event_audio.login.delete" data-confirm="Zugang „<?= e($login->username) ?>“ löschen?" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                 </form>
             <?php endforeach; ?>
@@ -428,7 +428,7 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
                                 <td class="py-2 pr-3"><span class="ea-pill" style="<?= e($r->status->badgeStyle()) ?>" title="<?= e($r->error ?? '') ?>"><?= e($r->status->label()) ?></span></td>
                                 <td class="whitespace-nowrap py-2 text-right">
                                     <?php if (!$r->status->isOpen() && $r->kind !== \App\Domain\EventAudio\PlaybackKind::Stop): ?>
-                                        <form method="post" action="<?= e($base) ?>/erneut/<?= e($r->id) ?>" data-confirm="„<?= e($r->text ?? $r->label ?? $r->kind->label()) ?>“ erneut einspielen?">
+                                        <form method="post" action="<?= e($base) ?>/erneut/<?= e($r->id) ?>" data-confirm-key="event_audio.repeat" data-confirm="„<?= e($r->text ?? $r->label ?? $r->kind->label()) ?>“ erneut einspielen?">
                                             <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                             <button type="submit" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">Erneut einspielen</button>
                                         </form>

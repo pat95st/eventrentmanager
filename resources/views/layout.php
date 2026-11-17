@@ -7,6 +7,12 @@
 /** @var \App\Domain\User\User|null $currentUser */
 /** @var \App\Domain\User\User|null $impersonator */
 /** @var \App\Domain\Settings\LegalSettings|null $legalSettings */
+/** @var bool $modalFrame */
+
+// Create/edit pages opened in the form modal (see App\Infrastructure\Http\
+// ModalFrame and public/assets/js/form-modal.js): same page, but without
+// navigation, footer and background.
+$modalFrame = $modalFrame ?? false;
 
 // Footer-Links Impressum/Datenschutz: im Link-Modus (mit hinterlegter URL)
 // geht es direkt auf die externe Seite (neuer Tab), sonst auf die eigene,
@@ -142,7 +148,7 @@ $canProcurement = $canArticles;
 $canDocuments = $canRentals;
 ?>
 <!DOCTYPE html>
-<html lang="<?= e($activeLocale) ?>">
+<html lang="<?= e($activeLocale) ?>"<?= $modalFrame ? ' data-modal-frame="' . (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? 'post' : 'get') . '"' : '' ?>>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -258,6 +264,32 @@ $canDocuments = $canRentals;
   /* Mobiles Menü im (sticky) Header: eigene Scrollfläche, sonst ist alles
      unterhalb des Bildschirmrands auf dem Handy nicht erreichbar. Die
      genaue Höhe setzt das Hamburger-Skript beim Öffnen. */
+  /* Form modal (see /assets/js/form-modal.js): a wide dialog whose only
+     content is an <iframe> with the regular create/edit page. */
+  dialog.form-modal { width: min(76rem, calc(100vw - 4rem)); max-width: none; max-height: none; overflow: visible; }
+  dialog.form-modal::backdrop { background: rgb(15 23 42 / 0.5); }
+  .form-modal-bar { position: absolute; top: 0.75rem; right: 0.875rem; z-index: 1; display: flex; gap: 0.25rem; }
+  .form-modal-bar > a, .form-modal-bar > button {
+    display: inline-flex; height: 2rem; width: 2rem; align-items: center; justify-content: center;
+    border-radius: 0.5rem; color: rgb(100 116 139); background: transparent;
+  }
+  .form-modal-bar > a:hover, .form-modal-bar > button:hover { background-color: rgb(241 245 249); color: rgb(15 23 42); }
+  html.dark .form-modal-bar > a:hover, html.dark .form-modal-bar > button:hover { background-color: rgb(30 41 59); color: rgb(241 245 249); }
+  .form-modal-bar > a:focus-visible, .form-modal-bar > button:focus-visible { outline: 2px solid rgb(var(--color-brand-500)); outline-offset: 1px; }
+  .form-modal-bar svg { height: 1.125rem; width: 1.125rem; }
+  .form-modal-frame { display: block; width: 100%; border: 0; border-radius: inherit; background: transparent; transition: opacity 150ms ease; }
+  .form-modal.is-loading .form-modal-frame { opacity: 0; }
+  .form-modal-spinner { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; pointer-events: none; }
+  .form-modal.is-loading .form-modal-spinner { display: flex; }
+  .form-modal-spinner::after { content: ""; height: 1.75rem; width: 1.75rem; border-radius: 9999px; border: 3px solid rgb(203 213 225); border-top-color: rgb(var(--color-brand-600)); animation: form-modal-spin 700ms linear infinite; }
+  @keyframes form-modal-spin { to { transform: rotate(360deg); } }
+  /* Inside the iframe: hide the page chrome (kept in the DOM, the layout
+     scripts below rely on these elements) and use the dialog as background. */
+  html[data-modal-frame] body > header, html[data-modal-frame] body > footer, html[data-modal-frame] [data-modal-frame-hide] { display: none !important; }
+  html[data-modal-frame], html[data-modal-frame] body { background: transparent !important; }
+  html[data-modal-frame] main { padding: 1.5rem 1.75rem 1.75rem; }
+  /* Room for the close button of the dialog above the page heading. */
+  html[data-modal-frame] main > :first-child { padding-right: 4.5rem; }
   #mobile-nav { max-height: calc(100vh - 4rem); max-height: calc(100dvh - 4rem); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 </style>
 <script src="/assets/js/modal-fade.js"></script>
@@ -266,7 +298,7 @@ $canDocuments = $canRentals;
 <script src="/assets/js/pdf-viewer.js" defer></script>
 <script src="/assets/js/row-actions.js" defer></script>
 <script src="/assets/js/row-links.js" defer></script>
-<?php if (($currentUser ?? null) !== null): /* Hinweis vor automatischer Abmeldung (Einstellungen › Sicherheit) */ ?>
+<?php if (($currentUser ?? null) !== null && !$modalFrame): /* Hinweis vor automatischer Abmeldung (Einstellungen › Sicherheit) */ ?>
 <script>window.SESSION_TIMEOUT_SECONDS = <?= (int) \App\Infrastructure\Http\Auth\SessionTimeout::seconds() ?>;</script>
 <script src="/assets/js/session-timeout.js" defer></script>
 <?php endif; ?>
@@ -353,9 +385,9 @@ $canDocuments = $canRentals;
 </script>
 </head>
 <body
-  class="flex min-h-screen flex-col antialiased<?= $backgroundImageUrl !== null ? ' has-bg-image' : '' ?>"
+  class="flex <?= $modalFrame ? '' : 'min-h-screen ' ?>flex-col antialiased<?= $backgroundImageUrl !== null && !$modalFrame ? ' has-bg-image' : '' ?>"
 >
-  <?= \App\Infrastructure\Http\BackgroundLayer::render(\App\Domain\Settings\BackgroundSlot::App) ?>
+  <?= $modalFrame ? '' : \App\Infrastructure\Http\BackgroundLayer::render(\App\Domain\Settings\BackgroundSlot::App) ?>
   <!--
     Globales Bestätigungs-Modal: ersetzt window.confirm() im gesamten
     Frontend (siehe window.confirmModal()-Helfer weiter unten). Formulare
@@ -867,7 +899,7 @@ $canDocuments = $canRentals;
   </header>
 
   <?php if ($impersonator !== null): ?>
-    <div class="flex flex-wrap items-center justify-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+    <div data-modal-frame-hide class="flex flex-wrap items-center justify-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
       <span>
         Angemeldet als <strong><?= e($currentUser?->displayName() ?? '') ?></strong>,
         ausgegeben durch <strong><?= e($impersonator->displayName()) ?></strong>.
@@ -881,8 +913,8 @@ $canDocuments = $canRentals;
     </div>
   <?php endif; ?>
 
-  <main class="app-container flex-1 py-6 sm:py-8 2xl:py-10">
-    <?php $settingsGroupKey = \App\Infrastructure\Http\SettingsSections::groupKeyFor($activeNav); ?>
+  <main class="<?= $modalFrame ? '' : 'app-container flex-1 py-6 sm:py-8 2xl:py-10' ?>">
+    <?php $settingsGroupKey = $modalFrame ? null : \App\Infrastructure\Http\SettingsSections::groupKeyFor($activeNav); ?>
     <?php if ($settingsGroupKey !== null): ?>
       <?php /* Einstellungsseiten: Navigation links (ab lg), Inhalt rechts — siehe settings/_tabs.php */ ?>
       <div class="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-10">
@@ -1604,6 +1636,17 @@ $canDocuments = $canRentals;
   <script src="/assets/js/dry-hire.js" defer></script>
   <!-- Set-Auswahl in Angebot/AB/Rechnung (Migration 113), siehe public/assets/js/set-picker.js -->
   <script src="/assets/js/set-picker.js" defer></script>
-  <?php /* Onboarding tour after the first login (migration 161) */ require __DIR__ . '/partials/onboarding_tour.php'; ?>
+  <?php if ($modalFrame): ?>
+    <script src="/assets/js/form-modal-frame.js" defer></script>
+  <?php else: ?>
+    <script>window.FORM_MODAL_I18N = <?= json_encode([
+        'close' => t('common.close'),
+        'openFullPage' => t('form_modal.open_full_page'),
+        'discardQuestion' => t('form_modal.discard_question'),
+        'discardOk' => t('form_modal.discard_ok'),
+    ], JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP) ?>;</script>
+    <script src="/assets/js/form-modal.js" defer></script>
+    <?php /* Onboarding tour after the first login (migration 161) */ require __DIR__ . '/partials/onboarding_tour.php'; ?>
+  <?php endif; ?>
 </body>
 </html>

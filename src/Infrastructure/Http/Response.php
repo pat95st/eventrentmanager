@@ -8,6 +8,19 @@ final class Response
 {
     public static function redirect(string $location): void
     {
+        // Request from the form modal (see ModalFrame): the iframe must not
+        // follow a redirect to a regular page — the whole window goes there.
+        if (ModalFrame::isCurrentNavigation()) {
+            $insideFrame = ModalFrame::redirectInsideFrame($location);
+            if ($insideFrame === null) {
+                header('Content-Type: text/html; charset=utf-8');
+                header('Cache-Control: no-store');
+                echo ModalFrame::breakoutPage($location);
+                exit;
+            }
+            $location = $insideFrame;
+        }
+
         header('Location: ' . $location, true, 303);
         exit;
     }

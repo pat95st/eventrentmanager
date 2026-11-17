@@ -51,6 +51,10 @@
       window.open(url, '_blank', 'noopener');
       return;
     }
+    // Create/edit pages open in the form modal on large screens (form-modal.js).
+    if (window.FormModal && window.FormModal.tryOpen(url)) {
+      return;
+    }
     window.location.href = url;
   });
 

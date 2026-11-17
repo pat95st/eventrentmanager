@@ -37,6 +37,8 @@ final class View
 
         return self::renderFile('layout', [
             'content' => $content,
+            // Create/edit pages opened in the form modal, see ModalFrame.
+            'modalFrame' => ModalFrame::isCurrentRequest(),
             'activeNav' => $activeNav,
             'title' => $title,
             'flashSuccess' => Flash::consumeSuccess(),

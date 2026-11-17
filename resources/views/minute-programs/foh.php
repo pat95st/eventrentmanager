@@ -324,7 +324,10 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
 
 <div class="toast" id="toast" role="status"></div>
 
+<?php require __DIR__ . '/../partials/confirm_shift_live.php'; ?>
 <script>
+    // Native confirm(), skipped when the click was made with Shift (see partial above).
+    function ask(text) { return window.skipConfirm() || confirm(text); }
 (function () {
     'use strict';
     var BASE = <?= json_encode($basePath, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES) ?>;
@@ -672,14 +675,14 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         } else if (b.dataset.msgClose) {
             var msg = (state.messages || []).filter(function (m) { return m.id === b.dataset.msgClose; })[0];
             if (msg && msg.fromFoh) { act('nachricht-ausblenden/' + encodeURIComponent(b.dataset.msgClose), {}, 'Nachricht zurückgezogen.'); return; }
-            if (msg && msg.stage && !confirm('Nachricht ausblenden? Sie verschwindet auch vom Stagedisplay.')) { return; }
+            if (msg && msg.stage && !ask('Nachricht ausblenden? Sie verschwindet auch vom Stagedisplay.')) { return; }
             act('nachricht-ausblenden/' + encodeURIComponent(b.dataset.msgClose), {}, 'Nachricht ausgeblendet.');
         } else if (b.dataset.preset) {
             var box = $('send-text'); box.value = b.dataset.preset; box.focus(); updateSendCount();
         } else if (b.dataset.start) {
             var it = itemById(b.dataset.start);
             var isNext = state.next && state.next.id === b.dataset.start;
-            if (!isNext && !confirm('„' + (it ? it.name : '') + '“ jetzt starten? Der Verzug wird danach neu berechnet.')) { return; }
+            if (!isNext && !ask('„' + (it ? it.name : '') + '“ jetzt starten? Der Verzug wird danach neu berechnet.')) { return; }
             act('start/' + encodeURIComponent(b.dataset.start), {}, 'Gestartet: ' + (it ? it.name : ''));
         } else if (b.dataset.timeform) {
             openTimeForm = openTimeForm === b.dataset.timeform ? null : b.dataset.timeform;
@@ -695,9 +698,9 @@ $origin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : '
         } else if (b.id === 'adopt-btn') {
             act('verzug', { adopt: '1' }, 'Prognose als Verzug übernommen.');
         } else if (b.id === 'finish-btn' || b.dataset.action === 'finish') {
-            if (confirm('Programm als beendet markieren?')) { act('ende', {}, 'Programm beendet.'); }
+            if (ask('Programm als beendet markieren?')) { act('ende', {}, 'Programm beendet.'); }
         } else if (b.id === 'reset-btn') {
-            if (confirm('Verzug, gestarteten Programmpunkt und Ende zurücksetzen? Danach gilt wieder der ursprüngliche Plan.')) { act('zuruecksetzen', {}, 'Zurückgesetzt.'); }
+            if (ask('Verzug, gestarteten Programmpunkt und Ende zurücksetzen? Danach gilt wieder der ursprüngliche Plan.')) { act('zuruecksetzen', {}, 'Zurückgesetzt.'); }
         }
     });
 

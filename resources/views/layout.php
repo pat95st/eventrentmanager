@@ -218,6 +218,9 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
   .confirm-icon-danger { background-color: rgb(254 226 226); color: rgb(220 38 38); }
   html.dark .confirm-icon-default { background-color: rgb(var(--color-brand-950) / 0.6); color: rgb(var(--color-brand-300)); }
   html.dark .confirm-icon-danger { background-color: rgb(127 29 29 / 0.45); color: rgb(252 165 165); }
+  /* While Shift is held: buttons whose confirmation would be skipped (see confirm script below) */
+  html.confirm-shift [data-confirm-skippable] { outline: 2px dashed rgb(217 119 6); outline-offset: 2px; }
+  html.dark.confirm-shift [data-confirm-skippable] { outline-color: rgb(251 191 36); }
 
   /* Weiches Ein-/Ausblenden, siehe /assets/js/modal-fade.js. Das Fenster
      selbst wächst leicht aus der Mitte (Handy: fährt von unten herein),
@@ -367,7 +370,8 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
     Frontend (siehe window.confirmModal()-Helfer weiter unten). Formulare
     markieren sich mit data-confirm="Frage..." (optional data-confirm-
     style="danger" für den roten Bestätigen-Button) statt eines
-    onsubmit="return confirm(...)"-Attributs.
+    onsubmit="return confirm(...)"-Attributs. Each form also names its
+    confirmation with data-confirm-key (App\Domain\Settings\ConfirmCatalog).
   -->
   <dialog id="global-confirm-dialog" class="modal-panel modal-panel-sm w-full bg-white dark:bg-slate-900" aria-labelledby="global-confirm-title" aria-describedby="global-confirm-message">
     <div class="flex gap-4 px-6 pb-5 pt-6">
@@ -378,6 +382,8 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
       <div class="min-w-0 pt-1.5">
         <h2 id="global-confirm-title" class="text-base font-semibold text-slate-900 dark:text-slate-100"><?= e(t('confirm.title')) ?></h2>
         <p id="global-confirm-message" class="mt-1.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400"></p>
+        <p id="global-confirm-hint" class="mt-3 hidden text-xs text-slate-400 dark:text-slate-500"
+           data-hint-skip="<?= e(t('confirm.hint_skip')) ?>" data-hint-locked="<?= e(t('confirm.hint_locked')) ?>"></p>
       </div>
     </div>
     <div class="flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end">
@@ -1173,6 +1179,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
       var titleEl = document.getElementById('global-confirm-title');
       var iconEl = document.getElementById('global-confirm-icon');
       var DEFAULT_TITLE = titleEl.textContent;
+      var hintEl = document.getElementById('global-confirm-hint');
       var DEFAULT_OK = okBtn.textContent;
       var DEFAULT_CANCEL = cancelBtn.textContent;
 
@@ -1186,6 +1193,10 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         cancelBtn.textContent = options && options.cancelLabel ? String(options.cancelLabel) : DEFAULT_CANCEL;
         return new Promise(function (resolve) {
           messageEl.textContent = message;
+          // options.hint: small note below the question (Shift bypass, see confirmGate).
+          var hint = options && options.hint ? String(options.hint) : '';
+          hintEl.textContent = hint;
+          hintEl.classList.toggle('hidden', hint === '');
           titleEl.textContent = okLabel !== '' ? okLabel + '?' : DEFAULT_TITLE;
           okBtn.textContent = okLabel !== '' ? okLabel : DEFAULT_OK;
 
@@ -1241,38 +1252,143 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         });
       };
 
-      // Formulare mit [data-confirm] verwenden das globale Modal statt
-      // window.confirm(). Wird der Absenden-Button (oder eine Umschalttaste-
-      // Variante davon) bei GEDRÜCKTER Umschalttaste (Shift) ausgelöst, wird
-      // die Rückfrage komplett übersprungen und sofort abgesendet.
-      document.addEventListener('click', function (e) {
-        var target = e.target.closest('button[type="submit"], input[type="submit"]');
-        if (!target) {
-          return;
+      // Skipping confirmations with Shift (migration 173). Every confirmation
+      // has a key (data-confirm-key, see App\Domain\Settings\ConfirmCatalog).
+      // confirmConfig.bypass: the shortcut is on (Einstellungen › Sicherheit
+      // and the user's own switch under Profil › Darstellung).
+      // confirmConfig.required: keys that must always be answered.
+      var confirmConfig = <?= json_encode(\App\Infrastructure\Http\ConfirmPolicy::clientConfig($currentUser ?? null), JSON_THROW_ON_ERROR) ?>;
+      var SUBMIT_SELECTOR = 'button:not([type]), button[type="submit"], input[type="submit"]';
+      var shiftDown = false;
+      // The tip is useless on touch-only devices.
+      var finePointer = !!window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+      function confirmRequired(key) {
+        return !!key && confirmConfig.required.indexOf(key) !== -1;
+      }
+
+      function confirmSkippable(key) {
+        return confirmConfig.bypass && !confirmRequired(key);
+      }
+
+      // Shift+click, or Shift+Enter/Space on the focused button itself. A
+      // keyboard click has detail 0; so has the implicit click when Enter is
+      // pressed in a text field, but then the field has the focus, not the
+      // button — that must not skip anything.
+      function shiftOnClick(e, button) {
+        if (e.detail === 0) {
+          return (e.shiftKey || shiftDown) && document.activeElement === button;
         }
-        var form = target.closest('form[data-confirm]');
+        return e.shiftKey;
+      }
+
+      function confirmHint(key, shift) {
+        if (!confirmConfig.bypass) {
+          return '';
+        }
+        if (confirmRequired(key)) {
+          return shift ? hintEl.getAttribute('data-hint-locked') : '';
+        }
+        return finePointer ? hintEl.getAttribute('data-hint-skip') : '';
+      }
+
+      // window.confirmGate(key, event, message, style, options): like
+      // confirmModal(), for confirmations asked from JavaScript. Resolves to
+      // true right away when the triggering event (a click, or the submit
+      // event of a form) was made with Shift and the key may be skipped.
+      window.confirmGate = function (key, event, message, style, options) {
+        var shift = false;
+        if (event && event.type === 'submit') {
+          shift = event.target.dataset.confirmShift === '1';
+        } else if (event) {
+          shift = shiftOnClick(event, event.target.closest('button, a, input'));
+        }
+        if (shift && confirmSkippable(key)) {
+          // Resolve in a new task, see the note on Shift in the submit handler below.
+          return new Promise(function (resolve) { setTimeout(function () { resolve(true); }, 0); });
+        }
+        var opts = { hint: confirmHint(key, shift) };
+        Object.keys(options || {}).forEach(function (name) { opts[name] = options[name]; });
+        return window.confirmModal(message, style, opts);
+      };
+
+      // Remember on the form whether its submit button was triggered with
+      // Shift; the submit event that follows synchronously reads it.
+      document.addEventListener('click', function (e) {
+        var target = e.target.closest(SUBMIT_SELECTOR);
+        var form = target ? target.form : null;
         if (!form) {
           return;
         }
-        form.dataset.skipConfirm = e.shiftKey ? '1' : '0';
+        form.dataset.confirmShift = shiftOnClick(e, target) ? '1' : '0';
+        setTimeout(function () { delete form.dataset.confirmShift; }, 0);
       }, true);
 
+      // While Shift is held, outline the buttons whose confirmation would be
+      // skipped — not while typing, where Shift just means a capital letter.
+      function markSkippable() {
+        document.querySelectorAll('[data-confirm-key]').forEach(function (el) {
+          var skippable = confirmSkippable(el.getAttribute('data-confirm-key'));
+          var buttons = el.tagName === 'FORM'
+            ? Array.prototype.filter.call(el.elements, function (control) { return control.matches(SUBMIT_SELECTOR); })
+            : [el];
+          buttons.forEach(function (button) { button.toggleAttribute('data-confirm-skippable', skippable); });
+        });
+      }
+
+      function isTyping() {
+        var el = document.activeElement;
+        if (!el) {
+          return false;
+        }
+        if (el.tagName === 'INPUT') {
+          return ['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'range', 'color'].indexOf(el.type) === -1;
+        }
+        return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable;
+      }
+
+      function shiftReleased() {
+        shiftDown = false;
+        document.documentElement.classList.remove('confirm-shift');
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Shift' || shiftDown) {
+          return;
+        }
+        shiftDown = true;
+        if (confirmConfig.bypass && !isTyping()) {
+          markSkippable();
+          document.documentElement.classList.add('confirm-shift');
+        }
+      }, true);
+      document.addEventListener('keyup', function (e) {
+        if (e.key === 'Shift') {
+          shiftReleased();
+        }
+      }, true);
+      window.addEventListener('blur', shiftReleased);
+
+      // Formulare mit [data-confirm] verwenden das globale Modal statt
+      // window.confirm().
       document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-confirm')) {
           return;
         }
 
-        var skip = form.dataset.skipConfirm === '1';
-        delete form.dataset.skipConfirm;
+        var key = form.getAttribute('data-confirm-key');
+        var shift = form.dataset.confirmShift === '1';
+        e.preventDefault();
 
-        if (skip) {
-          // Shift-Bypass: Formular ganz normal absenden lassen, kein
-          // preventDefault().
+        if (shift && confirmSkippable(key)) {
+          // Shift bypass. A follow-up question (data-storage-folder-delete)
+          // is skipped too, the folder stays. Submitted from a new task:
+          // Chromium opens a form submitted during a Shift+click in a new
+          // window, which is not what Shift means here.
+          setTimeout(function () { form.submit(); }, 0);
           return;
         }
-
-        e.preventDefault();
 
         var message = form.getAttribute('data-confirm');
         var style = form.getAttribute('data-confirm-style');
@@ -1282,7 +1398,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         var submitterText = submitter ? (submitter.textContent || submitter.value || '').replace(/\s+/g, ' ').trim() : '';
         var okLabel = form.getAttribute('data-confirm-ok') || (submitterText.length > 0 && submitterText.length <= 40 ? submitterText : '');
 
-        window.confirmModal(message, style, { okLabel: okLabel }).then(function (confirmed) {
+        window.confirmModal(message, style, { okLabel: okLabel, hint: confirmHint(key, shift) }).then(function (confirmed) {
           // Ordner im Dateiablagesystem (Migration 148): nach der eigentlichen
           // Lösch-Bestätigung zusätzlich fragen, ob auch der Ordner gelöscht
           // werden soll. „Ordner behalten“ (auch Escape) löscht nur den Datensatz.

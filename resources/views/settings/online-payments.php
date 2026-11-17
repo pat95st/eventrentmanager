@@ -129,7 +129,7 @@ $badge = static fn (bool $usable): string => $usable
             ['sumup', 'SumUp-API-Schlüssel', $settings->sumupApiKey !== null],
         ] as [$provider, $label, $present]): ?>
             <?php if ($present): ?>
-                <form method="post" action="/einstellungen/online-zahlung/<?= e($provider) ?>/zugangsdaten/loeschen" data-confirm="<?= e($label . ' wirklich entfernen? Die Zahlungsart wird dabei deaktiviert.') ?>" data-confirm-style="danger">
+                <form method="post" action="/einstellungen/online-zahlung/<?= e($provider) ?>/zugangsdaten/loeschen" data-confirm-key="settings.online_payments.credentials.delete" data-confirm="<?= e($label . ' wirklich entfernen? Die Zahlungsart wird dabei deaktiviert.') ?>" data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e($label) ?> entfernen</button>
                 </form>

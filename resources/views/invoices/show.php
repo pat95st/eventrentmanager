@@ -91,16 +91,16 @@ $rows = $detail->orderedRows();
     </div>
     <div class="flex flex-wrap items-center gap-3">
         <?php if ($status === \App\Domain\Invoice\InvoiceStatus::Draft): ?>
-            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/versenden" data-confirm="<?= e(t('invoices.show.confirm_mark_sent')) ?>">
+            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/versenden" data-confirm-key="invoices.send" data-confirm="<?= e(t('invoices.show.confirm_mark_sent')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('invoices.show.mark_sent')) ?></button>
             </form>
             <a href="/rechnungen/<?= e($invoice->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/stornieren" data-confirm="<?= e(t('invoices.show.confirm_cancel')) ?>" data-confirm-style="danger">
+            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/stornieren" data-confirm-key="invoices.cancel" data-confirm="<?= e(t('invoices.show.confirm_cancel')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('invoices.show.mark_cancelled')) ?></button>
             </form>
-            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/loeschen" data-confirm="<?= e(t('invoices.show.confirm_delete')) ?>" data-confirm-style="danger">
+            <form method="post" action="/rechnungen/<?= e($invoice->id) ?>/loeschen" data-confirm-key="invoices.delete" data-confirm="<?= e(t('invoices.show.confirm_delete')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
             </form>

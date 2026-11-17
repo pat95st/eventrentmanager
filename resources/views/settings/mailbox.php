@@ -116,7 +116,7 @@ use function App\Infrastructure\Http\t;
                             <span class="text-xs text-slate-400 dark:text-slate-500">— <?= e($sender->note) ?></span>
                         <?php endif; ?>
                     </span>
-                    <form method="post" action="/einstellungen/mailserver/erlaubte-absender/<?= e($sender->id) ?>/loeschen" data-confirm="<?= e(t('settings.mailbox.allowed_senders.confirm_delete')) ?>" data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/mailserver/erlaubte-absender/<?= e($sender->id) ?>/loeschen" data-confirm-key="settings.mailbox.sender.delete" data-confirm="<?= e(t('settings.mailbox.allowed_senders.confirm_delete')) ?>" data-confirm-style="danger">
                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                     </form>

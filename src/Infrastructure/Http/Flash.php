@@ -16,6 +16,13 @@ final class Flash
         $_SESSION['flash_success'] = $message;
     }
 
+    /** Adds a sentence to a success message set earlier in this request. */
+    public static function appendSuccess(string $message): void
+    {
+        self::ensureSession();
+        $_SESSION['flash_success'] = trim(($_SESSION['flash_success'] ?? '') . ' ' . $message);
+    }
+
     public static function error(string $message): void
     {
         self::ensureSession();

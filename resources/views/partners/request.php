@@ -170,7 +170,7 @@ $errorText = $errors !== [] ? implode(' ', $errors) : null;
             <?php if (!$incoming): ?>
                 <form method="post" action="/partner/anfragen/<?= e($r->id) ?>/aktualisieren"><input type="hidden" name="csrf_token" value="<?= $csrf ?>"><button type="submit" class="<?= $btnSecondary ?>">Stand abfragen</button></form>
                 <?php if (in_array($r->status, [PartnerRequestStatus::Pending, PartnerRequestStatus::Accepted], true)): ?>
-                    <form method="post" action="/partner/anfragen/<?= e($r->id) ?>/stornieren" data-confirm="Anfrage bei <?= e($partner->name) ?> stornieren?" data-confirm-style="danger"><input type="hidden" name="csrf_token" value="<?= $csrf ?>"><button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400">Stornieren</button></form>
+                    <form method="post" action="/partner/anfragen/<?= e($r->id) ?>/stornieren" data-confirm-key="partners.request.cancel" data-confirm="Anfrage bei <?= e($partner->name) ?> stornieren?" data-confirm-style="danger"><input type="hidden" name="csrf_token" value="<?= $csrf ?>"><button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400">Stornieren</button></form>
                 <?php endif; ?>
             <?php elseif (!$pending && $r->syncError !== null && $r->status !== PartnerRequestStatus::Cancelled): ?>
                 <form method="post" action="/partner/anfragen/<?= e($r->id) ?>/status-senden"><input type="hidden" name="csrf_token" value="<?= $csrf ?>"><button type="submit" class="<?= $btnSecondary ?>">Antwort erneut an Partner senden</button></form>

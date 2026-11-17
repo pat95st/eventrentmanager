@@ -11,6 +11,8 @@ return [
     // --- Allgemein / wiederkehrende Aktionen -------------------------------
     'confirm.title' => 'Bitte bestätigen',
     'confirm.ok' => 'Bestätigen',
+    'confirm.hint_skip' => 'Tipp: Umschalttaste (Shift) beim Klicken gedrückt halten, um Rückfragen zu überspringen.',
+    'confirm.hint_locked' => 'Diese Rückfrage lässt sich nicht überspringen.',
     'common.save' => 'Speichern',
     'common.cancel' => 'Abbrechen',
     'common.delete' => 'Löschen',
@@ -2467,6 +2469,8 @@ return [
 
     'profile.display.notify_receipt_inbox_label' => 'Per E-Mail benachrichtigen, wenn ein neuer Beleg im Posteingang eintrifft',
     'profile.display.notify_receipt_inbox_hint' => 'Nur wirksam, solange Sie das Recht "Administration" besitzen. Gilt für den automatisch per Cronjob eingesammelten Beleg-Posteingang.',
+    'profile.display.confirm_bypass_label' => 'Rückfragen mit gedrückter Umschalttaste (Shift) überspringen',
+    'profile.display.confirm_bypass_hint' => 'Wer beim Klick auf „Löschen“ und ähnliche Schaltflächen die Umschalttaste hält, führt die Aktion sofort aus. Sicherheitskritische Rückfragen erscheinen trotzdem.',
 
     'receipts.inbox.tab_label' => 'Posteingang',
     'receipts.inbox.title' => 'Beleg-Posteingang',

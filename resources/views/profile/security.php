@@ -23,7 +23,7 @@ use function App\Infrastructure\Http\t;
     </p>
 
     <?php if ($twoFactorMethod !== TwoFactorMethod::None): ?>
-        <form method="post" action="/profil/sicherheit/deaktivieren" class="mt-4" data-confirm="<?= e(t('profile.security.confirm_disable')) ?>" data-confirm-style="danger">
+        <form method="post" action="/profil/sicherheit/deaktivieren" class="mt-4" data-confirm-key="profile.two_factor.disable" data-confirm="<?= e(t('profile.security.confirm_disable')) ?>" data-confirm-style="danger">
           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                 <?= e(t('profile.security.disable_button')) ?>
@@ -53,7 +53,7 @@ use function App\Infrastructure\Http\t;
                 </li>
             <?php endforeach; ?>
         </ul>
-        <form method="post" action="/profil/sicherheit/vertraute-geraete/widerrufen" data-confirm="<?= e(t('profile.security.trusted_devices.confirm_revoke')) ?>" data-confirm-style="danger">
+        <form method="post" action="/profil/sicherheit/vertraute-geraete/widerrufen" data-confirm-key="profile.trusted_devices.revoke" data-confirm="<?= e(t('profile.security.trusted_devices.confirm_revoke')) ?>" data-confirm-style="danger">
             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                 <?= e(t('profile.security.trusted_devices.revoke_all')) ?>
@@ -135,7 +135,7 @@ use function App\Infrastructure\Http\t;
                         <?= e(t('profile.security.passkeys.created_on', ['date' => $passkey->createdAt->format('d.m.Y')])) ?><?php if ($passkey->lastUsedAt !== null): ?><?= e(t('profile.security.passkeys.last_used_on', ['date' => $passkey->lastUsedAt->format('d.m.Y H:i')])) ?><?php endif; ?>
                     </p>
                 </div>
-                <button type="button" class="passkey-delete-button rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
+                <button type="button" data-confirm-key="profile.passkey.remove" class="passkey-delete-button rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     <?= e(t('profile.security.passkeys.remove')) ?>
                 </button>
             </li>
@@ -264,10 +264,7 @@ use function App\Infrastructure\Http\t;
     list.addEventListener('click', async function (event) {
         var button = event.target.closest('.passkey-delete-button');
         if (!button) { return; }
-        if (!event.shiftKey) {
-            var confirmed = await window.confirmModal(confirmRemove);
-            if (!confirmed) { return; }
-        }
+        if (!(await window.confirmGate('profile.passkey.remove', event, confirmRemove, 'danger'))) { return; }
 
         var item = button.closest('[data-passkey-id]');
         var id = item.getAttribute('data-passkey-id');

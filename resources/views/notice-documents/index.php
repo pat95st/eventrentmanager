@@ -44,7 +44,7 @@ $formatSize = static function (int $bytes): string {
                     <div class="flex items-center justify-end gap-2">
                         <a href="/hinweisdokumente/<?= e($document->id) ?>/herunterladen" class="text-xs font-medium text-slate-500 hover:underline dark:text-slate-400"><?= e(t('notice_documents.download')) ?></a>
                         <a href="/hinweisdokumente/<?= e($document->id) ?>/bearbeiten" class="text-xs font-medium text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.edit')) ?></a>
-                        <form method="post" action="/hinweisdokumente/<?= e($document->id) ?>/loeschen" onsubmit="return confirm('<?= e(t('notice_documents.delete_confirm')) ?>')">
+                        <form method="post" action="/hinweisdokumente/<?= e($document->id) ?>/loeschen" data-confirm-key="notice_documents.delete" data-confirm="<?= e(t('notice_documents.delete_confirm')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                         </form>

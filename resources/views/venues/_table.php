@@ -85,7 +85,7 @@ use function App\Infrastructure\Http\t;
                                     <?php endforeach; ?>
                                 </div>
                             </details>
-                            <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/loeschen" data-confirm="<?= e(t('venues.confirm_delete')) ?>" data-confirm-style="danger" class="mt-1">
+                            <form method="post" action="/veranstaltungsorte/<?= e($venue->id) ?>/loeschen" data-confirm-key="venues.delete" data-confirm="<?= e(t('venues.confirm_delete')) ?>" data-confirm-style="danger" class="mt-1">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                             </form>

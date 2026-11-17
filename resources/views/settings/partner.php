@@ -69,7 +69,7 @@ $generalError = $errors['partner'] ?? $errors['discount'] ?? null;
                 ]) ?>
                 <div class="mt-4 text-right"><button type="submit" class="<?= $btn ?>">Partnerschaft bestätigen</button></div>
             </form>
-            <form method="post" action="/einstellungen/partner/<?= e($partner->id) ?>/ablehnen" class="mt-2 text-right" data-confirm="Partnerschaft mit „<?= e($partner->name) ?>“ ablehnen?" data-confirm-style="danger">
+            <form method="post" action="/einstellungen/partner/<?= e($partner->id) ?>/ablehnen" class="mt-2 text-right" data-confirm-key="settings.partner.reject" data-confirm="Partnerschaft mit „<?= e($partner->name) ?>“ ablehnen?" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                 <button type="submit" class="text-sm text-red-600 hover:underline dark:text-red-400">Ablehnen</button>
             </form>
@@ -166,13 +166,13 @@ $generalError = $errors['partner'] ?? $errors['discount'] ?? null;
         </form>
         <div class="flex flex-wrap gap-2">
             <?php if (in_array($partner->status, [PartnerStatus::Active, PartnerStatus::AwaitingPartner], true)): ?>
-                <form method="post" action="/einstellungen/partner/<?= e($partner->id) ?>/beenden" data-confirm="Partnerschaft mit „<?= e($partner->name) ?>“ beenden? Beide Seiten verlieren den Zugriff auf Materialpool und Techniker." data-confirm-style="danger">
+                <form method="post" action="/einstellungen/partner/<?= e($partner->id) ?>/beenden" data-confirm-key="settings.partner.end" data-confirm="Partnerschaft mit „<?= e($partner->name) ?>“ beenden? Beide Seiten verlieren den Zugriff auf Materialpool und Techniker." data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                     <button type="submit" class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">Partnerschaft beenden</button>
                 </form>
             <?php endif; ?>
             <?php if (!$partner->isActive()): ?>
-                <form method="post" action="/einstellungen/partner/<?= e($partner->id) ?>/loeschen" data-confirm="„<?= e($partner->name) ?>“ samt allen Anfragen löschen? Bereits angelegte Veranstaltungen bleiben erhalten." data-confirm-style="danger">
+                <form method="post" action="/einstellungen/partner/<?= e($partner->id) ?>/loeschen" data-confirm-key="settings.partner.delete" data-confirm="„<?= e($partner->name) ?>“ samt allen Anfragen löschen? Bereits angelegte Veranstaltungen bleiben erhalten." data-confirm-style="danger">
                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                     <button type="submit" class="text-sm text-red-600 hover:underline dark:text-red-400">Löschen</button>
                 </form>

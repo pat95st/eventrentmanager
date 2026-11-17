@@ -106,7 +106,7 @@ use function App\Infrastructure\Http\t;
             <div class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
                 <img src="/einstellungen/firma/logo" alt="<?= e(t('settings.company.logo.alt')) ?>" class="max-h-full max-w-full object-contain">
             </div>
-            <form method="post" action="/einstellungen/firma/logo/loeschen" data-confirm="<?= e(t('settings.company.logo.confirm_remove')) ?>" data-confirm-style="danger">
+            <form method="post" action="/einstellungen/firma/logo/loeschen" data-confirm-key="settings.company.logo.delete" data-confirm="<?= e(t('settings.company.logo.confirm_remove')) ?>" data-confirm-style="danger">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     <?= e(t('settings.company.logo.remove')) ?>
@@ -137,7 +137,7 @@ use function App\Infrastructure\Http\t;
             <div class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-800 p-2 dark:border-slate-700">
                 <img src="/einstellungen/firma/logo-dunkel" alt="<?= e(t('settings.company.dark_logo.alt')) ?>" class="max-h-full max-w-full object-contain">
             </div>
-            <form method="post" action="/einstellungen/firma/logo-dunkel/loeschen" data-confirm="<?= e(t('settings.company.dark_logo.confirm_remove')) ?>" data-confirm-style="danger">
+            <form method="post" action="/einstellungen/firma/logo-dunkel/loeschen" data-confirm-key="settings.company.logo_dark.delete" data-confirm="<?= e(t('settings.company.dark_logo.confirm_remove')) ?>" data-confirm-style="danger">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     <?= e(t('settings.company.dark_logo.remove')) ?>
@@ -169,7 +169,7 @@ use function App\Infrastructure\Http\t;
             <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700">
                 <img src="<?= e(\App\Infrastructure\Http\CompanyBranding::faviconUrl() ?? '/firmen-favicon') ?>" alt="<?= e(t('settings.company.favicon.title')) ?>" class="max-h-full max-w-full object-contain">
             </div>
-            <form method="post" action="/einstellungen/firma/favicon/loeschen" data-confirm="<?= e(t('settings.company.favicon.confirm_remove')) ?>" data-confirm-style="danger">
+            <form method="post" action="/einstellungen/firma/favicon/loeschen" data-confirm-key="settings.company.favicon.delete" data-confirm="<?= e(t('settings.company.favicon.confirm_remove')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                     <?= e(t('settings.company.favicon.remove')) ?>
@@ -237,7 +237,7 @@ echo BackgroundLayer::styles();
                     </div>
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <span class="text-xs text-slate-500 dark:text-slate-400"><?= $isVideo ? 'Video' : 'Bild' ?> hinterlegt</span>
-                        <form method="post" action="/einstellungen/firma/hintergrund/<?= e($slot->value) ?>/loeschen" data-confirm="<?= e($slot->label()) ?> entfernen?" data-confirm-style="danger">
+                        <form method="post" action="/einstellungen/firma/hintergrund/<?= e($slot->value) ?>/loeschen" data-confirm-key="settings.company.background.delete" data-confirm="<?= e($slot->label()) ?> entfernen?" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">Entfernen</button>
                         </form>

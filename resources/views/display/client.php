@@ -93,6 +93,7 @@
 </head>
 <body>
 <div id="app" style="display:contents"></div>
+<?php require __DIR__ . '/../partials/confirm_shift_live.php'; ?>
 <script>
 (function () {
     'use strict';
@@ -172,7 +173,7 @@
         render(key !== lastKey); lastKey = key;
     }
     function act(path, body, confirmText) {
-        if (confirmText && !confirm(confirmText)) { return; }
+        if (confirmText && !window.skipConfirm() && !confirm(confirmText)) { return; }
         request('POST', path, body || {}).then(function (j) { accept(j); }).catch(function (e) { if (e.message !== 'auth') { alert(e.message); } });
     }
 

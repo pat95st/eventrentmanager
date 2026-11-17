@@ -36,7 +36,7 @@ $btn = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-
                         <input type="number" name="sort_order" value="<?= e((string) $trade->sortOrder) ?>" aria-label="Reihenfolge" title="Reihenfolge" class="<?= $input ?>" style="width:5rem">
                         <button type="submit" class="<?= $btn ?>">Speichern</button>
                     </form>
-                    <form method="post" action="/einstellungen/techniker/gewerke/<?= e($trade->id) ?>/loeschen" data-confirm="Gewerk „<?= e($trade->name) ?>“ löschen? Es wird auch bei allen Veranstaltungen und Technikern entfernt." data-confirm-style="danger">
+                    <form method="post" action="/einstellungen/techniker/gewerke/<?= e($trade->id) ?>/loeschen" data-confirm-key="settings.trades.delete" data-confirm="Gewerk „<?= e($trade->name) ?>“ löschen? Es wird auch bei allen Veranstaltungen und Technikern entfernt." data-confirm-style="danger">
                         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                     </form>

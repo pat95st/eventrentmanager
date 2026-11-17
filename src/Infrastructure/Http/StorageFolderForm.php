@@ -42,6 +42,8 @@ final class StorageFolderForm
     private static ?StorageFolderShareNotifierInterface $notifier = null;
     /** @var array<string, StorageFolder>|null */
     private static ?array $customerFolders = null;
+    /** Folder of the record being deleted that the user did not ask to delete, see folderToDelete(). */
+    private static ?StorageFolder $keptFolder = null;
 
     public static function configure(
         CommandBus $commands,
@@ -416,16 +418,25 @@ final class StorageFolderForm
     /** VOR dem Löschen des Datensatzes aufrufen: der Ordner, falls der Benutzer dessen Löschung bestätigt hat. */
     public static function folderToDelete(StorageFolderOwnerType $ownerType, string $ownerId, Request $request): ?StorageFolder
     {
+        $folder = self::folderInfo($ownerType, $ownerId)['folder'] ?? null;
         if ($request->input('delete_storage_folder') !== '1') {
+            // Declined in the dialog, or the question was skipped with Shift:
+            // the folder stays and deleteFolder() says so.
+            self::$keptFolder = $folder;
+
             return null;
         }
 
-        return self::folderInfo($ownerType, $ownerId)['folder'] ?? null;
+        return $folder;
     }
 
     /** NACH dem erfolgreichen Löschen des Datensatzes aufrufen. */
     public static function deleteFolder(?StorageFolder $folder): void
     {
+        if ($folder === null && self::$keptFolder !== null) {
+            Flash::appendSuccess('Der Ordner „' . self::$keptFolder->path . '“ in der Dateiablage wurde beibehalten.');
+            self::$keptFolder = null;
+        }
         if ($folder === null || self::$commands === null) {
             return;
         }

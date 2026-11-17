@@ -506,7 +506,9 @@ $overageSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOver
 // Sicherheits-Einstellungen (Migration 127): Session-Timeout, MUSS vor dem
 // ersten session_start() gesetzt werden (siehe SessionTimeout).
 $securitySettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbSecuritySettingsRepository($pdo);
-\App\Infrastructure\Http\Auth\SessionTimeout::configure($securitySettingsRepository->get()->sessionTimeoutMinutes, __DIR__ . '/../storage/sessions');
+$securitySettings = $securitySettingsRepository->get();
+\App\Infrastructure\Http\Auth\SessionTimeout::configure($securitySettings->sessionTimeoutMinutes, __DIR__ . '/../storage/sessions');
+\App\Infrastructure\Http\ConfirmPolicy::configure($securitySettings);
 $vehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbVehicleRepository($pdo);
 $rentalVehicleLoadRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalVehicleLoadRepository($pdo);
 $rentalVehicleTowRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalVehicleTowRepository($pdo);
@@ -1221,6 +1223,7 @@ $commandBus->register(\App\Application\Settings\Command\UpdatePriceRounding::cla
 $commandBus->register(\App\Application\Settings\Command\UpdateOverageSettings::class, new \App\Application\Settings\Command\UpdateOverageSettingsHandler($overageSettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetOverageSettings::class, new \App\Application\Settings\Query\GetOverageSettingsHandler($overageSettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateSecuritySettings::class, new \App\Application\Settings\Command\UpdateSecuritySettingsHandler($securitySettingsRepository));
+$commandBus->register(\App\Application\Settings\Command\UpdateConfirmSettings::class, new \App\Application\Settings\Command\UpdateConfirmSettingsHandler($securitySettingsRepository));
 $queryBus->register(\App\Application\Settings\Query\GetSecuritySettings::class, new \App\Application\Settings\Query\GetSecuritySettingsHandler($securitySettingsRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateInvoicePdfSettings::class, new UpdateInvoicePdfSettingsHandler($invoicePdfSettingsRepository, $htmlSanitizer));
 $commandBus->register(\App\Application\Settings\Command\UpdatePdfDesignSettings::class, new \App\Application\Settings\Command\UpdatePdfDesignSettingsHandler($pdfDesignSettingsRepository));
@@ -1346,6 +1349,7 @@ $commandBus->register(\App\Application\ReceiptInbox\Command\ConvertReceiptInboxA
     $documentStoragePusher,
 ));
 $commandBus->register(\App\Application\User\Command\UpdateNotifyOnNewReceiptEmail::class, new UpdateNotifyOnNewReceiptEmailHandler($userRepository));
+$commandBus->register(\App\Application\User\Command\UpdateConfirmBypass::class, new \App\Application\User\Command\UpdateConfirmBypassHandler($userRepository));
 
 // --- Ziellaufwerke (externe Speicherziele für automatischen Dokument-Push) ---
 $commandBus->register(\App\Application\DocumentStorage\Command\CreateStorageTarget::class, new \App\Application\DocumentStorage\Command\CreateStorageTargetHandler($documentStorageTargetRepository));
@@ -2870,6 +2874,7 @@ $router->post('/einstellungen/ueberziehung', $auth->guard(Permission::Administra
 // Sicherheit (Migration 127): nur Administratoren
 $router->get('/einstellungen/sicherheit', $auth->guard(Permission::Administration, [$securitySettingsController, 'edit']));
 $router->post('/einstellungen/sicherheit', $auth->guard(Permission::Administration, [$securitySettingsController, 'update']));
+$router->post('/einstellungen/sicherheit/rueckfragen', $auth->guard(Permission::Administration, [$securitySettingsController, 'updateConfirmations']));
 $router->get('/einstellungen/anmeldung', $auth->guard(Permission::Administration, [$externalLoginSettingsController, 'edit']));
 $router->post('/einstellungen/anmeldung', $auth->guard(Permission::Administration, [$externalLoginSettingsController, 'update']));
 $router->post('/einstellungen/anmeldung/ldap-test', $auth->guard(Permission::Administration, [$externalLoginSettingsController, 'testLdap']));

@@ -15,7 +15,7 @@ $template = $detail->template;
     </div>
     <div class="flex gap-2">
         <a href="/minutenprogramm-vorlagen/<?= e($template->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-        <form method="post" action="/minutenprogramm-vorlagen/<?= e($template->id) ?>/loeschen" onsubmit="return confirm('<?= e(t('minute_program_templates.delete_confirm')) ?>')">
+        <form method="post" action="/minutenprogramm-vorlagen/<?= e($template->id) ?>/loeschen" data-confirm-key="minute_program_templates.delete" data-confirm="<?= e(t('minute_program_templates.delete_confirm')) ?>" data-confirm-style="danger">
             <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400"><?= e(t('common.delete')) ?></button>
         </form>
@@ -53,7 +53,7 @@ $template = $detail->template;
                             <input type="hidden" name="direction" value="down">
                             <button type="submit" class="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300">↓</button>
                         </form>
-                        <form method="post" action="/minutenprogramm-vorlagen-punkte/<?= e($item->id) ?>/loeschen" onsubmit="return confirm('<?= e(t('minute_programs.show.delete_item_confirm')) ?>')">
+                        <form method="post" action="/minutenprogramm-vorlagen-punkte/<?= e($item->id) ?>/loeschen" data-confirm-key="minute_program_templates.item.delete" data-confirm="<?= e(t('minute_programs.show.delete_item_confirm')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                             <input type="hidden" name="template_id" value="<?= e($template->id) ?>">
                             <button type="submit" class="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-400">×</button>

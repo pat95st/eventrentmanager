@@ -66,7 +66,7 @@ $rows = $detail->orderedRows();
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('offers.show.mark_sent')) ?></button>
             </form>
             <a href="/angebote/<?= e($offer->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.edit')) ?></a>
-            <form method="post" action="/angebote/<?= e($offer->id) ?>/loeschen" data-confirm="<?= e(t('offers.show.confirm_delete')) ?>" data-confirm-style="danger">
+            <form method="post" action="/angebote/<?= e($offer->id) ?>/loeschen" data-confirm-key="offers.delete" data-confirm="<?= e(t('offers.show.confirm_delete')) ?>" data-confirm-style="danger">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40"><?= e(t('common.delete')) ?></button>
             </form>
@@ -85,7 +85,7 @@ $rows = $detail->orderedRows();
         <a href="/angebote/<?= e($offer->id) ?>/angebot.pdf" target="_blank" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('offers.show.export_pdf')) ?>
         </a>
-        <form method="post" action="/angebote/<?= e($offer->id) ?>/rechnung-erstellen" data-confirm="<?= e(t('offers.show.confirm_create_invoice')) ?>">
+        <form method="post" action="/angebote/<?= e($offer->id) ?>/rechnung-erstellen" data-confirm-key="offers.create_invoice" data-confirm="<?= e(t('offers.show.confirm_create_invoice')) ?>">
             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('offers.show.create_invoice')) ?></button>
         </form>
@@ -125,7 +125,7 @@ $rows = $detail->orderedRows();
         <p class="text-sm <?= $offer->status === \App\Domain\Offer\OfferStatus::Accepted ? 'text-green-800 dark:text-green-300' : 'text-slate-600 dark:text-slate-400' ?>">
             <?= e(t('offers.show.convert_hint')) ?>
         </p>
-        <form method="post" action="/angebote/<?= e($offer->id) ?>/umwandeln" data-confirm="<?= e(t('offers.show.confirm_convert')) ?>">
+        <form method="post" action="/angebote/<?= e($offer->id) ?>/umwandeln" data-confirm-key="offers.convert" data-confirm="<?= e(t('offers.show.confirm_convert')) ?>">
             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"><?= e(t('offers.show.convert_button')) ?></button>
         </form>

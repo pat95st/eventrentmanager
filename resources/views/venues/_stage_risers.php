@@ -125,7 +125,7 @@ $riserSummary = static function (\App\Domain\Venue\Riser $riser) use ($formatMet
                                 </form>
                             </details>
                         <?php endif; ?>
-                        <form method="post" action="<?= e($riserBaseUrl . '/' . $riser->id . '/loeschen') ?>" data-confirm="<?= e(t('venues.risers.confirm_delete')) ?>" data-confirm-style="danger">
+                        <form method="post" action="<?= e($riserBaseUrl . '/' . $riser->id . '/loeschen') ?>" data-confirm-key="venues.stage_riser.delete" data-confirm="<?= e(t('venues.risers.confirm_delete')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
                             <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('venues.risers.delete')) ?></button>
                         </form>

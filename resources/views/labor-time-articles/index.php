@@ -29,7 +29,7 @@ use function App\Infrastructure\Http\e;
                         </span>
                         <span class="flex items-center gap-3">
                             <a href="/arbeitszeit-artikel/<?= e($laborTimeArticle->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
-                            <form method="post" action="/arbeitszeit-artikel/<?= e($laborTimeArticle->id) ?>/loeschen" data-confirm="Diesen Arbeitszeit-Artikel wirklich löschen?" data-confirm-style="danger">
+                            <form method="post" action="/arbeitszeit-artikel/<?= e($laborTimeArticle->id) ?>/loeschen" data-confirm-key="labor_time_articles.delete" data-confirm="Diesen Arbeitszeit-Artikel wirklich löschen?" data-confirm-style="danger">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                             </form>

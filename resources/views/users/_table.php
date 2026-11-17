@@ -62,18 +62,18 @@ use function App\Infrastructure\Http\e;
                                     <a href="/benutzer/<?= e($user->id) ?>/passwort" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Passwort</a>
                                     <a href="/benutzer/<?= e($user->id) ?>/sitzungen" class="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Sitzungen</a>
                                     <?php if ($user->isActive && !$user->isAdministrator() && $user->id !== \App\Infrastructure\Http\Auth\CurrentUser::get()?->id): ?>
-                                        <form method="post" action="/benutzer/<?= e($user->id) ?>/impersonieren" data-confirm="Als &quot;<?= e($user->displayName()) ?>&quot; anmelden?">
+                                        <form method="post" action="/benutzer/<?= e($user->id) ?>/impersonieren" data-confirm-key="users.impersonate" data-confirm="Als &quot;<?= e($user->displayName()) ?>&quot; anmelden?">
                                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                             <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">Als Benutzer anmelden</button>
                                         </form>
                                     <?php endif; ?>
                                     <?php if ($user->twoFactorMethod->value !== 'none'): ?>
-                                        <form method="post" action="/benutzer/<?= e($user->id) ?>/2fa-zuruecksetzen" data-confirm="Zweiten Faktor für diesen Benutzer zurücksetzen?">
+                                        <form method="post" action="/benutzer/<?= e($user->id) ?>/2fa-zuruecksetzen" data-confirm-key="users.two_factor.reset" data-confirm="Zweiten Faktor für diesen Benutzer zurücksetzen?">
                                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                             <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800">2FA zurücksetzen</button>
                                         </form>
                                     <?php endif; ?>
-                                    <form method="post" action="/benutzer/<?= e($user->id) ?>/loeschen" data-confirm="Diesen Benutzer wirklich löschen?" data-confirm-style="danger">
+                                    <form method="post" action="/benutzer/<?= e($user->id) ?>/loeschen" data-confirm-key="users.delete" data-confirm="Diesen Benutzer wirklich löschen?" data-confirm-style="danger">
                                         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">Löschen</button>
                                     </form>

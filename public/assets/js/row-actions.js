@@ -249,8 +249,13 @@
           close(false);
           var target = action.tagName === 'FORM' ? action.querySelector('button:not([type="button"]), input[type="submit"]') : action;
           // Umschalttaste wie beim Original: Rückfrage überspringen.
-          target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, shiftKey: e.shiftKey }));
+          // detail 1: the layout treats detail 0 as a keyboard click on the focused button.
+          target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1, shiftKey: e.shiftKey }));
         });
+      }
+      // Lets the layout outline the entry while Shift is held (confirmation skippable).
+      if (action.tagName === 'FORM' && action.hasAttribute('data-confirm-key')) {
+        item.setAttribute('data-confirm-key', action.getAttribute('data-confirm-key'));
       }
       item.className = 'ra-item' + (danger ? ' ra-danger' : '');
       item.setAttribute('role', 'menuitem');

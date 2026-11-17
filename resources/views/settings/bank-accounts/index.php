@@ -46,7 +46,7 @@ $inputClass = fn (string $errorKey) => 'mt-1 w-full rounded-md border ' . (isset
                                 <a href="/konten/<?= e($account->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Konto öffnen</a>
                             <?php endif; ?>
                             <a href="/einstellungen/bankverbindungen/<?= e($account->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                            <form method="post" action="/einstellungen/bankverbindungen/<?= e($account->id) ?>/loeschen" data-confirm="<?= e(t('settings.bank_accounts.confirm_delete')) ?>" data-confirm-style="danger">
+                            <form method="post" action="/einstellungen/bankverbindungen/<?= e($account->id) ?>/loeschen" data-confirm-key="settings.bank_accounts.delete" data-confirm="<?= e(t('settings.bank_accounts.confirm_delete')) ?>" data-confirm-style="danger">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
                             </form>

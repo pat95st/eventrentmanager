@@ -107,7 +107,7 @@ use function App\Infrastructure\Http\e;
                                         <button type="submit" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Aktivieren</button>
                                     </form>
                                 <?php endif; ?>
-                                <form method="post" action="/einstellungen/api/tokens/<?= e($token->id) ?>/loeschen" data-confirm="Token wirklich löschen? Bestehende Integrationen können sich danach nicht mehr anmelden." data-confirm-style="danger">
+                                <form method="post" action="/einstellungen/api/tokens/<?= e($token->id) ?>/loeschen" data-confirm-key="settings.api.token.delete" data-confirm="Token wirklich löschen? Bestehende Integrationen können sich danach nicht mehr anmelden." data-confirm-style="danger">
                                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <button type="submit" class="font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                                 </form>

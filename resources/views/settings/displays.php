@@ -171,11 +171,11 @@ $groupHints = [
                                 · zeigt gerade: <?= $shows !== null ? e(($shows['event'] !== null ? $shows['event'] . ' › ' : '') . $shows['program'] . ($shows['room'] !== null && $shows['room'] !== '' ? ' (' . $shows['room'] . ')' : '')) : '<em>kein Minutenprogramm</em>' ?>
                             </p>
                             <div class="mt-2 flex flex-wrap gap-3">
-                                <form method="post" action="/einstellungen/displays/<?= e($client->id) ?>/token" data-confirm="Neuen Token für „<?= e($client->name) ?>“ erzeugen? Das Display verliert sofort die Verbindung, bis der neue Token eingetragen ist.">
+                                <form method="post" action="/einstellungen/displays/<?= e($client->id) ?>/token" data-confirm-key="settings.displays.token" data-confirm="Neuen Token für „<?= e($client->name) ?>“ erzeugen? Das Display verliert sofort die Verbindung, bis der neue Token eingetragen ist.">
                                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                     <button type="submit" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">Neuen Token erzeugen</button>
                                 </form>
-                                <form method="post" action="/einstellungen/displays/<?= e($client->id) ?>/loeschen" data-confirm="Display „<?= e($client->name) ?>“ löschen?" data-confirm-style="danger">
+                                <form method="post" action="/einstellungen/displays/<?= e($client->id) ?>/loeschen" data-confirm-key="settings.displays.delete" data-confirm="Display „<?= e($client->name) ?>“ löschen?" data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
                                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                                 </form>

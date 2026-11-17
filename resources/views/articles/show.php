@@ -189,7 +189,7 @@ $availabilityStatusMeta = [
             Duplizieren
         </a>
         <?php if ($article->isActive): ?>
-            <form method="post" action="/artikel/<?= e($article->id) ?>/deaktivieren" data-confirm="<?= e(t('articles.show.confirm_deactivate')) ?>">
+            <form method="post" action="/artikel/<?= e($article->id) ?>/deaktivieren" data-confirm-key="articles.deactivate" data-confirm="<?= e(t('articles.show.confirm_deactivate')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
                     <?= e(t('articles.show.deactivate')) ?>
@@ -203,7 +203,7 @@ $availabilityStatusMeta = [
                 </button>
             </form>
         <?php endif; ?>
-        <form method="post" action="/artikel/<?= e($article->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete')) ?>" data-confirm-style="danger">
+        <form method="post" action="/artikel/<?= e($article->id) ?>/loeschen" data-confirm-key="articles.delete" data-confirm="<?= e(t('articles.show.confirm_delete')) ?>" data-confirm-style="danger">
           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
             <button type="submit" class="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/40">
                 <?= e(t('common.delete')) ?>
@@ -456,7 +456,7 @@ $availabilityStatusMeta = [
                         <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-images" data-gallery-src="/artikel-bilder/<?= e($image->filePath) ?>" data-gallery-caption="<?= e($article->name) ?>" aria-label="<?= e(t('gallery.open')) ?>">
                             <img src="/artikel-bilder/<?= e($image->filePath) ?>" alt="" class="h-full w-full object-cover">
                         </button>
-                        <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
+                        <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm-key="articles.image.delete" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                             <button type="submit" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
@@ -512,7 +512,7 @@ $availabilityStatusMeta = [
                                     data-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>"
                                     data-format="<?= e($adImage->format->label()) ?>"
                                     class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_refine')) ?></button>
-                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
+                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm-key="articles.ad_image.delete" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
                                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                                 <button type="submit" class="text-[11px] font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.ad_images_delete')) ?></button>
@@ -814,7 +814,7 @@ $availabilityStatusMeta = [
                             <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($noticeDocument->name) ?></p>
                             <div class="flex items-center gap-3">
                                 <a href="/hinweisdokumente/<?= e($noticeDocument->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
-                                <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente/<?= e($noticeDocument->id) ?>/entfernen" data-confirm="<?= e(t('articles.show.confirm_remove_notice_document')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente/<?= e($noticeDocument->id) ?>/entfernen" data-confirm-key="articles.notice_document.remove" data-confirm="<?= e(t('articles.show.confirm_remove_notice_document')) ?>" data-confirm-style="danger">
                                   <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.notice_document_remove')) ?></button>
                                 </form>
@@ -922,7 +922,7 @@ $availabilityStatusMeta = [
                                         <span class="ml-2 text-xs text-slate-400 dark:text-slate-500"><?= e($firmwareVersion->releasedAt->format('d.m.Y')) ?></span>
                                     <?php endif; ?>
                                 </p>
-                                <form method="post" action="/firmware-versionen/<?= e($firmwareVersion->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_firmware_version')) ?>" data-confirm-style="danger">
+                                <form method="post" action="/firmware-versionen/<?= e($firmwareVersion->id) ?>/loeschen" data-confirm-key="articles.firmware.delete" data-confirm="<?= e(t('articles.show.confirm_delete_firmware_version')) ?>" data-confirm-style="danger">
                                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                     <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                                     <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
@@ -1086,7 +1086,7 @@ $availabilityStatusMeta = [
                                     </a>
                                     <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
                                     <?php if ($entry->sale === null): ?>
-                                        <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_inventory_number')) ?>" data-confirm-style="danger">
+                                        <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm-key="articles.inventory_number.delete" data-confirm="<?= e(t('articles.show.confirm_delete_inventory_number')) ?>" data-confirm-style="danger">
                                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                             <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
@@ -1284,7 +1284,7 @@ $availabilityStatusMeta = [
                                 </p>
                                 <div class="flex items-center gap-3">
                                     <a href="/artikel/<?= e($article->id) ?>?edit_accessory=<?= e($accessory->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                                    <form method="post" action="/zubehoer/<?= e($accessory->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_accessory')) ?>" data-confirm-style="danger">
+                                    <form method="post" action="/zubehoer/<?= e($accessory->id) ?>/loeschen" data-confirm-key="articles.accessory.delete" data-confirm="<?= e(t('articles.show.confirm_delete_accessory')) ?>" data-confirm-style="danger">
                                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
@@ -1341,7 +1341,7 @@ $availabilityStatusMeta = [
                                 <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($preIssueCheck->description) ?></p>
                                 <div class="flex items-center gap-3">
                                     <a href="/artikel/<?= e($article->id) ?>?edit_pre_issue_check=<?= e($preIssueCheck->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                                    <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>/loeschen" data-confirm="<?= e(t('articles.show.confirm_delete_pre_issue_check')) ?>" data-confirm-style="danger">
+                                    <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>/loeschen" data-confirm-key="articles.pre_issue_check.delete" data-confirm="<?= e(t('articles.show.confirm_delete_pre_issue_check')) ?>" data-confirm-style="danger">
                                       <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                         <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
                                         <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>

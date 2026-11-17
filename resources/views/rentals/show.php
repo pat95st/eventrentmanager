@@ -118,7 +118,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                     </form>
                 </details>
                 <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
-                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rechnung-erstellen" data-confirm="<?= e(t('rentals.show.confirm_create_invoice')) ?>">
+                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/rechnung-erstellen" data-confirm-key="rentals.create_invoice" data-confirm="<?= e(t('rentals.show.confirm_create_invoice')) ?>">
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="<?= $menuItemClass ?>"><?= e(t('rentals.show.create_invoice')) ?></button>
                 </form>
@@ -135,7 +135,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                 <span class="sr-only"><?= e(t('rentals.show.more_actions')) ?></span>
             </summary>
             <div data-dropdown-menu role="menu" class="menu-fit absolute left-0 top-full z-20 mt-1 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:right-0">
-                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger"<?= \App\Infrastructure\Http\StorageFolderForm::deleteQuestionAttributes(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $rental->id) ?>>
+                <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm-key="rentals.delete" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger"<?= \App\Infrastructure\Http\StorageFolderForm::deleteQuestionAttributes(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $rental->id) ?>>
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
                         <?= e(t('rentals.show.delete_event')) ?>
@@ -172,7 +172,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                                 <p class="text-xs text-slate-500 dark:text-slate-400"><?= e($bookedBundle['description']) ?></p>
                             <?php endif; ?>
                         </div>
-                        <form method="post" action="/veranstaltungsbundles/<?= e($bookedBundle['id']) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_remove_bundle')) ?>" data-confirm-style="danger">
+                        <form method="post" action="/veranstaltungsbundles/<?= e($bookedBundle['id']) ?>/loeschen" data-confirm-key="rentals.bundle.delete" data-confirm="<?= e(t('rentals.show.confirm_remove_bundle')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.show.remove')) ?></button>
@@ -196,7 +196,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                                 <p class="text-xs text-slate-500 dark:text-slate-400"><?= e($bookedSet['description']) ?></p>
                             <?php endif; ?>
                         </div>
-                        <form method="post" action="/veranstaltungssets/<?= e($bookedSet['id']) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_remove_set')) ?>" data-confirm-style="danger">
+                        <form method="post" action="/veranstaltungssets/<?= e($bookedSet['id']) ?>/loeschen" data-confirm-key="rentals.set.delete" data-confirm="<?= e(t('rentals.show.confirm_remove_set')) ?>" data-confirm-style="danger">
                             <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.show.remove')) ?></button>
@@ -230,7 +230,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                                    class="w-16 rounded-md border border-slate-300 px-2 py-1 text-xs dark:border-slate-700">
                             <button type="submit" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('rentals.show.change')) ?></button>
                         </form>
-                        <form method="post" action="/veranstaltungsposten/<?= e($entry->item->id) ?>/loeschen" data-confirm="<?= e(t('rentals.show.confirm_remove_item')) ?>" data-confirm-style="danger">
+                        <form method="post" action="/veranstaltungsposten/<?= e($entry->item->id) ?>/loeschen" data-confirm-key="rentals.item.delete" data-confirm="<?= e(t('rentals.show.confirm_remove_item')) ?>" data-confirm-style="danger">
                           <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                             <input type="hidden" name="rental_id" value="<?= e($rental->id) ?>">
                             <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('rentals.show.remove')) ?></button>
@@ -412,7 +412,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"><?= e(t('rentals.show.customer_checklist.send_now')) ?></button>
             </form>
-            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/kundencheckliste/link/erneuern" data-confirm="<?= e(t('rentals.show.customer_checklist.confirm_regenerate')) ?>" data-confirm-style="danger">
+            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/kundencheckliste/link/erneuern" data-confirm-key="rentals.customer_checklist.renew_link" data-confirm="<?= e(t('rentals.show.customer_checklist.confirm_regenerate')) ?>" data-confirm-style="danger">
               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('rentals.show.customer_checklist.regenerate')) ?></button>
             </form>
@@ -499,7 +499,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                 · Rabatt <?= e($voucherDiscountLabel) ?>
                 · eingelöst am <?= e($voucherRedemption->redeemedAt->format('d.m.Y')) ?>
             </p>
-            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/gutschein/entfernen" data-confirm="Die Gutschein-Zuordnung wirklich aufheben? Der Gutschein selbst bleibt bestehen und kann danach erneut eingelöst werden.">
+            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/gutschein/entfernen" data-confirm-key="rentals.voucher.remove" data-confirm="Die Gutschein-Zuordnung wirklich aufheben? Der Gutschein selbst bleibt bestehen und kann danach erneut eingelöst werden.">
                 <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Einlösung aufheben</button>
             </form>

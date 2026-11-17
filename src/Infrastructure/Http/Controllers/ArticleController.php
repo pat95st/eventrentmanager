@@ -1209,6 +1209,7 @@ final class ArticleController
         $includeArticleName = $request->input('include_article_name') === '1';
         $includeProperties = $request->input('include_properties') === '1';
         $includePrice = $request->input('include_price') === '1';
+        $priceAsFrom = $request->input('price_as_from') === '1';
         $useGalleryImages = $request->input('use_gallery_images') === '1';
         // The photo selection only applies while gallery images are used.
         if (!$useGalleryImages) {
@@ -1226,6 +1227,7 @@ final class ArticleController
                 $includeProperties,
                 $includePrice,
                 $useGalleryImages,
+                $priceAsFrom,
             ));
             $generated = is_array($ids) ? count($ids) : 1;
             Flash::success($generated === 1

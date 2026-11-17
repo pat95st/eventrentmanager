@@ -55,11 +55,19 @@ final class ArticleAdImagePromptBuilderTest extends Unit
 
         $withPrice = $builder->build($this->article(), $this->manufacturer(), null, false, false, false, null, true);
         $this->assertStringContainsString('Text-Overlay', $withPrice);
-        $this->assertStringContainsString('"Miete: 1.250,00 € pro Tag"', $withPrice);
+        $this->assertStringContainsString('"Miete: ab 1.250,00 € pro Tag"', $withPrice);
         $this->assertStringNotContainsString('Eigenschaften', $withPrice);
 
         $withoutPrice = $builder->build($this->article(), $this->manufacturer(), null, false, false, true, null, false);
         $this->assertStringNotContainsString('Miete', $withoutPrice);
+    }
+
+    public function testPriceCanBeShownWithoutFromPrefix(): void
+    {
+        $prompt = (new ArticleAdImagePromptBuilder())->build($this->article(), $this->manufacturer(), null, false, false, false, null, true, 1, false);
+
+        $this->assertStringContainsString('"Miete: 1.250,00 € pro Tag"', $prompt);
+        $this->assertStringNotContainsString('ab 1.250', $prompt);
     }
 
     public function testPriceIsSkippedWhenArticleHasNoPrice(): void

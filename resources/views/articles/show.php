@@ -591,6 +591,10 @@ $availabilityStatusMeta = [
                         <input type="checkbox" name="include_price" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? '' : ' disabled data-ad-image-unavailable' ?>>
                         <?= e(t('articles.show.ad_images_include_price')) ?>
                     </label>
+                    <label class="ml-6 flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t('articles.show.ad_images_price_as_from_hint')) ?>">
+                        <input type="checkbox" name="price_as_from" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
+                        <?= e(t('articles.show.ad_images_price_as_from')) ?>
+                    </label>
                     <?php $adImageHasGallery = $article->images !== []; ?>
                     <label class="flex items-center gap-2 text-sm <?= $adImageHasGallery ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasGallery ? 'articles.show.ad_images_use_gallery_hint' : 'articles.show.ad_images_use_gallery_unavailable')) ?>">
                         <input type="checkbox" name="use_gallery_images" value="1" data-ad-image-use-gallery class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasGallery ? ' checked' : ' disabled data-ad-image-unavailable' ?>>

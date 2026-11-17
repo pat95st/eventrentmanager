@@ -97,6 +97,7 @@ final class GenerateArticleAdImageHandler implements CommandHandlerInterface
             $additionalInstructions,
             $command->includePrice,
             count($referenceImages),
+            $command->priceAsFrom,
         );
 
         try {

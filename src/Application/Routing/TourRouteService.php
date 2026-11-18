@@ -68,12 +68,13 @@ final class TourRouteService
         }
 
         $result = null;
+        $error = null;
         if (count($points) >= 2) {
             if (!$settings->hasApiKey() || $this->client === null) {
                 $result = RouteResult::straightLine($points);
                 $hints[] = 'Kein API-Schlüssel für die Routenplanung hinterlegt – Verbindungen als Luftlinie, ohne Fahrzeiten.';
             } else {
-                $result = $this->calculate($rental->id, (string) $settings->apiKey, $points, $profile, $restrictions, $hints);
+                $result = $this->calculate($rental->id, (string) $settings->apiKey, $points, $profile, $restrictions, $error);
             }
         } else {
             $hints[] = 'Für eine Route werden mindestens zwei Punkte mit Koordinaten gebraucht.';
@@ -91,6 +92,7 @@ final class TourRouteService
             hasApiKey: $settings->hasApiKey(),
             bufferMinutes: $settings->bufferMinutes,
             entries: $entries,
+            error: $error,
         );
     }
 
@@ -217,9 +219,8 @@ final class TourRouteService
 
     /**
      * @param RoutePoint[] $points
-     * @param string[] $hints
      */
-    private function calculate(string $rentalId, string $apiKey, array $points, RouteProfile $profile, VehicleRestrictions $restrictions, array &$hints): RouteResult
+    private function calculate(string $rentalId, string $apiKey, array $points, RouteProfile $profile, VehicleRestrictions $restrictions, ?string &$error): RouteResult
     {
         $hash = hash('sha256', json_encode([
             array_map(static fn (RoutePoint $p) => [round($p->latitude, 6), round($p->longitude, 6)], $points),
@@ -233,7 +234,7 @@ final class TourRouteService
         try {
             $result = $this->client?->route($apiKey, $points, $profile, $restrictions) ?? RouteResult::straightLine($points);
         } catch (RoutingException $e) {
-            $hints[] = 'Die Route konnte nicht berechnet werden (' . $e->getMessage() . ') – Verbindungen als Luftlinie.';
+            $error = $e->getMessage();
 
             return RouteResult::straightLine($points);
         }

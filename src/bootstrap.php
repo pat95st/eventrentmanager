@@ -1008,7 +1008,7 @@ $queryBus->register(\App\Application\RentalSeries\Query\GetRentalSeriesContext::
 $queryBus->register(\App\Application\Tour\Query\GetTourOverview::class, new \App\Application\Tour\Query\GetTourOverviewHandler($rentalRepository, $tourRepository, $tourSync, $materialConflictFinder, $rentalTechnicianRepository, $userRepository, $articleRepository, $manufacturerRepository, $warehouseRepository));
 $queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler(new \App\Application\Routing\TourRouteService(
     $rentalRepository, $tourRepository, $venueRepository, $warehouseRepository, $plannedVehicleRepository, $vehicleRepository,
-    $routingSettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbRouteCacheRepository($pdo), new \App\Infrastructure\Routing\OpenRouteServiceClient(),
+    $routingSettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbRouteCacheRepository($pdo), $openRouteServiceClient = new \App\Infrastructure\Routing\OpenRouteServiceClient(),
     $tourStopLocator, $geocoder,
 )));
 $commandBus->register(\App\Application\Sale\Command\SellInventoryNumber::class, new \App\Application\Sale\Command\SellInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $customerRepository, $invoiceRepository, $saleRepository));
@@ -2455,7 +2455,8 @@ $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahm
 $router->post('/veranstaltungen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'destroy']));
 $router->post('/veranstaltungen/{id}/logistik', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateLogistics']));
 // Route planning (migration 178)
-$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository, $rentalRepository);
+$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository, $rentalRepository, $openRouteServiceClient);
+$router->post('/einstellungen/routenplanung/test', $auth->guard(Permission::Administration, [$tourRouteController, 'testSettings']));
 $router->get('/veranstaltungen/{id}/tour/route.json', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'data']));
 $router->get('/veranstaltungen/{id}/tour/route', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'show']));
 $router->post('/veranstaltungen/{id}/tour/route/profil', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setProfile']));

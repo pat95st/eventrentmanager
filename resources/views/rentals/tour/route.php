@@ -143,7 +143,10 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
             + (data.googleLinks.length > 1 ? ' (Teil ' + (i + 1) + ': ' + esc(l.from) + ' → ' + esc(l.to) + ')' : '') + '</a>').join('');
 
         // Warnings and hints
-        $('[data-route-warnings]').innerHTML =
+        const errorBox = data.error
+            ? '<div class="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300"><strong>Straßenroute nicht verfügbar – Anzeige als Luftlinie.</strong><br>' + esc(data.error) + '<br><a href="/einstellungen/routenplanung" class="underline">Einstellungen › Routenplanung</a> (dort „Verbindung testen“)</div>'
+            : '';
+        $('[data-route-warnings]').innerHTML = errorBox +
             data.timingWarnings.map((w) => '<p class="mb-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">⚠ ' + esc(w.message) + '</p>').join('')
             + (data.hints.length ? '<ul class="mb-4 space-y-1 text-xs text-slate-600 dark:text-slate-400">' + data.hints.map((h) => '<li>ℹ ' + esc(h) + '</li>').join('') + '</ul>' : '');
 

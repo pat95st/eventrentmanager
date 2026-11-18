@@ -48,6 +48,10 @@ trait ValidatesVehicleInput
         ?string $acquisitionYear = null,
         ?string $purchasePrice = null,
         ?string $currentValue = null,
+        ?string $heightCm = null,
+        ?string $widthCm = null,
+        ?string $lengthCm = null,
+        ?string $grossWeightKg = null,
     ): array {
         $errors = [];
 
@@ -119,6 +123,12 @@ trait ValidatesVehicleInput
         $purchasePrice = $this->parseOptionalAmount($purchasePrice, 'purchasePrice', 'Bitte den Anschaffungspreis als Betrag in Euro angeben.', $errors);
         $currentValue = $this->parseOptionalAmount($currentValue, 'currentValue', 'Bitte den Zeitwert als Betrag in Euro angeben.', $errors);
 
+        // Dimensions for truck routing (migration 178)
+        $heightCm = $this->parseOptionalDecimal($heightCm, 'heightCm', 'Bitte die Fahrzeughöhe als Zahl (cm) angeben.', $errors);
+        $widthCm = $this->parseOptionalDecimal($widthCm, 'widthCm', 'Bitte die Fahrzeugbreite als Zahl (cm) angeben.', $errors);
+        $lengthCm = $this->parseOptionalDecimal($lengthCm, 'lengthCm', 'Bitte die Fahrzeuglänge als Zahl (cm) angeben.', $errors);
+        $grossWeightKg = $this->parseOptionalDecimal($grossWeightKg, 'grossWeightKg', 'Bitte das zulässige Gesamtgewicht als Zahl (kg) angeben.', $errors);
+
         return [$errors, [
             'category' => $category,
             'name' => $name,
@@ -135,6 +145,10 @@ trait ValidatesVehicleInput
             'acquisitionYear' => $year,
             'purchasePrice' => $purchasePrice,
             'currentValue' => $currentValue,
+            'heightCm' => $heightCm,
+            'widthCm' => $widthCm,
+            'lengthCm' => $lengthCm,
+            'grossWeightKg' => $grossWeightKg,
         ]];
     }
 

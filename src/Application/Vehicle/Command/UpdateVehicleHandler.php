@@ -44,6 +44,10 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
             $command->acquisitionYear,
             $command->purchasePrice,
             $command->currentValue,
+            $command->heightCm,
+            $command->widthCm,
+            $command->lengthCm,
+            $command->grossWeightKg,
         );
 
         if ($errors !== []) {
@@ -65,6 +69,10 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
         $vehicle->acquisitionYear = $data['acquisitionYear'];
         $vehicle->purchasePrice = $data['purchasePrice'];
         $vehicle->currentValue = $data['currentValue'];
+        $vehicle->heightCm = $data['heightCm'];
+        $vehicle->widthCm = $data['widthCm'];
+        $vehicle->lengthCm = $data['lengthCm'];
+        $vehicle->grossWeightKg = $data['grossWeightKg'];
         $vehicle->updatedAt = new DateTimeImmutable();
 
         $this->vehicles->save($vehicle);

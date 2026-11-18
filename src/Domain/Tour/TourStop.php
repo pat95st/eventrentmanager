@@ -50,6 +50,16 @@ final class TourStop
         return $this->kind === TourStopKind::Stop;
     }
 
+    public function isWaypoint(): bool
+    {
+        return $this->kind === TourStopKind::Waypoint;
+    }
+
+    public function hasCoordinates(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
+
     /** Begin of the occupied period at this stop (setup or event start). */
     public function occupiedFrom(): ?DateTimeImmutable
     {
@@ -69,7 +79,13 @@ final class TourStop
         }
         $what = $this->label ?? trim(($this->postalCode ?? '') . ' ' . ($this->city ?? ''));
 
-        return ($this->purpose?->label() ?? 'Zwischenstopp') . ($what !== '' ? ': ' . $what : '');
+        $prefix = match ($this->kind) {
+            TourStopKind::Start => 'Start',
+            TourStopKind::End => 'Ziel',
+            default => $this->purpose?->label() ?? 'Zwischenstopp',
+        };
+
+        return $prefix . ($what !== '' ? ': ' . $what : '');
     }
 
     public function addressLine(): string

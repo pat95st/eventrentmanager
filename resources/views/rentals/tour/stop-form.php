@@ -17,10 +17,18 @@ require __DIR__ . '/../series/_styles.php';
 $rental = $tour->rental;
 $v = static fn (string $key): string => $old[$key] ?? '';
 $action = $stop !== null ? '/tour-stops/' . $stop->id : '/veranstaltungen/' . $rental->id . '/tour/stops';
+$kind = $stop?->kind->value ?? ($old['kind'] ?? ($waypoint ? 'waypoint' : 'stop'));
+$endpoint = in_array($kind, ['start', 'end'], true);
+$heading = match (true) {
+    $kind === 'start' => 'Start der Route',
+    $kind === 'end' => 'Ziel der Route',
+    $waypoint => $stop !== null ? 'Zwischenstopp bearbeiten' : 'Zwischenstopp hinzufügen',
+    default => $stop !== null ? 'Stop bearbeiten' : 'Stop hinzufügen',
+};
 ?>
 <div class="mb-6">
     <a href="/veranstaltungen/<?= e($rental->id) ?>/tour" class="text-sm text-slate-500 hover:underline dark:text-slate-400">← Zurück zur Tour</a>
-    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= $waypoint ? ($stop !== null ? 'Zwischenstopp bearbeiten' : 'Zwischenstopp hinzufügen') : ($stop !== null ? 'Stop bearbeiten' : 'Stop hinzufügen') ?></h1>
+    <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e($heading) ?></h1>
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e($rental->eventName) ?></p>
 </div>
 
@@ -28,7 +36,10 @@ $action = $stop !== null ? '/tour-stops/' . $stop->id : '/veranstaltungen/' . $r
 
 <form method="post" action="<?= e($action) ?>" class="<?= $card ?> max-w-2xl space-y-4">
     <?= $csrf ?>
-    <input type="hidden" name="kind" value="<?= $waypoint ? 'waypoint' : 'stop' ?>">
+    <input type="hidden" name="kind" value="<?= e($kind) ?>">
+    <?php if ($endpoint): ?>
+        <p class="text-xs text-slate-500">Ohne eigene Angabe <?= $kind === 'start' ? 'beginnt die Route am Ausgabelager' : 'endet die Route am Rückgabelager' ?> der Veranstaltung.</p>
+    <?php endif; ?>
     <?php if (!$waypoint): ?>
         <div>
             <label class="<?= $label ?>" for="stop-location">Ort</label>
@@ -46,7 +57,7 @@ $action = $stop !== null ? '/tour-stops/' . $stop->id : '/veranstaltungen/' . $r
             <div><label class="<?= $label ?>" for="stop-phone">Telefon</label><input id="stop-phone" type="text" name="contact_phone" maxlength="50" value="<?= e($v('contact_phone')) ?>" class="<?= $input ?>"></div>
         </div>
     <?php else: ?>
-        <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid gap-3 sm:grid-cols-2"<?= $endpoint ? ' hidden' : '' ?>>
             <div>
                 <label class="<?= $label ?>" for="wp-purpose">Zweck</label>
                 <select id="wp-purpose" name="purpose" class="<?= $input ?>">

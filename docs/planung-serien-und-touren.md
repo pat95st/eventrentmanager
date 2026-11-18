@@ -35,7 +35,17 @@ eigene Migrationen (inkl. Übernahme in `database/schema.sql` und
     (keine Messenger-Nachricht).
   - Kalender: Monats- und Listenansicht zeigen die Stops des Tages unter
     der Tour; Wochenansicht und CalDAV zeigen die Tour als einen Eintrag.
-- Etappe 3 (Route/Fahrzeuge): offen.
+- **Etappe 3 (Route/Fahrzeuge): umgesetzt** (Migration 178). Abweichungen vom Plan:
+  - Start und Ziel werden nicht als eigene Spalten an `rentals` gespeichert,
+    sondern als Tour-Stops mit `kind = 'start' | 'end'` (gleiche
+    Adressfelder wie Zwischenstopps); ohne Eintrag gelten Ausgabe- bzw.
+    Rückgabelager.
+  - Stops ohne gespeicherten Veranstaltungsort (Freitext) haben keine
+    Koordinaten und werden in der Route übersprungen (mit Hinweis).
+  - Die Beladungsliste übernimmt geplante Fahrzeuge noch nicht als
+    Vorschlag.
+  - Leaflet 1.9.4 liegt lokal unter `public/assets/vendor/leaflet/`, die
+    Kartenkacheln kommen von tile.openstreetmap.org.
 
 ## Gemeinsame Basis (Teil von Etappe 1)
 

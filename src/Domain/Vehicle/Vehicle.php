@@ -43,6 +43,11 @@ final class Vehicle
         public ?int $acquisitionYear = null,
         public ?string $purchasePrice = null, // purchase price in EUR
         public ?string $currentValue = null, // estimated current value in EUR
+        // Migration 178: dimensions and permitted total weight for truck routing, all optional.
+        public ?string $heightCm = null,
+        public ?string $widthCm = null,
+        public ?string $lengthCm = null,
+        public ?string $grossWeightKg = null,
     ) {
     }
 

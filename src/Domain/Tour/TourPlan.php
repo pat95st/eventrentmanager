@@ -13,6 +13,10 @@ final class TourPlan
     /** @var TourStop[] */
     private array $ordered;
 
+    private ?TourStop $start = null;
+
+    private ?TourStop $end = null;
+
     /** @param TourStop[] $all */
     public function __construct(array $all)
     {
@@ -22,7 +26,13 @@ final class TourPlan
 
         $groups = [];
         foreach ($all as $waypoint) {
-            if ($waypoint->isStop()) {
+            if ($waypoint->kind === TourStopKind::Start) {
+                $this->start = $waypoint;
+            }
+            if ($waypoint->kind === TourStopKind::End) {
+                $this->end = $waypoint;
+            }
+            if (!$waypoint->isWaypoint()) {
                 continue;
             }
             $key = $waypoint->afterStopId !== null && in_array($waypoint->afterStopId, $stopIds, true) ? $waypoint->afterStopId : '';
@@ -42,7 +52,19 @@ final class TourPlan
         }
     }
 
-    /** @return TourStop[] stops and waypoints in driving order */
+    /** Start of the route as stored (null = pickup warehouse). */
+    public function start(): ?TourStop
+    {
+        return $this->start;
+    }
+
+    /** Destination of the route as stored (null = return warehouse). */
+    public function end(): ?TourStop
+    {
+        return $this->end;
+    }
+
+    /** @return TourStop[] stops and waypoints in driving order (without start/end) */
     public function ordered(): array
     {
         return $this->ordered;

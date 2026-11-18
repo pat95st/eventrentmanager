@@ -60,6 +60,7 @@ final class TourCommandHandler implements CommandHandlerInterface
         private readonly ?CommandBus $commands = null,
         private readonly ?TourCrewNotifierInterface $crewNotifier = null,
         private readonly ?DateTimeImmutable $now = null,
+        private readonly ?\App\Application\Routing\CompanyLocator $companyLocator = null,
     ) {
     }
 
@@ -168,21 +169,30 @@ final class TourCommandHandler implements CommandHandlerInterface
     private function saveWaypoint(SaveTourWaypoint $command): string
     {
         $rental = $this->tour($command->rentalId);
+        $kind = in_array($command->kind, ['start', 'end'], true) ? TourStopKind::from($command->kind) : TourStopKind::Waypoint;
         $existing = $command->waypointId !== null ? $this->stopOf($rental, $command->waypointId) : null;
+        if ($kind !== TourStopKind::Waypoint) {
+            // Only one start and one destination per tour.
+            foreach ($this->tours->findStopsByRental($rental->id) as $candidate) {
+                if ($candidate->kind === $kind) {
+                    $existing = $candidate;
+                }
+            }
+        }
         $errors = [];
-        $purpose = WaypointPurpose::tryFrom($command->purpose) ?? WaypointPurpose::Other;
+        $purpose = $kind === TourStopKind::Waypoint ? (WaypointPurpose::tryFrom($command->purpose) ?? WaypointPurpose::Other) : null;
         $type = WaypointAddressType::tryFrom($command->addressType);
         $arrive = $this->moment($command->arriveAt, 'arriveAt', $errors);
         $depart = $this->moment($command->departAt, 'departAt', $errors);
         if ($arrive !== null && $depart !== null && $depart < $arrive) {
             $errors['departAt'] = 'Die Abfahrt liegt vor der Ankunft.';
         }
-        $afterStopId = trim($command->afterStopId) !== '' ? $command->afterStopId : null;
+        $afterStopId = $kind === TourStopKind::Waypoint && trim($command->afterStopId) !== '' ? $command->afterStopId : null;
         if ($afterStopId !== null && !$this->stopOf($rental, $afterStopId)->isStop()) {
             $errors['afterStopId'] = 'Bitte einen Stop auswählen.';
         }
 
-        $waypoint = $existing ?? new TourStop(Uuid::v4(), $rental->id, TourStopKind::Waypoint);
+        $waypoint = $existing ?? new TourStop(Uuid::v4(), $rental->id, $kind);
         $waypoint->purpose = $purpose;
         $waypoint->addressType = $type;
         $waypoint->afterStopId = $afterStopId;
@@ -203,6 +213,11 @@ final class TourCommandHandler implements CommandHandlerInterface
                 $this->setAddress($waypoint, $warehouse->name, $warehouse->street, $warehouse->postalCode, $warehouse->city, $warehouse->country, $warehouse->latitude, $warehouse->longitude);
                 break;
             case WaypointAddressType::Company:
+                $located = $this->companyLocator?->locate();
+                if ($located !== null) {
+                    $this->setAddress($waypoint, $located['label'], $located['street'], $located['postalCode'], $located['city'], $located['country'], $located['lat'], $located['lng']);
+                    break;
+                }
                 $company = $this->company?->get();
                 if ($company === null || trim((string) $company->city) === '') {
                     $errors['addressType'] = 'In den Firmendaten ist keine Adresse hinterlegt.';
@@ -279,7 +294,7 @@ final class TourCommandHandler implements CommandHandlerInterface
             }
         }
         $allocation = TourAllocation::tryFrom($command->allocation) ?? TourAllocation::StopsOnly;
-        $waypointIds = array_map(static fn (TourStop $s) => $s->id, array_filter($this->tours->findStopsByRental($rental->id), static fn (TourStop $s) => !$s->isStop()));
+        $waypointIds = array_map(static fn (TourStop $s) => $s->id, array_filter($this->tours->findStopsByRental($rental->id), static fn (TourStop $s) => $s->isWaypoint()));
         $issueWaypoint = in_array($command->issueWaypointId, $waypointIds, true) ? $command->issueWaypointId : null;
         $returnWaypoint = in_array($command->returnWaypointId, $waypointIds, true) ? $command->returnWaypointId : null;
 

@@ -66,6 +66,10 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
     {
         $stmt = $this->pdo->prepare(
             'UPDATE company_settings SET
+                -- Migration 178: coordinates are geocoded again after the address changed
+                -- (assignments run left to right, so this compares with the old address).
+                latitude = IF(street <=> :street_chk AND postal_code <=> :postal_code_chk AND city <=> :city_chk, latitude, NULL),
+                longitude = IF(latitude IS NULL, NULL, longitude),
                 name = :name, brand_name = :brand_name, street = :street, postal_code = :postal_code, city = :city,
                 country = :country, logo_filename = :logo_filename,
                 logo_max_height_px = :logo_max_height_px, dark_logo_filename = :dark_logo_filename,
@@ -83,6 +87,9 @@ final class MariadbCompanySettingsRepository implements CompanySettingsRepositor
             'name' => $settings->name,
             'brand_name' => $settings->brandName,
             'street' => $settings->street,
+            'street_chk' => $settings->street,
+            'postal_code_chk' => $settings->postalCode,
+            'city_chk' => $settings->city,
             'postal_code' => $settings->postalCode,
             'city' => $settings->city,
             'country' => $settings->country,

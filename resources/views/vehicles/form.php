@@ -128,6 +128,43 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
 
     <div class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Maße für die Routenplanung</h3>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Außenmaße und zulässiges Gesamtgewicht – damit berücksichtigt die LKW-Route Brückenhöhen, Durchfahrtsbreiten und Gewichtsbeschränkungen. Alle Felder sind optional.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-4">
+            <div>
+                <label for="height_cm" class="block text-[11px] text-slate-500 dark:text-slate-400">Höhe (cm)</label>
+                <input type="text" id="height_cm" name="height_cm" inputmode="decimal" placeholder="z. B. 320"
+                       value="<?= e($val('height_cm', $vehicle?->heightCm)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['heightCm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['heightCm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['heightCm']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="width_cm" class="block text-[11px] text-slate-500 dark:text-slate-400">Breite (cm)</label>
+                <input type="text" id="width_cm" name="width_cm" inputmode="decimal" placeholder="z. B. 255"
+                       value="<?= e($val('width_cm', $vehicle?->widthCm)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['widthCm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['widthCm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['widthCm']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="length_cm" class="block text-[11px] text-slate-500 dark:text-slate-400">Länge (cm)</label>
+                <input type="text" id="length_cm" name="length_cm" inputmode="decimal" placeholder="z. B. 750"
+                       value="<?= e($val('length_cm', $vehicle?->lengthCm)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['lengthCm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['lengthCm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['lengthCm']) ?></p><?php endif; ?>
+            </div>
+            <div>
+                <label for="gross_weight_kg" class="block text-[11px] text-slate-500 dark:text-slate-400">Zul. Gesamtgewicht (kg)</label>
+                <input type="text" id="gross_weight_kg" name="gross_weight_kg" inputmode="decimal" placeholder="z. B. 7490"
+                       value="<?= e($val('gross_weight_kg', $vehicle?->grossWeightKg)) ?>"
+                       class="mt-1 w-full rounded-md border <?= isset($errors['grossWeightKg']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <?php if (isset($errors['grossWeightKg'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['grossWeightKg']) ?></p><?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div>
             <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Versicherung</h3>
             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Werte für die Versicherungsliste einer Veranstaltung, auf die das Fahrzeug gesetzt wird. Leere Felder bleiben im Export leer.</p>
         </div>

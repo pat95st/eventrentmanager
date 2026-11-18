@@ -24,6 +24,11 @@ final class CreateVehicle implements CommandInterface
         public readonly ?string $acquisitionYear = null,
         public readonly ?string $purchasePrice = null,
         public readonly ?string $currentValue = null,
+        // Migration 178: truck routing
+        public readonly ?string $heightCm = null,
+        public readonly ?string $widthCm = null,
+        public readonly ?string $lengthCm = null,
+        public readonly ?string $grossWeightKg = null,
     ) {
     }
 }

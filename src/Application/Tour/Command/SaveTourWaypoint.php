@@ -26,6 +26,8 @@ final class SaveTourWaypoint implements CommandInterface
         public readonly string $departAt,
         public readonly string $note,
         public readonly bool $rememberAddress,
+        // 'waypoint', or 'start'/'end' for the start and destination of the route (migration 178)
+        public readonly string $kind = 'waypoint',
     ) {
     }
 }

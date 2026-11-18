@@ -40,6 +40,10 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             $command->acquisitionYear,
             $command->purchasePrice,
             $command->currentValue,
+            $command->heightCm,
+            $command->widthCm,
+            $command->lengthCm,
+            $command->grossWeightKg,
         );
 
         if ($errors !== []) {
@@ -66,6 +70,10 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             acquisitionYear: $data['acquisitionYear'],
             purchasePrice: $data['purchasePrice'],
             currentValue: $data['currentValue'],
+            heightCm: $data['heightCm'],
+            widthCm: $data['widthCm'],
+            lengthCm: $data['lengthCm'],
+            grossWeightKg: $data['grossWeightKg'],
         );
 
         $this->vehicles->save($vehicle);

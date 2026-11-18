@@ -5,6 +5,7 @@
  *
  * @var \App\Application\Tour\Query\TourOverview $tour
  * @var string|null $focusStop
+ * @var \App\Application\Routing\TourRoute|null $route
  */
 
 use App\Domain\Tour\TourAllocation;
@@ -41,6 +42,7 @@ $materialList = static function (array $material) use ($tour): string {
     <div class="mt-4 flex flex-wrap gap-2">
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/stops/neu" class="<?= $primaryButton ?>">Stop hinzufügen</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/stops/neu?art=zwischenstopp" class="<?= $secondaryButton ?>">Zwischenstopp hinzufügen</a>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/route" class="<?= $secondaryButton ?>">Route &amp; Fahrzeiten</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/ladeliste" class="<?= $secondaryButton ?>">Ladelisten je Stop</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/ladeliste.pdf" target="_blank" class="<?= $secondaryButton ?>">Ladelisten (PDF)</a>
         <?php if (count($stops) <= 1): ?>
@@ -118,7 +120,7 @@ $materialList = static function (array $material) use ($tour): string {
                 </div>
             </div>
 
-            <?php foreach ($entry->warnings as $warning): ?>
+            <?php foreach ([...$entry->warnings, ...(($route ?? null)?->timingWarningsFor($stop->id) ?? [])] as $warning): ?>
                 <p class="mt-2 text-xs text-amber-700 dark:text-amber-400">⚠ <?= e($warning) ?></p>
             <?php endforeach; ?>
             <?php foreach ($entry->conflicts as $conflict): ?>

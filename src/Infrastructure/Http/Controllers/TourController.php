@@ -59,7 +59,13 @@ final class TourController
         if ($overview === null) {
             return;
         }
-        echo View::page('rentals/tour/show', ['tour' => $overview, 'focusStop' => $request->query('stop')], activeNav: 'rentals', title: 'Tour – ' . $overview->rental->eventName);
+        $route = null;
+        try {
+            $route = $this->queries->ask(new \App\Application\Routing\Query\GetTourRoute($overview->rental->id));
+        } catch (\Throwable) {
+            // The tour page also works without route data.
+        }
+        echo View::page('rentals/tour/show', ['tour' => $overview, 'focusStop' => $request->query('stop'), 'route' => $route], activeNav: 'rentals', title: 'Tour – ' . $overview->rental->eventName);
     }
 
     public function stopForm(Request $request): void
@@ -71,8 +77,23 @@ final class TourController
         if ($overview === null) {
             return;
         }
-        $waypoint = $stop !== null ? !$stop->isStop() : $request->query('art') === 'zwischenstopp';
-        $this->renderStopForm($overview, $stop, $waypoint, [], $this->oldFromStop($stop, $request));
+        $endpoint = match ($request->query('art')) {
+            'start' => 'start',
+            'ziel' => 'end',
+            default => null,
+        };
+        if ($stop === null && $endpoint !== null) {
+            // Start/destination: edit the stored one, if any.
+            foreach ($this->tours->findStopsByRental($rentalId) as $candidate) {
+                if ($candidate->kind->value === $endpoint) {
+                    $stop = $candidate;
+                }
+            }
+        }
+        $waypoint = $stop !== null ? !$stop->isStop() : ($request->query('art') === 'zwischenstopp' || $endpoint !== null);
+        $old = $this->oldFromStop($stop, $request);
+        $old['kind'] = $stop?->kind->value ?? ($endpoint ?? ($waypoint ? 'waypoint' : 'stop'));
+        $this->renderStopForm($overview, $stop, $waypoint, [], $old);
     }
 
     public function saveStop(Request $request): void
@@ -86,7 +107,7 @@ final class TourController
         }
         $rentalId = $stop?->rentalId ?? $request->param('id');
         $in = static fn (string $key): string => trim($request->input($key, '') ?? '');
-        $waypoint = $stop !== null ? !$stop->isStop() : $in('kind') === 'waypoint';
+        $waypoint = $stop !== null ? !$stop->isStop() : in_array($in('kind'), ['waypoint', 'start', 'end'], true);
         try {
             if ($waypoint) {
                 $this->commands->dispatch(new SaveTourWaypoint(
@@ -106,6 +127,7 @@ final class TourController
                     $in('depart_at'),
                     $in('note'),
                     $in('remember_address') === '1',
+                    $stop?->kind->value ?? (in_array($in('kind'), ['start', 'end'], true) ? $in('kind') : 'waypoint'),
                 ));
             } else {
                 $this->commands->dispatch(new SaveTourStop(
@@ -133,8 +155,13 @@ final class TourController
 
             return;
         }
-        Flash::success($waypoint ? 'Zwischenstopp gespeichert.' : 'Stop gespeichert.');
-        Response::redirect('/veranstaltungen/' . $rentalId . '/tour');
+        $kind = $stop?->kind->value ?? $in('kind');
+        Flash::success(match ($kind) {
+            'start' => 'Start der Route gespeichert.',
+            'end' => 'Ziel der Route gespeichert.',
+            default => $waypoint ? 'Zwischenstopp gespeichert.' : 'Stop gespeichert.',
+        });
+        Response::redirect('/veranstaltungen/' . $rentalId . '/tour' . (in_array($kind, ['start', 'end'], true) ? '/route' : ''));
     }
 
     public function deleteStop(Request $request): void

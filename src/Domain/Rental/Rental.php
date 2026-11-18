@@ -58,6 +58,8 @@ final class Rental
         public bool $seriesCustomized = false,
         // Migration 177: tour with several stops (see App\Domain\Tour).
         public bool $isTour = false,
+        // Migration 178: 'car', 'hgv' or 'hgv_vehicles' (see App\Domain\Routing\RouteProfile).
+        public string $routeProfile = 'car',
     ) {
     }
 

@@ -11,13 +11,13 @@ use DateTimeImmutable;
 
 /**
  * HTTP-Basic-Auth-Prüfung für den CalDAV-Server (bewusst getrennt von
- * AuthGuard [Session-Cookie, HTML-Frontend] und ApiTokenGuard [Bearer-Token,
+ * AuthGuard [Session-Cookie, HTML-Frontend] und Api\ApiKernel [Bearer-Token,
  * REST-API] — CalDAV-Clients (Apple Kalender, Thunderbird, ...) unterstützen
  * standardmäßig nur Basic Auth). Zugangsdaten sind KEIN Anmeldepasswort,
  * sondern ein separates, pro User selbst verwaltetes App-Passwort (siehe
  * App\Domain\Calendar\CalDavCredential / ProfileController).
  *
- * Anders als ApiTokenGuard::guard() (das einen Handler wrappt) liefert
+ * Anders als Api\ApiKernel::route() (das einen Handler wrappt) liefert
  * authenticate() direkt den authentifizierten User zurück oder beendet die
  * Anfrage selbst mit 401 — CalDavController prüft danach zusätzlich, ob der
  * User Zugriff auf den jeweils angefragten Kalender hat (siehe dort).

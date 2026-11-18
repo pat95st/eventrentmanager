@@ -19,6 +19,6 @@ interface ApiTokenRepositoryInterface
 
     public function delete(string $id): void;
 
-    /** Leichtgewichtiges Update von last_used_at bei jeder erfolgreichen API-Anfrage, siehe ApiTokenGuard. */
+    /** Leichtgewichtiges Update von last_used_at bei jeder erfolgreichen API-Anfrage, siehe Api\ApiKernel. */
     public function touchLastUsed(string $id, DateTimeImmutable $at): void;
 }

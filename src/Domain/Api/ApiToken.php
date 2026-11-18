@@ -8,16 +8,19 @@ use DateTimeImmutable;
 
 /**
  * Ein von einem Administrator ausgestelltes API-Token für die optionale
- * Lesezugriff-REST-API (siehe ArticleApiController). Es wird — wie bei
- * PasswordSetupToken — nur der Hash des Klartext-Tokens gespeichert
- * ($tokenHash); der Klartext wird ausschließlich einmalig direkt nach dem
- * Anlegen angezeigt und danach nie wieder rekonstruierbar. $tokenLastFour
- * hält die letzten vier Zeichen des Klartexts, damit ein Token in der Liste
- * wiedererkannt werden kann, ohne dass der volle Wert erneut sichtbar sein
- * muss (analog zu "Kreditkarte endet auf …").
+ * REST-API (/api/v1). Es wird — wie bei PasswordSetupToken — nur der Hash des
+ * Klartext-Tokens gespeichert ($tokenHash); der Klartext wird ausschließlich
+ * einmalig direkt nach dem Anlegen angezeigt und danach nie wieder
+ * rekonstruierbar. $tokenLastFour hält die letzten vier Zeichen des
+ * Klartexts, damit ein Token in der Liste wiedererkannt werden kann, ohne
+ * dass der volle Wert erneut sichtbar sein muss (analog zu "Kreditkarte endet
+ * auf …").
  */
 final class ApiToken
 {
+    /**
+     * @param list<ApiScope> $scopes granted scopes (migration 175)
+     */
     public function __construct(
         public readonly string $id,
         public string $name,
@@ -30,6 +33,26 @@ final class ApiToken
         public bool $enabled,
         public ?DateTimeImmutable $lastUsedAt,
         public readonly DateTimeImmutable $createdAt,
+        public array $scopes = [],
+        // Read-only tokens are denied every write scope, whatever is ticked.
+        public bool $readOnly = false,
+        // Requests per minute for this token; null = global default from ApiSettings.
+        public ?int $rateLimitPerMinute = null,
     ) {
+    }
+
+    public function allows(ApiScope $scope): bool
+    {
+        if ($this->readOnly && !$scope->isRead()) {
+            return false;
+        }
+
+        return in_array($scope, $this->scopes, true);
+    }
+
+    /** @return list<string> */
+    public function scopeValues(): array
+    {
+        return array_map(static fn (ApiScope $s) => $s->value, $this->scopes);
     }
 }

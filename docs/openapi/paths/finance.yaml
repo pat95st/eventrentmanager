@@ -1,0 +1,745 @@
+# REST API v1 — finance. Paths are referenced from ../openapi.yaml.
+/api/v1/receipts:
+  get:
+    tags:
+    - Finanzen
+    summary: Belege auflisten
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinanceReceipts
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - name: supplier_id
+      in: query
+      schema:
+        type: string
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/ReceiptResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Finanzen
+    summary: Beleg anlegen
+    description: |
+      `multipart/form-data`: die Felder unten plus die Datei (PDF/JPG/PNG) im Feld `file`.
+
+      **Scopes:** `finance:write`
+    operationId: FinanceStoreReceipt
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            allOf:
+            - $ref: ../components/generated.yaml#/ReceiptInput
+            - type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ReceiptDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/receipts/{id}:
+  get:
+    tags:
+    - Finanzen
+    summary: Beleg abrufen
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinanceReceipt
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ReceiptDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Finanzen
+    summary: Beleg ändern
+    description: |
+      `PATCH` mit JSON (nur gesendete Felder) oder `POST` als `multipart/form-data`, um zusätzlich die Datei (`file`) zu ersetzen.
+
+      **Scopes:** `finance:write`
+    operationId: FinanceUpdateReceipt
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ReceiptPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ReceiptDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Finanzen
+    summary: Beleg ändern
+    description: |
+      `PATCH` mit JSON (nur gesendete Felder) oder `POST` als `multipart/form-data`, um zusätzlich die Datei (`file`) zu ersetzen.
+
+      **Scopes:** `finance:write`
+    operationId: FinanceUpdateReceiptPost
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            allOf:
+            - $ref: ../components/generated.yaml#/ReceiptPatch
+            - type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ReceiptDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Finanzen
+    summary: Beleg löschen
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceDestroyReceipt
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/receipts/{id}/file:
+  get:
+    tags:
+    - Finanzen
+    summary: Belegdatei herunterladen
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinanceReceiptFile
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Datei.
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/receipts/{id}/mark-paid:
+  post:
+    tags:
+    - Finanzen
+    summary: Beleg als bezahlt markieren
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceMarkReceiptPaid
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ReceiptDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/receipts/{id}/mark-open:
+  post:
+    tags:
+    - Finanzen
+    summary: Beleg als offen markieren
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceMarkReceiptOpen
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ReceiptDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/bank-accounts:
+  get:
+    tags:
+    - Finanzen
+    summary: Bankkonten auflisten
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinanceBankAccounts
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/BankAccount
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/bank-accounts/{id}/ledger:
+  get:
+    tags:
+    - Finanzen
+    summary: Kontobuchungen eines Zeitraums
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinanceLedger
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    - name: period
+      in: query
+      schema:
+        type: string
+        enum:
+        - monat
+        - jahr
+        - jahre
+        default: jahr
+    - name: date
+      in: query
+      description: Stichtag im gewünschten Zeitraum (Y-m-d), Standard heute.
+      schema:
+        type: string
+        format: date
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/LedgerEntry
+                meta:
+                  $ref: ../components/common.yaml#/schemas/LedgerMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/purchase-orders:
+  get:
+    tags:
+    - Finanzen
+    summary: Bestellungen auflisten
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinancePurchaseOrders
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/PurchaseOrderResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Finanzen
+    summary: Bestellung anlegen
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceStorePurchaseOrder
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/PurchaseOrderInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/PurchaseOrderDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/purchase-orders/{id}:
+  get:
+    tags:
+    - Finanzen
+    summary: Bestellung abrufen
+    description: |
+      **Scopes:** `finance:read`
+    operationId: FinancePurchaseOrder
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/PurchaseOrderDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Finanzen
+    summary: Bestellung ändern
+    description: |
+      Teilweise Änderung; ohne `items` bleiben die Positionen erhalten.
+
+      **Scopes:** `finance:write`
+    operationId: FinanceUpdatePurchaseOrder
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/PurchaseOrderPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/PurchaseOrderDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Finanzen
+    summary: Bestellung löschen
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceDestroyPurchaseOrder
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/purchase-orders/{id}/mark-ordered:
+  post:
+    tags:
+    - Finanzen
+    summary: Als bestellt markieren
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceMarkPurchaseOrderOrdered
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/PurchaseOrderDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/purchase-orders/{id}/cancel:
+  post:
+    tags:
+    - Finanzen
+    summary: Bestellung stornieren
+    description: |
+      **Scopes:** `finance:write`
+    operationId: FinanceCancelPurchaseOrder
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/PurchaseOrderDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/purchase-order-items/{id}/receive:
+  post:
+    tags:
+    - Finanzen
+    summary: Wareneingang buchen
+    description: |
+      Bucht die gelieferte Menge einer Bestellposition (Vermietpool: neue Inventarnummern, Verkaufsbestand: Lagerzugang).
+
+      **Scopes:** `finance:write`
+    operationId: FinanceReceivePurchaseOrderItem
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - finance:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ReceiveInput
+    responses:
+      '200':
+        $ref: ../components/common.yaml#/responses/Ok
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

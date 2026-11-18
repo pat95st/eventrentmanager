@@ -846,14 +846,33 @@ Muster wie der Dark-Mode:
   Benutzerkonten hat, gilt die Wahl je Gerät/Browser, genau wie der
   Dark-Mode.
 
-## API-Dokumentation
+## REST-API und API-Dokumentation
 
-Alle maschinenlesbaren Schnittstellen (Artikel-REST-API, Abspielgerät,
-Run-Sheet, Stage-/FOH-Displays, Partner-Instanzen, SumUp-Webhook) sind in
-`docs/openapi.yaml` (OpenAPI 3) beschrieben. Die daraus mit Redoc erzeugte,
-eigenständige Doku liegt als `api-docs.html` im Wurzelverzeichnis und lässt
-sich direkt im Browser öffnen. Nach Änderungen an der Spezifikation neu bauen
-mit `bin/build-api-docs.sh` (benötigt Node.js/npx).
+Unter *Einstellungen › API* lässt sich die REST-API `/api/v1` einschalten.
+Dort werden auch Tokens mit Scopes je Fachbereich (lesen/schreiben,
+`invoices:finalize`, `email:send`), dem Schalter „Nur lesen“, IP-Filter und
+eigenem Anfragelimit verwaltet. Die Ratenbegrenzung zählt wahlweise in der
+Datenbank oder in Redis (Unix-Socket, TCP oder TLS; ohne PHP-Erweiterung, bei
+Ausfall automatisch zurück auf die Datenbank). Schreibende Zugriffe werden 90
+Tage protokolliert (Migration 175).
+
+Alle maschinenlesbaren Schnittstellen (REST-API v1, Abspielgerät, Run-Sheet,
+Stage-/FOH-Displays, Partner-Instanzen, SumUp-Webhook) sind in
+`docs/openapi/` (OpenAPI 3) beschrieben. Die Spezifikation ist aufgeteilt in:
+
+- `openapi.yaml`: Einstieg, Beschreibung, Tags
+- `paths/*.yaml`: ein File je Bereich
+- `components/common.yaml`: gemeinsame Parameter, Antworten und Schemas
+- `components/generated.yaml`: aus den Domain-Klassen und Commands erzeugt, nicht von Hand ändern
+
+Die daraus mit Redoc erzeugte, eigenständige Doku liegt als `api-docs.html` im
+Wurzelverzeichnis und lässt sich direkt im Browser öffnen.
+
+- Neu bauen mit `bin/build-api-docs.sh`. Das Skript benötigt Node.js/npx und
+  ruft auch `bin/generate-api-schemas.php` auf.
+- Die Routen stehen in `src/Infrastructure/Http/Api/ApiRoutes.php`.
+- `ApiDocumentationTest` schlägt fehl, wenn eine Route nicht dokumentiert ist
+  oder `generated.yaml` veraltet ist.
 
 ## Statische Analyse (PHPStan)
 

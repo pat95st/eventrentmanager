@@ -12,6 +12,11 @@ final class UpdateApiToken implements CommandInterface
         public readonly string $id,
         public readonly ?string $name,
         public readonly ?string $ipAllowlist,
+        /** @var list<string> scope values, see App\Domain\Api\ApiScope */
+        public readonly array $scopes = [],
+        public readonly bool $readOnly = false,
+        // Empty/null = global default from the API settings.
+        public readonly ?string $rateLimitPerMinute = null,
     ) {
     }
 }

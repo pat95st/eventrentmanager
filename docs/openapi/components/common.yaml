@@ -1,0 +1,929 @@
+# Shared parameters, responses and composite schemas of the REST API v1.
+parameters:
+  Id:
+    name: id
+    in: path
+    required: true
+    description: ID (UUID) der Ressource.
+    schema:
+      type: string
+  ImageId:
+    name: imageId
+    in: path
+    required: true
+    schema:
+      type: string
+  Q:
+    name: q
+    in: query
+    description: 'Suchbegriff: Teilstring (ohne Groß-/Kleinschreibung) in allen Textfeldern der obersten Ebene.'
+    schema:
+      type: string
+  UpdatedSince:
+    name: updated_since
+    in: query
+    description: Nur Einträge mit `updated_at` ≥ diesem Zeitpunkt (ISO 8601), z. B. `2026-11-01T00:00:00+01:00`.
+      Für Ressourcen ohne `updated_at` → `400`.
+    schema:
+      type: string
+      format: date-time
+  Sort:
+    name: sort
+    in: query
+    description: Sortierfeld (Feldname der obersten Ebene), absteigend mit vorangestelltem `-`, z. B. `-updated_at`.
+    schema:
+      type: string
+  Page:
+    name: page
+    in: query
+    schema:
+      type: integer
+      minimum: 1
+      default: 1
+  PageSize:
+    name: page_size
+    in: query
+    schema:
+      type: integer
+      minimum: 1
+      maximum: 500
+      default: 100
+  From:
+    name: from
+    in: query
+    required: true
+    description: Beginn (Y-m-d).
+    schema:
+      type: string
+      format: date
+  To:
+    name: to
+    in: query
+    description: Ende (Y-m-d), Standard = `from`.
+    schema:
+      type: string
+      format: date
+responses:
+  NoContent:
+    description: Erfolgreich, keine Antwortdaten.
+  Ok:
+    description: Erfolgreich.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            ok:
+              type: boolean
+              example: true
+  BadRequest:
+    description: Ungültige Anfrage (z. B. kaputtes JSON oder unbekannter Filter).
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  Unauthorized:
+    description: Kein, ein unbekanntes oder ein deaktiviertes Token.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  Forbidden:
+    description: Scope fehlt, Token ist „Nur lesen“ oder die IP-Adresse ist nicht freigegeben.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  NotFound:
+    description: Nicht gefunden (oder API deaktiviert).
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  Conflict:
+    description: Im aktuellen Zustand nicht möglich (z. B. festgeschriebene Rechnung ändern).
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  Unprocessable:
+    description: Validierungsfehler; `errors` nennt die Felder.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/ValidationError'
+  TooManyRequests:
+    description: Ratenbegrenzung überschritten. `Retry-After` nennt die Sekunden bis zur nächsten Minute.
+    headers:
+      Retry-After:
+        schema:
+          type: integer
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  MailFailed:
+    description: Der E-Mail-Versand ist fehlgeschlagen (SMTP).
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Error'
+  Pdf:
+    description: PDF-Dokument.
+    content:
+      application/pdf:
+        schema:
+          type: string
+          format: binary
+  Xml:
+    description: E-Rechnung (XRechnung, UBL).
+    content:
+      application/xml:
+        schema:
+          type: string
+          format: binary
+schemas:
+  Error:
+    type: object
+    required:
+    - error
+    properties:
+      error:
+        type: string
+        example: Ungültiges oder deaktiviertes Token.
+  ValidationError:
+    type: object
+    required:
+    - error
+    - errors
+    properties:
+      error:
+        type: string
+        example: Die Eingaben sind ungültig.
+      errors:
+        type: object
+        additionalProperties:
+          type: string
+        example:
+          last_name: Pflichtfeld fehlt.
+  ListMeta:
+    type: object
+    required:
+    - page
+    - page_size
+    - total
+    - total_pages
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+  CustomerRef:
+    type: object
+    nullable: true
+    properties:
+      id:
+        type: string
+      customer_number:
+        type: string
+      display_name:
+        type: string
+  NamedRef:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+  InventoryNumberRef:
+    type: object
+    properties:
+      id:
+        type: string
+      number:
+        type: string
+  EmailResult:
+    type: object
+    properties:
+      ok:
+        type: boolean
+        example: true
+  ContactRow:
+    type: object
+    description: Ansprechpartner. Vorhandene behalten ihre `id`, wenn sie mitgeschickt wird; nicht mitgeschickte
+      werden entfernt.
+    required:
+    - name
+    properties:
+      id:
+        type: string
+      salutation:
+        type: string
+        enum:
+        - herr
+        - frau
+        - divers
+        - ''
+      name:
+        type: string
+      job_title:
+        type: string
+      phone:
+        type: string
+      email:
+        type: string
+      street:
+        type: string
+      address_line2:
+        type: string
+      postal_code:
+        type: string
+      city:
+        type: string
+  BundleComponentRow:
+    type: object
+    required:
+    - article_id
+    - quantity
+    properties:
+      article_id:
+        type: string
+      quantity:
+        type: string
+      alternative_ids:
+        type: string
+        description: Kommagetrennte Artikel-IDs gleichwertiger Alternativen.
+  SetItemRow:
+    type: object
+    required:
+    - article_id
+    - quantity
+    properties:
+      article_id:
+        type: string
+      label:
+        type: string
+        readOnly: true
+      quantity:
+        type: string
+  SetRuleRow:
+    type: object
+    description: 'Zeitregel: `type` jährlich (Beginn/Ende als `TT.MM.`) oder fester Zeitraum (`Y-m-d`).'
+    properties:
+      type:
+        type: string
+      from_month_day:
+        type: string
+        example: 01.05.
+      to_month_day:
+        type: string
+        example: 30.09.
+      from_date:
+        type: string
+        format: date
+      to_date:
+        type: string
+        format: date
+  SetUpgradeRow:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      price:
+        type: string
+      items:
+        type: array
+        items:
+          $ref: '#/schemas/SetItemRow'
+  DocumentItemRow:
+    type: object
+    description: Mietposition.
+    required:
+    - article_id
+    - quantity
+    properties:
+      article_id:
+        type: string
+      article_name:
+        type: string
+        readOnly: true
+      quantity:
+        type: string
+      unit_price:
+        type: string
+        description: Preis pro Tag, Dezimalpunkt.
+      line_note:
+        type: string
+      sort_order:
+        type: string
+      is_rental_item:
+        type: string
+        enum:
+        - '1'
+        - '0'
+        description: 'Nur Rechnungen: Mietposition (1) oder Verkauf/Pauschale (0).'
+  LaborItemRow:
+    type: object
+    description: Arbeitszeit-Position.
+    required:
+    - labor_article_id
+    - hours
+    properties:
+      labor_article_id:
+        type: string
+      labor_article_name:
+        type: string
+        readOnly: true
+      labor_user_id:
+        type: string
+        description: Mitarbeiter (optional).
+      hours:
+        type: string
+        description: Stunden bzw. Tage (siehe `labor_billing_unit`).
+      labor_billing_unit:
+        type: string
+        enum:
+        - hour
+        - day
+  SaleItemRow:
+    type: object
+    description: Verkaufsposition (nur Angebote).
+    required:
+    - article_id
+    - source
+    properties:
+      article_id:
+        type: string
+      article_name:
+        type: string
+        readOnly: true
+      source:
+        type: string
+        enum:
+        - inventory_number
+        - stock
+        description: Konkretes Exemplar aus dem Vermietpool oder Verkaufsbestand.
+      inventory_number_id:
+        type: string
+      quantity:
+        type: string
+      unit_price:
+        type: string
+      line_note:
+        type: string
+  FreeTextItemRow:
+    type: object
+    required:
+    - description
+    properties:
+      description:
+        type: string
+      quantity:
+        type: string
+      unit_price:
+        type: string
+      sort_order:
+        type: string
+      set_id:
+        type: string
+      set_upgrade_id:
+        type: string
+  SectionTextRow:
+    type: object
+    description: Zwischenüberschrift.
+    required:
+    - heading
+    properties:
+      heading:
+        type: string
+      sort_order:
+        type: string
+  PurchaseOrderItemRow:
+    type: object
+    required:
+    - article_id
+    - quantity
+    - unit_price
+    - target_type
+    properties:
+      article_id:
+        type: string
+      quantity:
+        type: string
+      unit_price:
+        type: string
+      target_type:
+        type: string
+        enum:
+        - rental_pool
+        - sale_stock
+  CustomerResource:
+    allOf:
+    - $ref: generated.yaml#/Customer
+    - type: object
+      properties:
+        display_name:
+          type: string
+        contacts:
+          type: array
+          items:
+            $ref: generated.yaml#/CustomerContact
+  ArticleResource:
+    allOf:
+    - $ref: generated.yaml#/Article
+    - type: object
+      description: Felder der ersten API-Version bleiben erhalten.
+      properties:
+        manufacturer:
+          type: string
+          nullable: true
+          description: Name des Herstellers
+        category:
+          type: string
+          nullable: true
+          description: Name der Kategorie
+        weight:
+          type: object
+          nullable: true
+          properties:
+            value:
+              type: string
+            unit:
+              type: string
+        billable:
+          type: boolean
+        active:
+          type: boolean
+        images:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              url:
+                type: string
+                example: /api/v1/articles/{id}/images/{imageId}
+        stock_count:
+          type: integer
+          nullable: true
+          description: 'Nur in Listen: Verkaufsbestand.'
+  InventoryNumberEntry:
+    allOf:
+    - $ref: generated.yaml#/InventoryNumber
+    - type: object
+      properties:
+        open_rma_count:
+          type: integer
+        total_rma_count:
+          type: integer
+        sold:
+          type: boolean
+        firmware_outdated:
+          type: boolean
+  InventoryNumberDetail:
+    allOf:
+    - $ref: generated.yaml#/InventoryNumber
+    - type: object
+      properties:
+        article:
+          $ref: '#/schemas/NamedRef'
+        manufacturer:
+          type: string
+        firmware_outdated:
+          type: boolean
+  ArticleDetailResource:
+    allOf:
+    - $ref: '#/schemas/ArticleResource'
+    - type: object
+      properties:
+        inventory_numbers:
+          type: array
+          items:
+            $ref: '#/schemas/InventoryNumberEntry'
+        bundle_components:
+          type: array
+          items:
+            $ref: '#/schemas/BundleComponentRow'
+  Availability:
+    type: object
+    description: Verfügbarkeit = Anzahl aktiver Inventarnummern minus eingeplante Menge je Tag.
+    properties:
+      article_id:
+        type: string
+      from:
+        type: string
+        format: date
+      to:
+        type: string
+        format: date
+      total:
+        type: integer
+        description: Aktive Inventarnummern.
+      available:
+        type: integer
+        description: Mindestens verfügbar über den ganzen Zeitraum.
+      days:
+        type: array
+        items:
+          type: object
+          properties:
+            date:
+              type: string
+              format: date
+            reserved:
+              type: integer
+            available:
+              type: integer
+  ArticleSetResource:
+    allOf:
+    - $ref: generated.yaml#/ArticleSet
+    - type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/schemas/SetItemRow'
+        rules:
+          type: array
+          items:
+            $ref: '#/schemas/SetRuleRow'
+        upgrades:
+          type: array
+          items:
+            $ref: '#/schemas/SetUpgradeRow'
+  RentalResource:
+    allOf:
+    - $ref: generated.yaml#/Rental
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+  CalendarEntry:
+    allOf:
+    - $ref: '#/schemas/RentalResource'
+    - type: object
+      properties:
+        material:
+          type: array
+          items:
+            type: string
+  RentalDetailResource:
+    allOf:
+    - $ref: '#/schemas/RentalResource'
+    - type: object
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+            - $ref: generated.yaml#/RentalItem
+            - type: object
+              properties:
+                article:
+                  $ref: '#/schemas/NamedRef'
+                issued_count:
+                  type: integer
+        issued_items:
+          type: array
+          items:
+            allOf:
+            - $ref: generated.yaml#/RentalIssuedItem
+            - type: object
+              properties:
+                inventory_number:
+                  $ref: '#/schemas/InventoryNumberRef'
+                article:
+                  $ref: '#/schemas/NamedRef'
+  RentalTechnicianEntry:
+    allOf:
+    - $ref: generated.yaml#/RentalTechnician
+    - type: object
+      properties:
+        user:
+          $ref: '#/schemas/NamedRef'
+        trade_names:
+          type: array
+          items:
+            type: string
+  OfferResource:
+    allOf:
+    - $ref: generated.yaml#/Offer
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+  OfferDetailResource:
+    allOf:
+    - $ref: generated.yaml#/Offer
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+        contact:
+          type: object
+          allOf:
+          - $ref: generated.yaml#/CustomerContact
+          nullable: true
+        totals:
+          $ref: generated.yaml#/DocumentTotals
+        items:
+          type: array
+          items:
+            $ref: '#/schemas/DocumentItemRow'
+        labor_items:
+          type: array
+          items:
+            $ref: '#/schemas/LaborItemRow'
+        sale_items:
+          type: array
+          items:
+            $ref: '#/schemas/SaleItemRow'
+        free_text_items:
+          type: array
+          items:
+            $ref: '#/schemas/FreeTextItemRow'
+        section_texts:
+          type: array
+          items:
+            $ref: '#/schemas/SectionTextRow'
+  OrderConfirmationResource:
+    allOf:
+    - $ref: generated.yaml#/OrderConfirmation
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+  OrderConfirmationDetailResource:
+    allOf:
+    - $ref: generated.yaml#/OrderConfirmation
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+        contact:
+          type: object
+          allOf:
+          - $ref: generated.yaml#/CustomerContact
+          nullable: true
+        totals:
+          $ref: generated.yaml#/DocumentTotals
+        items:
+          type: array
+          items:
+            $ref: '#/schemas/DocumentItemRow'
+        free_text_items:
+          type: array
+          items:
+            $ref: '#/schemas/FreeTextItemRow'
+        section_texts:
+          type: array
+          items:
+            $ref: '#/schemas/SectionTextRow'
+  InvoiceResource:
+    allOf:
+    - $ref: generated.yaml#/Invoice
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+  InvoiceDetailResource:
+    allOf:
+    - $ref: generated.yaml#/Invoice
+    - type: object
+      properties:
+        customer:
+          $ref: '#/schemas/CustomerRef'
+        contact:
+          type: object
+          allOf:
+          - $ref: generated.yaml#/CustomerContact
+          nullable: true
+        totals:
+          $ref: generated.yaml#/DocumentTotals
+        items:
+          type: array
+          items:
+            $ref: '#/schemas/DocumentItemRow'
+        labor_items:
+          type: array
+          items:
+            $ref: '#/schemas/LaborItemRow'
+        free_text_items:
+          type: array
+          items:
+            $ref: '#/schemas/FreeTextItemRow'
+        section_texts:
+          type: array
+          items:
+            $ref: '#/schemas/SectionTextRow'
+  InvoiceCorrectionResource:
+    allOf:
+    - $ref: generated.yaml#/InvoiceCorrection
+    - type: object
+      properties:
+        invoice_number:
+          type: string
+          nullable: true
+        customer_name:
+          type: string
+          nullable: true
+  InvoiceCorrectionDetailResource:
+    allOf:
+    - $ref: generated.yaml#/InvoiceCorrection
+    - type: object
+      properties:
+        invoice_number:
+          type: string
+          nullable: true
+        invoice_net_total:
+          type: number
+        invoice_gross_total:
+          type: number
+  DunningNoticeResource:
+    allOf:
+    - $ref: generated.yaml#/DunningNotice
+    - type: object
+      properties:
+        invoice_number:
+          type: string
+          nullable: true
+        customer:
+          $ref: '#/schemas/CustomerRef'
+  ReceiptResource:
+    allOf:
+    - $ref: generated.yaml#/Receipt
+    - type: object
+      properties:
+        supplier:
+          type: object
+          allOf:
+          - $ref: '#/schemas/NamedRef'
+          nullable: true
+        file_url:
+          type: string
+          example: /api/v1/receipts/{id}/file
+  ReceiptDetailResource:
+    allOf:
+    - $ref: '#/schemas/ReceiptResource'
+    - type: object
+      properties:
+        inventory_numbers:
+          type: array
+          items:
+            type: object
+  PurchaseOrderResource:
+    allOf:
+    - $ref: generated.yaml#/PurchaseOrder
+    - type: object
+      properties:
+        supplier:
+          type: object
+          allOf:
+          - $ref: '#/schemas/NamedRef'
+          nullable: true
+  PurchaseOrderDetailResource:
+    allOf:
+    - $ref: '#/schemas/PurchaseOrderResource'
+    - type: object
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+            - $ref: generated.yaml#/PurchaseOrderItem
+            - type: object
+              properties:
+                article:
+                  $ref: '#/schemas/NamedRef'
+  LedgerEntry:
+    allOf:
+    - $ref: generated.yaml#/AccountTransaction
+    - type: object
+      properties:
+        amount:
+          type: number
+          description: Betrag in Euro (Einnahme positiv).
+        balance_after:
+          type: number
+          nullable: true
+  LedgerMeta:
+    type: object
+    properties:
+      account:
+        $ref: generated.yaml#/BankAccount
+      period:
+        type: string
+        enum:
+        - monat
+        - jahr
+        - jahre
+      from:
+        type: string
+        format: date
+      to:
+        type: string
+        format: date
+      start_balance:
+        type: number
+        nullable: true
+      end_balance:
+        type: number
+        nullable: true
+      income:
+        type: number
+      expense:
+        type: number
+      current_balance:
+        type: number
+        nullable: true
+  CaseResource:
+    allOf:
+    - $ref: generated.yaml#/CaseItem
+    - type: object
+      properties:
+        manufacturer:
+          type: string
+        inventory_numbers:
+          type: array
+          items:
+            type: object
+  RackResource:
+    allOf:
+    - $ref: generated.yaml#/Rack
+    - type: object
+      properties:
+        manufacturer:
+          type: string
+          nullable: true
+        exemplar_count:
+          type: integer
+  RackDetailResource:
+    allOf:
+    - $ref: generated.yaml#/Rack
+    - type: object
+      properties:
+        manufacturer:
+          type: string
+          nullable: true
+        exemplars:
+          type: array
+          items:
+            type: object
+  RmaResource:
+    allOf:
+    - $ref: generated.yaml#/Rma
+    - type: object
+      properties:
+        inventory_number:
+          $ref: '#/schemas/InventoryNumberRef'
+        article:
+          $ref: '#/schemas/NamedRef'
+        manufacturer:
+          type: string
+        document_count:
+          type: integer
+  RmaDetailResource:
+    allOf:
+    - $ref: generated.yaml#/Rma
+    - type: object
+      properties:
+        documents:
+          type: array
+          items:
+            type: object
+        receipts:
+          type: array
+          items:
+            type: object
+        package_photos:
+          type: array
+          items:
+            type: object
+  RecentInspection:
+    allOf:
+    - $ref: generated.yaml#/ElectricalInspection
+    - type: object
+      properties:
+        inventory_number:
+          type: string
+        article_label:
+          type: string
+  SaleResource:
+    allOf:
+    - $ref: generated.yaml#/Sale
+    - type: object
+      properties:
+        article:
+          type: object
+          allOf:
+          - $ref: '#/schemas/NamedRef'
+          nullable: true
+        customer:
+          $ref: '#/schemas/CustomerRef'

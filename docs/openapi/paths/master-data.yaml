@@ -1,0 +1,735 @@
+# REST API v1 — master-data. Paths are referenced from ../openapi.yaml.
+/api/v1/suppliers:
+  get:
+    tags:
+    - Stammdaten
+    summary: Lieferanten auflisten
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: SuppliersIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/Supplier
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Stammdaten
+    summary: Lieferant anlegen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: SuppliersStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/SupplierInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Supplier
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/suppliers/{id}:
+  get:
+    tags:
+    - Stammdaten
+    summary: Lieferant abrufen
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: SuppliersShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Supplier
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Stammdaten
+    summary: Lieferant ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `master_data:write`
+    operationId: SuppliersUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/SupplierPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Supplier
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Stammdaten
+    summary: Lieferant löschen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: SuppliersDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/venues:
+  get:
+    tags:
+    - Stammdaten
+    summary: Veranstaltungsorte auflisten
+    description: |
+      Bilder, Stromanschlüsse und Bühnen werden in der Weboberfläche gepflegt.
+
+      **Scopes:** `master_data:read`
+    operationId: VenuesIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/Venue
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Stammdaten
+    summary: Veranstaltungsort anlegen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: VenuesStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/VenueInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Venue
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/venues/{id}:
+  get:
+    tags:
+    - Stammdaten
+    summary: Veranstaltungsort abrufen
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: VenuesShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Venue
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Stammdaten
+    summary: Veranstaltungsort ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `master_data:write`
+    operationId: VenuesUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/VenuePatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Venue
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Stammdaten
+    summary: Veranstaltungsort löschen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: VenuesDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/warehouses:
+  get:
+    tags:
+    - Stammdaten
+    summary: Lagerorte auflisten
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: WarehousesIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/Warehouse
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Stammdaten
+    summary: Lagerort anlegen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: WarehousesStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/WarehouseInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Warehouse
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/warehouses/{id}:
+  get:
+    tags:
+    - Stammdaten
+    summary: Lagerort abrufen
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: WarehousesShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Warehouse
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Stammdaten
+    summary: Lagerort ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `master_data:write`
+    operationId: WarehousesUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/WarehousePatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Warehouse
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Stammdaten
+    summary: Lagerort löschen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: WarehousesDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/vehicles:
+  get:
+    tags:
+    - Stammdaten
+    summary: Fahrzeuge auflisten
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: VehiclesIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/Vehicle
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Stammdaten
+    summary: Fahrzeug anlegen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: VehiclesStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/VehicleInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Vehicle
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/vehicles/{id}:
+  get:
+    tags:
+    - Stammdaten
+    summary: Fahrzeug abrufen
+    description: |
+      **Scopes:** `master_data:read`
+    operationId: VehiclesShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Vehicle
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Stammdaten
+    summary: Fahrzeug ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `master_data:write`
+    operationId: VehiclesUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/VehiclePatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Vehicle
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Stammdaten
+    summary: Fahrzeug löschen
+    description: |
+      **Scopes:** `master_data:write`
+    operationId: VehiclesDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - master_data:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

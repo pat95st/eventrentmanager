@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the self-contained API documentation (api-docs.html in the repository
-# root) from docs/openapi.yaml with Redoc. Requires Node.js/npx; the Redoc
+# root) from docs/openapi/openapi.yaml with Redoc. Requires Node.js/npx; the Redoc
 # bundle is inlined so the HTML works offline without any CDN.
 set -euo pipefail
 
@@ -11,8 +11,9 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 cd "$ROOT"
-npx --yes "@redocly/cli@${REDOCLY_CLI_VERSION}" lint docs/openapi.yaml
-npx --yes "@redocly/cli@${REDOCLY_CLI_VERSION}" build-docs docs/openapi.yaml \
+php bin/generate-api-schemas.php
+npx --yes "@redocly/cli@${REDOCLY_CLI_VERSION}" lint docs/openapi/openapi.yaml
+npx --yes "@redocly/cli@${REDOCLY_CLI_VERSION}" build-docs docs/openapi/openapi.yaml \
     -o api-docs.html --title "Materialverleih – API"
 
 (cd "$WORK" && npm init -y >/dev/null && npm install --silent "redoc@${REDOC_VERSION}")

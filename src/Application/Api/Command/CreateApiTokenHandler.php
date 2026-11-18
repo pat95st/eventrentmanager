@@ -8,8 +8,6 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Api\ApiToken;
 use App\Domain\Api\ApiTokenRepositoryInterface;
-use App\Domain\Api\IpAllowlist;
-use App\Domain\Exception\ValidationException;
 use App\Shared\Uuid;
 use DateTimeImmutable;
 
@@ -28,31 +26,23 @@ final class CreateApiTokenHandler implements CommandHandlerInterface
     {
         assert($command instanceof CreateApiToken);
 
-        $name = trim((string) $command->name);
-        if ($name === '') {
-            throw new ValidationException(['name' => 'Bitte einen Namen für das Token angeben (z. B. "Website-Integration").']);
-        }
-
-        $ipAllowlist = trim((string) $command->ipAllowlist);
-        if ($ipAllowlist !== '') {
-            $error = IpAllowlist::validationError($ipAllowlist);
-            if ($error !== null) {
-                throw new ValidationException(['ipAllowlist' => $error]);
-            }
-        }
+        $input = ApiTokenInput::validate($command->name, $command->ipAllowlist, $command->scopes, $command->rateLimitPerMinute);
 
         $rawToken = self::TOKEN_PREFIX . bin2hex(random_bytes(self::TOKEN_BYTES));
         $id = Uuid::v4();
 
         $token = new ApiToken(
             id: $id,
-            name: $name,
+            name: $input['name'],
             tokenHash: hash('sha256', $rawToken),
             tokenLastFour: substr($rawToken, -4),
-            ipAllowlist: $ipAllowlist !== '' ? $ipAllowlist : null,
+            ipAllowlist: $input['ipAllowlist'],
             enabled: true,
             lastUsedAt: null,
             createdAt: new DateTimeImmutable(),
+            scopes: $input['scopes'],
+            readOnly: $command->readOnly,
+            rateLimitPerMinute: $input['rateLimit'],
         );
 
         $this->repository->save($token);

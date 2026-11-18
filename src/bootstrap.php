@@ -687,9 +687,19 @@ $commandBus->register(\App\Application\Article\Command\UpdateArticle::class, new
 $cableSettingsHandler = new \App\Application\Cable\Command\CableSettingsHandler($cableRepository);
 // Techniker & Gewerke (Migration 134)
 $technicianNotifier = new \App\Application\Technician\TechnicianNotifier(
-    $rentalTechnicianRepository, $rentalRepository, $userRepository, $technicianProfileRepository, $tradeRepository,
-    $mailer, $emailTemplateRenderer, $smtpSettingsRepository, $companySettingsRepository, $integrationBaseSettingsRepository,
-    $messagingSettingsRepository, $messagingTemplateRenderer, $messageSender,
+    $rentalTechnicianRepository,
+    $rentalRepository,
+    $userRepository,
+    $technicianProfileRepository,
+    $tradeRepository,
+    $mailer,
+    $emailTemplateRenderer,
+    $smtpSettingsRepository,
+    $companySettingsRepository,
+    $integrationBaseSettingsRepository,
+    $messagingSettingsRepository,
+    $messagingTemplateRenderer,
+    $messageSender,
 );
 $commandBus->register(\App\Application\Technician\Command\SaveTrade::class, new \App\Application\Technician\Command\SaveTradeHandler($tradeRepository));
 $commandBus->register(\App\Application\Technician\Command\DeleteTrade::class, new \App\Application\Technician\Command\DeleteTradeHandler($tradeRepository));
@@ -1892,9 +1902,54 @@ $priceTierSettingsController = new PriceTierSettingsController($commandBus, $que
 $dryHireSettingsController = new \App\Infrastructure\Http\Controllers\DryHireSettingsController($commandBus, $dryHireRepository);
 $companySettingsController = new CompanySettingsController($commandBus, $queryBus, $fileStorage);
 $integrationSettingsController = new \App\Infrastructure\Http\Controllers\IntegrationSettingsController($commandBus, $queryBus, $googleBusinessApiClient);
-$apiSettingsController = new \App\Infrastructure\Http\Controllers\ApiSettingsController($commandBus, $queryBus);
-$apiTokenGuard = new \App\Infrastructure\Http\Auth\ApiTokenGuard($apiSettingsRepository, $apiTokenRepository);
-$articleApiController = new \App\Infrastructure\Http\Controllers\Api\ArticleApiController($queryBus, $fileStorage);
+$apiRequestLogRepository = new \App\Infrastructure\Persistence\Pdo\MariadbApiRequestLogRepository($pdo);
+$apiSettingsController = new \App\Infrastructure\Http\Controllers\ApiSettingsController($commandBus, $queryBus, $apiRequestLogRepository, $apiSettingsRepository);
+// REST API v1 (migration 175): kernel with token/scope/IP checks, rate limiting
+// (database counter, or Redis with automatic fallback to the database) and
+// write-request log; see App\Infrastructure\Http\Api\ApiKernel.
+$apiDatabaseRateLimiter = new \App\Infrastructure\Http\Api\RateLimit\DatabaseRateLimiter($pdo);
+$apiKernel = new \App\Infrastructure\Http\Api\ApiKernel(
+    $apiSettingsRepository,
+    $apiTokenRepository,
+    $apiRequestLogRepository,
+    static function (\App\Domain\Settings\ApiSettings $settings) use ($apiDatabaseRateLimiter, $apiSettingsRepository): \App\Infrastructure\Http\Api\RateLimit\RateLimiterInterface {
+        if (!$settings->usesRedis()) {
+            return $apiDatabaseRateLimiter;
+        }
+
+        return new \App\Infrastructure\Http\Api\RateLimit\FallbackRateLimiter(
+            static fn () => new \App\Infrastructure\Http\Api\RateLimit\RedisRateLimiter(\App\Infrastructure\Http\Api\RateLimit\RedisClient::fromSettings($settings), $settings->redisKeyPrefix),
+            $apiDatabaseRateLimiter,
+            static function (?string $error) use ($settings, $apiSettingsRepository): void {
+                // Only write when the state changes (no DB write per request while Redis is fine).
+                if ($error !== $settings->redisLastError) {
+                    $apiSettingsRepository->recordRedisError($error, new DateTimeImmutable());
+                }
+            },
+        );
+    },
+);
+$apiDocumentRenderer = new \App\Infrastructure\Http\Api\DocumentRenderer($queryBus, $offerPdfGenerator, $orderConfirmationPdfGenerator, $invoicePdfGenerator, $xRechnungGenerator, $invoiceCorrectionDocuments, $dunningPdfGenerator);
+$simpleApiResource = static fn (string $label, Closure $list, ?Closure $find, ?string $create, ?string $update, ?string $delete, array $exclude = []) => new \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController($queryBus, $commandBus, $label, $list, $find, $create, $update, $delete, $exclude);
+$apiControllers = [
+    'customers' => new \App\Infrastructure\Http\Controllers\Api\CustomerApiController($queryBus, $commandBus, $customerContactRepository),
+    'articles' => new \App\Infrastructure\Http\Controllers\Api\ArticleApiController($queryBus, $commandBus, $fileStorage, $articleBundleComponentRepository),
+    'article-sets' => new \App\Infrastructure\Http\Controllers\Api\ArticleSetApiController($queryBus, $commandBus),
+    'categories' => $simpleApiResource('Kategorie', static fn () => $queryBus->ask(new \App\Application\Category\Query\ListCategories()), null, \App\Application\Category\Command\CreateCategory::class, \App\Application\Category\Command\UpdateCategory::class, \App\Application\Category\Command\DeleteCategory::class),
+    'manufacturers' => $simpleApiResource('Hersteller', static fn () => $queryBus->ask(new \App\Application\Manufacturer\Query\ListManufacturers()), static fn (string $id) => $manufacturerRepository->findById($id), \App\Application\Manufacturer\Command\CreateManufacturer::class, \App\Application\Manufacturer\Command\UpdateManufacturer::class, \App\Application\Manufacturer\Command\DeleteManufacturer::class),
+    'labor-time-articles' => $simpleApiResource('Arbeitszeit-Artikel', static fn () => $queryBus->ask(new \App\Application\LaborTime\Query\ListLaborTimeArticles()), null, \App\Application\LaborTime\Command\CreateLaborTimeArticle::class, \App\Application\LaborTime\Command\UpdateLaborTimeArticle::class, \App\Application\LaborTime\Command\DeleteLaborTimeArticle::class),
+    'suppliers' => $simpleApiResource('Lieferant', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Supplier\Query\ListSuppliers())), static fn (string $id) => $supplierRepository->findById($id), \App\Application\Supplier\Command\CreateSupplier::class, \App\Application\Supplier\Command\UpdateSupplier::class, \App\Application\Supplier\Command\DeleteSupplier::class),
+    'venues' => $simpleApiResource('Veranstaltungsort', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Venue\Query\ListVenues(null, 1, 1_000_000))), static fn (string $id) => $venueRepository->findById($id), \App\Application\Venue\Command\CreateVenue::class, \App\Application\Venue\Command\UpdateVenue::class, \App\Application\Venue\Command\DeleteVenue::class),
+    'warehouses' => $simpleApiResource('Lagerort', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Warehouse\Query\ListWarehouses())), static fn (string $id) => $warehouseRepository->findById($id), \App\Application\Warehouse\Command\CreateWarehouse::class, \App\Application\Warehouse\Command\UpdateWarehouse::class, \App\Application\Warehouse\Command\DeleteWarehouse::class),
+    'vehicles' => $simpleApiResource('Fahrzeug', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Vehicle\Query\ListVehicles())), static fn (string $id) => $vehicleRepository->findById($id), \App\Application\Vehicle\Command\CreateVehicle::class, \App\Application\Vehicle\Command\UpdateVehicle::class, \App\Application\Vehicle\Command\DeleteVehicle::class),
+    'rentals' => new \App\Infrastructure\Http\Controllers\Api\RentalApiController($queryBus, $commandBus, $packingListPdfGenerator),
+    'offers' => new \App\Infrastructure\Http\Controllers\Api\OfferApiController($queryBus, $commandBus, $apiDocumentRenderer),
+    'order-confirmations' => new \App\Infrastructure\Http\Controllers\Api\OrderConfirmationApiController($queryBus, $commandBus, $apiDocumentRenderer),
+    'invoices' => new \App\Infrastructure\Http\Controllers\Api\InvoiceApiController($queryBus, $commandBus, $apiDocumentRenderer),
+    'finance' => new \App\Infrastructure\Http\Controllers\Api\FinanceApiController($queryBus, $commandBus, $fileStorage, $bankAccountRepository),
+    'inventory' => new \App\Infrastructure\Http\Controllers\Api\InventoryApiController($queryBus, $commandBus),
+    'reports' => new \App\Infrastructure\Http\Controllers\Api\ReportApiController($queryBus, $commandBus),
+];
 $calendarSettingsController = new \App\Infrastructure\Http\Controllers\CalendarSettingsController($commandBus, $queryBus);
 $calDavAuthGuard = new \App\Infrastructure\Http\Auth\CalDavAuthGuard($userRepository, $calDavCredentialRepository);
 $calDavController = new \App\Infrastructure\Http\CalDav\CalDavController($calDavAuthGuard, $queryBus, $calendarAccessRepository);
@@ -2936,6 +2991,7 @@ $router->post('/einstellungen/api/tokens/{id}', $auth->guard(Permission::Adminis
 $router->post('/einstellungen/api/tokens/{id}/aktivieren', $auth->guard(Permission::Administration, [$apiSettingsController, 'enableToken']));
 $router->post('/einstellungen/api/tokens/{id}/deaktivieren', $auth->guard(Permission::Administration, [$apiSettingsController, 'disableToken']));
 $router->post('/einstellungen/api/tokens/{id}/loeschen', $auth->guard(Permission::Administration, [$apiSettingsController, 'deleteToken']));
+$router->post('/einstellungen/api/redis-test', $auth->guard(Permission::Administration, [$apiSettingsController, 'testRedis']));
 
 // Kalender-Einstellungen (CalDAV-Server, nur Administration).
 $router->get('/einstellungen/kalender', $auth->guard(Permission::Administration, [$calendarSettingsController, 'edit']));
@@ -2950,12 +3006,9 @@ $router->post('/einstellungen/kalender/{id}/deaktivieren', $auth->guard(Permissi
 $router->post('/einstellungen/kalender/{id}/loeschen', $auth->guard(Permission::Administration, [$calendarSettingsController, 'deleteCalendar']));
 $router->post('/einstellungen/kalender/{id}/zugriff', $auth->guard(Permission::Administration, [$calendarSettingsController, 'updateAccess']));
 
-// Öffentliche REST-API (Token-Auth über ApiTokenGuard, bewusst OHNE Session/
-// CSRF — siehe ApiTokenGuard-Docblock). GET-only, daher ohnehin nicht
-// CSRF-pflichtig (siehe Router::dispatch()).
-$router->get('/api/v1/articles', $apiTokenGuard->guard([$articleApiController, 'index']));
-$router->get('/api/v1/articles/{id}', $apiTokenGuard->guard([$articleApiController, 'show']));
-$router->get('/api/v1/articles/{id}/images/{imageId}', $apiTokenGuard->guard([$articleApiController, 'image']));
+// REST API /api/v1 (token + scopes, no session/CSRF, see ApiKernel). The route
+// table lives in ApiRoutes so the documentation test can check it.
+\App\Infrastructure\Http\Api\ApiRoutes::register($router, $apiKernel, $apiControllers);
 // Federation protocol between partner installations (migration 160): bearer
 // token of the partnership (or the secret invitation code), no session/CSRF.
 $router->get('/api/federation/v1/invitations/{code}', [$federationApiController, 'invitation']);

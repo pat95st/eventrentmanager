@@ -45,7 +45,7 @@ $timeRange = static function ($r): string {
                             <a href="/veranstaltungen/<?= e($r->id) ?>" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60">
                                 <span class="mt-1.5 shrink-0 rounded-full" style="width:.625rem; height:.625rem; background: <?= e($color) ?>"></span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100"><?= e($r->eventName) ?></span>
+                                    <span class="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100"><?= $r->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($r->eventName) ?></span>
                                     <span class="block truncate text-xs text-slate-500 dark:text-slate-400">
                                         <?= e($entry->customer->displayName()) ?><?= $r->eventLocation ? ' · ' . e($r->eventLocation) : '' ?>
                                     </span>

@@ -9,6 +9,20 @@ eigene Migrationen (inkl. Übernahme in `database/schema.sql` und
 
 ---
 
+## Umsetzungsstand
+
+- **Etappe 1 (Serien): umgesetzt** (Migration 176). Abweichungen vom Plan:
+  - Bereich „Erinnerungen“ entfällt: `rental_reminders` protokolliert nur
+    bereits verschickte Erinnerungen; automatische Erinnerungen ergeben
+    sich ohnehin aus Ausgabe-/Rückgabezeit jedes Termins.
+  - Bereich „Audio“ entfällt vorerst: Audio-Dateien liegen als Dateien im
+    Speicher und gehören einer Veranstaltung; ein Kopieren der Verweise
+    würde beim Löschen eines Termins die Dateien der anderen zerstören.
+    Der Jingle-Verweis im kopierten Minutenprogramm wird daher geleert.
+  - Techniker werden über `AssignTechnician` neu angefragt (mit der
+    üblichen Benachrichtigung je Termin).
+- Etappe 2 (Touren) und 3 (Route/Fahrzeuge): offen.
+
 ## Gemeinsame Basis (Teil von Etappe 1)
 
 ### Übernahme-Dienst `RentalCopier`

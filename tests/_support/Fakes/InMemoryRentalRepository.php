@@ -47,6 +47,14 @@ final class InMemoryRentalRepository implements RentalRepositoryInterface
         return [];
     }
 
+    public function findBySeries(string $seriesId): array
+    {
+        $result = array_values(array_filter($this->rentals, static fn (Rental $r): bool => $r->seriesId === $seriesId));
+        usort($result, static fn (Rental $a, Rental $b): int => [$a->startDate, $a->seriesIndex] <=> [$b->startDate, $b->seriesIndex]);
+
+        return $result;
+    }
+
     public function delete(string $id): void
     {
         unset($this->rentals[$id]);

@@ -440,6 +440,7 @@ final class RentalController
 
         echo View::page('rentals/show', [
             'detail' => $detail,
+            'seriesContext' => $detail->rental->seriesId !== null ? $this->queries->ask(new \App\Application\RentalSeries\Query\GetRentalSeriesContext($id)) : null,
             'bookedBundles' => $bookedBundles,
             'bookedSets' => $this->bookedSets($id, $articleDisplayNames ?? []),
             'bundleRequiredByArticle' => $bundleRequiredByArticle,

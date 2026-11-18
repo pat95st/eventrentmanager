@@ -634,6 +634,9 @@ Rental:
     - "terms_signed_at"
     - "blocks_other_rentals"
     - "no_strobe"
+    - "series_id"
+    - "series_index"
+    - "series_customized"
   properties:
     id:
       type: "string"
@@ -685,6 +688,14 @@ Rental:
     blocks_other_rentals:
       type: "boolean"
     no_strobe:
+      type: "boolean"
+    series_id:
+      type: "string"
+      nullable: true
+    series_index:
+      type: "integer"
+      nullable: true
+    series_customized:
       type: "boolean"
 RentalItem:
   type: "object"

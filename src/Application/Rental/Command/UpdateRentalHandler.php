@@ -56,6 +56,13 @@ final class UpdateRentalHandler implements CommandHandlerInterface
         // Veranstaltung durch diese Änderung neu hineinfällt.
         $previousHolidayIds = array_map(static fn ($h) => $h->id, $this->schedule?->holidaysDuring($rental->startDate, $rental->endDate) ?? []);
 
+        // Occurrence of a series moved by hand: a later rule change must not move it back.
+        $datesChanged = $rental->startDate->format('Y-m-d') !== $data['startDate']->format('Y-m-d')
+            || $rental->endDate->format('Y-m-d') !== $data['endDate']->format('Y-m-d');
+        if ($rental->seriesId !== null && $datesChanged) {
+            $rental->seriesCustomized = true;
+        }
+
         $rental->customerId = $data['customerId'];
         $rental->startDate = $data['startDate'];
         $rental->endDate = $data['endDate'];

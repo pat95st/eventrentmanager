@@ -39,7 +39,7 @@ use function App\Infrastructure\Http\t;
                 <?php foreach ($rentals as $entry): ?>
                     <?php $rental = $entry->rental; ?>
                     <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/veranstaltungen/<?= e($rental->id) ?>">
-                        <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100"><?= e($rental->eventName) ?></td>
+                        <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100"><?= $rental->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($rental->eventName) ?></td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($entry->customer->displayName()) ?></td>
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                             <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>

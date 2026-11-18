@@ -21,11 +21,11 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'INSERT INTO rentals (
                 id, customer_id, start_date, end_date, event_name, event_location, venue_id,
                 pickup_warehouse_id, pickup_at, return_warehouse_id, return_at, transport_note,
-                deployment_days, blocks_other_rentals, no_strobe, terms_signed_at, terms_signature_file, created_at, updated_at
+                deployment_days, blocks_other_rentals, no_strobe, series_id, series_index, series_customized, terms_signed_at, terms_signature_file, created_at, updated_at
              ) VALUES (
                 :id, :customer_id, :start_date, :end_date, :event_name, :event_location, :venue_id,
                 :pickup_warehouse_id, :pickup_at, :return_warehouse_id, :return_at, :transport_note,
-                :deployment_days, :blocks_other_rentals, :no_strobe, :terms_signed_at, :terms_signature_file, :created_at, :updated_at
+                :deployment_days, :blocks_other_rentals, :no_strobe, :series_id, :series_index, :series_customized, :terms_signed_at, :terms_signature_file, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, start_date = :start_date2, end_date = :end_date2,
@@ -34,6 +34,7 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
                 return_warehouse_id = :return_warehouse_id2, return_at = :return_at2,
                 transport_note = :transport_note2,
                 deployment_days = :deployment_days2, blocks_other_rentals = :blocks_other_rentals2, no_strobe = :no_strobe2,
+                series_id = :series_id2, series_index = :series_index2, series_customized = :series_customized2,
                 terms_signed_at = :terms_signed_at2, terms_signature_file = :terms_signature_file2,
                 updated_at = :updated_at2'
         );
@@ -54,6 +55,9 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'deployment_days' => $rental->deploymentDays,
             'blocks_other_rentals' => $rental->blocksOtherRentals ? 1 : 0,
             'no_strobe' => $rental->noStrobe ? 1 : 0,
+            'series_id' => $rental->seriesId,
+            'series_index' => $rental->seriesIndex,
+            'series_customized' => $rental->seriesCustomized ? 1 : 0,
             'terms_signed_at' => $rental->termsSignedAt?->format('Y-m-d H:i:s'),
             'terms_signature_file' => $rental->termsSignatureFile,
             'created_at' => $rental->createdAt->format('Y-m-d H:i:s'),
@@ -72,6 +76,9 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'deployment_days2' => $rental->deploymentDays,
             'blocks_other_rentals2' => $rental->blocksOtherRentals ? 1 : 0,
             'no_strobe2' => $rental->noStrobe ? 1 : 0,
+            'series_id2' => $rental->seriesId,
+            'series_index2' => $rental->seriesIndex,
+            'series_customized2' => $rental->seriesCustomized ? 1 : 0,
             'terms_signed_at2' => $rental->termsSignedAt?->format('Y-m-d H:i:s'),
             'terms_signature_file2' => $rental->termsSignatureFile,
             'updated_at2' => $rental->updatedAt->format('Y-m-d H:i:s'),
@@ -152,6 +159,14 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
     {
         $stmt = $this->pdo->prepare('SELECT * FROM rentals WHERE venue_id = :venue_id ORDER BY start_date DESC');
         $stmt->execute(['venue_id' => $venueId]);
+
+        return array_map($this->hydrate(...), $stmt->fetchAll());
+    }
+
+    public function findBySeries(string $seriesId): array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM rentals WHERE series_id = :series_id ORDER BY start_date ASC, series_index ASC');
+        $stmt->execute(['series_id' => $seriesId]);
 
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
@@ -300,6 +315,9 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             termsSignatureFile: $row['terms_signature_file'],
             blocksOtherRentals: (bool) ($row['blocks_other_rentals'] ?? false),
             noStrobe: (bool) ($row['no_strobe'] ?? false),
+            seriesId: $row['series_id'] ?? null,
+            seriesIndex: isset($row['series_index']) ? (int) $row['series_index'] : null,
+            seriesCustomized: (bool) ($row['series_customized'] ?? false),
         );
     }
 }

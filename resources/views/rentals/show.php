@@ -9,6 +9,7 @@
 /** @var string $companyAddress */
 /** @var string|null $customerChecklistUrl */
 /** @var string|null $customerChecklistUrlError */
+/** @var \App\Application\RentalSeries\Query\RentalSeriesContext|null $seriesContext */
 
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
@@ -135,6 +136,15 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                 <span class="sr-only"><?= e(t('rentals.show.more_actions')) ?></span>
             </summary>
             <div data-dropdown-menu role="menu" class="menu-fit absolute left-0 top-full z-20 mt-1 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:right-0">
+                <?php if (($seriesContext ?? null) === null): ?>
+                    <a href="/veranstaltungen/<?= e($rental->id) ?>/serie/neu" class="<?= $menuItemClass ?>">🔁 Wiederkehrend machen …</a>
+                <?php else: ?>
+                    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/serie/loesen" data-confirm-key="rentals.series.detach" data-confirm="Diesen Termin aus der Serie lösen? Er bleibt als normale Veranstaltung bestehen.">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <button type="submit" class="<?= $menuItemClass ?>">Aus der Serie lösen</button>
+                    </form>
+                <?php endif; ?>
+                <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
                 <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/loeschen" data-confirm-key="rentals.delete" data-confirm="<?= e(t('rentals.show.confirm_delete')) ?>" data-confirm-style="danger"<?= \App\Infrastructure\Http\StorageFolderForm::deleteQuestionAttributes(\App\Domain\DocumentStorage\StorageFolderOwnerType::Rental, $rental->id) ?>>
                     <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                     <button type="submit" class="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
@@ -145,6 +155,22 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
         </details>
     </div>
 </div>
+<?php if (($seriesContext ?? null) !== null): ?>
+    <?php /* Recurring event (migration 176) */ ?>
+    <div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-sm dark:border-brand-900 dark:bg-brand-950/30">
+        <span class="font-medium text-brand-900 dark:text-brand-200">🔁 Termin <?= $seriesContext->position ?> von <?= $seriesContext->total ?> der Serie</span>
+        <span class="text-brand-800/80 dark:text-brand-300/80"><?= e($seriesContext->series->rule->describe()) ?></span>
+        <span class="flex flex-wrap gap-x-4 gap-y-1">
+            <a href="/serien/<?= e($seriesContext->series->id) ?>" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Serie anzeigen</a>
+            <?php if ($seriesContext->previous !== null): ?>
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/serie/uebernehmen?richtung=vorher" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Aus vorherigem Termin übernehmen</a>
+            <?php endif; ?>
+            <?php if ($seriesContext->following !== []): ?>
+                <a href="/veranstaltungen/<?= e($rental->id) ?>/serie/uebernehmen?richtung=folgende" class="font-medium text-brand-700 hover:underline dark:text-brand-400">Auf folgende Termine übertragen</a>
+            <?php endif; ?>
+        </span>
+    </div>
+<?php endif; ?>
 <?php /* Warnings first: overlaps/exclusivity, then spare fuses to pack */ ?>
 <?php require __DIR__ . '/_schedule_notes.php'; /* Exklusiv / Betriebsurlaub (Migration 130) */ ?>
 <?php require __DIR__ . '/_spare_fuses.php'; /* Ersatzsicherungen (Migration 129) */ ?>

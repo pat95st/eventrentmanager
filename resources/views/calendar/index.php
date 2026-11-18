@@ -66,7 +66,7 @@ $maxVisiblePerDay = 3;
                                     style="--c: <?= e(\App\Infrastructure\Http\Controllers\CalendarController::colorFor($entry->rental->id)) ?>"
                                     title="<?= e($entry->rental->eventName . ' — ' . $entry->customer->displayName() . ($entry->materialLabels !== [] ? ' — ' . implode(', ', $entry->materialLabels) : '')) ?>"
                                 >
-                                    <?= e($entry->rental->eventName) ?>
+                                    <?= $entry->rental->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($entry->rental->eventName) ?>
                                 </a>
                             <?php endforeach; ?>
                             <?php if ($hiddenCount > 0): ?>

@@ -32,6 +32,7 @@ final class TourRoute
         public readonly bool $hasApiKey,
         public readonly int $bufferMinutes,
         public readonly array $entries = [],
+        public readonly ?string $error = null, // why the route service failed (straight lines shown instead)
     ) {
     }
 

@@ -307,7 +307,10 @@ $materialList = static function (array $material) use ($tour): string {
                 box.appendChild(p);
             });
             const missing = data.entries.filter((e) => !e.included).length;
-            if (data.timingWarnings.length === 0 && missing === 0) {
+            if (data.error) {
+                status.textContent = 'Fahrzeiten konnten nicht berechnet werden: ' + data.error;
+                status.classList.add('text-red-600');
+            } else if (data.timingWarnings.length === 0 && missing === 0) {
                 status.textContent = data.straightLine ? 'Route als Luftlinie (ohne Fahrzeiten) – siehe „Route & Fahrzeiten“.' : 'Fahrzeiten geprüft: die Zeit zwischen den Tourstops reicht.';
             } else {
                 status.textContent = (data.timingWarnings.length ? data.timingWarnings.length + ' Fahrzeit-Warnung(en) bei den Tourstops. ' : '')

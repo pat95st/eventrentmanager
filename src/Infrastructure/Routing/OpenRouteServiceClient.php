@@ -14,13 +14,17 @@ use App\Domain\Routing\VehicleRestrictions;
 use App\Infrastructure\Integration\HttpJsonRequest;
 
 /**
- * Directions of OpenRouteService (https://openrouteservice.org, free API
- * key). Profiles driving-car / driving-hgv; for trucks the dimensions are
- * sent as restrictions.
+ * Directions of OpenRouteService (HeiGIT, free API key from
+ * account.heigit.org). Profiles driving-car / driving-hgv; for trucks the
+ * dimensions are sent as restrictions.
+ *
+ * Since November 2026 the API is only served by api.heigit.org (the former
+ * host api.openrouteservice.org was shut down); the key is sent unchanged
+ * in the Authorization header.
  */
 final class OpenRouteServiceClient implements RoutingClientInterface
 {
-    private const URL = 'https://api.openrouteservice.org/v2/directions/%s/geojson';
+    public const URL = 'https://api.heigit.org/openrouteservice/v2/directions/%s/geojson';
 
     /** @var callable(string, string, array<string, string>, array<string, mixed>): array{status: int, json: array<string, mixed>|null, raw: string} */
     private $transport;
@@ -54,14 +58,29 @@ final class OpenRouteServiceClient implements RoutingClientInterface
                 'Accept' => 'application/geo+json, application/json',
             ], $body);
         } catch (\Throwable $e) {
-            throw new RoutingException('Verbindung zu OpenRouteService fehlgeschlagen', 0, $e);
+            throw new RoutingException('Verbindung zu OpenRouteService fehlgeschlagen: ' . $e->getMessage(), 0, $e);
         }
         if ($response['status'] !== 200 || $response['json'] === null) {
-            $message = $response['json']['error']['message'] ?? ($response['json']['error'] ?? null);
-            throw new RoutingException('OpenRouteService: ' . (is_string($message) ? $message : 'HTTP ' . $response['status']));
+            throw new RoutingException(self::errorMessage($response['status'], $response['json'], $response['raw']));
         }
 
         return self::parse($response['json'], count($points));
+    }
+
+    /** @param array<string, mixed>|null $json */
+    public static function errorMessage(int $status, ?array $json, string $raw): string
+    {
+        $message = $json['error']['message'] ?? ($json['error'] ?? ($json['message'] ?? null));
+        $detail = is_string($message) && $message !== '' ? $message : mb_substr(trim((string) preg_replace('/\s+/', ' ', strip_tags((string) preg_replace('/</', ' <', $raw)))), 0, 160);
+        $hint = match (true) {
+            $status === 401, $status === 403 => 'API-Schlüssel ungültig oder ohne Berechtigung – bitte den Schlüssel aus account.heigit.org neu kopieren',
+            $status === 404 => 'Endpunkt nicht gefunden',
+            $status === 429 => 'Tageskontingent bzw. Anfragelimit erreicht',
+            $status === 0 => 'keine Antwort vom Server',
+            default => null,
+        };
+
+        return 'OpenRouteService HTTP ' . $status . ($hint !== null ? ' – ' . $hint : '') . ($detail !== '' ? ' (' . $detail . ')' : '');
     }
 
     /** @param array<string, mixed> $json GeoJSON answer of the directions endpoint */

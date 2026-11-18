@@ -180,7 +180,7 @@ final class TourRouteServiceTest extends Unit
         $this->failWith = new RoutingException('Kontingent erschöpft');
         $route = $this->service()->forRental('tour');
         $this->assertTrue($route->result?->straightLine);
-        $this->assertStringContainsString('Kontingent erschöpft', implode(' ', $route->hints));
+        $this->assertSame('Kontingent erschöpft', $route->error);
     }
 
     public function testTruckProfileUsesPlannedVehiclesAndReportsMissingDimensions(): void

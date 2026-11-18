@@ -24,8 +24,8 @@ $input = 'mt-1 w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text
     <div>
         <label for="api_key" class="block text-xs font-medium text-slate-600 dark:text-slate-400">API-Schlüssel von OpenRouteService</label>
         <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-            Kostenlos nach Registrierung auf openrouteservice.org (Heidelberg Institute for Geoinformation Technology).
-            Ohne Schlüssel zeigt die Karte die Tourstops nur als Luftlinie, ohne Fahrzeiten.
+            Kostenlos nach Registrierung bei HeiGIT (account.heigit.org, Heidelberg Institute for Geoinformation Technology);
+            die Anfragen gehen an api.heigit.org. Ohne Schlüssel zeigt die Karte die Tourstops nur als Luftlinie, ohne Fahrzeiten.
         </p>
         <input type="password" id="api_key" name="api_key" autocomplete="off" placeholder="<?= $settings->hasApiKey() ? 'gespeichert – leer lassen, um ihn zu behalten' : '' ?>" class="<?= $input ?>">
         <?php if ($settings->hasApiKey()): ?>
@@ -41,3 +41,11 @@ $input = 'mt-1 w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>
     </div>
 </form>
+
+<?php if ($settings->hasApiKey()): ?>
+    <form method="post" action="/einstellungen/routenplanung/test" class="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+        <button type="submit" class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800">Verbindung testen</button>
+        <span class="text-xs text-slate-500 dark:text-slate-400">Berechnet eine kurze Testroute Hamburg → Hannover mit dem gespeicherten Schlüssel und zeigt das Ergebnis oder die Fehlermeldung des Dienstes.</span>
+    </form>
+<?php endif; ?>

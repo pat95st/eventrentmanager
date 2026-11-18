@@ -33,6 +33,7 @@ final class TourRouteController
         private readonly TourRepositoryInterface $tours,
         private readonly RoutingSettingsRepositoryInterface $settings,
         private readonly ?\App\Domain\Rental\RentalRepositoryInterface $rentals = null,
+        private readonly ?\App\Application\Routing\RoutingClientInterface $client = null,
     ) {
     }
 
@@ -102,6 +103,8 @@ final class TourRouteController
                 'geometry' => $l->geometry,
             ], $result->legs) : [],
             'entries' => $route->entries,
+            'error' => $route->error,
+            'hasApiKey' => $route->hasApiKey,
             'hints' => $route->hints,
             'timingWarnings' => $route->timingWarnings,
             'googleLinks' => $route->googleLinks,
@@ -147,6 +150,34 @@ final class TourRouteController
             $this->renderSettings($e->errors());
 
             return;
+        }
+        Response::redirect('/einstellungen/routenplanung');
+    }
+
+    /** Settings page: calculates a short test route (Hamburg → Hannover) with the stored key. */
+    public function testSettings(Request $request): void
+    {
+        $settings = $this->settings->get();
+        if (!$settings->hasApiKey() || $this->client === null) {
+            Flash::error('Bitte zuerst einen API-Schlüssel speichern.');
+            Response::redirect('/einstellungen/routenplanung');
+
+            return;
+        }
+        try {
+            $result = $this->client->route(
+                (string) $settings->apiKey,
+                [new \App\Domain\Routing\RoutePoint('Hamburg', 53.5511, 9.9937, 'start'), new \App\Domain\Routing\RoutePoint('Hannover', 52.3759, 9.7320, 'end')],
+                \App\Domain\Routing\RouteProfile::Car,
+                new \App\Domain\Routing\VehicleRestrictions(),
+            );
+            Flash::success(sprintf(
+                'Verbindung zu OpenRouteService funktioniert: Testroute Hamburg → Hannover %s km, %d min.',
+                number_format($result->totalDistanceM() / 1000, 0, ',', '.'),
+                (int) round((float) $result->totalDurationS() / 60),
+            ));
+        } catch (\App\Application\Routing\RoutingException $e) {
+            Flash::error('Test fehlgeschlagen: ' . $e->getMessage());
         }
         Response::redirect('/einstellungen/routenplanung');
     }

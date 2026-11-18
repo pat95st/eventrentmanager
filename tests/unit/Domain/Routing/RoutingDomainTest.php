@@ -102,6 +102,27 @@ final class RoutingDomainTest extends Unit
         $this->assertSame(27000.0, $result->totalDurationS());
     }
 
+    public function testOpenRouteServiceErrorsAreExplained(): void
+    {
+        $this->assertSame(
+            'OpenRouteService HTTP 403 – API-Schlüssel ungültig oder ohne Berechtigung – bitte den Schlüssel aus account.heigit.org neu kopieren (Access to this API has been disallowed)',
+            OpenRouteServiceClient::errorMessage(403, ['error' => 'Access to this API has been disallowed'], ''),
+        );
+        $this->assertSame(
+            'OpenRouteService HTTP 400 (Could not find routable point within a radius of 350.0 meters)',
+            OpenRouteServiceClient::errorMessage(400, ['error' => ['code' => 2010, 'message' => 'Could not find routable point within a radius of 350.0 meters']], ''),
+        );
+        $this->assertSame('OpenRouteService HTTP 400 (400 Bad Request nginx)', OpenRouteServiceClient::errorMessage(400, null, '<html><h1>400 Bad Request</h1>nginx</html>'));
+
+        $client = new OpenRouteServiceClient(static fn () => ['status' => 429, 'json' => ['error' => 'Rate limit exceeded'], 'raw' => '']);
+        try {
+            $client->route('k', [new RoutePoint('A', 53.5, 10.0, 'start'), new RoutePoint('B', 51.3, 9.5, 'end')], \App\Domain\Routing\RouteProfile::Car, new VehicleRestrictions());
+            $this->fail('RoutingException expected');
+        } catch (\App\Application\Routing\RoutingException $e) {
+            $this->assertStringContainsString('HTTP 429 – Tageskontingent', $e->getMessage());
+        }
+    }
+
     public function testOpenRouteServiceRequestForTrucks(): void
     {
         $sent = null;
@@ -115,7 +136,7 @@ final class RoutingDomainTest extends Unit
         });
         $client->route('key-123', [new RoutePoint('A', 53.5, 10.0, 'start'), new RoutePoint('B', 51.3, 9.5, 'end')], \App\Domain\Routing\RouteProfile::HgvVehicles, new VehicleRestrictions(3.4, null, 8.0, 7.49));
 
-        $this->assertStringContainsString('/driving-hgv/', $sent['url']);
+        $this->assertSame('https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson', $sent['url']);
         $this->assertSame('key-123', $sent['headers']['Authorization']);
         $this->assertSame([[10.0, 53.5], [9.5, 51.3]], $sent['body']['coordinates']);
         $this->assertSame(['height' => 3.4, 'length' => 8.0, 'weight' => 7.49], $sent['body']['options']['profile_params']['restrictions']);

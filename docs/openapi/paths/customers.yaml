@@ -1,0 +1,186 @@
+# REST API v1 — customers. Paths are referenced from ../openapi.yaml.
+/api/v1/customers:
+  get:
+    tags:
+    - Kunden
+    summary: Kunden auflisten
+    description: |
+      Inklusive Ansprechpartnern (`contacts`).
+
+      **Scopes:** `customers:read`
+    operationId: CustomersIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - customers:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/CustomerResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Kunden
+    summary: Kunde anlegen
+    description: |
+      **Scopes:** `customers:write`
+    operationId: CustomersStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - customers:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/CustomerInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/CustomerResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/customers/{id}:
+  get:
+    tags:
+    - Kunden
+    summary: Kunde abrufen
+    description: |
+      **Scopes:** `customers:read`
+    operationId: CustomersShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - customers:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/CustomerResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Kunden
+    summary: Kunde ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `customers:write`
+    operationId: CustomersUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - customers:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/CustomerPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/CustomerResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Kunden
+    summary: Kunde löschen
+    description: |
+      **Scopes:** `customers:write`
+    operationId: CustomersDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - customers:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

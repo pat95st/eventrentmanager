@@ -1,0 +1,1399 @@
+# REST API v1 — articles. Paths are referenced from ../openapi.yaml.
+/api/v1/articles:
+  get:
+    tags:
+    - Artikel
+    summary: Artikel auflisten
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticlesIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - name: active
+      in: query
+      description: '`1` = nur aktive Artikel.'
+      schema:
+        type: string
+        enum:
+        - '1'
+    - name: manufacturer_id
+      in: query
+      schema:
+        type: string
+    - name: category_id
+      in: query
+      schema:
+        type: string
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/ArticleResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Artikel
+    summary: Artikel anlegen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticlesStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ArticleInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}:
+  get:
+    tags:
+    - Artikel
+    summary: Artikel abrufen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticlesShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Artikel
+    summary: Artikel ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `articles:write`
+    operationId: ArticlesUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ArticlePatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Artikel löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticlesDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}/activate:
+  post:
+    tags:
+    - Artikel
+    summary: Artikel aktivieren
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticlesActivate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}/deactivate:
+  post:
+    tags:
+    - Artikel
+    summary: Artikel deaktivieren
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticlesDeactivate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}/images/{imageId}:
+  get:
+    tags:
+    - Artikel
+    summary: Artikelbild herunterladen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticlesImage
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    - $ref: ../components/common.yaml#/parameters/ImageId
+    responses:
+      '200':
+        description: Datei.
+        content:
+          image/*:
+            schema:
+              type: string
+              format: binary
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Artikelbild löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticlesDeleteImage
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    - $ref: ../components/common.yaml#/parameters/ImageId
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}/images:
+  post:
+    tags:
+    - Artikel
+    summary: Artikelbild hochladen
+    description: |
+      `multipart/form-data` mit der Bilddatei im Feld `file`.
+
+      **Scopes:** `articles:write`
+    operationId: ArticlesUploadImage
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required:
+            - file
+            properties:
+              file:
+                type: string
+                format: binary
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    url:
+                      type: string
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}/availability:
+  get:
+    tags:
+    - Artikel
+    summary: Verfügbarkeit eines Artikels
+    description: |
+      Tagesgenaue Verfügbarkeit im Zeitraum (max. 366 Tage) — gedacht für Shops.
+
+      **Scopes:** `articles:read`
+    operationId: ArticlesAvailability
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    - $ref: ../components/common.yaml#/parameters/From
+    - $ref: ../components/common.yaml#/parameters/To
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/Availability
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/availability:
+  get:
+    tags:
+    - Artikel
+    summary: Verfügbarkeit mehrerer Artikel
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticlesAvailabilityBulk
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - name: article_ids
+      in: query
+      required: true
+      description: Kommagetrennte Artikel-IDs (max. 100).
+      schema:
+        type: string
+    - $ref: ../components/common.yaml#/parameters/From
+    - $ref: ../components/common.yaml#/parameters/To
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/Availability
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/articles/{id}/inventory-numbers:
+  get:
+    tags:
+    - Artikel
+    summary: Inventarnummern eines Artikels
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticlesInventoryNumbers
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/InventoryNumberEntry
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Artikel
+    summary: Inventarnummer anlegen
+    description: |
+      Die Nummer wird wie in der Oberfläche automatisch vergeben.
+
+      **Scopes:** `articles:write`
+    operationId: ArticlesStoreInventoryNumber
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/InventoryNumberInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/InventoryNumberDetail
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/inventory-numbers/{id}:
+  get:
+    tags:
+    - Artikel
+    summary: Inventarnummer abrufen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticlesShowInventoryNumber
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/InventoryNumberDetail
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Artikel
+    summary: Inventarnummer ändern
+    description: |
+      Teilweise Änderung. `current_value` setzt den Zeitwert.
+
+      **Scopes:** `articles:write`
+    operationId: ArticlesUpdateInventoryNumber
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/InventoryNumberPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/InventoryNumberDetail
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Inventarnummer löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticlesDestroyInventoryNumber
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/article-sets:
+  get:
+    tags:
+    - Artikel
+    summary: Sets auflisten
+    description: |
+      `items`, `rules` und `upgrades` haben dasselbe Format wie beim Schreiben.
+
+      **Scopes:** `articles:read`
+    operationId: ArticleSetsIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - name: active
+      in: query
+      schema:
+        type: string
+        enum:
+        - '1'
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/ArticleSetResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Artikel
+    summary: Set anlegen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticleSetsStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ArticleSetInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleSetResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/article-sets/{id}:
+  get:
+    tags:
+    - Artikel
+    summary: Set abrufen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ArticleSetsShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleSetResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Artikel
+    summary: Set ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `articles:write`
+    operationId: ArticleSetsUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ArticleSetPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/ArticleSetResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Set löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ArticleSetsDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/categories:
+  get:
+    tags:
+    - Artikel
+    summary: Kategorien auflisten
+    description: |
+      **Scopes:** `articles:read`
+    operationId: CategoriesIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/Category
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Artikel
+    summary: Kategorie anlegen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: CategoriesStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/CategoryInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Category
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/categories/{id}:
+  get:
+    tags:
+    - Artikel
+    summary: Kategorie abrufen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: CategoriesShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Category
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Artikel
+    summary: Kategorie ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `articles:write`
+    operationId: CategoriesUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/CategoryPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Category
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Kategorie löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: CategoriesDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/manufacturers:
+  get:
+    tags:
+    - Artikel
+    summary: Hersteller auflisten
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ManufacturersIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/Manufacturer
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Artikel
+    summary: Hersteller anlegen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ManufacturersStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ManufacturerInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Manufacturer
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/manufacturers/{id}:
+  get:
+    tags:
+    - Artikel
+    summary: Hersteller abrufen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: ManufacturersShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Manufacturer
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Artikel
+    summary: Hersteller ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `articles:write`
+    operationId: ManufacturersUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ManufacturerPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Manufacturer
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Hersteller löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: ManufacturersDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/labor-time-articles:
+  get:
+    tags:
+    - Artikel
+    summary: Arbeitszeit-Artikel auflisten
+    description: |
+      **Scopes:** `articles:read`
+    operationId: LaborTimeArticlesIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/LaborTimeArticle
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Artikel
+    summary: Arbeitszeit-Artikel anlegen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: LaborTimeArticlesStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/LaborTimeArticleInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/LaborTimeArticle
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/labor-time-articles/{id}:
+  get:
+    tags:
+    - Artikel
+    summary: Arbeitszeit-Artikel abrufen
+    description: |
+      **Scopes:** `articles:read`
+    operationId: LaborTimeArticlesShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/LaborTimeArticle
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Artikel
+    summary: Arbeitszeit-Artikel ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `articles:write`
+    operationId: LaborTimeArticlesUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/LaborTimeArticlePatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/LaborTimeArticle
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Artikel
+    summary: Arbeitszeit-Artikel löschen
+    description: |
+      **Scopes:** `articles:write`
+    operationId: LaborTimeArticlesDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - articles:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Api\Command\CreateApiToken;
-use App\Application\Api\Command\CreatedApiToken;
 use App\Application\Api\Command\DeleteApiToken;
 use App\Application\Api\Command\SetApiTokenEnabled;
 use App\Application\Api\Command\UpdateApiToken;
@@ -14,18 +13,31 @@ use App\Application\Command\CommandBus;
 use App\Application\Query\QueryBus;
 use App\Application\Settings\Command\UpdateApiSettings;
 use App\Application\Settings\Query\GetApiSettings;
+use App\Domain\Api\ApiRequestLogRepositoryInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\Settings\ApiSettingsRepositoryInterface;
+use App\Infrastructure\Http\Api\RateLimit\RateLimiterUnavailable;
+use App\Infrastructure\Http\Api\RateLimit\RedisClient;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
+use DateTimeImmutable;
 
+/**
+ * Einstellungen › API: global switch, rate limiting (database or Redis),
+ * tokens with scopes/read-only/rate limit and the log of write requests.
+ */
 final class ApiSettingsController
 {
+    private const LOG_ENTRIES = 100;
+
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        private readonly ApiRequestLogRepositoryInterface $requestLog,
+        private readonly ApiSettingsRepositoryInterface $settings,
     ) {
     }
 
@@ -36,18 +48,55 @@ final class ApiSettingsController
 
     public function updateSettings(Request $request): void
     {
-        $this->commands->dispatch(new UpdateApiSettings($request->input('enabled') === '1'));
+        try {
+            $this->commands->dispatch(new UpdateApiSettings(
+                enabled: $request->input('enabled') === '1',
+                rateLimitPerMinute: $request->input('rate_limit_per_minute'),
+                rateLimitBackend: $request->input('rate_limit_backend'),
+                redisConnection: $request->input('redis_connection'),
+                redisHost: $request->input('redis_host'),
+                redisPort: $request->input('redis_port'),
+                redisSocketPath: $request->input('redis_socket_path'),
+                redisUsername: $request->input('redis_username'),
+                redisPassword: $request->input('redis_password'),
+                clearRedisPassword: $request->input('redis_password_clear') === '1',
+                redisDatabase: $request->input('redis_database'),
+                redisKeyPrefix: $request->input('redis_key_prefix'),
+                redisTimeoutMs: $request->input('redis_timeout_ms'),
+            ));
+        } catch (ValidationException $e) {
+            $this->render($e->errors(), null, null);
+
+            return;
+        }
         Flash::success('API-Einstellungen wurden gespeichert.');
+        Response::redirect('/einstellungen/api');
+    }
+
+    /** Tests the saved Redis connection (PING + server version). */
+    public function testRedis(Request $request): void
+    {
+        $settings = $this->settings->get();
+        try {
+            $version = RedisClient::fromSettings($settings)->ping();
+            $this->settings->recordRedisError(null, new DateTimeImmutable());
+            Flash::success('Verbindung zu Redis erfolgreich (' . RedisClient::address($settings) . ', Redis ' . $version . ').');
+        } catch (RateLimiterUnavailable $e) {
+            $this->settings->recordRedisError($e->getMessage(), new DateTimeImmutable());
+            Flash::error('Redis ist nicht erreichbar: ' . $e->getMessage());
+        }
         Response::redirect('/einstellungen/api');
     }
 
     public function createToken(Request $request): void
     {
         try {
-            /** @var CreatedApiToken $created */
             $created = $this->commands->dispatch(new CreateApiToken(
                 name: $request->input('name'),
                 ipAllowlist: $request->input('ip_allowlist'),
+                scopes: $request->inputArray('scopes'),
+                readOnly: $request->input('read_only') === '1',
+                rateLimitPerMinute: $request->input('rate_limit_per_minute'),
             ));
         } catch (ValidationException $e) {
             $this->render($e->errors(), null, null);
@@ -55,7 +104,7 @@ final class ApiSettingsController
             return;
         }
 
-        // Der Klartext-Token ist ab jetzt für immer weg — wird per Flash EINMALIG
+        // Der Klartext-Token ist ab jetzt für immer weg — wird EINMALIG
         // angezeigt (siehe settings/api.php), nicht in der DB gespeichert.
         $this->render([], $created->rawToken, null);
     }
@@ -69,6 +118,9 @@ final class ApiSettingsController
                 id: $id,
                 name: $request->input('name'),
                 ipAllowlist: $request->input('ip_allowlist'),
+                scopes: $request->inputArray('scopes'),
+                readOnly: $request->input('read_only') === '1',
+                rateLimitPerMinute: $request->input('rate_limit_per_minute'),
             ));
             Flash::success('Token wurde aktualisiert.');
             Response::redirect('/einstellungen/api');
@@ -125,6 +177,7 @@ final class ApiSettingsController
         echo View::page('settings/api', [
             'apiSettings' => $this->queries->ask(new GetApiSettings()),
             'tokens' => $this->queries->ask(new ListApiTokens()),
+            'requestLog' => $this->requestLog->latest(self::LOG_ENTRIES),
             'errors' => $errors,
             'newRawToken' => $newRawToken,
             'editTokenId' => $editTokenId !== '' ? $editTokenId : null,

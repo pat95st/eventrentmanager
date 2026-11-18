@@ -1,0 +1,824 @@
+# REST API v1 — sales. Paths are referenced from ../openapi.yaml.
+/api/v1/offers:
+  get:
+    tags:
+    - Angebote
+    summary: Angebote auflisten
+    description: |
+      Ein Shop kann Anfragen als Angebotsentwurf anlegen.
+
+      **Scopes:** `sales:read`
+    operationId: OffersIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    parameters:
+    - name: status
+      in: query
+      schema:
+        type: string
+        enum:
+        - draft
+        - sent
+        - accepted
+        - declined
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/OfferResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Angebote
+    summary: Angebot anlegen
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OffersStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/OfferInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OfferDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}:
+  get:
+    tags:
+    - Angebote
+    summary: Angebot abrufen
+    description: |
+      **Scopes:** `sales:read`
+    operationId: OffersShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OfferDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Angebote
+    summary: Angebot ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `sales:write`
+    operationId: OffersUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/OfferPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OfferDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Angebote
+    summary: Angebot löschen
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OffersDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/mark-sent:
+  post:
+    tags:
+    - Angebote
+    summary: Als versendet markieren
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OffersMarkSent
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OfferDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/accept:
+  post:
+    tags:
+    - Angebote
+    summary: Als angenommen markieren
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OffersAccept
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OfferDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/decline:
+  post:
+    tags:
+    - Angebote
+    summary: Als abgelehnt markieren
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OffersDecline
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OfferDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/rental:
+  post:
+    tags:
+    - Angebote
+    summary: In Veranstaltung umwandeln
+    description: |
+      Prüft die Verfügbarkeit wie die Oberfläche.
+
+      **Scopes:** `sales:write`, `rentals:write`
+    operationId: OffersConvertToRental
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    - rentals:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Rental
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/order-confirmation:
+  post:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung aus Angebot
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OffersCreateOrderConfirmation
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/OrderConfirmation
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/invoice:
+  post:
+    tags:
+    - Angebote
+    summary: Rechnung aus Angebot
+    description: |
+      **Scopes:** `sales:read`, `invoices:write`
+    operationId: OffersCreateInvoice
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    - invoices:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/Invoice
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/pdf:
+  get:
+    tags:
+    - Angebote
+    summary: Angebot als PDF
+    description: |
+      **Scopes:** `sales:read`
+    operationId: OffersPdf
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        $ref: ../components/common.yaml#/responses/Pdf
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/offers/{id}/email:
+  post:
+    tags:
+    - Angebote
+    summary: Angebot per E-Mail versenden
+    description: |
+      Versendet das Dokument als PDF-Anhang an `recipient_email` (der Versand wird wie in der Oberfläche archiviert).
+
+      **Scopes:** `sales:read`, `email:send`
+    operationId: OffersEmail
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    - email:send
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/EmailInput
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/EmailResult
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+      '502':
+        $ref: ../components/common.yaml#/responses/MailFailed
+/api/v1/order-confirmations:
+  get:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigungen auflisten
+    description: |
+      **Scopes:** `sales:read`
+    operationId: OrderConfirmationsIndex
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    parameters:
+    - name: status
+      in: query
+      schema:
+        type: string
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/OrderConfirmationResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung anlegen
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OrderConfirmationsStore
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/OrderConfirmationInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OrderConfirmationDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/order-confirmations/{id}:
+  get:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung abrufen
+    description: |
+      **Scopes:** `sales:read`
+    operationId: OrderConfirmationsShow
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OrderConfirmationDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  patch:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung ändern
+    description: |
+      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+
+      **Scopes:** `sales:write`
+    operationId: OrderConfirmationsUpdate
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/OrderConfirmationPatch
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OrderConfirmationDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  delete:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung löschen
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OrderConfirmationsDestroy
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '204':
+        $ref: ../components/common.yaml#/responses/NoContent
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/order-confirmations/{id}/mark-sent:
+  post:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung als versendet markieren
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OrderConfirmationsMarkSent
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OrderConfirmationDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/order-confirmations/{id}/confirm:
+  post:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung als bestätigt markieren
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OrderConfirmationsConfirm
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OrderConfirmationDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/order-confirmations/{id}/cancel:
+  post:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung stornieren
+    description: |
+      **Scopes:** `sales:write`
+    operationId: OrderConfirmationsCancel
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/OrderConfirmationDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '409':
+        $ref: ../components/common.yaml#/responses/Conflict
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/order-confirmations/{id}/pdf:
+  get:
+    tags:
+    - Angebote
+    summary: Auftragsbestätigung als PDF
+    description: |
+      **Scopes:** `sales:read`
+    operationId: OrderConfirmationsPdf
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - sales:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        $ref: ../components/common.yaml#/responses/Pdf
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

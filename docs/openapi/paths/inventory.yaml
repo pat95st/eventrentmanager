@@ -1,0 +1,455 @@
+# REST API v1 — inventory. Paths are referenced from ../openapi.yaml.
+/api/v1/cases:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Cases auflisten
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryCases
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - name: manufacturer_id
+      in: query
+      schema:
+        type: string
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/CaseItem
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/cases/{id}:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Case abrufen
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryCaseItem
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/CaseResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/racks:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Racks auflisten
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryRacks
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/RackResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/racks/{id}:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Rack abrufen
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryRack
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/RackDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/rmas:
+  get:
+    tags:
+    - Lager & Technik
+    summary: RMAs auflisten
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryRmas
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - name: status
+      in: query
+      schema:
+        type: string
+        enum:
+        - offen
+        - unterwegs
+        - abgeschlossen
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/RmaResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/rmas/{id}:
+  get:
+    tags:
+    - Lager & Technik
+    summary: RMA abrufen
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryRma
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/common.yaml#/schemas/RmaDetailResource
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/electrical-inspections:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Letzte Elektroprüfungen
+    description: |
+      Die bis zu 500 jüngsten Prüfungen über alle Inventarnummern.
+
+      **Scopes:** `inventory:read`
+    operationId: InventoryElectricalInspections
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/RecentInspection
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/electrical-inspections/{id}:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Elektroprüfung abrufen
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryElectricalInspection
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/ElectricalInspection
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/inventory-numbers/{id}/electrical-inspections:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Elektroprüfungen einer Inventarnummer
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventoryInventoryNumberInspections
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/generated.yaml#/ElectricalInspection
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+  post:
+    tags:
+    - Lager & Technik
+    summary: Elektroprüfung erfassen
+    description: |
+      Z. B. aus einem Prüfgerät oder einer App.
+
+      **Scopes:** `inventory:write`
+    operationId: InventoryStoreInspection
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:write
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Id
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/generated.yaml#/ElectricalInspectionInput
+    responses:
+      '201':
+        description: Angelegt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: ../components/generated.yaml#/ElectricalInspection
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '404':
+        $ref: ../components/common.yaml#/responses/NotFound
+      '422':
+        $ref: ../components/common.yaml#/responses/Unprocessable
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/sales:
+  get:
+    tags:
+    - Lager & Technik
+    summary: Verkäufe auflisten
+    description: |
+      **Scopes:** `inventory:read`
+    operationId: InventorySales
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - inventory:read
+    parameters:
+    - $ref: ../components/common.yaml#/parameters/Q
+    - $ref: ../components/common.yaml#/parameters/UpdatedSince
+    - $ref: ../components/common.yaml#/parameters/Sort
+    - $ref: ../components/common.yaml#/parameters/Page
+    - $ref: ../components/common.yaml#/parameters/PageSize
+    responses:
+      '200':
+        description: Liste (seitenweise).
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/common.yaml#/schemas/SaleResource
+                meta:
+                  $ref: ../components/common.yaml#/schemas/ListMeta
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

@@ -1,0 +1,120 @@
+# REST API v1 — reports. Paths are referenced from ../openapi.yaml.
+/api/v1/reports/income-expense:
+  get:
+    tags:
+    - Berichte
+    summary: Einnahmen und Ausgaben je Monat
+    description: |
+      **Scopes:** `reports:read`
+    operationId: ReportsIncomeExpense
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - reports:read
+    parameters:
+    - name: year
+      in: query
+      schema:
+        type: integer
+        example: 2026
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  type: object
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/reports/revenue-forecast:
+  get:
+    tags:
+    - Berichte
+    summary: Umsatzprognose
+    description: |
+      **Scopes:** `reports:read`
+    operationId: ReportsRevenueForecast
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - reports:read
+    parameters:
+    - name: from_year
+      in: query
+      schema:
+        type: integer
+    - name: years
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 20
+        default: 5
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  type: object
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests
+/api/v1/reports/depreciation:
+  get:
+    tags:
+    - Berichte
+    summary: Abschreibungen (AfA)
+    description: |
+      **Scopes:** `reports:read`
+    operationId: ReportsDepreciation
+    security:
+    - apiToken: []
+    x-required-scopes:
+    - reports:read
+    parameters:
+    - name: year
+      in: query
+      schema:
+        type: integer
+    responses:
+      '200':
+        description: Erfolgreich.
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  type: object
+      '400':
+        $ref: ../components/common.yaml#/responses/BadRequest
+      '401':
+        $ref: ../components/common.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/common.yaml#/responses/Forbidden
+      '429':
+        $ref: ../components/common.yaml#/responses/TooManyRequests

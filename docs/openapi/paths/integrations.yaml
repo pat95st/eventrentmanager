@@ -1,0 +1,445 @@
+# integrations interfaces (see docs/*-api.md). Paths are referenced from ../openapi.yaml.
+/api/federation/v1/invitations/{code}:
+  get:
+    tags:
+    - Partner-Instanzen
+    operationId: federationInvitation
+    security: []
+    summary: Einladung prüfen
+    description: Liefert Name, Basis-URL und Anschrift der einladenden Instanz.
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/InvitationCode
+    responses:
+      '200':
+        description: Einladende Instanz.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/legacy.yaml#/schemas/FederationSelf
+      '404':
+        description: Link ungültig, abgelaufen (7 Tage) oder bereits verwendet.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+/api/federation/v1/invitations/{code}/accept:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationAcceptInvitation
+    security: []
+    summary: Einladung annehmen
+    description: 'Die eingeladene Instanz nimmt an. `token` ist der Token, mit dem die einladende Instanz
+
+      künftig den Absender aufruft; die Antwort enthält umgekehrt den Token für den Absender.
+
+      Die Partnerschaft steht danach auf `pending_confirmation` bei der einladenden Instanz.
+
+      '
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/InvitationCode
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - name
+            - base_url
+            - token
+            properties:
+              name:
+                type: string
+                maxLength: 255
+              base_url:
+                type: string
+                format: uri
+              profile:
+                $ref: ../components/legacy.yaml#/schemas/PartnerProfile
+              token:
+                type: string
+                pattern: ^[A-Za-z0-9]{32,128}$
+              discount_granted:
+                type: number
+                minimum: 0
+                maximum: 100
+                example: 10
+              discount_received:
+                type: number
+                minimum: 0
+                maximum: 100
+                example: 10
+    responses:
+      '200':
+        description: Angenommen.
+        content:
+          application/json:
+            schema:
+              allOf:
+              - $ref: ../components/legacy.yaml#/schemas/FederationSelf
+              - type: object
+                properties:
+                  token:
+                    type: string
+                    description: Token für künftige Aufrufe des Absenders.
+      '404':
+        $ref: ../components/legacy.yaml#/responses/Error
+      '409':
+        description: Es besteht bereits eine Partnerschaft mit dieser Instanz.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+      '422':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/partnership:
+  get:
+    tags:
+    - Partner-Instanzen
+    operationId: federationPartnership
+    summary: Status der Partnerschaft
+    description: Auch als Verbindungstest nutzbar.
+    security:
+    - federationToken: []
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/Partnership
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+/api/federation/v1/partnership/confirm:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationConfirm
+    summary: Partnerschaft bestätigen oder ablehnen
+    description: Nur wenn die Partnerschaft auf `awaiting_partner` steht.
+    security:
+    - federationToken: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              decision:
+                type: string
+                enum:
+                - accept
+                - decline
+              discount:
+                $ref: ../components/legacy.yaml#/schemas/DiscountAction
+    responses:
+      '200':
+        description: Bei `accept` der neue Partnerschaftsstand, bei `decline` nur `status`.
+        content:
+          application/json:
+            schema:
+              oneOf:
+              - $ref: ../components/legacy.yaml#/schemas/Partnership
+              - $ref: ../components/legacy.yaml#/schemas/StatusOnly
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '409':
+        $ref: ../components/legacy.yaml#/responses/Error
+      '422':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/partnership/discount:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationDiscount
+    summary: Rabatt vorschlagen, annehmen oder ablehnen
+    description: Bis zur Zustimmung gilt der bisher vereinbarte Rabatt.
+    security:
+    - federationToken: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/legacy.yaml#/schemas/DiscountAction
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/Partnership
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '409':
+        $ref: ../components/legacy.yaml#/responses/Error
+      '422':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/partnership/end:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationEnd
+    summary: Partnerschaft beenden
+    description: Danach antworten alle Endpunkte mit `403`.
+    security:
+    - federationToken: []
+    responses:
+      '200':
+        description: Beendet.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/legacy.yaml#/schemas/StatusOnly
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+/api/federation/v1/articles:
+  get:
+    tags:
+    - Partner-Instanzen
+    operationId: federationArticles
+    summary: Materialpool des Partners
+    description: Vermietbare Artikel mit Verfügbarkeit im Zeitraum, 25 je Seite.
+    security:
+    - federationToken: []
+    parameters:
+    - name: from
+      in: query
+      description: Beginn (Standard heute).
+      schema:
+        type: string
+        format: date
+    - name: to
+      in: query
+      description: Ende (Standard = `from`).
+      schema:
+        type: string
+        format: date
+    - name: q
+      in: query
+      schema:
+        type: string
+        maxLength: 100
+    - name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    responses:
+      '200':
+        description: Artikel.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: ../components/legacy.yaml#/schemas/FederationArticle
+                meta:
+                  type: object
+                  properties:
+                    page:
+                      type: integer
+                    page_size:
+                      type: integer
+                      example: 25
+                    total:
+                      type: integer
+                    from:
+                      type: string
+                      format: date
+                    to:
+                      type: string
+                      format: date
+                    discount_percent:
+                      type: number
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '422':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/technicians:
+  get:
+    tags:
+    - Partner-Instanzen
+    operationId: federationTechnicians
+    summary: Techniker und Gewerke des Partners
+    description: Geteilt werden nur Namen, keine E-Mail-Adressen.
+    security:
+    - federationToken: []
+    responses:
+      '200':
+        description: Techniker.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                allowed:
+                  type: boolean
+                technicians:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                trades:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                  - Ton
+                  - Licht
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+/api/federation/v1/requests:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationCreateRequest
+    summary: Material- oder Techniker-Anfrage stellen
+    description: 'Wiederholtes Senden derselben `reference` liefert den bestehenden Stand. Bei Material und
+
+      aktivem „automatisch zusagen“ wird die Anfrage sofort zugesagt, sofern alles verfügbar ist.
+
+      '
+    security:
+    - federationToken: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/legacy.yaml#/schemas/FederationRequestInput
+    responses:
+      '201':
+        $ref: ../components/legacy.yaml#/responses/FederationRequestState
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '422':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/requests/{reference}:
+  get:
+    tags:
+    - Partner-Instanzen
+    operationId: federationRequestStatus
+    summary: Stand einer Anfrage des Absenders
+    security:
+    - federationToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/Reference
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/FederationRequestState
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '404':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/requests/{reference}/cancel:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationCancelRequest
+    summary: Anfrage stornieren
+    security:
+    - federationToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/Reference
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/FederationRequestState
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '404':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/federation/v1/requests/{reference}/status:
+  post:
+    tags:
+    - Partner-Instanzen
+    operationId: federationReceiveStatus
+    summary: Entscheidung zu einer Anfrage melden
+    description: Der anbietende Partner meldet den neuen Stand einer Anfrage, die der Empfänger gestellt hat.
+    security:
+    - federationToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/Reference
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../components/legacy.yaml#/schemas/FederationRequestStatusEnum
+              message:
+                type: string
+                nullable: true
+                maxLength: 1000
+              discount_percent:
+                type: number
+                nullable: true
+                minimum: 0
+                maximum: 100
+              items:
+                type: array
+                items:
+                  $ref: ../components/legacy.yaml#/schemas/FederationRequestItem
+              technicians:
+                type: array
+                maxItems: 50
+                items:
+                  $ref: ../components/legacy.yaml#/schemas/FederationTechnicianStatus
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/Ok
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '403':
+        $ref: ../components/legacy.yaml#/responses/FederationForbidden
+      '404':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/payments/sumup/webhook:
+  post:
+    tags:
+    - Online-Zahlung
+    operationId: sumUpWebhook
+    security: []
+    summary: SumUp-Webhook
+    description: 'Benachrichtigung von SumUp über einen Checkout. Der Server ordnet die Checkout-ID der
+
+      zugehörigen Rechnung zu und bestätigt deren Online-Zahlung. Unbekannte Checkouts werden
+
+      ignoriert; die Antwort ist immer `{"ok": true}`.
+
+      '
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+                maxLength: 100
+                description: Checkout-ID.
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/Ok

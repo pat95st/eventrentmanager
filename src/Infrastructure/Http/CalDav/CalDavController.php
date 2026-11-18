@@ -253,7 +253,7 @@ final class CalDavController
         if (!$calendar->enabled || !$hasAccess) {
             // 404 statt 403: verrät nicht, ob der Kalender überhaupt existiert
             // (dieselbe Begründung wie beim globalen API-Schalter, siehe
-            // ApiTokenGuard).
+            // Api\ApiKernel).
             Response::raw('Nicht gefunden.', 404, 'text/plain; charset=utf-8');
         }
 

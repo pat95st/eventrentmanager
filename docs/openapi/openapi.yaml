@@ -1,0 +1,494 @@
+# Root of the OpenAPI description. Build: bin/build-api-docs.sh (bundles docs/openapi/ into api-docs.html).
+openapi: 3.0.3
+info:
+  title: Materialverleih – API
+  version: '1.1'
+  description: |
+    Maschinenlesbare Schnittstellen der Materialverleih-Software.
+
+    Alle Pfade sind relativ zur Basis-URL der Installation, z. B. `https://verleih.example.de`.
+    Keine Schnittstelle nutzt Session-Cookies oder CSRF-Schutz.
+
+    | Bereich | Pfad-Präfix | Zugang |
+    |---|---|---|
+    | **REST-API v1** (Kunden, Artikel, Veranstaltungen, Angebote, Rechnungen, Finanzen, Lager, Berichte) | `/api/v1` | API-Token mit Scopes (*Einstellungen › API*) |
+    | Abspielgerät | `/api/player/v1` | Geräte-Token `mvp_…` |
+    | Run-Sheet / Stagedisplay | `/api/runsheet/v1/{token}` | Token eines Freigabe-Links |
+    | Stage- & FOH-Displays | `/api/display/v1` | Display-Token `mvd_…` |
+    | Partner-Instanzen | `/api/federation/v1` | Partnerschafts-Token / Einladungscode |
+    | Online-Zahlung | `/api/payments` | – (Webhook) |
+
+    # REST-API v1
+
+    ## Aktivieren und Tokens
+
+    Die API wird unter **Einstellungen › API** eingeschaltet; ausgeschaltet antwortet jeder Endpunkt mit `404`.
+    Dort werden auch die Tokens angelegt. Ein Token wird nur einmal angezeigt und bei jeder Anfrage mitgeschickt:
+
+    ```
+    Authorization: Bearer mv_…
+    ```
+
+    Je Token lassen sich **Scopes**, ein **IP-Filter**, der Schalter **„Nur lesen“** (lehnt jede schreibende Anfrage
+    mit `403` ab, egal welche Scopes gesetzt sind) und ein eigenes **Anfragelimit** festlegen.
+
+    ## Scopes
+
+    Jeder Endpunkt nennt die nötigen Scopes („**Scopes:**“); alle genannten müssen gewährt sein. Ein `write`-Scope
+    schließt den `read`-Scope nicht ein.
+
+    | Scope | Erlaubt |
+    |---|---|
+    | `customers:read` | Kunden lesen |
+    | `customers:write` | Kunden schreiben |
+    | `articles:read` | Artikel lesen (inkl. Inventurnummern, Kategorien, Hersteller, Sets, Verfügbarkeit) |
+    | `articles:write` | Artikel schreiben |
+    | `master_data:read` | Stammdaten lesen (Lieferanten, Veranstaltungsorte, Lagerorte, Fahrzeuge) |
+    | `master_data:write` | Stammdaten schreiben |
+    | `rentals:read` | Veranstaltungen lesen (inkl. Positionen, Techniker, Kalender) |
+    | `rentals:write` | Veranstaltungen schreiben |
+    | `sales:read` | Angebote & Auftragsbestätigungen lesen |
+    | `sales:write` | Angebote & Auftragsbestätigungen schreiben |
+    | `invoices:read` | Rechnungen lesen (inkl. Korrekturen, Mahnungen) |
+    | `invoices:write` | Rechnungsentwürfe schreiben, als bezahlt markieren |
+    | `invoices:finalize` | Rechnungen festschreiben & stornieren (vergibt Rechnungsnummer, unumkehrbar) |
+    | `finance:read` | Finanzen lesen (Belege, Konten, Bestellungen) |
+    | `finance:write` | Finanzen schreiben (Belege, Bestellungen) |
+    | `inventory:read` | Lager & Technik lesen (Cases, Racks, RMA, E-Prüfungen, Verkäufe) |
+    | `inventory:write` | E-Prüfungen erfassen |
+    | `minute_programs:read` | Minutenprogramme lesen |
+    | `reports:read` | Berichte lesen |
+    | `email:send` | E-Mails an Kunden versenden (Angebote, Rechnungen, Mahnungen, Packlisten) |
+
+    Bestehende Tokens aus der Zeit vor den Scopes haben nur `articles:read` und sind „Nur lesen“.
+
+    ## Konventionen
+
+    - **JSON**: Anfragen mit `Content-Type: application/json`, Felder in `snake_case`. Einzelne Ressourcen kommen als
+      `{"data": …}`, Listen als `{"data": [...], "meta": {"page", "page_size", "total", "total_pages"}}`.
+    - **Listen** unterstützen `q` (Suche in Textfeldern), `updated_since` (ISO 8601, für den Abgleich nur geänderter
+      Datensätze), `sort` (`feld` oder `-feld`) und `page`/`page_size` (Standard 100, höchstens 500).
+      Gelöschte Datensätze erscheinen dabei nicht.
+    - **Anlegen** per `POST` → `201` mit der neuen Ressource. **Ändern** per `PATCH`: nur die gesendeten Felder ändern
+      sich, alles andere bleibt (auch Positionslisten von Belegen, solange sie nicht mitgeschickt werden). Positionslisten
+      werden im selben Format zurückgegeben, wie sie geschrieben werden. **Löschen** per `DELETE` → `204`.
+    - **Fachaktionen** sind `POST /…/{id}/<aktion>`, z. B. `/offers/{id}/accept` oder `/invoices/{id}/finalize`.
+    - Es gelten dieselben Prüfungen und Geschäftsregeln wie in der Weboberfläche.
+    - **Fehler** kommen als `{"error": "…"}`; Validierungsfehler (`422`) zusätzlich mit `errors` (Feld → Meldung).
+      `401` Token fehlt/ungültig, `403` Scope fehlt oder „Nur lesen“, `404` nicht gefunden, `409` im aktuellen Zustand
+      nicht möglich, `429` Limit überschritten, `502` E-Mail-Versand fehlgeschlagen.
+    - **Datum/Zeit**: ISO 8601; reine Datumsfelder als `Y-m-d`.
+    - **Dateien**: PDFs (`…/pdf`), XRechnung (`…/xrechnung`) und Belegdateien als Download. Uploads (Artikelbilder,
+      Belege) als `multipart/form-data` mit der Datei im Feld `file`.
+
+    ## Ratenbegrenzung
+
+    Anfragen werden je Token und Minute gezählt (Standard 600, einstellbar global und je Token; 0 = unbegrenzt).
+    Jede Antwort enthält `X-RateLimit-Limit`, `X-RateLimit-Remaining` und `X-RateLimit-Reset` (Unix-Zeit).
+    Beim Überschreiten folgt `429` mit `Retry-After` (Sekunden). Gezählt wird in der Datenbank oder in Redis
+    (Unix-Socket, TCP oder TLS); ist Redis nicht erreichbar, zählt die API automatisch in der Datenbank weiter.
+
+    ## Protokoll
+
+    Jede schreibende Anfrage (`POST`, `PATCH`, `PUT`, `DELETE`) wird mit Zeit, Token, Pfad, Statuscode und IP
+    protokolliert und unter *Einstellungen › API* angezeigt (Aufbewahrung 90 Tage).
+
+    ## Was bleibt in der Weboberfläche?
+
+    Ausgabe und Rücknahme von Material (Unterschrift, Ausweis-/Zubehörprüfung), Rechnungskorrekturen und Mahnungen
+    anlegen, Bankimport, DATEV-Export, KI-Funktionen, Benutzer und Einstellungen.
+
+    ---
+
+    Diese Dokumentation wird aus `docs/openapi/` erzeugt: `bin/generate-api-schemas.php` (Felder aus den
+    Domain-Klassen), danach `bin/build-api-docs.sh` (ergibt `api-docs.html`).
+servers:
+- url: https://verleih.example.de
+  description: Beispiel-Installation (eigene Basis-URL einsetzen)
+tags:
+- name: Kunden
+  description: Kunden inkl. Ansprechpartnern. Scopes `customers:*`.
+- name: Artikel
+  description: Artikel, Inventarnummern, Verfügbarkeit, Sets, Kategorien, Hersteller, Arbeitszeit-Artikel. Scopes
+    `articles:*`.
+- name: Stammdaten
+  description: Lieferanten, Veranstaltungsorte, Lagerorte, Fahrzeuge. Scopes `master_data:*`.
+- name: Veranstaltungen
+  description: Veranstaltungen (Vermietungen), Positionen, Techniker, Kalender, Packliste. Scopes `rentals:*`.
+- name: Minutenprogramme
+  description: Minutenprogramme und Vorlagen (lesend). Scope `minute_programs:read`.
+- name: Angebote
+  description: Angebote und Auftragsbestätigungen. Scopes `sales:*`.
+- name: Rechnungen
+  description: Rechnungen, Rechnungskorrekturen und Mahnungen. Scopes `invoices:*`, Festschreiben mit `invoices:finalize`.
+- name: Finanzen
+  description: Belege, Bankkonten und Bestellungen. Scopes `finance:*`.
+- name: Lager & Technik
+  description: Cases, Racks, RMA, Elektroprüfungen, Verkäufe. Scopes `inventory:*`.
+- name: Berichte
+  description: Auswertungen. Scope `reports:read`.
+- name: Abspielgerät
+  description: 'Schnittstelle für das Abspielgerät (Raspberry Pi am Mischpult) für Veranstaltungs-Audio:
+
+    Kopplung, Manifest der Audio-Dateien, Warteschlange von Durchsagen/Einspielern und
+
+    Statusrückmeldung. Das Gerät fragt `state` alle `poll_interval_seconds` ab; jede Abfrage
+
+    zählt als Lebenszeichen (offline nach 45 s).
+
+
+    | `queue[].kind` | Inhalt | Abspielen |
+
+    |---|---|---|
+
+    | `jingle` | `file_id`/`file_url` | Datei aus dem lokalen Cache abspielen |
+
+    | `audio` | `file_id`/`file_url` | Datei abspielen |
+
+    | `tts` | `text`, `language` | ggf. Gong → Text per Sprachausgabe sprechen |
+
+    | `recording` | `recording_url`, `recording_mime` | ggf. Gong → Aufnahme abspielen |
+
+    | `stop` | – | laufende Wiedergabe sofort beenden, dann `done` melden |
+
+    '
+- name: Run-Sheet
+  description: 'Live-Stand eines Minutenprogramms für Stagedisplays und andere externe Clients.
+
+    Zugang ist der Token eines **Freigabe-Links** des Minutenprogramms: „Nur lesen“ erlaubt
+
+    `GET`, „Lesen & bearbeiten“ zusätzlich die steuernden `POST`-Endpunkte. Wird der Link
+
+    widerrufen, antwortet die API mit `404`. Alle Antworten senden `Access-Control-Allow-Origin: *`.
+
+    '
+- name: Display
+  description: 'Schnittstelle für fest eingerichtete Stage- und FOH-Displays mit eigenem Geräte-Token.
+
+    Welches Minutenprogramm ein Display zeigt, wird zentral in der Verwaltung festgelegt.
+
+    `runSheet` hat genau das Format der Run-Sheet-API. Steuernde Endpunkte sind nur für
+
+    FOH-Displays mit „Steuern erlauben“ zulässig. CORS ist offen (inkl. `Authorization`).
+
+    '
+- name: Partner-Instanzen
+  description: 'Server-zu-Server-Protokoll zwischen zwei Installationen („Föderation“). Werte sind immer
+
+    **aus Sicht des Absenders** angegeben (`discount_granted` = Rabatt, den der Absender dem
+
+    Empfänger gewährt). Die Einladungs-Endpunkte werden über den geheimen Code im Pfad
+
+    authentifiziert, alle anderen über den beim Annehmen ausgetauschten Bearer-Token.
+
+    '
+- name: Online-Zahlung
+  description: Eingehende Benachrichtigungen von Zahlungsanbietern.
+x-tagGroups:
+- name: 'REST-API v1: Stammdaten'
+  tags:
+  - Kunden
+  - Artikel
+  - Stammdaten
+- name: 'REST-API v1: Veranstaltungen & Verkauf'
+  tags:
+  - Veranstaltungen
+  - Minutenprogramme
+  - Angebote
+  - Rechnungen
+- name: 'REST-API v1: Finanzen, Lager & Berichte'
+  tags:
+  - Finanzen
+  - Lager & Technik
+  - Berichte
+- name: Veranstaltungstechnik
+  tags:
+  - Abspielgerät
+  - Run-Sheet
+  - Display
+- name: Integrationen
+  tags:
+  - Partner-Instanzen
+  - Online-Zahlung
+paths:
+  /api/v1/customers:
+    $ref: paths/customers.yaml#/~1api~1v1~1customers
+  /api/v1/customers/{id}:
+    $ref: paths/customers.yaml#/~1api~1v1~1customers~1{id}
+  /api/v1/articles:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles
+  /api/v1/articles/{id}:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}
+  /api/v1/articles/{id}/activate:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}~1activate
+  /api/v1/articles/{id}/deactivate:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}~1deactivate
+  /api/v1/articles/{id}/images/{imageId}:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}~1images~1{imageId}
+  /api/v1/articles/{id}/images:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}~1images
+  /api/v1/articles/{id}/availability:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}~1availability
+  /api/v1/availability:
+    $ref: paths/articles.yaml#/~1api~1v1~1availability
+  /api/v1/articles/{id}/inventory-numbers:
+    $ref: paths/articles.yaml#/~1api~1v1~1articles~1{id}~1inventory-numbers
+  /api/v1/inventory-numbers/{id}:
+    $ref: paths/articles.yaml#/~1api~1v1~1inventory-numbers~1{id}
+  /api/v1/article-sets:
+    $ref: paths/articles.yaml#/~1api~1v1~1article-sets
+  /api/v1/article-sets/{id}:
+    $ref: paths/articles.yaml#/~1api~1v1~1article-sets~1{id}
+  /api/v1/categories:
+    $ref: paths/articles.yaml#/~1api~1v1~1categories
+  /api/v1/categories/{id}:
+    $ref: paths/articles.yaml#/~1api~1v1~1categories~1{id}
+  /api/v1/manufacturers:
+    $ref: paths/articles.yaml#/~1api~1v1~1manufacturers
+  /api/v1/manufacturers/{id}:
+    $ref: paths/articles.yaml#/~1api~1v1~1manufacturers~1{id}
+  /api/v1/labor-time-articles:
+    $ref: paths/articles.yaml#/~1api~1v1~1labor-time-articles
+  /api/v1/labor-time-articles/{id}:
+    $ref: paths/articles.yaml#/~1api~1v1~1labor-time-articles~1{id}
+  /api/v1/suppliers:
+    $ref: paths/master-data.yaml#/~1api~1v1~1suppliers
+  /api/v1/suppliers/{id}:
+    $ref: paths/master-data.yaml#/~1api~1v1~1suppliers~1{id}
+  /api/v1/venues:
+    $ref: paths/master-data.yaml#/~1api~1v1~1venues
+  /api/v1/venues/{id}:
+    $ref: paths/master-data.yaml#/~1api~1v1~1venues~1{id}
+  /api/v1/warehouses:
+    $ref: paths/master-data.yaml#/~1api~1v1~1warehouses
+  /api/v1/warehouses/{id}:
+    $ref: paths/master-data.yaml#/~1api~1v1~1warehouses~1{id}
+  /api/v1/vehicles:
+    $ref: paths/master-data.yaml#/~1api~1v1~1vehicles
+  /api/v1/vehicles/{id}:
+    $ref: paths/master-data.yaml#/~1api~1v1~1vehicles~1{id}
+  /api/v1/rentals:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals
+  /api/v1/rentals/{id}:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}
+  /api/v1/rentals/{id}/logistics:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1logistics
+  /api/v1/rentals/{id}/items:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1items
+  /api/v1/rental-items/{id}:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rental-items~1{id}
+  /api/v1/rentals/{id}/technicians:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1technicians
+  /api/v1/rentals/{id}/packing-list.pdf:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1packing-list.pdf
+  /api/v1/rentals/{id}/packing-list/email:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1packing-list~1email
+  /api/v1/rentals/{id}/invoice:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1invoice
+  /api/v1/calendar:
+    $ref: paths/rentals.yaml#/~1api~1v1~1calendar
+  /api/v1/rentals/{id}/minute-programs:
+    $ref: paths/rentals.yaml#/~1api~1v1~1rentals~1{id}~1minute-programs
+  /api/v1/minute-programs/{id}:
+    $ref: paths/rentals.yaml#/~1api~1v1~1minute-programs~1{id}
+  /api/v1/minute-program-templates:
+    $ref: paths/rentals.yaml#/~1api~1v1~1minute-program-templates
+  /api/v1/minute-program-templates/{id}:
+    $ref: paths/rentals.yaml#/~1api~1v1~1minute-program-templates~1{id}
+  /api/v1/offers:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers
+  /api/v1/offers/{id}:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}
+  /api/v1/offers/{id}/mark-sent:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1mark-sent
+  /api/v1/offers/{id}/accept:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1accept
+  /api/v1/offers/{id}/decline:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1decline
+  /api/v1/offers/{id}/rental:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1rental
+  /api/v1/offers/{id}/order-confirmation:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1order-confirmation
+  /api/v1/offers/{id}/invoice:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1invoice
+  /api/v1/offers/{id}/pdf:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1pdf
+  /api/v1/offers/{id}/email:
+    $ref: paths/sales.yaml#/~1api~1v1~1offers~1{id}~1email
+  /api/v1/order-confirmations:
+    $ref: paths/sales.yaml#/~1api~1v1~1order-confirmations
+  /api/v1/order-confirmations/{id}:
+    $ref: paths/sales.yaml#/~1api~1v1~1order-confirmations~1{id}
+  /api/v1/order-confirmations/{id}/mark-sent:
+    $ref: paths/sales.yaml#/~1api~1v1~1order-confirmations~1{id}~1mark-sent
+  /api/v1/order-confirmations/{id}/confirm:
+    $ref: paths/sales.yaml#/~1api~1v1~1order-confirmations~1{id}~1confirm
+  /api/v1/order-confirmations/{id}/cancel:
+    $ref: paths/sales.yaml#/~1api~1v1~1order-confirmations~1{id}~1cancel
+  /api/v1/order-confirmations/{id}/pdf:
+    $ref: paths/sales.yaml#/~1api~1v1~1order-confirmations~1{id}~1pdf
+  /api/v1/invoices:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices
+  /api/v1/invoices/{id}:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}
+  /api/v1/invoices/{id}/finalize:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1finalize
+  /api/v1/invoices/{id}/cancel:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1cancel
+  /api/v1/invoices/{id}/mark-paid:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1mark-paid
+  /api/v1/invoices/{id}/pdf:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1pdf
+  /api/v1/invoices/{id}/xrechnung:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1xrechnung
+  /api/v1/invoices/{id}/email:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1email
+  /api/v1/invoices/{id}/dunning-notices:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoices~1{id}~1dunning-notices
+  /api/v1/dunning-notices/{id}:
+    $ref: paths/invoices.yaml#/~1api~1v1~1dunning-notices~1{id}
+  /api/v1/dunning-notices/{id}/pdf:
+    $ref: paths/invoices.yaml#/~1api~1v1~1dunning-notices~1{id}~1pdf
+  /api/v1/dunning-notices/{id}/email:
+    $ref: paths/invoices.yaml#/~1api~1v1~1dunning-notices~1{id}~1email
+  /api/v1/invoice-corrections:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoice-corrections
+  /api/v1/invoice-corrections/{id}:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoice-corrections~1{id}
+  /api/v1/invoice-corrections/{id}/pdf:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoice-corrections~1{id}~1pdf
+  /api/v1/invoice-corrections/{id}/xrechnung:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoice-corrections~1{id}~1xrechnung
+  /api/v1/invoice-corrections/{id}/email:
+    $ref: paths/invoices.yaml#/~1api~1v1~1invoice-corrections~1{id}~1email
+  /api/v1/receipts:
+    $ref: paths/finance.yaml#/~1api~1v1~1receipts
+  /api/v1/receipts/{id}:
+    $ref: paths/finance.yaml#/~1api~1v1~1receipts~1{id}
+  /api/v1/receipts/{id}/file:
+    $ref: paths/finance.yaml#/~1api~1v1~1receipts~1{id}~1file
+  /api/v1/receipts/{id}/mark-paid:
+    $ref: paths/finance.yaml#/~1api~1v1~1receipts~1{id}~1mark-paid
+  /api/v1/receipts/{id}/mark-open:
+    $ref: paths/finance.yaml#/~1api~1v1~1receipts~1{id}~1mark-open
+  /api/v1/bank-accounts:
+    $ref: paths/finance.yaml#/~1api~1v1~1bank-accounts
+  /api/v1/bank-accounts/{id}/ledger:
+    $ref: paths/finance.yaml#/~1api~1v1~1bank-accounts~1{id}~1ledger
+  /api/v1/purchase-orders:
+    $ref: paths/finance.yaml#/~1api~1v1~1purchase-orders
+  /api/v1/purchase-orders/{id}:
+    $ref: paths/finance.yaml#/~1api~1v1~1purchase-orders~1{id}
+  /api/v1/purchase-orders/{id}/mark-ordered:
+    $ref: paths/finance.yaml#/~1api~1v1~1purchase-orders~1{id}~1mark-ordered
+  /api/v1/purchase-orders/{id}/cancel:
+    $ref: paths/finance.yaml#/~1api~1v1~1purchase-orders~1{id}~1cancel
+  /api/v1/purchase-order-items/{id}/receive:
+    $ref: paths/finance.yaml#/~1api~1v1~1purchase-order-items~1{id}~1receive
+  /api/v1/cases:
+    $ref: paths/inventory.yaml#/~1api~1v1~1cases
+  /api/v1/cases/{id}:
+    $ref: paths/inventory.yaml#/~1api~1v1~1cases~1{id}
+  /api/v1/racks:
+    $ref: paths/inventory.yaml#/~1api~1v1~1racks
+  /api/v1/racks/{id}:
+    $ref: paths/inventory.yaml#/~1api~1v1~1racks~1{id}
+  /api/v1/rmas:
+    $ref: paths/inventory.yaml#/~1api~1v1~1rmas
+  /api/v1/rmas/{id}:
+    $ref: paths/inventory.yaml#/~1api~1v1~1rmas~1{id}
+  /api/v1/electrical-inspections:
+    $ref: paths/inventory.yaml#/~1api~1v1~1electrical-inspections
+  /api/v1/electrical-inspections/{id}:
+    $ref: paths/inventory.yaml#/~1api~1v1~1electrical-inspections~1{id}
+  /api/v1/inventory-numbers/{id}/electrical-inspections:
+    $ref: paths/inventory.yaml#/~1api~1v1~1inventory-numbers~1{id}~1electrical-inspections
+  /api/v1/sales:
+    $ref: paths/inventory.yaml#/~1api~1v1~1sales
+  /api/v1/reports/income-expense:
+    $ref: paths/reports.yaml#/~1api~1v1~1reports~1income-expense
+  /api/v1/reports/revenue-forecast:
+    $ref: paths/reports.yaml#/~1api~1v1~1reports~1revenue-forecast
+  /api/v1/reports/depreciation:
+    $ref: paths/reports.yaml#/~1api~1v1~1reports~1depreciation
+  /api/player/v1/pair:
+    $ref: paths/devices.yaml#/~1api~1player~1v1~1pair
+  /api/player/v1/state:
+    $ref: paths/devices.yaml#/~1api~1player~1v1~1state
+  /api/player/v1/requests/{id}/status:
+    $ref: paths/devices.yaml#/~1api~1player~1v1~1requests~1{id}~1status
+  /api/player/v1/requests/{id}/recording:
+    $ref: paths/devices.yaml#/~1api~1player~1v1~1requests~1{id}~1recording
+  /api/player/v1/files/{id}:
+    $ref: paths/devices.yaml#/~1api~1player~1v1~1files~1{id}
+  /api/player/v1/gong:
+    $ref: paths/devices.yaml#/~1api~1player~1v1~1gong
+  /api/runsheet/v1/{token}:
+    $ref: paths/devices.yaml#/~1api~1runsheet~1v1~1{token}
+  /api/runsheet/v1/{token}/delay:
+    $ref: paths/devices.yaml#/~1api~1runsheet~1v1~1{token}~1delay
+  /api/runsheet/v1/{token}/items/{itemId}/start:
+    $ref: paths/devices.yaml#/~1api~1runsheet~1v1~1{token}~1items~1{itemId}~1start
+  /api/runsheet/v1/{token}/finish:
+    $ref: paths/devices.yaml#/~1api~1runsheet~1v1~1{token}~1finish
+  /api/runsheet/v1/{token}/reset:
+    $ref: paths/devices.yaml#/~1api~1runsheet~1v1~1{token}~1reset
+  /api/display/v1/state:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1state
+  /api/display/v1/delay:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1delay
+  /api/display/v1/items/{itemId}/start:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1items~1{itemId}~1start
+  /api/display/v1/finish:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1finish
+  /api/display/v1/reset:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1reset
+  /api/display/v1/messages/{messageId}/seen:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1messages~1{messageId}~1seen
+  /api/display/v1/messages/{messageId}/hide:
+    $ref: paths/devices.yaml#/~1api~1display~1v1~1messages~1{messageId}~1hide
+  /api/federation/v1/invitations/{code}:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1invitations~1{code}
+  /api/federation/v1/invitations/{code}/accept:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1invitations~1{code}~1accept
+  /api/federation/v1/partnership:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1partnership
+  /api/federation/v1/partnership/confirm:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1partnership~1confirm
+  /api/federation/v1/partnership/discount:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1partnership~1discount
+  /api/federation/v1/partnership/end:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1partnership~1end
+  /api/federation/v1/articles:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1articles
+  /api/federation/v1/technicians:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1technicians
+  /api/federation/v1/requests:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1requests
+  /api/federation/v1/requests/{reference}:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1requests~1{reference}
+  /api/federation/v1/requests/{reference}/cancel:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1requests~1{reference}~1cancel
+  /api/federation/v1/requests/{reference}/status:
+    $ref: paths/integrations.yaml#/~1api~1federation~1v1~1requests~1{reference}~1status
+  /api/payments/sumup/webhook:
+    $ref: paths/integrations.yaml#/~1api~1payments~1sumup~1webhook
+components:
+  securitySchemes:
+    apiToken:
+      type: http
+      scheme: bearer
+      description: 'API-Token aus *Einstellungen › API* (`Authorization: Bearer mv_…`). Die nötigen Scopes stehen
+        beim jeweiligen Endpunkt.'
+    playerToken:
+      type: http
+      scheme: bearer
+      description: Geräte-Token des Abspielgeräts (`mvp_…`).
+    displayToken:
+      type: http
+      scheme: bearer
+      description: Display-Token (`mvd_…`), wird beim Anlegen bzw. Neu-Erzeugen einmal angezeigt.
+    federationToken:
+      type: http
+      scheme: bearer
+      description: Beim Annehmen der Einladung ausgetauschter Partnerschafts-Token.

@@ -50,6 +50,8 @@ final class Router
         '/api/display/',
         '/api/federation/',
         '/api/payments/',
+        // REST API v1: bearer token only, no session (see Api\ApiKernel).
+        '/api/v1/',
     ];
 
     public function get(string $path, callable $handler): void
@@ -65,6 +67,11 @@ final class Router
     public function put(string $path, callable $handler): void
     {
         $this->add('PUT', $path, $handler);
+    }
+
+    public function patch(string $path, callable $handler): void
+    {
+        $this->add('PATCH', $path, $handler);
     }
 
     public function delete(string $path, callable $handler): void
@@ -114,7 +121,8 @@ final class Router
         // Zentrale CSRF-Prüfung VOR jedem Routen-Handler (statt verstreut in
         // einzelnen Controllern), siehe CSRF_PROTECTED_METHODS/CSRF_EXEMPT_PATHS
         // oben sowie Csrf.php für Token-Erzeugung/-Vergleich.
-        if (in_array($request->method, self::CSRF_PROTECTED_METHODS, true)
+        if (
+            in_array($request->method, self::CSRF_PROTECTED_METHODS, true)
             && !in_array($request->path, self::CSRF_EXEMPT_PATHS, true)
             && !$this->hasExemptPrefix($request->path)
         ) {
@@ -136,6 +144,10 @@ final class Router
 
                 return;
             }
+        }
+
+        if (str_starts_with($request->path, '/api/v1/')) {
+            Response::json(['error' => 'Unbekannter API-Endpunkt oder nicht unterstützte Methode.'], 404);
         }
 
         Response::notFound("Für \"{$request->path}\" wurde keine passende Route gefunden.");

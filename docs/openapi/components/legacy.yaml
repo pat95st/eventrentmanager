@@ -1,0 +1,999 @@
+# Components of the device and integration interfaces (player, run sheet, display, federation, payments).
+parameters:
+  RequestId:
+    name: id
+    in: path
+    required: true
+    description: ID des Auftrags aus `queue`.
+    schema:
+      type: string
+  ShareToken:
+    name: token
+    in: path
+    required: true
+    description: Token eines Freigabe-Links des Minutenprogramms.
+    schema:
+      type: string
+  ItemId:
+    name: itemId
+    in: path
+    required: true
+    description: ID des Programmpunkts.
+    schema:
+      type: string
+  MessageId:
+    name: messageId
+    in: path
+    required: true
+    schema:
+      type: string
+  InvitationCode:
+    name: code
+    in: path
+    required: true
+    description: Geheimer Code aus dem Einladungslink.
+    schema:
+      type: string
+  Reference:
+    name: reference
+    in: path
+    required: true
+    description: UUID der Anfrage (auf beiden Seiten gleich).
+    schema:
+      type: string
+      format: uuid
+requestBodies:
+  DelayInput:
+    description: Genau eine Angabe; Vorrang in der Reihenfolge der Felder. Maximal ±24 Stunden.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/DelayInput'
+      application/x-www-form-urlencoded:
+        schema:
+          $ref: '#/schemas/DelayInput'
+  StartInput:
+    required: false
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/StartInput'
+      application/x-www-form-urlencoded:
+        schema:
+          $ref: '#/schemas/StartInput'
+responses:
+  Ok:
+    description: Erfolg.
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            ok:
+              type: boolean
+              example: true
+  Error:
+    description: Fehler.
+    content:
+      application/json:
+        schema:
+          $ref: common.yaml#/schemas/Error
+  Unauthorized:
+    description: Token fehlt, ist ungültig oder deaktiviert.
+    content:
+      application/json:
+        schema:
+          $ref: common.yaml#/schemas/Error
+  FederationForbidden:
+    description: Partnerschaft beendet/abgelehnt, noch nicht bestätigt oder Aktion nicht freigegeben.
+    content:
+      application/json:
+        schema:
+          $ref: common.yaml#/schemas/Error
+  OkFalse401:
+    description: Ungültiger Token oder deaktiviertes Display.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/OkFalse'
+  OkFalse403:
+    description: Zugang erlaubt nur das Lesen bzw. Display darf nicht steuern.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/OkFalse'
+  OkFalse404:
+    description: Unbekannter/widerrufener Token oder unbekannter Programmpunkt bzw. Nachricht.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/OkFalse'
+  OkFalse409:
+    description: Dem Display ist gerade kein Minutenprogramm zugeordnet.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/OkFalse'
+  OkFalse422:
+    description: Ungültige Eingabe (z. B. Verzug nicht lesbar).
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/OkFalse'
+  RunSheetOk:
+    description: Erfolg, mit komplettem neuen Live-Stand.
+    content:
+      application/json:
+        schema:
+          allOf:
+          - type: object
+            properties:
+              ok:
+                type: boolean
+                example: true
+          - $ref: '#/schemas/RunSheet'
+  DisplayOk:
+    description: Erfolg, mit komplettem neuen Stand (wie `GET /api/display/v1/state`).
+    content:
+      application/json:
+        schema:
+          allOf:
+          - type: object
+            properties:
+              ok:
+                type: boolean
+                example: true
+          - $ref: '#/schemas/DisplayState'
+  Partnership:
+    description: Stand der Partnerschaft.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/Partnership'
+  FederationRequestState:
+    description: Stand der Anfrage.
+    content:
+      application/json:
+        schema:
+          $ref: '#/schemas/FederationRequestState'
+schemas:
+  OkFalse:
+    type: object
+    properties:
+      ok:
+        type: boolean
+        example: false
+      error:
+        type: string
+  StatusOnly:
+    type: object
+    properties:
+      status:
+        $ref: '#/schemas/PartnerStatus'
+  PlayerRef:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+        example: Pi Mischpult
+  PlayerRental:
+    type: object
+    nullable: true
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+        example: Stadtfest
+      location:
+        type: string
+        nullable: true
+        example: Marktplatz
+      start_date:
+        type: string
+        format: date
+      end_date:
+        type: string
+        format: date
+  PlayerState:
+    type: object
+    properties:
+      server_time:
+        type: string
+        format: date-time
+      poll_interval_seconds:
+        type: integer
+        example: 2
+      player:
+        $ref: '#/schemas/PlayerRef'
+      tts:
+        type: object
+        properties:
+          language:
+            type: string
+            example: de-DE
+          voice:
+            type: string
+            nullable: true
+            example: de_DE-thorsten-high
+          rate:
+            type: number
+            minimum: 0.5
+            maximum: 2.0
+            example: 1.0
+      gong:
+        type: object
+        nullable: true
+        description: '`null` = eingebauten Gong verwenden.'
+        properties:
+          url:
+            type: string
+            example: /api/player/v1/gong
+          version:
+            type: string
+          mime:
+            type: string
+            example: audio/mpeg
+      rental:
+        description: '`null`, wenn gerade keine laufende Veranstaltung zugeordnet ist.'
+        allOf:
+        - $ref: '#/schemas/PlayerRental'
+        - type: object
+          properties:
+            gong_by_default:
+              type: boolean
+            tts_languages:
+              type: array
+              items:
+                type: string
+              example:
+              - de-DE
+              - en-GB
+      files:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            kind:
+              type: string
+              example: jingle
+            title:
+              type: string
+            description:
+              type: string
+              nullable: true
+            filename:
+              type: string
+            mime:
+              type: string
+            size:
+              type: integer
+            version:
+              type: string
+              description: Ändert sich bei neuer Datei – dann neu herunterladen.
+            url:
+              type: string
+      minute_programs:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            start_at:
+              type: string
+              format: date-time
+              description: Inkl. live gepflegter Verzögerung.
+            jingle_before:
+              type: boolean
+            jingle_file_id:
+              type: string
+              nullable: true
+      scheduled:
+        type: array
+        description: Noch nicht ausgelöste geplante Einspieler, nach Zeit sortiert (nur zur Information).
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            file_id:
+              type: string
+            play_at:
+              type: string
+              format: date-time
+              description: Nächster Termin.
+            note:
+              type: string
+              nullable: true
+            repeat_interval_minutes:
+              type: integer
+              nullable: true
+            repeat_until:
+              type: string
+              format: date-time
+              nullable: true
+            repeat_max:
+              type: integer
+              nullable: true
+            repeat_count:
+              type: integer
+      queue:
+        type: array
+        description: Der Reihe nach abzuarbeiten (älteste zuerst).
+        items:
+          $ref: '#/schemas/PlayerQueueItem'
+  PlayerQueueItem:
+    type: object
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+        enum:
+        - jingle
+        - audio
+        - tts
+        - recording
+        - stop
+      label:
+        type: string
+      file_id:
+        type: string
+        nullable: true
+      file_url:
+        type: string
+        nullable: true
+      text:
+        type: string
+        nullable: true
+      language:
+        type: string
+        description: BCP-47-Code der Durchsage.
+        example: de-DE
+      recording_url:
+        type: string
+        nullable: true
+      recording_mime:
+        type: string
+        nullable: true
+      with_gong:
+        type: boolean
+        description: Nur bei `tts` und `recording`.
+      requested_by:
+        type: string
+        nullable: true
+      created_at:
+        type: string
+        format: date-time
+      status_url:
+        type: string
+        example: /api/player/v1/requests/{id}/status
+  PlayerStatusInput:
+    type: object
+    required:
+    - status
+    properties:
+      status:
+        type: string
+        enum:
+        - playing
+        - done
+        - failed
+        - cancelled
+      error:
+        type: string
+        description: Fehlerbeschreibung bei `failed`.
+  DelayInput:
+    type: object
+    properties:
+      adopt:
+        type: boolean
+        description: Prognostizierten Verzug übernehmen.
+      adjust_seconds:
+        type: integer
+        description: Relativ zum aktuellen Verzug.
+        example: 60
+      delay_seconds:
+        type: integer
+        description: Absolut in Sekunden (negativ = Vorsprung).
+        example: 270
+      delay:
+        type: string
+        description: Absolut als Text – Minuten (`5`, `-2`, `1,5`), `mm:ss` oder `h:mm:ss`.
+        example: '4:30'
+  StartInput:
+    type: object
+    properties:
+      started_at:
+        type: string
+        description: Uhrzeit (`20:13:20`) oder ISO-8601-Zeitstempel, falls der Punkt früher begonnen hat.
+  Notes:
+    type: object
+    description: Kompatibilitätsfelder; für neue Displays `tradeNotes` verwenden.
+    properties:
+      general:
+        type: string
+        nullable: true
+      sound:
+        type: string
+        nullable: true
+      light:
+        type: string
+        nullable: true
+      video:
+        type: string
+        nullable: true
+      stage:
+        type: string
+        nullable: true
+  TradeNote:
+    type: object
+    properties:
+      tradeId:
+        type: string
+      trade:
+        type: string
+        example: Ton
+      color:
+        type: string
+        example: '#3b82f6'
+      text:
+        type: string
+  RunSheetCurrentItem:
+    type: object
+    nullable: true
+    properties:
+      id:
+        type: string
+      position:
+        type: integer
+      name:
+        type: string
+      description:
+        type: string
+        nullable: true
+      notes:
+        $ref: '#/schemas/Notes'
+      tradeNotes:
+        type: array
+        items:
+          $ref: '#/schemas/TradeNote'
+      noStrobe:
+        type: boolean
+      durationSeconds:
+        type: integer
+        nullable: true
+      startsAt:
+        type: string
+        format: date-time
+      endsAt:
+        type: string
+        format: date-time
+        nullable: true
+      elapsedSeconds:
+        type: integer
+        description: Beim nächsten Punkt negativ (Zeit bis zum Start).
+      remainingSeconds:
+        type: integer
+        nullable: true
+        description: < 0 = überzogen.
+      actualStart:
+        type: string
+        format: date-time
+        nullable: true
+  RunSheetItem:
+    type: object
+    properties:
+      id:
+        type: string
+      position:
+        type: integer
+      name:
+        type: string
+      description:
+        type: string
+        nullable: true
+      notes:
+        $ref: '#/schemas/Notes'
+      tradeNotes:
+        type: array
+        items:
+          $ref: '#/schemas/TradeNote'
+      noStrobe:
+        type: boolean
+      durationMinutes:
+        type: integer
+        nullable: true
+      status:
+        type: string
+        enum:
+        - done
+        - current
+        - next
+        - upcoming
+      plannedStart:
+        type: string
+        format: date-time
+        description: Plan ohne Verzug.
+      plannedEnd:
+        type: string
+        format: date-time
+      currentStart:
+        type: string
+        format: date-time
+        description: Plan + gesetzter Verzug.
+      projectedStart:
+        type: string
+        format: date-time
+      projectedEnd:
+        type: string
+        format: date-time
+      actualStart:
+        type: string
+        format: date-time
+        nullable: true
+  RunSheetMessage:
+    type: object
+    properties:
+      id:
+        type: string
+      text:
+        type: string
+        maxLength: 500
+      urgent:
+        type: boolean
+      stage:
+        type: boolean
+      foh:
+        type: boolean
+      allPrograms:
+        type: boolean
+      sentAt:
+        type: string
+        format: date-time
+      sentBy:
+        type: string
+      fromFoh:
+        type: boolean
+      acknowledgedAt:
+        type: string
+        format: date-time
+        nullable: true
+      acknowledgedBy:
+        type: string
+        nullable: true
+  RunSheet:
+    type: object
+    properties:
+      apiVersion:
+        type: integer
+        example: 1
+      serverTime:
+        type: string
+        format: date-time
+      revision:
+        type: string
+        description: Ändert sich bei jeder Änderung von Plan oder Live-Stand.
+        example: bd7c8561a5b09953
+      event:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Firmengala 2026
+          noStrobe:
+            type: boolean
+      program:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          room:
+            type: string
+            nullable: true
+          plannedStart:
+            type: string
+            format: date-time
+          currentStart:
+            type: string
+            format: date-time
+          plannedEnd:
+            type: string
+            format: date-time
+          projectedEnd:
+            type: string
+            format: date-time
+          jingleBefore:
+            type: boolean
+          jingleTitle:
+            type: string
+            nullable: true
+          handheldMicCount:
+            type: integer
+          headsetMicCount:
+            type: integer
+          itemCount:
+            type: integer
+      trades:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            color:
+              type: string
+      live:
+        type: object
+        properties:
+          state:
+            type: string
+            enum:
+            - pending
+            - running
+            - finished
+          tracking:
+            type: boolean
+            description: '`true` = FOH-Modus, `false` = Uhr-Modus.'
+          delaySeconds:
+            type: integer
+          projectedDelaySeconds:
+            type: integer
+            description: Wert für die Anzeige.
+          overrunSeconds:
+            type: integer
+          finishedAt:
+            type: string
+            format: date-time
+            nullable: true
+          canControl:
+            type: boolean
+      current:
+        $ref: '#/schemas/RunSheetCurrentItem'
+      next:
+        $ref: '#/schemas/RunSheetCurrentItem'
+      items:
+        type: array
+        items:
+          $ref: '#/schemas/RunSheetItem'
+      messages:
+        type: array
+        items:
+          $ref: '#/schemas/RunSheetMessage'
+  DisplayState:
+    type: object
+    properties:
+      apiVersion:
+        type: integer
+        example: 1
+      serverTime:
+        type: string
+        format: date-time
+      pollIntervalSeconds:
+        type: integer
+        example: 3
+      display:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+            example: Bühnenmonitor links
+          role:
+            type: string
+            enum:
+            - stage
+            - foh
+          roleLabel:
+            type: string
+            example: Stagedisplay
+          canControl:
+            type: boolean
+          assignment:
+            type: object
+            properties:
+              mode:
+                type: string
+                enum:
+                - program
+                - rental
+                - auto
+              rentalId:
+                type: string
+                nullable: true
+              minuteProgramId:
+                type: string
+                nullable: true
+              room:
+                type: string
+                nullable: true
+          options:
+            type: object
+            properties:
+              notes:
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - general
+                  - sound
+                  - light
+                  - video
+                  - stage
+              showClock:
+                type: boolean
+              showDelay:
+                type: boolean
+              showNext:
+                type: boolean
+              showItemList:
+                type: boolean
+              showDescription:
+                type: boolean
+              showMics:
+                type: boolean
+              allowControl:
+                type: boolean
+              theme:
+                type: string
+                enum:
+                - dark
+                - light
+              fontScale:
+                type: integer
+                minimum: 50
+                maximum: 200
+          thresholds:
+            type: object
+            properties:
+              warnSeconds:
+                type: integer
+                example: 120
+              criticalSeconds:
+                type: integer
+                example: 30
+          configRevision:
+            type: string
+      runSheet:
+        description: Live-Stand des gezeigten Minutenprogramms oder `null`.
+        nullable: true
+        type: object
+        allOf:
+        - $ref: '#/schemas/RunSheet'
+  PartnerStatus:
+    type: string
+    enum:
+    - awaiting_partner
+    - pending_confirmation
+    - active
+    - declined
+    - ended
+  PartnerProfile:
+    type: object
+    properties:
+      street:
+        type: string
+        nullable: true
+      postal_code:
+        type: string
+        nullable: true
+      city:
+        type: string
+        nullable: true
+      country:
+        type: string
+        nullable: true
+      email:
+        type: string
+        nullable: true
+      phone:
+        type: string
+        nullable: true
+      website:
+        type: string
+        nullable: true
+  FederationSelf:
+    type: object
+    properties:
+      protocol:
+        type: integer
+        example: 1
+      name:
+        type: string
+      base_url:
+        type: string
+        format: uri
+      profile:
+        $ref: '#/schemas/PartnerProfile'
+  Partnership:
+    allOf:
+    - $ref: '#/schemas/FederationSelf'
+    - type: object
+      properties:
+        status:
+          $ref: '#/schemas/PartnerStatus'
+        discount_granted:
+          type: number
+        discount_received:
+          type: number
+        allows_technician_requests:
+          type: boolean
+  DiscountAction:
+    type: object
+    properties:
+      action:
+        type: string
+        enum:
+        - propose
+        - accept
+        - reject
+      granted:
+        type: number
+        minimum: 0
+        maximum: 100
+      received:
+        type: number
+        minimum: 0
+        maximum: 100
+  FederationArticle:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      manufacturer:
+        type: string
+        nullable: true
+      category:
+        type: string
+        nullable: true
+      daily_price:
+        type: number
+        nullable: true
+      total:
+        type: integer
+      available:
+        type: integer
+        description: Verfügbar im Zeitraum.
+      discount_percent:
+        type: number
+      discounted_daily_price:
+        type: number
+        nullable: true
+  FederationRequestItem:
+    type: object
+    required:
+    - article_id
+    - quantity
+    properties:
+      article_id:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+        minimum: 1
+      daily_price:
+        type: number
+        nullable: true
+  FederationTechnicianStatus:
+    type: object
+    properties:
+      name:
+        type: string
+      status:
+        type: string
+  FederationRequestStatusEnum:
+    type: string
+    enum:
+    - pending
+    - accepted
+    - declined
+    - cancelled
+  FederationRequestInput:
+    type: object
+    required:
+    - reference
+    - kind
+    - event_name
+    - start_date
+    - end_date
+    properties:
+      reference:
+        type: string
+        format: uuid
+      kind:
+        type: string
+        enum:
+        - material
+        - technician
+      event_name:
+        type: string
+        maxLength: 200
+      start_date:
+        type: string
+        format: date
+      end_date:
+        type: string
+        format: date
+      event_location:
+        type: string
+        nullable: true
+      note:
+        type: string
+        nullable: true
+        maxLength: 2000
+      contact_name:
+        type: string
+        nullable: true
+      contact_email:
+        type: string
+        nullable: true
+      items:
+        type: array
+        description: Nur bei `material`.
+        items:
+          type: object
+          required:
+          - article_id
+          - quantity
+          properties:
+            article_id:
+              type: string
+            quantity:
+              type: integer
+              minimum: 1
+      trades:
+        type: array
+        description: Nur bei `technician`.
+        items:
+          type: string
+      technician_count:
+        type: integer
+        minimum: 1
+        maximum: 50
+        description: Nur bei `technician`.
+      preferred_technician_id:
+        type: string
+        nullable: true
+        description: Nur bei `technician`.
+  FederationRequestState:
+    type: object
+    properties:
+      reference:
+        type: string
+        format: uuid
+      kind:
+        type: string
+        enum:
+        - material
+        - technician
+      status:
+        $ref: '#/schemas/FederationRequestStatusEnum'
+      message:
+        type: string
+        nullable: true
+      discount_percent:
+        type: number
+        nullable: true
+      items:
+        type: array
+        items:
+          $ref: '#/schemas/FederationRequestItem'
+      technicians:
+        type: array
+        items:
+          $ref: '#/schemas/FederationTechnicianStatus'

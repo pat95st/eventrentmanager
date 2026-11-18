@@ -68,6 +68,59 @@ class Acceptance extends Module
         $this->assertStringContainsString($expected, $actual);
     }
 
+    /**
+     * Creates an API token directly in the database (the settings form is
+     * covered separately) and returns the raw token.
+     *
+     * @param list<string> $scopes
+     */
+    public function haveApiToken(array $scopes, bool $readOnly = false, ?int $rateLimitPerMinute = null, bool $enableApi = true): string
+    {
+        $raw = 'mv_test' . bin2hex(random_bytes(8));
+        /** @var \Codeception\Module\Db $db */
+        $db = $this->getModule('Db');
+        $db->haveInDatabase('api_tokens', [
+            'id' => sprintf('%08x-0000-4000-8000-%012x', random_int(0, 0xffffffff), random_int(0, 0xffffffffffff)),
+            'name' => 'Test ' . substr($raw, -4),
+            'token_hash' => hash('sha256', $raw),
+            'token_last_four' => substr($raw, -4),
+            'enabled' => 1,
+            'scopes' => json_encode($scopes),
+            'read_only' => $readOnly ? 1 : 0,
+            'rate_limit_per_minute' => $rateLimitPerMinute,
+        ]);
+        if ($enableApi) {
+            $db->updateInDatabase('api_settings', ['enabled' => 1], ['id' => 1]);
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Sends a request to the REST API and returns [status code, decoded JSON
+     * body]. PhpBrowser has no REST helpers (module-rest is not installed),
+     * so this uses its low-level _request() with a raw JSON body.
+     *
+     * @param array<string, mixed>|null $json
+     * @return array{0: int, 1: array<string, mixed>}
+     */
+    public function sendApiRequest(string $method, string $path, ?string $token, ?array $json = null): array
+    {
+        $browser = $this->phpBrowser();
+        $server = ['HTTP_ACCEPT' => 'application/json'];
+        if ($token !== null) {
+            $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+        }
+        if ($json !== null) {
+            $server['CONTENT_TYPE'] = 'application/json';
+        }
+        $browser->_request($method, '/api/v1' . $path, [], [], $server, $json !== null ? json_encode($json, JSON_THROW_ON_ERROR) : null);
+        $response = $browser->client->getInternalResponse();
+        $body = json_decode((string) $response->getContent(), true);
+
+        return [$response->getStatusCode(), is_array($body) ? $body : []];
+    }
+
     private function phpBrowser(): PhpBrowser
     {
         /** @var PhpBrowser $browser */

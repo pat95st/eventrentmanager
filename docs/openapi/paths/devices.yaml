@@ -1,0 +1,467 @@
+# devices interfaces (see docs/*-api.md). Paths are referenced from ../openapi.yaml.
+/api/player/v1/pair:
+  post:
+    tags:
+    - Abspielgerät
+    operationId: playerPair
+    summary: Gerät per Code koppeln
+    description: 'Koppelt ein Gerät per 6-stelligem Code (in der Veranstaltung unter **Audio & Durchsagen**
+
+      erzeugt, 15 Minuten und einmal gültig) an eine Veranstaltung. Benötigt **keinen** Token.
+
+
+      Sendet das Gerät zusätzlich einen gültigen `Authorization: Bearer <Token>`, wird das
+
+      vorhandene Gerät der neuen Veranstaltung zugeordnet und behält seinen Token
+
+      (`token: null`). Sonst wird ein neues Gerät angelegt und der Token **einmalig** geliefert.
+
+      '
+    security:
+    - {}
+    - playerToken: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - code
+            properties:
+              code:
+                type: string
+                description: Leerzeichen und Bindestriche werden ignoriert.
+                example: '123456'
+              name:
+                type: string
+                description: Gerätename (Standard „AutoEventPlay“).
+                example: Pi Mischpult
+              version:
+                type: string
+                example: 1.0.0
+    responses:
+      '200':
+        description: Gekoppelt.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ok:
+                  type: boolean
+                  example: true
+                token:
+                  type: string
+                  nullable: true
+                  example: mvp_…
+                player:
+                  $ref: ../components/legacy.yaml#/schemas/PlayerRef
+                rental:
+                  $ref: ../components/legacy.yaml#/schemas/PlayerRental
+                poll_interval_seconds:
+                  type: integer
+                  example: 2
+      '422':
+        description: Code ungültig oder abgelaufen.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+      '429':
+        description: 10 Fehlversuche derselben IP innerhalb von 15 Minuten.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+/api/player/v1/state:
+  get:
+    tags:
+    - Abspielgerät
+    operationId: playerState
+    summary: Zustand, Manifest und Warteschlange abfragen
+    description: 'Wird alle `poll_interval_seconds` abgefragt. Erreicht ein geplanter Einspieler seine
+
+      Startzeit, legt der Server dabei automatisch einen Auftrag in `queue` an. Aufträge, die
+
+      zu lange nicht abgeholt wurden, verfallen serverseitig.
+
+      '
+    security:
+    - playerToken: []
+    parameters:
+    - name: version
+      in: query
+      description: Version der Geräte-Software (Anzeige in der Geräteübersicht).
+      schema:
+        type: string
+    - name: playing
+      in: query
+      description: Klartext, was gerade läuft (z. B. „Opener“); leer = nichts.
+      schema:
+        type: string
+    responses:
+      '200':
+        description: Aktueller Zustand.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/legacy.yaml#/schemas/PlayerState
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+/api/player/v1/requests/{id}/status:
+  post:
+    tags:
+    - Abspielgerät
+    operationId: playerReportStatus
+    summary: Status eines Auftrags melden
+    security:
+    - playerToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/RequestId
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/legacy.yaml#/schemas/PlayerStatusInput
+        application/x-www-form-urlencoded:
+          schema:
+            $ref: ../components/legacy.yaml#/schemas/PlayerStatusInput
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/Ok
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '404':
+        description: Auftrag gehört nicht zur Veranstaltung dieses Geräts.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+      '422':
+        description: Ungültiger Status.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+/api/player/v1/requests/{id}/recording:
+  get:
+    tags:
+    - Abspielgerät
+    operationId: playerRecording
+    summary: Mikrofon-Aufnahme eines Auftrags herunterladen
+    security:
+    - playerToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/RequestId
+    responses:
+      '200':
+        description: Aufnahme (`audio/webm`, `audio/mp4` oder `audio/ogg`).
+        content:
+          audio/*:
+            schema:
+              type: string
+              format: binary
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '404':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/player/v1/files/{id}:
+  get:
+    tags:
+    - Abspielgerät
+    operationId: playerFile
+    summary: Audio-Datei herunterladen
+    description: Unterstützt Range-Anfragen. Nur Dateien von Veranstaltungen, die dem Gerät zugeordnet sind.
+    security:
+    - playerToken: []
+    parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    - name: Range
+      in: header
+      schema:
+        type: string
+        example: bytes=0-1023
+    responses:
+      '200':
+        description: Datei (WAV, FLAC, AAC/M4A oder MP3).
+        content:
+          audio/*:
+            schema:
+              type: string
+              format: binary
+      '206':
+        description: Teilinhalt (Range).
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '404':
+        $ref: ../components/legacy.yaml#/responses/Error
+/api/player/v1/gong:
+  get:
+    tags:
+    - Abspielgerät
+    operationId: playerGong
+    summary: Eigenen Gong herunterladen
+    security:
+    - playerToken: []
+    responses:
+      '200':
+        description: Gong-Datei.
+        content:
+          audio/*:
+            schema:
+              type: string
+              format: binary
+      '401':
+        $ref: ../components/legacy.yaml#/responses/Unauthorized
+      '404':
+        description: Kein eigener Gong hinterlegt – eingebauten Gong verwenden.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/Error
+/api/runsheet/v1/{token}:
+  get:
+    tags:
+    - Run-Sheet
+    operationId: runSheetState
+    security: []
+    summary: Kompletter Live-Stand
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/ShareToken
+    responses:
+      '200':
+        description: Live-Stand.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/legacy.yaml#/schemas/RunSheet
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+/api/runsheet/v1/{token}/delay:
+  post:
+    tags:
+    - Run-Sheet
+    operationId: runSheetDelay
+    security: []
+    summary: Verzug setzen/ändern
+    description: Erfordert einen Link „Lesen & bearbeiten“.
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/ShareToken
+    requestBody:
+      $ref: ../components/legacy.yaml#/requestBodies/DelayInput
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/RunSheetOk
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+      '422':
+        $ref: ../components/legacy.yaml#/responses/OkFalse422
+/api/runsheet/v1/{token}/items/{itemId}/start:
+  post:
+    tags:
+    - Run-Sheet
+    operationId: runSheetStart
+    security: []
+    summary: Programmpunkt starten
+    description: Ohne Daten gilt „jetzt“. Erfordert einen Link „Lesen & bearbeiten“.
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/ShareToken
+    - $ref: ../components/legacy.yaml#/parameters/ItemId
+    requestBody:
+      $ref: ../components/legacy.yaml#/requestBodies/StartInput
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/RunSheetOk
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+      '422':
+        $ref: ../components/legacy.yaml#/responses/OkFalse422
+/api/runsheet/v1/{token}/finish:
+  post:
+    tags:
+    - Run-Sheet
+    operationId: runSheetFinish
+    security: []
+    summary: Programm beenden
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/ShareToken
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/RunSheetOk
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+/api/runsheet/v1/{token}/reset:
+  post:
+    tags:
+    - Run-Sheet
+    operationId: runSheetReset
+    security: []
+    summary: Live-Stand zurücksetzen
+    description: Stellt den ursprünglichen Plan wieder her.
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/ShareToken
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/RunSheetOk
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+/api/display/v1/state:
+  get:
+    tags:
+    - Display
+    operationId: displayState
+    summary: Konfiguration und Live-Stand
+    description: Jede Abfrage zählt als Lebenszeichen (offline nach 45 s).
+    security:
+    - displayToken: []
+    parameters:
+    - name: version
+      in: query
+      description: Version des Clients (Anzeige in der Geräteübersicht).
+      schema:
+        type: string
+    responses:
+      '200':
+        description: Zustand.
+        content:
+          application/json:
+            schema:
+              $ref: ../components/legacy.yaml#/schemas/DisplayState
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+/api/display/v1/delay:
+  post:
+    tags:
+    - Display
+    operationId: displayDelay
+    summary: Verzug setzen/ändern
+    security:
+    - displayToken: []
+    requestBody:
+      $ref: ../components/legacy.yaml#/requestBodies/DelayInput
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/DisplayOk
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '409':
+        $ref: ../components/legacy.yaml#/responses/OkFalse409
+      '422':
+        $ref: ../components/legacy.yaml#/responses/OkFalse422
+/api/display/v1/items/{itemId}/start:
+  post:
+    tags:
+    - Display
+    operationId: displayStart
+    summary: Programmpunkt starten
+    security:
+    - displayToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/ItemId
+    requestBody:
+      $ref: ../components/legacy.yaml#/requestBodies/StartInput
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/DisplayOk
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+      '409':
+        $ref: ../components/legacy.yaml#/responses/OkFalse409
+      '422':
+        $ref: ../components/legacy.yaml#/responses/OkFalse422
+/api/display/v1/finish:
+  post:
+    tags:
+    - Display
+    operationId: displayFinish
+    summary: Programm beenden
+    security:
+    - displayToken: []
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/DisplayOk
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '409':
+        $ref: ../components/legacy.yaml#/responses/OkFalse409
+/api/display/v1/reset:
+  post:
+    tags:
+    - Display
+    operationId: displayReset
+    summary: Live-Stand zurücksetzen
+    security:
+    - displayToken: []
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/DisplayOk
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '409':
+        $ref: ../components/legacy.yaml#/responses/OkFalse409
+/api/display/v1/messages/{messageId}/seen:
+  post:
+    tags:
+    - Display
+    operationId: displayMessageSeen
+    summary: Nachricht als gesehen markieren
+    security:
+    - displayToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/MessageId
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/DisplayOk
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+      '409':
+        $ref: ../components/legacy.yaml#/responses/OkFalse409
+/api/display/v1/messages/{messageId}/hide:
+  post:
+    tags:
+    - Display
+    operationId: displayMessageHide
+    summary: Nachricht ausblenden (auch auf der Bühne)
+    security:
+    - displayToken: []
+    parameters:
+    - $ref: ../components/legacy.yaml#/parameters/MessageId
+    responses:
+      '200':
+        $ref: ../components/legacy.yaml#/responses/DisplayOk
+      '401':
+        $ref: ../components/legacy.yaml#/responses/OkFalse401
+      '403':
+        $ref: ../components/legacy.yaml#/responses/OkFalse403
+      '404':
+        $ref: ../components/legacy.yaml#/responses/OkFalse404
+      '409':
+        $ref: ../components/legacy.yaml#/responses/OkFalse409

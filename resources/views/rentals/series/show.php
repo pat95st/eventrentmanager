@@ -18,7 +18,7 @@ $today = new DateTimeImmutable('today');
 $scopes = array_map(static fn (CopyScope $s) => $s->value, CopyScope::defaults());
 ?>
 <div class="mb-6">
-    <a href="/veranstaltungen" class="text-sm text-slate-500 hover:underline dark:text-slate-400">← Veranstaltungen</a>
+    <a href="/serien" class="text-sm text-slate-500 hover:underline dark:text-slate-400">← Wiederkehrende Veranstaltungen</a>
     <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">🔁 Serie: <?= e($first?->eventName ?? '–') ?></h1>
         <?php if ($series->isEnded()): ?>

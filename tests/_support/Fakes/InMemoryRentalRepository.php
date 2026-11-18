@@ -55,6 +55,14 @@ final class InMemoryRentalRepository implements RentalRepositoryInterface
         return $result;
     }
 
+    public function findTours(): array
+    {
+        $result = array_values(array_filter($this->rentals, static fn (Rental $r): bool => $r->isTour));
+        usort($result, static fn (Rental $a, Rental $b): int => $b->startDate <=> $a->startDate);
+
+        return $result;
+    }
+
     public function delete(string $id): void
     {
         unset($this->rentals[$id]);

@@ -22,6 +22,11 @@ final class InMemoryRentalSeriesRepository implements RentalSeriesRepositoryInte
         return $this->series[$id] ?? null;
     }
 
+    public function findAll(): array
+    {
+        return array_values($this->series);
+    }
+
     public function delete(string $id): void
     {
         unset($this->series[$id]);

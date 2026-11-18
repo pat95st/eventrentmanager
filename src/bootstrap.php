@@ -2460,7 +2460,8 @@ $router->post('/veranstaltungen/{id}/tour/route/fahrzeuge/{plannedId}/loeschen',
 $router->get('/einstellungen/routenplanung', $auth->guard(Permission::Administration, [$tourRouteController, 'editSettings']));
 $router->post('/einstellungen/routenplanung', $auth->guard(Permission::Administration, [$tourRouteController, 'updateSettings']));
 // Tours (migration 177)
-$tourController = new \App\Infrastructure\Http\Controllers\TourController($commandBus, $queryBus, $tourRepository, new \App\Infrastructure\Pdf\TourLoadListPdfGenerator());
+$tourController = new \App\Infrastructure\Http\Controllers\TourController($commandBus, $queryBus, $tourRepository, new \App\Infrastructure\Pdf\TourLoadListPdfGenerator(), $rentalRepository, $customerRepository);
+$router->get('/touren', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'index']));
 $router->post('/veranstaltungen/{id}/tour', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'make']));
 $router->post('/veranstaltungen/{id}/tour/aufloesen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'revert']));
 $router->get('/veranstaltungen/{id}/tour', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'show']));
@@ -2477,7 +2478,8 @@ $router->post('/tour-stops/{stopId}', $auth->guard(Permission::AusgabeRuecknahme
 $router->post('/tour-stops/{stopId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'deleteStop']));
 $router->post('/tour-stops/{stopId}/minutenprogramm', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'createMinuteProgram']));
 // Recurring events (migration 176)
-$rentalSeriesController = new \App\Infrastructure\Http\Controllers\RentalSeriesController($commandBus, $queryBus, $rentalRepository);
+$rentalSeriesController = new \App\Infrastructure\Http\Controllers\RentalSeriesController($commandBus, $queryBus, $rentalRepository, $rentalSeriesRepository);
+$router->get('/serien', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'index']));
 $router->get('/veranstaltungen/{id}/serie/neu', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'create']));
 $router->post('/veranstaltungen/{id}/serie/vorschau', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'preview']));
 $router->post('/veranstaltungen/{id}/serie', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'store']));

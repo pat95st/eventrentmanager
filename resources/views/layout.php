@@ -109,9 +109,12 @@ $isDocumentsGroupActive = in_array($activeNav, $documentsGroupKeys, true);
 // untergeordnet) — enthält nach der Trennung von den kaufmännischen
 // Dokumenten (siehe "Dokumente" oben) und Lagerorte (siehe "Artikel" oben)
 // nur noch die eigentliche Veranstaltungsplanung.
-$rentalsGroupKeys = ['rentals', 'venues', 'calendar', 'minute_program_templates', 'partners'];
+$rentalsGroupKeys = ['rentals', 'tours', 'series', 'venues', 'calendar', 'minute_program_templates', 'partners'];
 $rentalsChildren = [
     ['key' => 'rentals', 'label' => t('nav.rentals_all'), 'href' => '/veranstaltungen'],
+    // Tours (migration 177) and recurring events (migration 176)
+    ['key' => 'tours', 'label' => 'Touren', 'href' => '/touren'],
+    ['key' => 'series', 'label' => 'Wiederkehrende Veranstaltungen', 'href' => '/serien'],
     ['key' => 'venues', 'label' => t('nav.venues'), 'href' => '/veranstaltungsorte'],
     ['key' => 'calendar', 'label' => t('nav.calendar'), 'href' => '/kalender'],
     ['key' => 'minute_program_templates', 'label' => t('nav.minute_program_templates'), 'href' => '/minutenprogramm-vorlagen'],

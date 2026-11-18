@@ -68,7 +68,7 @@ final class TourRouteController
             'planned' => $planned,
             'vehicles' => $this->vehicles->findAll(),
             'endpoints' => $endpoints,
-        ], activeNav: 'rentals', title: 'Route – ' . $route->rental->eventName);
+        ], activeNav: 'tours', title: 'Route – ' . $route->rental->eventName);
     }
 
     public function setProfile(Request $request): void

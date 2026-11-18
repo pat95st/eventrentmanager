@@ -36,7 +36,32 @@ final class TourController
         private readonly QueryBus $queries,
         private readonly TourRepositoryInterface $tours,
         private readonly ?TourLoadListPdfGenerator $pdf = null,
+        private readonly ?\App\Domain\Rental\RentalRepositoryInterface $rentals = null,
+        private readonly ?\App\Domain\Customer\CustomerRepositoryInterface $customers = null,
     ) {
+    }
+
+    /** Menu "Touren": all tours with their stops. */
+    public function index(Request $request): void
+    {
+        $today = new \DateTimeImmutable('today');
+        $upcoming = [];
+        $past = [];
+        foreach ($this->rentals?->findTours() ?? [] as $rental) {
+            $row = [
+                'rental' => $rental,
+                'customer' => $this->customers?->findById($rental->customerId)?->displayName() ?? '',
+                'stops' => (new \App\Domain\Tour\TourPlan($this->tours->findStopsByRental($rental->id)))->stops(),
+            ];
+            if ($rental->occupiedUntil() >= $today) {
+                $upcoming[] = $row;
+            } else {
+                $past[] = $row;
+            }
+        }
+        // Upcoming tours: next one first.
+        usort($upcoming, static fn (array $a, array $b) => $a['rental']->startDate <=> $b['rental']->startDate);
+        echo View::page('rentals/tour/index', ['upcoming' => $upcoming, 'past' => $past], activeNav: 'tours', title: 'Touren');
     }
 
     public function make(Request $request): void
@@ -65,7 +90,7 @@ final class TourController
         } catch (\Throwable) {
             // The tour page also works without route data.
         }
-        echo View::page('rentals/tour/show', ['tour' => $overview, 'focusStop' => $request->query('stop'), 'route' => $route], activeNav: 'rentals', title: 'Tour – ' . $overview->rental->eventName);
+        echo View::page('rentals/tour/show', ['tour' => $overview, 'focusStop' => $request->query('stop'), 'route' => $route], activeNav: 'tours', title: 'Tour – ' . $overview->rental->eventName);
     }
 
     public function stopForm(Request $request): void
@@ -250,7 +275,7 @@ final class TourController
         if ($overview === null) {
             return;
         }
-        echo View::page('rentals/tour/load-list', ['tour' => $overview], activeNav: 'rentals', title: 'Ladelisten – ' . $overview->rental->eventName);
+        echo View::page('rentals/tour/load-list', ['tour' => $overview], activeNav: 'tours', title: 'Ladelisten – ' . $overview->rental->eventName);
     }
 
     public function loadListPdf(Request $request): void
@@ -307,7 +332,7 @@ final class TourController
             'waypoint' => $waypoint,
             'errors' => $errors,
             'old' => $old,
-        ], activeNav: 'rentals', title: ($waypoint ? 'Zwischenstopp' : 'Stop') . ' – ' . $overview->rental->eventName);
+        ], activeNav: 'tours', title: ($waypoint ? 'Zwischenstopp' : 'Stop') . ' – ' . $overview->rental->eventName);
     }
 
     /** @return array<string, string> */

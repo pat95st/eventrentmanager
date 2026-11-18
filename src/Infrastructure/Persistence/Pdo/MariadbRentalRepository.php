@@ -175,6 +175,11 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
         return array_map($this->hydrate(...), $stmt->fetchAll());
     }
 
+    public function findTours(): array
+    {
+        return array_map($this->hydrate(...), $this->pdo->query('SELECT * FROM rentals WHERE is_tour = 1 ORDER BY start_date DESC')->fetchAll());
+    }
+
     public function delete(string $id): void
     {
         $stmt = $this->pdo->prepare('DELETE FROM rentals WHERE id = :id');

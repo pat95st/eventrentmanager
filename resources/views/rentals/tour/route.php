@@ -60,7 +60,7 @@ $mapData = [
 <?php endif; ?>
 
 <div class="<?= $card ?> mb-6 p-0">
-    <div id="tour-map" class="h-[28rem] w-full rounded-lg" aria-label="Karte der Route"></div>
+    <div id="tour-map" class="relative z-0 h-[28rem] w-full rounded-lg" style="isolation: isolate" aria-label="Karte der Route"></div>
 </div>
 
 <div class="mb-6 grid gap-4 lg:grid-cols-3">

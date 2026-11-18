@@ -64,6 +64,11 @@ final class MariadbRentalSeriesRepository implements RentalSeriesRepositoryInter
         return $row ? $this->hydrate($row) : null;
     }
 
+    public function findAll(): array
+    {
+        return array_map($this->hydrate(...), $this->pdo->query('SELECT * FROM rental_series ORDER BY created_at DESC')->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     public function delete(string $id): void
     {
         $this->pdo->prepare('DELETE FROM rental_series WHERE id = :id')->execute(['id' => $id]);

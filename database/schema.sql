@@ -4877,7 +4877,229 @@ CREATE TABLE api_request_log (
     KEY idx_api_request_log_created (created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- --- 176_rental_series.sql ---
+-- Recurring events (rental series). A series is created from an existing
+-- rental (its first occurrence); every occurrence stays an ordinary rental
+-- that points to the series via rentals.series_id.
+--
+--  - recurrence_type: weekly | monthly_day | monthly_weekday | yearly | manual
+--  - interval_n: every n weeks/months/years (ignored for manual)
+--  - weekdays: comma separated ISO weekdays 1 (Mon) .. 7 (Sun) for weekly
+--  - month_day: day of month for monthly_day (clamped to the month's length)
+--  - week_of_month / weekday: n-th weekday for monthly_weekday (-1 = last)
+--  - manual_dates: comma separated Y-m-d dates for manual
+--  - ends_on / occurrence_count: end condition (exactly one is set);
+--    occurrence_count counts from anchor_date (inclusive)
+--  - anchor_date: first occurrence the rule is calculated from
+--  - ended_at: series was ended, no further occurrences can be generated
+--  - rentals.series_index: running number within the series ({nr})
+--  - rentals.series_customized: dates were changed by hand, a later rule
+--    change leaves this occurrence untouched
+CREATE TABLE rental_series (
+    id               CHAR(36)          NOT NULL PRIMARY KEY,
+    name_template    VARCHAR(255)      NULL,
+    recurrence_type  VARCHAR(20)       NOT NULL,
+    interval_n       SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    weekdays         VARCHAR(20)       NULL,
+    month_day        TINYINT UNSIGNED  NULL,
+    week_of_month    TINYINT           NULL,
+    weekday          TINYINT UNSIGNED  NULL,
+    manual_dates     TEXT              NULL,
+    ends_on          DATE              NULL,
+    occurrence_count SMALLINT UNSIGNED NULL,
+    anchor_date      DATE              NOT NULL,
+    source_rental_id CHAR(36)          NULL,
+    ended_at         DATETIME          NULL,
+    created_at       DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_series_source_rental
+        FOREIGN KEY (source_rental_id) REFERENCES rentals (id) ON DELETE SET NULL
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+ALTER TABLE rentals
+    ADD COLUMN series_id         CHAR(36)          NULL AFTER deployment_days,
+    ADD COLUMN series_index      SMALLINT UNSIGNED NULL AFTER series_id,
+    ADD COLUMN series_customized TINYINT(1)        NOT NULL DEFAULT 0 AFTER series_index,
+    ADD CONSTRAINT fk_rentals_series
+        FOREIGN KEY (series_id) REFERENCES rental_series (id) ON DELETE SET NULL,
+    ADD INDEX idx_rentals_series (series_id, start_date);
+
+-- --- 177_rental_tours.sql ---
+-- Tours: one rental with several stops at different places and times
+-- (rentals.is_tour). The material of rental_items is the base list of the
+-- tour; per stop it can deviate (rental_tour_stop_items), and the crew can
+-- deviate per stop as well (rental_tour_stop_technicians).
+--
+--  - rental_tour_stops.kind: 'stop' (event at a venue) or 'waypoint'
+--    (stop between venues: warehouse, company address, saved or custom
+--    address; purpose load/overnight/break/other). A waypoint sits after
+--    the stop after_stop_id (NULL = before the first stop).
+--  - rental_tour_stop_items.delta: + additional / - fewer pieces at this
+--    stop compared to the base list. allocation 'whole_tour' = travels the
+--    whole tour (occupied for the whole period), 'stops_only' = occupied only
+--    around the affected stops; issue_waypoint_id/return_waypoint_id name an
+--    optional warehouse waypoint where it is loaded/unloaded.
+--  - rental_items.tour_extra_quantity: pieces that may be issued on top of
+--    the base quantity because stops need more (maintained by the tour code).
+--  - rental_tour_stop_technicians.action: 'replace' (user_id replaces
+--    replaces_user_id), 'add' or 'remove' (user_id) for this stop.
+--  - minute_programs.tour_stop_id: minute program of a single stop.
+ALTER TABLE rentals
+    ADD COLUMN is_tour TINYINT(1) NOT NULL DEFAULT 0 AFTER series_customized;
+
+ALTER TABLE rental_items
+    ADD COLUMN tour_extra_quantity INT UNSIGNED NOT NULL DEFAULT 0 AFTER quantity;
+
+CREATE TABLE tour_saved_addresses (
+    id          CHAR(36)       NOT NULL PRIMARY KEY,
+    label       VARCHAR(255)   NOT NULL,
+    street      VARCHAR(255)   NOT NULL,
+    postal_code VARCHAR(20)    NOT NULL,
+    city        VARCHAR(150)   NOT NULL,
+    country     VARCHAR(100)   NULL,
+    latitude    DECIMAL(10, 7) NULL,
+    longitude   DECIMAL(10, 7) NULL,
+    created_at  DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_tour_saved_addresses_label (label)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_tour_stops (
+    id               CHAR(36)       NOT NULL PRIMARY KEY,
+    rental_id        CHAR(36)       NOT NULL,
+    kind             VARCHAR(10)    NOT NULL,
+    -- stop
+    venue_id         CHAR(36)       NULL,
+    location_text    VARCHAR(255)   NULL,
+    setup_at         DATETIME       NULL,
+    event_start_at   DATETIME       NULL,
+    event_end_at     DATETIME       NULL,
+    teardown_end_at  DATETIME       NULL,
+    contact_name     VARCHAR(150)   NULL,
+    contact_phone    VARCHAR(50)    NULL,
+    note             TEXT           NULL,
+    -- waypoint
+    after_stop_id    CHAR(36)       NULL,
+    purpose          VARCHAR(20)    NULL,
+    address_type     VARCHAR(20)    NULL,
+    warehouse_id     CHAR(36)       NULL,
+    saved_address_id CHAR(36)       NULL,
+    label            VARCHAR(255)   NULL,
+    street           VARCHAR(255)   NULL,
+    postal_code      VARCHAR(20)    NULL,
+    city             VARCHAR(150)   NULL,
+    country          VARCHAR(100)   NULL,
+    latitude         DECIMAL(10, 7) NULL,
+    longitude        DECIMAL(10, 7) NULL,
+    arrive_at        DATETIME       NULL,
+    depart_at        DATETIME       NULL,
+    created_at       DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_tour_stops_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_tour_stops_venue FOREIGN KEY (venue_id) REFERENCES venues (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rental_tour_stops_after FOREIGN KEY (after_stop_id) REFERENCES rental_tour_stops (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rental_tour_stops_warehouse FOREIGN KEY (warehouse_id) REFERENCES warehouses (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rental_tour_stops_saved_address FOREIGN KEY (saved_address_id) REFERENCES tour_saved_addresses (id) ON DELETE SET NULL,
+    INDEX idx_rental_tour_stops_rental (rental_id, event_start_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_tour_stop_items (
+    id                 CHAR(36)    NOT NULL PRIMARY KEY,
+    stop_id            CHAR(36)    NOT NULL,
+    article_id         CHAR(36)    NOT NULL,
+    delta              INT         NOT NULL,
+    allocation         VARCHAR(20) NOT NULL DEFAULT 'stops_only',
+    issue_waypoint_id  CHAR(36)    NULL,
+    return_waypoint_id CHAR(36)    NULL,
+    CONSTRAINT fk_rental_tour_stop_items_stop FOREIGN KEY (stop_id) REFERENCES rental_tour_stops (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_tour_stop_items_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_rental_tour_stop_items_issue FOREIGN KEY (issue_waypoint_id) REFERENCES rental_tour_stops (id) ON DELETE SET NULL,
+    CONSTRAINT fk_rental_tour_stop_items_return FOREIGN KEY (return_waypoint_id) REFERENCES rental_tour_stops (id) ON DELETE SET NULL,
+    UNIQUE KEY uq_rental_tour_stop_items (stop_id, article_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE rental_tour_stop_technicians (
+    id               CHAR(36)    NOT NULL PRIMARY KEY,
+    stop_id          CHAR(36)    NOT NULL,
+    action           VARCHAR(10) NOT NULL,
+    user_id          CHAR(36)    NOT NULL,
+    replaces_user_id CHAR(36)    NULL,
+    created_at       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_tour_stop_technicians_stop FOREIGN KEY (stop_id) REFERENCES rental_tour_stops (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_tour_stop_technicians_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_tour_stop_technicians_replaces FOREIGN KEY (replaces_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_rental_tour_stop_technicians_stop (stop_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+ALTER TABLE minute_programs
+    ADD COLUMN tour_stop_id CHAR(36) NULL AFTER rental_id,
+    ADD CONSTRAINT fk_minute_programs_tour_stop
+        FOREIGN KEY (tour_stop_id) REFERENCES rental_tour_stops (id) ON DELETE SET NULL;
+
+-- --- 178_tour_routing.sql ---
+-- Routes of tours (OpenRouteService), vehicle dimensions for truck routing
+-- and planned vehicles of an event.
+--
+--  - routing_settings: API key of OpenRouteService and the buffer (minutes)
+--    between teardown + driving time and the next setup.
+--  - company_settings.latitude/longitude: geocoded company address (start,
+--    destination or waypoint of a route).
+--  - vehicles.height_cm/width_cm/length_cm/gross_weight_kg: dimensions and
+--    permitted total weight for the truck profile, all optional.
+--  - rental_planned_vehicles: vehicles planned for an event already before
+--    issuing; towing_vehicle_id = car that pulls this trailer.
+--  - rentals.route_profile: 'car', 'hgv' (truck without restrictions) or
+--    'hgv_vehicles' (truck with the dimensions of the planned vehicles).
+--  - rental_tour_stops.kind 'start'/'end': start and destination of a tour
+--    route (same address fields as waypoints); without them the pickup and
+--    return warehouses are used.
+--  - rental_route_cache: last calculated route per event, keyed by a hash of
+--    points, profile and restrictions, so the API is not called on every
+--    page view.
+CREATE TABLE routing_settings (
+    id             TINYINT           NOT NULL PRIMARY KEY DEFAULT 1,
+    api_key        VARCHAR(255)      NULL,
+    buffer_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+    updated_at     DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_routing_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO routing_settings (id) VALUES (1);
+
+ALTER TABLE company_settings
+    ADD COLUMN latitude  DECIMAL(10, 7) NULL,
+    ADD COLUMN longitude DECIMAL(10, 7) NULL;
+
+ALTER TABLE vehicles
+    ADD COLUMN height_cm       DECIMAL(6, 1) NULL AFTER empty_weight_kg,
+    ADD COLUMN width_cm        DECIMAL(6, 1) NULL AFTER height_cm,
+    ADD COLUMN length_cm       DECIMAL(6, 1) NULL AFTER width_cm,
+    ADD COLUMN gross_weight_kg DECIMAL(8, 2) NULL AFTER length_cm;
+
+CREATE TABLE rental_planned_vehicles (
+    id                CHAR(36) NOT NULL PRIMARY KEY,
+    rental_id         CHAR(36) NOT NULL,
+    vehicle_id        CHAR(36) NOT NULL,
+    towing_vehicle_id CHAR(36) NULL,
+    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_planned_vehicles_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_planned_vehicles_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rental_planned_vehicles_towing FOREIGN KEY (towing_vehicle_id) REFERENCES vehicles (id) ON DELETE SET NULL,
+    UNIQUE KEY uq_rental_planned_vehicles (rental_id, vehicle_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+ALTER TABLE rentals
+    ADD COLUMN route_profile VARCHAR(20) NOT NULL DEFAULT 'car' AFTER is_tour;
+
+CREATE TABLE rental_route_cache (
+    rental_id  CHAR(36)   NOT NULL PRIMARY KEY,
+    hash       CHAR(64)   NOT NULL,
+    payload    MEDIUMTEXT NOT NULL,
+    created_at DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_route_cache_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- =======================================================================
+
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
 --
 -- Die folgende Liste nennt jede Migration aus database/migrations/, deren
@@ -5074,4 +5296,7 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('172_minute_program_trades.sql', NOW()),
     ('173_article_average_power.sql', NOW()),
     ('174_confirm_bypass.sql', NOW()),
-    ('175_api_scopes_rate_limit.sql', NOW());
+    ('175_api_scopes_rate_limit.sql', NOW()),
+    ('176_rental_series.sql', NOW()),
+    ('177_rental_tours.sql', NOW()),
+    ('178_tour_routing.sql', NOW());

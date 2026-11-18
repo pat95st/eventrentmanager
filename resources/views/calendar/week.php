@@ -72,7 +72,7 @@ $fmt = static fn (int $min): string => sprintf('%02d:%02d', intdiv(min($min, 143
             <?php foreach ($days as $d): ?>
                 <div class="wk-allday" style="background:inherit">
                     <?php foreach ($d['allDay'] as $entry): ?>
-                        <a class="wk-chip" style="--c: <?= e(CalendarController::colorFor($entry->rental->id)) ?>" href="/veranstaltungen/<?= e($entry->rental->id) ?>" title="<?= e($tooltip($entry)) ?>"><?= e($entry->rental->eventName) ?></a>
+                        <a class="wk-chip" style="--c: <?= e(CalendarController::colorFor($entry->rental->id)) ?>" href="/veranstaltungen/<?= e($entry->rental->id) ?>" title="<?= e($tooltip($entry)) ?>"><?= $entry->rental->isTour ? '🚚 ' : '' ?><?= $entry->rental->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($entry->rental->eventName) ?></a>
                     <?php endforeach; ?>
                 </div>
             <?php endforeach; ?>
@@ -98,7 +98,7 @@ $fmt = static fn (int $min): string => sprintf('%02d:%02d', intdiv(min($min, 143
                     <a href="/veranstaltungen/<?= e($entry->rental->id) ?>" class="wk-ev<?= $classes ?>"
                        style="--c: <?= e(CalendarController::colorFor($entry->rental->id)) ?>; top: <?= round($top, 1) ?>px; height: <?= round($height, 1) ?>px; left: calc(<?= round($left, 3) ?>% + 2px); width: calc(<?= round($width, 3) ?>% - 4px);"
                        title="<?= e($tooltip($entry)) ?>">
-                        <span class="block font-semibold" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap"><?= e($entry->rental->eventName) ?></span>
+                        <span class="block font-semibold" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap"><?= $entry->rental->isTour ? '🚚 ' : '' ?><?= $entry->rental->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($entry->rental->eventName) ?></span>
                         <?php if ($height >= 32): ?>
                             <span class="block" style="opacity:.8"><?= e($fmt($item['start'])) ?>–<?= e($item['end'] >= 1440 ? '24:00' : $fmt($item['end'])) ?></span>
                         <?php endif; ?>

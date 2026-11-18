@@ -113,9 +113,10 @@ final class IssueRentalItemHandler implements CommandHandlerInterface
         }
 
         $alreadyIssued = $this->issuedItems->countByRentalAndArticle($command->rentalId, $inventoryNumber->articleId);
-        if ($alreadyIssued >= $rentalItem->quantity) {
+        // Tours (migration 177): stops may need more than the base list.
+        if ($alreadyIssued >= $rentalItem->issueQuantity()) {
             throw new ValidationException([
-                'inventoryNumberId' => "Es sind bereits alle geplanten {$rentalItem->quantity} Exemplare dieses Artikels ausgegeben.",
+                'inventoryNumberId' => "Es sind bereits alle geplanten {$rentalItem->issueQuantity()} Exemplare dieses Artikels ausgegeben.",
             ]);
         }
 

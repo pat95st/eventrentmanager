@@ -83,6 +83,10 @@ final class VehicleController
             acquisitionYear: $this->nullIfEmpty($request->input('acquisition_year')),
             purchasePrice: $this->nullIfEmpty($request->input('purchase_price')),
             currentValue: $this->nullIfEmpty($request->input('current_value')),
+            heightCm: $this->nullIfEmpty($request->input('height_cm')),
+            widthCm: $this->nullIfEmpty($request->input('width_cm')),
+            lengthCm: $this->nullIfEmpty($request->input('length_cm')),
+            grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
         );
 
         try {
@@ -130,6 +134,10 @@ final class VehicleController
             acquisitionYear: $this->nullIfEmpty($request->input('acquisition_year')),
             purchasePrice: $this->nullIfEmpty($request->input('purchase_price')),
             currentValue: $this->nullIfEmpty($request->input('current_value')),
+            heightCm: $this->nullIfEmpty($request->input('height_cm')),
+            widthCm: $this->nullIfEmpty($request->input('width_cm')),
+            lengthCm: $this->nullIfEmpty($request->input('length_cm')),
+            grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
         );
 
         try {
@@ -188,6 +196,10 @@ final class VehicleController
             'acquisition_year' => $command->acquisitionYear,
             'purchase_price' => $command->purchasePrice,
             'current_value' => $command->currentValue,
+            'height_cm' => $command->heightCm,
+            'width_cm' => $command->widthCm,
+            'length_cm' => $command->lengthCm,
+            'gross_weight_kg' => $command->grossWeightKg,
         ];
     }
 

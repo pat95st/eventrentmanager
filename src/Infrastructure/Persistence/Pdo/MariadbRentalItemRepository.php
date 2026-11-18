@@ -110,6 +110,7 @@ final class MariadbRentalItemRepository implements RentalItemRepositoryInterface
             createdAt: new DateTimeImmutable($row['created_at']),
             updatedAt: new DateTimeImmutable($row['updated_at']),
             preIssueChecksConfirmed: (bool) $row['pre_issue_checks_confirmed'],
+            tourExtraQuantity: (int) ($row['tour_extra_quantity'] ?? 0),
         );
     }
 }

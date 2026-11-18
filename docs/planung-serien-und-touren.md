@@ -9,6 +9,44 @@ eigene Migrationen (inkl. Übernahme in `database/schema.sql` und
 
 ---
 
+## Umsetzungsstand
+
+- **Etappe 1 (Serien): umgesetzt** (Migration 176). Abweichungen vom Plan:
+  - Bereich „Erinnerungen“ entfällt: `rental_reminders` protokolliert nur
+    bereits verschickte Erinnerungen; automatische Erinnerungen ergeben
+    sich ohnehin aus Ausgabe-/Rückgabezeit jedes Termins.
+  - Bereich „Audio“ entfällt vorerst: Audio-Dateien liegen als Dateien im
+    Speicher und gehören einer Veranstaltung; ein Kopieren der Verweise
+    würde beim Löschen eines Termins die Dateien der anderen zerstören.
+    Der Jingle-Verweis im kopierten Minutenprogramm wird daher geleert.
+  - Techniker werden über `AssignTechnician` neu angefragt (mit der
+    üblichen Benachrichtigung je Termin).
+- **Etappe 2 (Touren): umgesetzt** (Migration 177). Abweichungen vom Plan:
+  - Stromplanung je Stop entfällt vorerst: die Stromplanung hängt
+    (Primärschlüssel, Anschlüsse des Veranstaltungsorts) an der
+    Veranstaltung; eine Tour hat eine gemeinsame Stromplanung. Ein Umbau des
+    Strommoduls auf Stops wäre ein eigenes Paket.
+  - Material-Abweichungen je Stop nur auf Artikel-Ebene (Bundles/Sets
+    werden in der Grundliste ohnehin in Artikel aufgelöst).
+  - Ausgabe: `rental_items.tour_extra_quantity` = größter Zusatz eines
+    Stops je Artikel; die Ausgabe-Checkliste erlaubt Grundmenge + Zusatz.
+    Wann Zusatzmaterial physisch geladen wird, steht in den Ladelisten.
+  - Wer an Stops nicht mehr gebraucht wird, erhält eine einfache E-Mail
+    (keine Messenger-Nachricht).
+  - Kalender: Monats- und Listenansicht zeigen die Stops des Tages unter
+    der Tour; Wochenansicht und CalDAV zeigen die Tour als einen Eintrag.
+- **Etappe 3 (Route/Fahrzeuge): umgesetzt** (Migration 178). Abweichungen vom Plan:
+  - Start und Ziel werden nicht als eigene Spalten an `rentals` gespeichert,
+    sondern als Tour-Stops mit `kind = 'start' | 'end'` (gleiche
+    Adressfelder wie Zwischenstopps); ohne Eintrag gelten Ausgabe- bzw.
+    Rückgabelager.
+  - Stops ohne gespeicherten Veranstaltungsort (Freitext) haben keine
+    Koordinaten und werden in der Route übersprungen (mit Hinweis).
+  - Die Beladungsliste übernimmt geplante Fahrzeuge noch nicht als
+    Vorschlag.
+  - Leaflet 1.9.4 liegt lokal unter `public/assets/vendor/leaflet/`, die
+    Kartenkacheln kommen von tile.openstreetmap.org.
+
 ## Gemeinsame Basis (Teil von Etappe 1)
 
 ### Übernahme-Dienst `RentalCopier`

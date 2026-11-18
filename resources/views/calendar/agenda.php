@@ -45,10 +45,13 @@ $timeRange = static function ($r): string {
                             <a href="/veranstaltungen/<?= e($r->id) ?>" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60">
                                 <span class="mt-1.5 shrink-0 rounded-full" style="width:.625rem; height:.625rem; background: <?= e($color) ?>"></span>
                                 <span class="min-w-0 flex-1">
-                                    <span class="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100"><?= e($r->eventName) ?></span>
+                                    <span class="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100"><?= $r->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($r->eventName) ?></span>
                                     <span class="block truncate text-xs text-slate-500 dark:text-slate-400">
                                         <?= e($entry->customer->displayName()) ?><?= $r->eventLocation ? ' · ' . e($r->eventLocation) : '' ?>
                                     </span>
+                                    <?php foreach ($entry->tourStopsOn($date) as $stopLabel): ?>
+                                        <span class="block truncate text-xs text-emerald-700 dark:text-emerald-400">🚚 <?= e($stopLabel) ?></span>
+                                    <?php endforeach; ?>
                                     <?php if ($entry->materialLabels !== []): ?>
                                         <span class="mt-0.5 block truncate text-xs text-slate-400 dark:text-slate-500"><?= e(implode(', ', $entry->materialLabels)) ?></span>
                                     <?php endif; ?>

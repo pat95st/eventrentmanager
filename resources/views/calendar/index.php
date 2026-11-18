@@ -66,7 +66,10 @@ $maxVisiblePerDay = 3;
                                     style="--c: <?= e(\App\Infrastructure\Http\Controllers\CalendarController::colorFor($entry->rental->id)) ?>"
                                     title="<?= e($entry->rental->eventName . ' — ' . $entry->customer->displayName() . ($entry->materialLabels !== [] ? ' — ' . implode(', ', $entry->materialLabels) : '')) ?>"
                                 >
-                                    <?= e($entry->rental->eventName) ?>
+                                    <?= $entry->rental->isTour ? '<span title="Tour" aria-label="Tour">🚚</span> ' : '' ?><?= $entry->rental->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($entry->rental->eventName) ?>
+                                    <?php foreach ($entry->tourStopsOn($day) as $stopLabel): ?>
+                                        <span class="block truncate pl-2 text-[11px] font-normal opacity-80">↳ <?= e($stopLabel) ?></span>
+                                    <?php endforeach; ?>
                                 </a>
                             <?php endforeach; ?>
                             <?php if ($hiddenCount > 0): ?>

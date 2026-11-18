@@ -961,6 +961,53 @@ $commandBus->register(\App\Application\Rental\Command\RemoveRentalBundle::class,
 $commandBus->register(\App\Application\Rental\Command\IssueRentalItem::class, new IssueRentalItemHandler($rentalIssuedItemRepository, $rentalItemRepository, $rentalRepository, $inventoryNumberRepository, $articleAccessoryRepository, $articlePreIssueCheckRepository, $saleRepository, $customerRepository));
 $commandBus->register(\App\Application\Rental\Command\SignRentalTerms::class, new \App\Application\Rental\Command\SignRentalTermsHandler($rentalRepository, $fileStorage));
 $commandBus->register(\App\Application\Rental\Command\ConfirmCustomerIdChecked::class, new \App\Application\Rental\Command\ConfirmCustomerIdCheckedHandler($customerRepository));
+
+// Route planning (migration 178)
+$routingSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRoutingSettingsRepository($pdo);
+$plannedVehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPlannedVehicleRepository($pdo);
+$companyLocator = new \App\Application\Routing\CompanyLocator($companySettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbCompanyCoordinatesRepository($pdo), $geocoder);
+$routingCommandHandler = new \App\Application\Routing\Command\RoutingCommandHandler($routingSettingsRepository, $rentalRepository, $plannedVehicleRepository, $vehicleRepository);
+foreach (['SaveRoutingSettings', 'SetRouteProfile', 'AddPlannedVehicle', 'RemovePlannedVehicle'] as $routingCommand) {
+    $commandBus->register('App\\Application\\Routing\\Command\\' . $routingCommand, $routingCommandHandler);
+}
+
+// Tours (migration 177)
+$tourRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTourRepository($pdo);
+$tourSync = new \App\Application\Tour\TourSync($tourRepository, $rentalRepository, $rentalItemRepository);
+$tourCommandHandler = new \App\Application\Tour\Command\TourCommandHandler(
+    $tourRepository, $rentalRepository, $tourSync, $venueRepository, $articleRepository, $inventoryNumberRepository,
+    $warehouseRepository, $companySettingsRepository, $geocoder, $rentalTechnicianRepository, $userRepository, $commandBus,
+    new \App\Application\Tour\MailTourCrewNotifier($mailer, $userRepository),
+    null,
+    $companyLocator,
+);
+foreach (['MakeTour', 'RevertTour', 'SaveTourStop', 'SaveTourWaypoint', 'DeleteTourStop', 'ApplyTourMaterialChange', 'DeleteTourStopItem', 'ApplyTourCrewChange', 'DeleteTourCrewDeviation', 'CreateTourStopMinuteProgram'] as $tourCommand) {
+    $commandBus->register('App\\Application\\Tour\\Command\\' . $tourCommand, $tourCommandHandler);
+}
+
+// Recurring events / rental series (migration 176)
+$rentalSeriesRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalSeriesRepository($pdo);
+$plannedMaterialReadModel = new \App\Infrastructure\Persistence\Pdo\PdoPlannedMaterialReadModel($pdo);
+$materialConflictFinder = new \App\Application\RentalSeries\MaterialConflictFinder($plannedMaterialReadModel, $inventoryNumberRepository, $articleRepository, $manufacturerRepository);
+$rentalSeriesSupport = new \App\Application\RentalSeries\SeriesSupport($rentalSeriesRepository, $rentalRepository);
+$rentalCopier = new \App\Application\RentalSeries\RentalCopier($rentalRepository, $rentalIssuedItemRepository, new \App\Infrastructure\Persistence\Pdo\PdoRentalChildDataCopier($pdo), $rentalTechnicianRepository, $venueRepository, $commandBus, $tourSync);
+$occurrenceChecker = new \App\Application\RentalSeries\OccurrenceChecker($materialConflictFinder, $rentalScheduleRules);
+$recurrenceCalculator = new \App\Domain\RentalSeries\RecurrenceCalculator();
+$commandBus->register(\App\Application\RentalSeries\Command\CreateRentalSeries::class, new \App\Application\RentalSeries\Command\CreateRentalSeriesHandler($rentalSeriesSupport, $rentalSeriesRepository, $rentalRepository, $rentalCopier, $occurrenceChecker));
+$commandBus->register(\App\Application\RentalSeries\Command\ExtendRentalSeries::class, new \App\Application\RentalSeries\Command\ExtendRentalSeriesHandler($rentalSeriesSupport, $rentalSeriesRepository, $recurrenceCalculator, $rentalCopier, $occurrenceChecker));
+$commandBus->register(\App\Application\RentalSeries\Command\ChangeRentalSeriesRule::class, new \App\Application\RentalSeries\Command\ChangeRentalSeriesRuleHandler($rentalSeriesSupport, $rentalSeriesRepository, $rentalRepository, $recurrenceCalculator, $rentalCopier));
+$commandBus->register(\App\Application\RentalSeries\Command\DetachRentalFromSeries::class, new \App\Application\RentalSeries\Command\DetachRentalFromSeriesHandler($rentalSeriesSupport, $rentalRepository, $rentalCopier));
+$commandBus->register(\App\Application\RentalSeries\Command\EndRentalSeries::class, new \App\Application\RentalSeries\Command\EndRentalSeriesHandler($rentalSeriesSupport, $rentalSeriesRepository, $rentalRepository, $rentalCopier));
+$commandBus->register(\App\Application\RentalSeries\Command\CopyRentalData::class, new \App\Application\RentalSeries\Command\CopyRentalDataHandler($rentalSeriesSupport, $rentalCopier));
+$queryBus->register(\App\Application\RentalSeries\Query\PreviewRentalSeries::class, new \App\Application\RentalSeries\Query\PreviewRentalSeriesHandler($rentalSeriesSupport, $recurrenceCalculator, $occurrenceChecker, $plannedMaterialReadModel));
+$queryBus->register(\App\Application\RentalSeries\Query\PreviewRentalCopy::class, new \App\Application\RentalSeries\Query\PreviewRentalCopyHandler($rentalSeriesSupport, $rentalCopier, $plannedMaterialReadModel, $articleRepository, $manufacturerRepository, $rentalTechnicianRepository, $userRepository, $warehouseRepository));
+$queryBus->register(\App\Application\RentalSeries\Query\GetRentalSeries::class, new \App\Application\RentalSeries\Query\GetRentalSeriesHandler($rentalSeriesSupport, $rentalCopier, $materialConflictFinder, $customerRepository));
+$queryBus->register(\App\Application\RentalSeries\Query\GetRentalSeriesContext::class, new \App\Application\RentalSeries\Query\GetRentalSeriesContextHandler($rentalRepository, $rentalSeriesRepository));
+$queryBus->register(\App\Application\Tour\Query\GetTourOverview::class, new \App\Application\Tour\Query\GetTourOverviewHandler($rentalRepository, $tourRepository, $tourSync, $materialConflictFinder, $rentalTechnicianRepository, $userRepository, $articleRepository, $manufacturerRepository, $warehouseRepository));
+$queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler(new \App\Application\Routing\TourRouteService(
+    $rentalRepository, $tourRepository, $venueRepository, $warehouseRepository, $plannedVehicleRepository, $vehicleRepository,
+    $routingSettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbRouteCacheRepository($pdo), new \App\Infrastructure\Routing\OpenRouteServiceClient(),
+)));
 $commandBus->register(\App\Application\Sale\Command\SellInventoryNumber::class, new \App\Application\Sale\Command\SellInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $customerRepository, $invoiceRepository, $saleRepository));
 $commandBus->register(\App\Application\Sale\Command\SellArticleFromStock::class, new \App\Application\Sale\Command\SellArticleFromStockHandler($articleRepository, $customerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository));
 $commandBus->register(\App\Application\Purchase\Command\CreatePurchaseOrder::class, new \App\Application\Purchase\Command\CreatePurchaseOrderHandler($purchaseOrderRepository, $supplierRepository, $articleRepository));
@@ -1563,7 +1610,7 @@ $queryBus->register(\App\Application\Venue\Query\GetVenuesNeedDistributorFlags::
 $queryBus->register(\App\Application\Warehouse\Query\ListWarehouses::class, new ListWarehousesHandler($warehouseRepository));
 $queryBus->register(\App\Application\Warehouse\Query\GetWarehouse::class, new GetWarehouseHandler($warehouseRepository));
 
-$queryBus->register(\App\Application\Rental\Query\ListRentals::class, new ListRentalsHandler($rentalRepository, $customerRepository));
+$queryBus->register(\App\Application\Rental\Query\ListRentals::class, new ListRentalsHandler($rentalRepository, $customerRepository, new \App\Infrastructure\Persistence\Pdo\MariadbTourRepository($pdo)));
 $getRentalHandler = new GetRentalHandler(
     $rentalRepository,
     $customerRepository,
@@ -1611,6 +1658,7 @@ $queryBus->register(\App\Application\Rental\Query\ListRentalsInRange::class, new
     $articleRepository,
     $inventoryNumberRepository,
     $manufacturerRepository,
+    new \App\Infrastructure\Persistence\Pdo\MariadbTourRepository($pdo),
 ));
 $queryBus->register(\App\Application\Rental\Query\ListRentalHistoryForInventoryNumber::class, new ListRentalHistoryForInventoryNumberHandler(
     $rentalIssuedItemRepository,
@@ -2403,6 +2451,45 @@ $router->get('/veranstaltungen/{id}/bearbeiten', $auth->guard(Permission::Ausgab
 $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'update']));
 $router->post('/veranstaltungen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'destroy']));
 $router->post('/veranstaltungen/{id}/logistik', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateLogistics']));
+// Route planning (migration 178)
+$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository);
+$router->get('/veranstaltungen/{id}/tour/route', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'show']));
+$router->post('/veranstaltungen/{id}/tour/route/profil', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setProfile']));
+$router->post('/veranstaltungen/{id}/tour/route/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'addVehicle']));
+$router->post('/veranstaltungen/{id}/tour/route/fahrzeuge/{plannedId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'removeVehicle']));
+$router->get('/einstellungen/routenplanung', $auth->guard(Permission::Administration, [$tourRouteController, 'editSettings']));
+$router->post('/einstellungen/routenplanung', $auth->guard(Permission::Administration, [$tourRouteController, 'updateSettings']));
+// Tours (migration 177)
+$tourController = new \App\Infrastructure\Http\Controllers\TourController($commandBus, $queryBus, $tourRepository, new \App\Infrastructure\Pdf\TourLoadListPdfGenerator());
+$router->post('/veranstaltungen/{id}/tour', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'make']));
+$router->post('/veranstaltungen/{id}/tour/aufloesen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'revert']));
+$router->get('/veranstaltungen/{id}/tour', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'show']));
+$router->get('/veranstaltungen/{id}/tour/stops/neu', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'stopForm']));
+$router->post('/veranstaltungen/{id}/tour/stops', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'saveStop']));
+$router->post('/veranstaltungen/{id}/tour/material', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'applyMaterial']));
+$router->post('/veranstaltungen/{id}/tour/material/{itemId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'deleteItem']));
+$router->post('/veranstaltungen/{id}/tour/crew', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'applyCrew']));
+$router->post('/veranstaltungen/{id}/tour/crew/{deviationId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'deleteCrewDeviation']));
+$router->get('/veranstaltungen/{id}/tour/ladeliste', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'loadList']));
+$router->get('/veranstaltungen/{id}/tour/ladeliste.pdf', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'loadListPdf']));
+$router->get('/tour-stops/{stopId}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'stopForm']));
+$router->post('/tour-stops/{stopId}', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'saveStop']));
+$router->post('/tour-stops/{stopId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'deleteStop']));
+$router->post('/tour-stops/{stopId}/minutenprogramm', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'createMinuteProgram']));
+// Recurring events (migration 176)
+$rentalSeriesController = new \App\Infrastructure\Http\Controllers\RentalSeriesController($commandBus, $queryBus, $rentalRepository);
+$router->get('/veranstaltungen/{id}/serie/neu', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'create']));
+$router->post('/veranstaltungen/{id}/serie/vorschau', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'preview']));
+$router->post('/veranstaltungen/{id}/serie', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'store']));
+$router->post('/veranstaltungen/{id}/serie/loesen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'detach']));
+$router->get('/veranstaltungen/{id}/serie/uebernehmen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'copyForm']));
+$router->post('/veranstaltungen/{id}/serie/uebernehmen/vorschau', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'copyPreview']));
+$router->post('/veranstaltungen/{id}/serie/uebernehmen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'copy']));
+$router->get('/serien/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'show']));
+$router->post('/serien/{id}/verlaengern', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'extend']));
+$router->get('/serien/{id}/rhythmus', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'editRule']));
+$router->post('/serien/{id}/rhythmus', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'updateRule']));
+$router->post('/serien/{id}/beenden', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'end']));
 
 $router->post('/veranstaltungen/{id}/artikel', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'addItem']));
 $router->post('/veranstaltungen/{id}/artikel/mehrere', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'addItems']));

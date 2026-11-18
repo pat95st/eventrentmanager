@@ -558,6 +558,10 @@ Vehicle:
     - "acquisition_year"
     - "purchase_price"
     - "current_value"
+    - "height_cm"
+    - "width_cm"
+    - "length_cm"
+    - "gross_weight_kg"
   properties:
     id:
       type: "string"
@@ -612,6 +616,18 @@ Vehicle:
     current_value:
       type: "string"
       nullable: true
+    height_cm:
+      type: "string"
+      nullable: true
+    width_cm:
+      type: "string"
+      nullable: true
+    length_cm:
+      type: "string"
+      nullable: true
+    gross_weight_kg:
+      type: "string"
+      nullable: true
 Rental:
   type: "object"
   description: "Veranstaltung (Vermietung)"
@@ -634,6 +650,11 @@ Rental:
     - "terms_signed_at"
     - "blocks_other_rentals"
     - "no_strobe"
+    - "series_id"
+    - "series_index"
+    - "series_customized"
+    - "is_tour"
+    - "route_profile"
   properties:
     id:
       type: "string"
@@ -686,6 +707,18 @@ Rental:
       type: "boolean"
     no_strobe:
       type: "boolean"
+    series_id:
+      type: "string"
+      nullable: true
+    series_index:
+      type: "integer"
+      nullable: true
+    series_customized:
+      type: "boolean"
+    is_tour:
+      type: "boolean"
+    route_profile:
+      type: "string"
 RentalItem:
   type: "object"
   description: "Geplante Position einer Veranstaltung"
@@ -698,6 +731,7 @@ RentalItem:
     - "created_at"
     - "updated_at"
     - "pre_issue_checks_confirmed"
+    - "tour_extra_quantity"
   properties:
     id:
       type: "string"
@@ -717,6 +751,8 @@ RentalItem:
       format: "date-time"
     pre_issue_checks_confirmed:
       type: "boolean"
+    tour_extra_quantity:
+      type: "integer"
 RentalIssuedItem:
   type: "object"
   description: "Ausgegebenes Exemplar"
@@ -2513,6 +2549,18 @@ VehicleInput:
     current_value:
       type: "string"
       nullable: true
+    height_cm:
+      type: "string"
+      nullable: true
+    width_cm:
+      type: "string"
+      nullable: true
+    length_cm:
+      type: "string"
+      nullable: true
+    gross_weight_kg:
+      type: "string"
+      nullable: true
 VehiclePatch:
   type: "object"
   description: "Fahrzeug ändern"
@@ -2559,6 +2607,18 @@ VehiclePatch:
       type: "string"
       nullable: true
     current_value:
+      type: "string"
+      nullable: true
+    height_cm:
+      type: "string"
+      nullable: true
+    width_cm:
+      type: "string"
+      nullable: true
+    length_cm:
+      type: "string"
+      nullable: true
+    gross_weight_kg:
       type: "string"
       nullable: true
 RentalInput:

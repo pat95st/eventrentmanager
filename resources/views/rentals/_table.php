@@ -39,12 +39,25 @@ use function App\Infrastructure\Http\t;
                 <?php foreach ($rentals as $entry): ?>
                     <?php $rental = $entry->rental; ?>
                     <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/veranstaltungen/<?= e($rental->id) ?>">
-                        <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100"><?= e($rental->eventName) ?></td>
+                        <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100"><?= $rental->isTour ? '<span title="Tour" aria-label="Tour">🚚</span> ' : '' ?><?= $rental->seriesId !== null ? '<span title="Wiederkehrende Veranstaltung" aria-label="Serie">🔁</span> ' : '' ?><?= e($rental->eventName) ?></td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= e($entry->customer->displayName()) ?></td>
                         <td class="break-words px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">
                             <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?>
                         </td>
-                        <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $rental->eventLocation !== null ? e($rental->eventLocation) : '–' ?></td>
+                        <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
+                            <?php if ($entry->tourStops !== []): ?>
+                                <details data-row-link-ignore>
+                                    <summary class="cursor-pointer text-brand-700 dark:text-brand-400"><?= count($entry->tourStops) ?> Stops</summary>
+                                    <ol class="mt-1 list-inside list-decimal space-y-0.5 text-xs">
+                                        <?php foreach ($entry->tourStops as $stop): ?>
+                                            <li><?= e($stop->title()) ?><?= $stop->eventStartAt !== null ? ' · ' . e($stop->eventStartAt->format('d.m.')) : '' ?></li>
+                                        <?php endforeach; ?>
+                                    </ol>
+                                </details>
+                            <?php else: ?>
+                                <?= $rental->eventLocation !== null ? e($rental->eventLocation) : '–' ?>
+                            <?php endif; ?>
+                        </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400"><?= $rental->deploymentDays ?></td>
                         <td class="break-words px-4 py-3 text-right">
                             <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('rentals.table.checkout_link')) ?></a>

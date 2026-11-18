@@ -117,6 +117,7 @@ final class SettingsSections
                     $page('settings-kalender', '/einstellungen/kalender', t('nav.calendar_settings'), 'Kalender-Abos (CalDAV/ICS)'),
                     $page('settings-veranstaltungs-audio', '/einstellungen/veranstaltungs-audio', 'Veranstaltungs-Audio', 'Abspielgeräte (Raspberry Pi), Gong und Sprachausgabe für Durchsagen'),
                     $page('settings-displays', '/einstellungen/displays', 'Stage- & FOH-Displays', 'Bühnen- und Regie-Displays mit Countdown, Ablauf und Hinweisen'),
+                    $page('settings-routenplanung', '/einstellungen/routenplanung', 'Routenplanung', 'Straßenrouten und Fahrzeiten für Touren (OpenRouteService)'),
                 ],
             ],
             'system' => [

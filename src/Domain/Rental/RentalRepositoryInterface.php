@@ -36,6 +36,13 @@ interface RentalRepositoryInterface
      */
     public function findByVenue(string $venueId): array;
 
+    /**
+     * All occurrences of a recurring event (migration 176).
+     *
+     * @return Rental[] sorted by start date ascending
+     */
+    public function findBySeries(string $seriesId): array;
+
     public function delete(string $id): void;
 
     /**

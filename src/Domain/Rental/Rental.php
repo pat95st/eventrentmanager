@@ -51,6 +51,15 @@ final class Rental
         public bool $blocksOtherRentals = false,
         // Migration 166: no strobe lighting may be used at this event.
         public bool $noStrobe = false,
+        // Migration 176: occurrence of a recurring event (see App\Domain\RentalSeries).
+        public ?string $seriesId = null,
+        public ?int $seriesIndex = null,
+        // Dates were changed by hand; a later rule change leaves this occurrence as it is.
+        public bool $seriesCustomized = false,
+        // Migration 177: tour with several stops (see App\Domain\Tour).
+        public bool $isTour = false,
+        // Migration 178: 'car', 'hgv' or 'hgv_vehicles' (see App\Domain\Routing\RouteProfile).
+        public string $routeProfile = 'car',
     ) {
     }
 

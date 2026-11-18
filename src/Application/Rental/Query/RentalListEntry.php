@@ -12,6 +12,8 @@ final class RentalListEntry
     public function __construct(
         public readonly Rental $rental,
         public readonly Customer $customer,
+        /** @var \App\Domain\Tour\TourStop[] tours (migration 177): stops in order */
+        public readonly array $tourStops = [],
     ) {
     }
 }

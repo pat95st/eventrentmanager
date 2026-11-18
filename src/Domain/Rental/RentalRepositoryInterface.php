@@ -43,6 +43,13 @@ interface RentalRepositoryInterface
      */
     public function findBySeries(string $seriesId): array;
 
+    /**
+     * All tours (migration 177).
+     *
+     * @return Rental[] sorted by start date descending
+     */
+    public function findTours(): array;
+
     public function delete(string $id): void;
 
     /**

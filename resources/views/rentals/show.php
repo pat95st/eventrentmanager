@@ -137,7 +137,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
             </summary>
             <div data-dropdown-menu role="menu" class="menu-fit absolute left-0 top-full z-20 mt-1 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:left-auto sm:right-0">
                 <?php if (!$rental->isTour): ?>
-                    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour" data-confirm-key="rentals.tour.make" data-confirm="Als Tour mit mehreren Stops planen? Der bisherige Ort wird Stop 1.">
+                    <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour" data-confirm-key="rentals.tour.make" data-confirm="Als Tour mit mehreren Tourstops planen? Der bisherige Ort wird Tourstop 1.">
                         <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                         <button type="submit" class="<?= $menuItemClass ?>">🚚 Als Tour planen …</button>
                     </form>
@@ -165,8 +165,8 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
     <?php /* Tour (migration 177) */ ?>
     <div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
         <span class="font-medium text-emerald-900 dark:text-emerald-200">🚚 Diese Veranstaltung ist eine Tour.</span>
-        <span class="text-emerald-800/80 dark:text-emerald-300/80">Die geplanten Artikel unten sind die Grundliste für alle Stops.</span>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour" class="font-medium text-emerald-700 hover:underline dark:text-emerald-400">Stops, Material und Besetzung je Stop</a>
+        <span class="text-emerald-800/80 dark:text-emerald-300/80">Die geplanten Artikel unten sind die Grundliste für alle Tourstops.</span>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour" class="font-medium text-emerald-700 hover:underline dark:text-emerald-400">Tourstops, Material und Besetzung je Tourstop</a>
     </div>
 <?php endif; ?>
 <?php if (($seriesContext ?? null) !== null): ?>
@@ -256,7 +256,7 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
                     <div>
                         <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($entry->displayName()) ?></p>
                         <p class="text-xs text-slate-400 dark:text-slate-500">
-                            <?= e(t('rentals.show.planned_label')) ?>: <?= $entry->item->quantity ?><?= $entry->item->tourExtraQuantity > 0 ? ' (+' . $entry->item->tourExtraQuantity . ' an einzelnen Stops)' : '' ?> · <?= e(t('rentals.show.issued_label')) ?>: <?= $entry->issuedCount ?>
+                            <?= e(t('rentals.show.planned_label')) ?>: <?= $entry->item->quantity ?><?= $entry->item->tourExtraQuantity > 0 ? ' (+' . $entry->item->tourExtraQuantity . ' an einzelnen Tourstops)' : '' ?> · <?= e(t('rentals.show.issued_label')) ?>: <?= $entry->issuedCount ?>
                             <?php if (($bundleRequiredByArticle[$entry->article->id] ?? 0) > 0): ?>
                                 · <?= e(t('rentals.show.of_which_bundle', ['count' => (string) $bundleRequiredByArticle[$entry->article->id]])) ?>
                             <?php endif; ?>

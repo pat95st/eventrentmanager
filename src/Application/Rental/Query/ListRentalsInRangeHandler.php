@@ -45,7 +45,7 @@ final class ListRentalsInRangeHandler implements QueryHandlerInterface
             }
             $end = ($stop->eventEndAt ?? $stop->eventStartAt)->setTime(0, 0);
             for ($day = $start, $guard = 0; $day <= $end && $guard < 60; $day = $day->modify('+1 day'), $guard++) {
-                $byDay[$day->format('Y-m-d')][] = 'Stop ' . ($i + 1) . ': ' . $stop->title();
+                $byDay[$day->format('Y-m-d')][] = 'Tourstop ' . ($i + 1) . ': ' . $stop->title();
             }
         }
 

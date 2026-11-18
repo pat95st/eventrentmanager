@@ -10,5 +10,8 @@ interface RentalSeriesRepositoryInterface
 
     public function findById(string $id): ?RentalSeries;
 
+    /** @return RentalSeries[] newest first */
+    public function findAll(): array;
+
     public function delete(string $id): void;
 }

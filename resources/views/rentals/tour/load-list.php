@@ -50,10 +50,10 @@ $list = static function (array $material) use ($tour): void {
         <?php continue; ?>
     <?php endif; ?>
     <section class="<?= $card ?> mb-4 break-inside-avoid">
-        <h2 class="font-semibold">Stop <?= (int) $entry->number ?>: <?= e($stop->title()) ?></h2>
+        <h2 class="font-semibold">Tourstop <?= (int) $entry->number ?>: <?= e($stop->title()) ?></h2>
         <p class="mb-3 text-xs text-slate-500"><?= $stop->eventStartAt !== null ? e($stop->eventStartAt->format('d.m.Y H:i')) : '' ?><?= $stop->addressLine() !== '' ? ' · ' . e($stop->addressLine()) : '' ?></p>
         <?php if ($entry->changes !== []): ?>
-            <h3 class="text-xs font-semibold text-slate-600 dark:text-slate-400">Gegenüber <?= $entry->number === 1 ? 'der Grundliste' : 'Stop ' . ($entry->number - 1) ?></h3>
+            <h3 class="text-xs font-semibold text-slate-600 dark:text-slate-400">Gegenüber <?= $entry->number === 1 ? 'der Grundliste' : 'Tourstop ' . ($entry->number - 1) ?></h3>
             <ul class="mb-3 text-sm">
                 <?php foreach ($entry->changes as $change): ?>
                     <?php $diff = $change['after'] - $change['before']; ?>
@@ -63,7 +63,7 @@ $list = static function (array $material) use ($tour): void {
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
-        <h3 class="text-xs font-semibold text-slate-600 dark:text-slate-400">Benötigt an diesem Stop</h3>
+        <h3 class="text-xs font-semibold text-slate-600 dark:text-slate-400">Benötigt an diesem Tourstop</h3>
         <?php $list($entry->material); ?>
     </section>
 <?php endforeach; ?>

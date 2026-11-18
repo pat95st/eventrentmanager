@@ -12,7 +12,7 @@ $input = 'mt-1 w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text
 ?>
 <div class="mb-6">
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Routenplanung</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Straßenrouten und Fahrzeiten zwischen den Stops einer Tour.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Straßenrouten und Fahrzeiten zwischen den Tourstops einer Tour.</p>
 </div>
 
 <?php if ($errors !== []): ?>
@@ -25,7 +25,7 @@ $input = 'mt-1 w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text
         <label for="api_key" class="block text-xs font-medium text-slate-600 dark:text-slate-400">API-Schlüssel von OpenRouteService</label>
         <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Kostenlos nach Registrierung auf openrouteservice.org (Heidelberg Institute for Geoinformation Technology).
-            Ohne Schlüssel zeigt die Karte die Stops nur als Luftlinie, ohne Fahrzeiten.
+            Ohne Schlüssel zeigt die Karte die Tourstops nur als Luftlinie, ohne Fahrzeiten.
         </p>
         <input type="password" id="api_key" name="api_key" autocomplete="off" placeholder="<?= $settings->hasApiKey() ? 'gespeichert – leer lassen, um ihn zu behalten' : '' ?>" class="<?= $input ?>">
         <?php if ($settings->hasApiKey()): ?>
@@ -35,7 +35,7 @@ $input = 'mt-1 w-full max-w-sm rounded-md border border-slate-300 px-3 py-2 text
     <div>
         <label for="buffer_minutes" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Puffer zwischen Abbau + Fahrt und dem nächsten Aufbau (Minuten)</label>
         <input type="number" id="buffer_minutes" name="buffer_minutes" min="0" max="600" value="<?= (int) $settings->bufferMinutes ?>" class="<?= $input ?> max-w-[8rem]">
-        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Reicht die Zeit zwischen zwei Stops nicht für Fahrt und Puffer, erscheint eine Warnung.</p>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Reicht die Zeit zwischen zwei Tourstops nicht für Fahrt und Puffer, erscheint eine Warnung.</p>
     </div>
     <div class="flex border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>

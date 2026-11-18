@@ -12,6 +12,7 @@
 use App\Domain\Tour\WaypointAddressType;
 use App\Domain\Tour\WaypointPurpose;
 use function App\Infrastructure\Http\e;
+use function App\Infrastructure\Http\renderLiveSearchField;
 
 require __DIR__ . '/../series/_styles.php';
 $rental = $tour->rental;
@@ -23,7 +24,7 @@ $heading = match (true) {
     $kind === 'start' => 'Start der Route',
     $kind === 'end' => 'Ziel der Route',
     $waypoint => $stop !== null ? 'Zwischenstopp bearbeiten' : 'Zwischenstopp hinzufügen',
-    default => $stop !== null ? 'Stop bearbeiten' : 'Stop hinzufügen',
+    default => $stop !== null ? 'Tourstop bearbeiten' : 'Tourstop hinzufügen',
 };
 ?>
 <div class="mb-6">
@@ -34,7 +35,7 @@ $heading = match (true) {
 
 <?php require __DIR__ . '/../series/_errors.php'; ?>
 
-<form method="post" action="<?= e($action) ?>" class="<?= $card ?> max-w-2xl space-y-4">
+<form method="post" action="<?= e($action) ?>" class="<?= $card ?> space-y-4">
     <?= $csrf ?>
     <input type="hidden" name="kind" value="<?= e($kind) ?>">
     <?php if ($endpoint): ?>
@@ -42,8 +43,10 @@ $heading = match (true) {
     <?php endif; ?>
     <?php if (!$waypoint): ?>
         <div>
-            <label class="<?= $label ?>" for="stop-location">Ort</label>
-            <input id="stop-location" type="text" name="location" value="<?= e($v('location')) ?>" required class="<?= $input ?>" placeholder="Veranstaltungsort oder Freitext">
+            <label class="<?= $label ?>" for="location">Ort</label>
+            <div class="mt-1">
+                <?php renderLiveSearchField('location', '/veranstaltungsorte/suche', null, $v('location'), 'Veranstaltungsort oder Freitext', $errors['location'] ?? null, 'freetext', true); ?>
+            </div>
             <p class="mt-1 text-xs text-slate-500">Stimmt der Name mit einem gespeicherten Veranstaltungsort überein, wird dieser verknüpft.</p>
         </div>
         <div class="grid gap-3 sm:grid-cols-2">
@@ -69,9 +72,9 @@ $heading = match (true) {
             <div>
                 <label class="<?= $label ?>" for="wp-after">Zwischen</label>
                 <select id="wp-after" name="after_stop_id" class="<?= $input ?>">
-                    <option value="">Tourstart und Stop 1</option>
+                    <option value="">Tourstart und Tourstop 1</option>
                     <?php foreach ($tour->stops() as $i => $entry): ?>
-                        <option value="<?= e($entry->stop->id) ?>"<?= $v('after_stop_id') === $entry->stop->id ? ' selected' : '' ?>>Stop <?= (int) $entry->number ?> (<?= e($entry->stop->title()) ?>) und <?= isset($tour->stops()[$i + 1]) ? 'Stop ' . ((int) $entry->number + 1) : 'Tourende' ?></option>
+                        <option value="<?= e($entry->stop->id) ?>"<?= $v('after_stop_id') === $entry->stop->id ? ' selected' : '' ?>>Tourstop <?= (int) $entry->number ?> (<?= e($entry->stop->title()) ?>) und <?= isset($tour->stops()[$i + 1]) ? 'Tourstop ' . ((int) $entry->number + 1) : 'Tourende' ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

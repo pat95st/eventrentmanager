@@ -23,7 +23,7 @@ require __DIR__ . '/_styles.php';
 
 <?php require __DIR__ . '/_errors.php'; ?>
 
-<form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/serie/vorschau" class="<?= $card ?> max-w-2xl space-y-5">
+<form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/serie/vorschau" class="<?= $card ?> space-y-5">
     <?= $csrf ?>
     <?php $showEnd = true; require __DIR__ . '/_rule_fields.php'; ?>
 

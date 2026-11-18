@@ -32,7 +32,7 @@ $fromPrevious = $direction === 'vorher';
 
 <?php require __DIR__ . '/_errors.php'; ?>
 
-<form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/serie/uebernehmen/vorschau" class="<?= $card ?> max-w-3xl space-y-5">
+<form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/serie/uebernehmen/vorschau" class="<?= $card ?> space-y-5">
     <?= $csrf ?>
     <input type="hidden" name="richtung" value="<?= e($direction) ?>">
     <?php require __DIR__ . '/_scopes.php'; ?>

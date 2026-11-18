@@ -5,7 +5,6 @@
  *
  * @var \App\Application\Tour\Query\TourOverview $tour
  * @var string|null $focusStop
- * @var \App\Application\Routing\TourRoute|null $route
  */
 
 use App\Domain\Tour\TourAllocation;
@@ -38,15 +37,15 @@ $materialList = static function (array $material) use ($tour): string {
 <div class="mb-6">
     <a href="/veranstaltungen/<?= e($rental->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400">← Zurück zur Veranstaltung</a>
     <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100">🚚 Tour: <?= e($rental->eventName) ?></h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400"><?= count($stops) ?> Stops · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?></p>
+    <p class="text-sm text-slate-500 dark:text-slate-400"><?= count($stops) ?> Tourstops · <?= e($rental->startDate->format('d.m.Y')) ?> – <?= e($rental->endDate->format('d.m.Y')) ?></p>
     <div class="mt-4 flex flex-wrap gap-2">
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/stops/neu" class="<?= $primaryButton ?>">Stop hinzufügen</a>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/stops/neu" class="<?= $primaryButton ?>">Tourstop hinzufügen</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/stops/neu?art=zwischenstopp" class="<?= $secondaryButton ?>">Zwischenstopp hinzufügen</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/route" class="<?= $secondaryButton ?>">Route &amp; Fahrzeiten</a>
-        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/ladeliste" class="<?= $secondaryButton ?>">Ladelisten je Stop</a>
+        <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/ladeliste" class="<?= $secondaryButton ?>">Ladelisten je Tourstop</a>
         <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/ladeliste.pdf" target="_blank" class="<?= $secondaryButton ?>">Ladelisten (PDF)</a>
         <?php if (count($stops) <= 1): ?>
-            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour/aufloesen" data-confirm-key="rentals.tour.revert" data-confirm="Die Tour-Planung entfernen? Stops und Zwischenstopps werden gelöscht, die Veranstaltung bleibt erhalten.">
+            <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour/aufloesen" data-confirm-key="rentals.tour.revert" data-confirm="Die Tour-Planung entfernen? Tourstops und Zwischenstopps werden gelöscht, die Veranstaltung bleibt erhalten.">
                 <?= $csrf ?>
                 <button type="submit" class="<?= $secondaryButton ?>">Tour-Planung entfernen</button>
             </form>
@@ -54,11 +53,15 @@ $materialList = static function (array $material) use ($tour): string {
     </div>
 </div>
 
+<p class="mb-4 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400" data-timing-status>
+    <span class="loading-spinner text-brand-600" aria-hidden="true"></span> Fahrzeiten zwischen den Tourstops werden geprüft …
+</p>
+
 <div class="mb-6 grid gap-4 md:grid-cols-3">
     <div class="<?= $card ?>">
         <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Grundliste</h2>
         <?= $materialList($tour->base) ?>
-        <p class="mt-2 text-xs text-slate-500">Gilt für alle Stops; bearbeiten auf der <a class="underline" href="/veranstaltungen/<?= e($rental->id) ?>">Veranstaltungsseite</a>.</p>
+        <p class="mt-2 text-xs text-slate-500">Gilt für alle Tourstops; bearbeiten auf der <a class="underline" href="/veranstaltungen/<?= e($rental->id) ?>">Veranstaltungsseite</a>.</p>
     </div>
     <div class="<?= $card ?>">
         <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Beladung zum Tourstart</h2>
@@ -98,7 +101,7 @@ $materialList = static function (array $material) use ($tour): string {
         <li id="stop-<?= e($stop->id) ?>" class="<?= $card ?><?= $entry->locked ? ' opacity-70' : '' ?>">
             <div class="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                    <h2 class="font-semibold text-slate-900 dark:text-slate-100">Stop <?= (int) $entry->number ?>: <?= e($stop->title()) ?><?= $entry->locked ? ' <span class="text-xs font-normal text-slate-500">(vorbei)</span>' : '' ?></h2>
+                    <h2 class="font-semibold text-slate-900 dark:text-slate-100">Tourstop <?= (int) $entry->number ?>: <?= e($stop->title()) ?><?= $entry->locked ? ' <span class="text-xs font-normal text-slate-500">(vorbei)</span>' : '' ?></h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400">
                         <?php if ($stop->setupAt !== null): ?>Aufbau <?= e($fmt($stop->setupAt)) ?> · <?php endif; ?>
                         Veranstaltung <?= e($fmt($stop->eventStartAt)) ?><?= $stop->eventEndAt !== null ? ' – ' . e($stop->eventEndAt->format('Y-m-d') === $stop->eventStartAt?->format('Y-m-d') ? $fmtTime($stop->eventEndAt) : $fmt($stop->eventEndAt)) : '' ?>
@@ -113,16 +116,17 @@ $materialList = static function (array $material) use ($tour): string {
                     <a href="/tour-stops/<?= e($stop->id) ?>/bearbeiten" class="text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
                     <a href="/veranstaltungen/<?= e($rental->id) ?>/tour/stops/neu?art=zwischenstopp&amp;nach=<?= e($stop->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400">Zwischenstopp danach</a>
                     <?php if (count($stops) > 1): ?>
-                        <form method="post" action="/tour-stops/<?= e($stop->id) ?>/loeschen" data-confirm-key="rentals.tour.stop.delete" data-confirm="Stop löschen? Abweichungen bei Material und Besetzung dieses Stops gehen verloren." data-confirm-style="danger">
+                        <form method="post" action="/tour-stops/<?= e($stop->id) ?>/loeschen" data-confirm-key="rentals.tour.stop.delete" data-confirm="Tourstop löschen? Abweichungen bei Material und Besetzung dieses Tourstops gehen verloren." data-confirm-style="danger">
                             <?= $csrf ?><button type="submit" class="text-red-600 hover:underline dark:text-red-400">Löschen</button>
                         </form>
                     <?php endif; ?>
                 </div>
             </div>
 
-            <?php foreach ([...$entry->warnings, ...(($route ?? null)?->timingWarningsFor($stop->id) ?? [])] as $warning): ?>
+            <?php foreach ($entry->warnings as $warning): ?>
                 <p class="mt-2 text-xs text-amber-700 dark:text-amber-400">⚠ <?= e($warning) ?></p>
             <?php endforeach; ?>
+            <div data-stop-timing="<?= e($stop->id) ?>"></div>
             <?php foreach ($entry->conflicts as $conflict): ?>
                 <p class="mt-1 text-xs text-amber-700 dark:text-amber-400">⚠ <?= e($conflict->describe()) ?></p>
             <?php endforeach; ?>
@@ -201,7 +205,7 @@ $materialList = static function (array $material) use ($tour): string {
                     <?php endforeach; ?>
                     <form method="post" action="/tour-stops/<?= e($stop->id) ?>/minutenprogramm" class="mt-1">
                         <?= $csrf ?>
-                        <button type="submit" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">+ Minutenprogramm für diesen Stop</button>
+                        <button type="submit" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">+ Minutenprogramm für diesen Tourstop</button>
                     </form>
                     <p class="mt-2 text-xs text-slate-400">Stromplanung: über die Veranstaltung (gilt für die Tour).</p>
                 </div>
@@ -213,7 +217,7 @@ $materialList = static function (array $material) use ($tour): string {
 <div class="grid gap-4 lg:grid-cols-2">
     <form id="material" method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour/material" class="<?= $card ?> space-y-3">
         <?= $csrf ?>
-        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Material an Stops ändern</h2>
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Material an Tourstops ändern</h2>
         <div>
             <label class="<?= $label ?>" for="tour-article">Artikel</label>
             <select id="tour-article" name="article_id" required class="<?= $input ?>">
@@ -224,9 +228,9 @@ $materialList = static function (array $material) use ($tour): string {
             </select>
         </div>
         <div>
-            <label class="<?= $label ?>" for="tour-quantity">Menge an jedem gewählten Stop</label>
+            <label class="<?= $label ?>" for="tour-quantity">Menge an jedem gewählten Tourstop</label>
             <input id="tour-quantity" type="number" name="quantity" min="0" required class="<?= $input ?> max-w-[8rem]">
-            <p class="mt-1 text-xs text-slate-500">Gleich viel wie in der Grundliste entfernt die Abweichung, 0 = an diesen Stops nicht dabei.</p>
+            <p class="mt-1 text-xs text-slate-500">Gleich viel wie in der Grundliste entfernt die Abweichung, 0 = an diesen Tourstops nicht dabei.</p>
         </div>
         <fieldset class="text-sm">
             <legend class="<?= $label ?>">Zusatzmaterial</legend>
@@ -258,7 +262,7 @@ $materialList = static function (array $material) use ($tour): string {
 
     <form id="crew" method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour/crew" class="<?= $card ?> space-y-3">
         <?= $csrf ?>
-        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Besetzung an Stops ändern</h2>
+        <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Besetzung an Tourstops ändern</h2>
         <div>
             <label class="<?= $label ?>" for="crew-action">Was?</label>
             <select id="crew-action" name="action" class="<?= $input ?>" data-crew-action>
@@ -289,6 +293,30 @@ $materialList = static function (array $material) use ($tour): string {
 
 <script>
 (() => {
+    // Timing warnings from the route (geocoding/driving times can take a moment).
+    const status = document.querySelector('[data-timing-status]');
+    fetch(<?= json_encode('/veranstaltungen/' . $rental->id . '/tour/route.json', JSON_HEX_TAG | JSON_THROW_ON_ERROR) ?>, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+        .then((r) => { if (!r.ok) throw new Error(); return r.json(); })
+        .then((data) => {
+            data.timingWarnings.forEach((w) => {
+                const box = document.querySelector('[data-stop-timing="' + CSS.escape(w.stopId) + '"]');
+                if (!box) return;
+                const p = document.createElement('p');
+                p.className = 'mt-2 text-xs text-amber-700 dark:text-amber-400';
+                p.textContent = '⚠ ' + w.message;
+                box.appendChild(p);
+            });
+            const missing = data.entries.filter((e) => !e.included).length;
+            if (data.timingWarnings.length === 0 && missing === 0) {
+                status.textContent = data.straightLine ? 'Route als Luftlinie (ohne Fahrzeiten) – siehe „Route & Fahrzeiten“.' : 'Fahrzeiten geprüft: die Zeit zwischen den Tourstops reicht.';
+            } else {
+                status.textContent = (data.timingWarnings.length ? data.timingWarnings.length + ' Fahrzeit-Warnung(en) bei den Tourstops. ' : '')
+                    + (missing ? missing + ' Punkt(e) ohne Koordinaten – siehe „Route & Fahrzeiten“.' : '');
+                status.classList.add('text-amber-700');
+            }
+        })
+        .catch(() => { status.textContent = 'Die Fahrzeiten konnten nicht geprüft werden.'; });
+
     document.querySelectorAll('[data-stop-picker]').forEach((picker) => {
         const boxes = Array.from(picker.querySelectorAll('input[type=checkbox]'));
         const ref = picker.querySelector('[data-picker-ref]');

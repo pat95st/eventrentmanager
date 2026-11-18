@@ -14,9 +14,9 @@ $reference = $focusStop !== null && $focusStop !== '' ? $focusStop : null;
 $now = new \DateTimeImmutable();
 ?>
 <fieldset data-stop-picker="<?= e($pickerId) ?>">
-    <legend class="text-xs font-medium text-slate-600 dark:text-slate-400">Stops</legend>
+    <legend class="text-xs font-medium text-slate-600 dark:text-slate-400">Tourstops</legend>
     <div class="mt-1 flex flex-wrap items-center gap-2 text-xs">
-        <label class="flex items-center gap-1">ab Stop
+        <label class="flex items-center gap-1">ab Tourstop
             <select data-picker-ref class="rounded-md border border-slate-300 px-1.5 py-1 text-xs dark:border-slate-700 dark:bg-slate-900">
                 <?php foreach ($stops as $entry): ?>
                     <option value="<?= e($entry->stop->id) ?>"<?= $entry->stop->id === $reference ? ' selected' : '' ?>><?= (int) $entry->number ?>: <?= e($entry->stop->title()) ?></option>

@@ -36,13 +36,38 @@ final class TourController
         private readonly QueryBus $queries,
         private readonly TourRepositoryInterface $tours,
         private readonly ?TourLoadListPdfGenerator $pdf = null,
+        private readonly ?\App\Domain\Rental\RentalRepositoryInterface $rentals = null,
+        private readonly ?\App\Domain\Customer\CustomerRepositoryInterface $customers = null,
     ) {
+    }
+
+    /** Menu "Touren": all tours with their stops. */
+    public function index(Request $request): void
+    {
+        $today = new \DateTimeImmutable('today');
+        $upcoming = [];
+        $past = [];
+        foreach ($this->rentals?->findTours() ?? [] as $rental) {
+            $row = [
+                'rental' => $rental,
+                'customer' => $this->customers?->findById($rental->customerId)?->displayName() ?? '',
+                'stops' => (new \App\Domain\Tour\TourPlan($this->tours->findStopsByRental($rental->id)))->stops(),
+            ];
+            if ($rental->occupiedUntil() >= $today) {
+                $upcoming[] = $row;
+            } else {
+                $past[] = $row;
+            }
+        }
+        // Upcoming tours: next one first.
+        usort($upcoming, static fn (array $a, array $b) => $a['rental']->startDate <=> $b['rental']->startDate);
+        echo View::page('rentals/tour/index', ['upcoming' => $upcoming, 'past' => $past], activeNav: 'tours', title: 'Touren');
     }
 
     public function make(Request $request): void
     {
         $rentalId = $request->param('id');
-        $this->run(fn () => $this->commands->dispatch(new MakeTour($rentalId)), 'Die Veranstaltung wird jetzt als Tour geplant. Der bisherige Ort ist Stop 1.');
+        $this->run(fn () => $this->commands->dispatch(new MakeTour($rentalId)), 'Die Veranstaltung wird jetzt als Tour geplant. Der bisherige Ort ist Tourstop 1.');
         Response::redirect('/veranstaltungen/' . $rentalId . '/tour');
     }
 
@@ -59,13 +84,8 @@ final class TourController
         if ($overview === null) {
             return;
         }
-        $route = null;
-        try {
-            $route = $this->queries->ask(new \App\Application\Routing\Query\GetTourRoute($overview->rental->id));
-        } catch (\Throwable) {
-            // The tour page also works without route data.
-        }
-        echo View::page('rentals/tour/show', ['tour' => $overview, 'focusStop' => $request->query('stop'), 'route' => $route], activeNav: 'rentals', title: 'Tour – ' . $overview->rental->eventName);
+        // Timing warnings of the route are loaded in the background (see show.php).
+        echo View::page('rentals/tour/show', ['tour' => $overview, 'focusStop' => $request->query('stop')], activeNav: 'tours', title: 'Tour – ' . $overview->rental->eventName);
     }
 
     public function stopForm(Request $request): void
@@ -101,7 +121,7 @@ final class TourController
         $stopId = $request->param('stopId') !== '' ? $request->param('stopId') : null;
         $stop = $stopId !== null ? $this->tours->findStop($stopId) : null;
         if ($stopId !== null && $stop === null) {
-            Response::notFound('Der Stop wurde nicht gefunden.');
+            Response::notFound('Der Tourstop wurde nicht gefunden.');
 
             return;
         }
@@ -159,7 +179,7 @@ final class TourController
         Flash::success(match ($kind) {
             'start' => 'Start der Route gespeichert.',
             'end' => 'Ziel der Route gespeichert.',
-            default => $waypoint ? 'Zwischenstopp gespeichert.' : 'Stop gespeichert.',
+            default => $waypoint ? 'Zwischenstopp gespeichert.' : 'Tourstop gespeichert.',
         });
         Response::redirect('/veranstaltungen/' . $rentalId . '/tour' . (in_array($kind, ['start', 'end'], true) ? '/route' : ''));
     }
@@ -168,11 +188,11 @@ final class TourController
     {
         $stop = $this->tours->findStop($request->param('stopId'));
         if ($stop === null) {
-            Response::notFound('Der Stop wurde nicht gefunden.');
+            Response::notFound('Der Tourstop wurde nicht gefunden.');
 
             return;
         }
-        $this->run(fn () => $this->commands->dispatch(new DeleteTourStop($stop->id)), $stop->isStop() ? 'Stop gelöscht.' : 'Zwischenstopp gelöscht.');
+        $this->run(fn () => $this->commands->dispatch(new DeleteTourStop($stop->id)), $stop->isStop() ? 'Tourstop gelöscht.' : 'Zwischenstopp gelöscht.');
         Response::redirect('/veranstaltungen/' . $stop->rentalId . '/tour');
     }
 
@@ -190,7 +210,7 @@ final class TourController
                 $request->input('return_waypoint_id', '') ?? '',
             ));
 
-            return $count === 1 ? 'Material an 1 Stop geändert.' : "Material an {$count} Stops geändert.";
+            return $count === 1 ? 'Material an 1 Tourstop geändert.' : "Material an {$count} Tourstops geändert.";
         });
         Response::redirect('/veranstaltungen/' . $rentalId . '/tour#material');
     }
@@ -214,7 +234,7 @@ final class TourController
                 $request->input('replaces_user_id', '') ?? '',
             ));
 
-            return "Besetzung an {$result['changed']} Stop(s) geändert." . ($result['requested'] ? ' Der Techniker wurde angefragt.' : '');
+            return "Besetzung an {$result['changed']} Tourstop(s) geändert." . ($result['requested'] ? ' Der Techniker wurde angefragt.' : '');
         });
         Response::redirect('/veranstaltungen/' . $rentalId . '/tour#crew');
     }
@@ -230,13 +250,13 @@ final class TourController
     {
         $stop = $this->tours->findStop($request->param('stopId'));
         if ($stop === null) {
-            Response::notFound('Der Stop wurde nicht gefunden.');
+            Response::notFound('Der Tourstop wurde nicht gefunden.');
 
             return;
         }
         try {
             $programId = (string) $this->commands->dispatch(new CreateTourStopMinuteProgram($stop->id));
-            Flash::success('Minutenprogramm für den Stop angelegt.');
+            Flash::success('Minutenprogramm für den Tourstop angelegt.');
             Response::redirect('/minutenprogramme/' . $programId);
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
@@ -250,7 +270,7 @@ final class TourController
         if ($overview === null) {
             return;
         }
-        echo View::page('rentals/tour/load-list', ['tour' => $overview], activeNav: 'rentals', title: 'Ladelisten – ' . $overview->rental->eventName);
+        echo View::page('rentals/tour/load-list', ['tour' => $overview], activeNav: 'tours', title: 'Ladelisten – ' . $overview->rental->eventName);
     }
 
     public function loadListPdf(Request $request): void
@@ -307,7 +327,7 @@ final class TourController
             'waypoint' => $waypoint,
             'errors' => $errors,
             'old' => $old,
-        ], activeNav: 'rentals', title: ($waypoint ? 'Zwischenstopp' : 'Stop') . ' – ' . $overview->rental->eventName);
+        ], activeNav: 'tours', title: ($waypoint ? 'Zwischenstopp' : 'Tourstop') . ' – ' . $overview->rental->eventName);
     }
 
     /** @return array<string, string> */

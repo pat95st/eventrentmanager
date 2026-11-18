@@ -26,7 +26,7 @@ $series = $overview->series;
 
 <?php require __DIR__ . '/_errors.php'; ?>
 
-<form method="post" action="/serien/<?= e($series->id) ?>/rhythmus" class="<?= $card ?> max-w-2xl space-y-5"
+<form method="post" action="/serien/<?= e($series->id) ?>/rhythmus" class="<?= $card ?> space-y-5"
       data-confirm-key="rentals.series.change_rule" data-confirm="Rhythmus jetzt ändern? Termine werden verschoben, angelegt oder gelöscht.">
     <?= $csrf ?>
     <div>

@@ -39,7 +39,34 @@ final class RentalSeriesController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
         private readonly RentalRepositoryInterface $rentals,
+        private readonly ?\App\Domain\RentalSeries\RentalSeriesRepositoryInterface $seriesRepository = null,
     ) {
+    }
+
+    /** Menu "Wiederkehrende Veranstaltungen": all series with their next occurrence. */
+    public function index(Request $request): void
+    {
+        $today = new \DateTimeImmutable('today');
+        $active = [];
+        $ended = [];
+        foreach ($this->seriesRepository?->findAll() ?? [] as $series) {
+            $occurrences = $this->rentals->findBySeries($series->id);
+            $next = null;
+            foreach ($occurrences as $occurrence) {
+                if ($occurrence->endDate >= $today) {
+                    $next = $occurrence;
+                    break;
+                }
+            }
+            $row = ['series' => $series, 'occurrences' => $occurrences, 'next' => $next, 'first' => $occurrences[0] ?? null, 'last' => $occurrences !== [] ? end($occurrences) : null];
+            if ($series->isEnded() || $next === null) {
+                $ended[] = $row;
+            } else {
+                $active[] = $row;
+            }
+        }
+        usort($active, static fn (array $a, array $b) => $a['next']->startDate <=> $b['next']->startDate);
+        echo View::page('rentals/series/index', ['active' => $active, 'ended' => $ended], activeNav: 'series', title: 'Wiederkehrende Veranstaltungen');
     }
 
     public function create(Request $request): void
@@ -60,7 +87,7 @@ final class RentalSeriesController
             'rule' => ['type' => 'weekly', 'interval' => '1', 'weekdays' => [$rental->startDate->format('N')], 'end_mode' => 'count', 'occurrence_count' => '10'],
             'nameTemplate' => '',
             'errors' => [],
-        ], activeNav: 'rentals', title: 'Wiederkehrend machen – ' . $rental->eventName);
+        ], activeNav: 'series', title: 'Wiederkehrend machen – ' . $rental->eventName);
     }
 
     public function preview(Request $request): void
@@ -81,7 +108,7 @@ final class RentalSeriesController
 
                 return;
             }
-            echo View::page('rentals/series/create', ['rental' => $rental, 'rule' => $rule, 'nameTemplate' => $nameTemplate, 'errors' => $e->errors()], activeNav: 'rentals', title: 'Wiederkehrend machen – ' . $rental->eventName);
+            echo View::page('rentals/series/create', ['rental' => $rental, 'rule' => $rule, 'nameTemplate' => $nameTemplate, 'errors' => $e->errors()], activeNav: 'series', title: 'Wiederkehrend machen – ' . $rental->eventName);
 
             return;
         }
@@ -92,7 +119,7 @@ final class RentalSeriesController
             'scopes' => array_map(static fn (CopyScope $s) => $s->value, CopyScope::defaults()),
             'rowsInput' => null,
             'errors' => [],
-        ], activeNav: 'rentals', title: 'Vorschau der Termine – ' . $preview->source->eventName);
+        ], activeNav: 'series', title: 'Vorschau der Termine – ' . $preview->source->eventName);
     }
 
     public function store(Request $request): void
@@ -139,7 +166,7 @@ final class RentalSeriesController
                 'scopes' => $scopes,
                 'rowsInput' => $rows,
                 'errors' => $e->errors(),
-            ], activeNav: 'rentals', title: 'Vorschau der Termine – ' . $preview->source->eventName);
+            ], activeNav: 'series', title: 'Vorschau der Termine – ' . $preview->source->eventName);
 
             return;
         }
@@ -158,7 +185,7 @@ final class RentalSeriesController
             return;
         }
         $first = $overview->occurrences[0]['rental'] ?? null;
-        echo View::page('rentals/series/show', ['overview' => $overview], activeNav: 'rentals', title: 'Serie – ' . ($first?->eventName ?? ''));
+        echo View::page('rentals/series/show', ['overview' => $overview], activeNav: 'series', title: 'Serie – ' . ($first?->eventName ?? ''));
     }
 
     public function extend(Request $request): void
@@ -220,7 +247,7 @@ final class RentalSeriesController
                 'occurrence_count' => (string) ($rule->occurrenceCount ?? ''),
             ],
             'errors' => [],
-        ], activeNav: 'rentals', title: 'Rhythmus ändern');
+        ], activeNav: 'series', title: 'Rhythmus ändern');
     }
 
     public function updateRule(Request $request): void
@@ -236,7 +263,7 @@ final class RentalSeriesController
             return;
         } catch (ValidationException $e) {
             $overview = $this->queries->ask(new GetRentalSeries($seriesId));
-            echo View::page('rentals/series/rule', ['overview' => $overview, 'firstDate' => $firstDate, 'rule' => $rule, 'errors' => $e->errors()], activeNav: 'rentals', title: 'Rhythmus ändern');
+            echo View::page('rentals/series/rule', ['overview' => $overview, 'firstDate' => $firstDate, 'rule' => $rule, 'errors' => $e->errors()], activeNav: 'series', title: 'Rhythmus ändern');
 
             return;
         }
@@ -310,7 +337,7 @@ final class RentalSeriesController
             'scopes' => array_map(static fn (CopyScope $s) => $s->value, CopyScope::defaults()),
             'targets' => array_map(static fn ($r) => $r->id, $context->following),
             'errors' => [],
-        ], activeNav: 'rentals', title: $direction === 'vorher' ? 'Aus vorherigem Termin übernehmen' : 'Auf folgende Termine übertragen');
+        ], activeNav: 'series', title: $direction === 'vorher' ? 'Aus vorherigem Termin übernehmen' : 'Auf folgende Termine übertragen');
     }
 
     public function copyPreview(Request $request): void
@@ -333,11 +360,11 @@ final class RentalSeriesController
                 'scopes' => $scopes,
                 'targets' => $targetIds,
                 'errors' => $e->errors(),
-            ], activeNav: 'rentals', title: 'Daten übernehmen');
+            ], activeNav: 'series', title: 'Daten übernehmen');
 
             return;
         }
-        echo View::page('rentals/series/copy-preview', ['preview' => $preview, 'rentalId' => $rentalId, 'direction' => $direction], activeNav: 'rentals', title: 'Vorschau: Daten übernehmen');
+        echo View::page('rentals/series/copy-preview', ['preview' => $preview, 'rentalId' => $rentalId, 'direction' => $direction], activeNav: 'series', title: 'Vorschau: Daten übernehmen');
     }
 
     public function copy(Request $request): void

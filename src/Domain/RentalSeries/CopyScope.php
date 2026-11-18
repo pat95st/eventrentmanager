@@ -30,7 +30,7 @@ enum CopyScope: string
             self::Technicians => 'Techniker und Gewerke (werden neu angefragt)',
             self::MinuteProgram => 'Minutenprogramm',
             self::PowerPlan => 'Stromplanung',
-            self::TourStops => 'Tour: Stops, Zwischenstopps und Abweichungen je Stop (verschoben)',
+            self::TourStops => 'Tour: Tourstops, Zwischenstopps und Abweichungen je Tourstop (verschoben)',
         };
     }
 

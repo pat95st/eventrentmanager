@@ -117,6 +117,9 @@ final class PreviewRentalCopyHandler implements QueryHandlerInterface
         if (in_array(CopyScope::MinuteProgram, $scopes, true)) {
             $changes[] = ['area' => 'Minutenprogramm', 'before' => 'bisherige Programme', 'after' => 'Programme der Quelle (Uhrzeiten auf das Datum verschoben)'];
         }
+        if (in_array(CopyScope::TourStops, $scopes, true) && $source->isTour) {
+            $changes[] = ['area' => 'Tour', 'before' => $target->isTour ? 'bisherige Stops' : 'keine Tour', 'after' => 'Stops der Quelle (auf das Datum verschoben)'];
+        }
         if (in_array(CopyScope::PowerPlan, $scopes, true)) {
             $changes[] = ['area' => 'Stromplanung', 'before' => 'bisherige Planung', 'after' => 'Planung der Quelle'];
         }

@@ -38,6 +38,15 @@ final class DeleteRentalItemHandler implements CommandHandlerInterface
             throw new ConflictException('Dieser Artikel gehört zu einem gebuchten Bundle oder Set. Bitte stattdessen das Bundle bzw. Set entfernen.');
         }
 
+        // Tours (migration 177): the article is still needed at single stops — keep the row for issuing.
+        if ($item->tourExtraQuantity > 0) {
+            $item->quantity = 0;
+            $item->updatedAt = new \DateTimeImmutable();
+            $this->items->save($item);
+
+            return null;
+        }
+
         $this->items->delete($command->id);
 
         return null;

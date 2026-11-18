@@ -23,6 +23,15 @@ interface RentalChildDataCopierInterface
     /** Power plan; plug-ins into venue connections are kept only when both rentals share the venue. */
     public function replacePowerPlan(string $sourceRentalId, string $targetRentalId, bool $keepVenueConnections): void;
 
+    /**
+     * Tour stops and waypoints with their material and crew deviations
+     * (migration 177); all times are moved by $dayOffset days.
+     */
+    public function replaceTourStops(string $sourceRentalId, string $targetRentalId, int $dayOffset): void;
+
+    /** Moves all times of the tour stops of a rental by $dayOffset days. */
+    public function shiftTourStops(string $rentalId, int $dayOffset): void;
+
     /** Trades required for the event (rental_trades). */
     public function replaceTrades(string $sourceRentalId, string $targetRentalId): void;
 }

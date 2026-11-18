@@ -21,11 +21,11 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'INSERT INTO rentals (
                 id, customer_id, start_date, end_date, event_name, event_location, venue_id,
                 pickup_warehouse_id, pickup_at, return_warehouse_id, return_at, transport_note,
-                deployment_days, blocks_other_rentals, no_strobe, series_id, series_index, series_customized, terms_signed_at, terms_signature_file, created_at, updated_at
+                deployment_days, blocks_other_rentals, no_strobe, series_id, series_index, series_customized, is_tour, terms_signed_at, terms_signature_file, created_at, updated_at
              ) VALUES (
                 :id, :customer_id, :start_date, :end_date, :event_name, :event_location, :venue_id,
                 :pickup_warehouse_id, :pickup_at, :return_warehouse_id, :return_at, :transport_note,
-                :deployment_days, :blocks_other_rentals, :no_strobe, :series_id, :series_index, :series_customized, :terms_signed_at, :terms_signature_file, :created_at, :updated_at
+                :deployment_days, :blocks_other_rentals, :no_strobe, :series_id, :series_index, :series_customized, :is_tour, :terms_signed_at, :terms_signature_file, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 customer_id = :customer_id2, start_date = :start_date2, end_date = :end_date2,
@@ -34,7 +34,7 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
                 return_warehouse_id = :return_warehouse_id2, return_at = :return_at2,
                 transport_note = :transport_note2,
                 deployment_days = :deployment_days2, blocks_other_rentals = :blocks_other_rentals2, no_strobe = :no_strobe2,
-                series_id = :series_id2, series_index = :series_index2, series_customized = :series_customized2,
+                series_id = :series_id2, series_index = :series_index2, series_customized = :series_customized2, is_tour = :is_tour2,
                 terms_signed_at = :terms_signed_at2, terms_signature_file = :terms_signature_file2,
                 updated_at = :updated_at2'
         );
@@ -58,6 +58,7 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'series_id' => $rental->seriesId,
             'series_index' => $rental->seriesIndex,
             'series_customized' => $rental->seriesCustomized ? 1 : 0,
+            'is_tour' => $rental->isTour ? 1 : 0,
             'terms_signed_at' => $rental->termsSignedAt?->format('Y-m-d H:i:s'),
             'terms_signature_file' => $rental->termsSignatureFile,
             'created_at' => $rental->createdAt->format('Y-m-d H:i:s'),
@@ -79,6 +80,7 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             'series_id2' => $rental->seriesId,
             'series_index2' => $rental->seriesIndex,
             'series_customized2' => $rental->seriesCustomized ? 1 : 0,
+            'is_tour2' => $rental->isTour ? 1 : 0,
             'terms_signed_at2' => $rental->termsSignedAt?->format('Y-m-d H:i:s'),
             'terms_signature_file2' => $rental->termsSignatureFile,
             'updated_at2' => $rental->updatedAt->format('Y-m-d H:i:s'),
@@ -318,6 +320,7 @@ final class MariadbRentalRepository implements RentalRepositoryInterface
             seriesId: $row['series_id'] ?? null,
             seriesIndex: isset($row['series_index']) ? (int) $row['series_index'] : null,
             seriesCustomized: (bool) ($row['series_customized'] ?? false),
+            isTour: (bool) ($row['is_tour'] ?? false),
         );
     }
 }

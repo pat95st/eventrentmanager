@@ -199,6 +199,20 @@ final class RentalSeriesHandlersTest extends Unit
         $this->assertNull($occurrences[1]->pickupAt);
     }
 
+    public function testTourIsCopiedWithItsStops(): void
+    {
+        $source = $this->source();
+        $source->isTour = true;
+        $this->rentals->save($source);
+
+        $occurrences = $this->rentals->findBySeries($this->createSeries(self::weeklyRule(2)));
+
+        $this->assertTrue($occurrences[1]->isTour);
+        $this->assertContains('tour_stops', $this->childData->kindsFor($occurrences[1]->id));
+        $call = array_values(array_filter($this->childData->calls, static fn ($c) => $c[0] === 'tour_stops'))[0];
+        $this->assertSame(14, $call[3]);
+    }
+
     public function testSourceAlreadyInSeriesIsRejected(): void
     {
         $this->source();

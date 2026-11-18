@@ -26,7 +26,30 @@ final class ListRentalsInRangeHandler implements QueryHandlerInterface
         private readonly ArticleRepositoryInterface $articles,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ManufacturerRepositoryInterface $manufacturers,
+        private readonly ?\App\Domain\Tour\TourRepositoryInterface $tours = null,
     ) {
+    }
+
+    /** @return array<string, string[]> 'Y-m-d' => stop labels (tours, migration 177) */
+    private function tourStopsByDay(\App\Domain\Rental\Rental $rental): array
+    {
+        if (!$rental->isTour || $this->tours === null) {
+            return [];
+        }
+        $byDay = [];
+        $plan = new \App\Domain\Tour\TourPlan($this->tours->findStopsByRental($rental->id));
+        foreach ($plan->stops() as $i => $stop) {
+            $start = $stop->eventStartAt?->setTime(0, 0);
+            if ($start === null) {
+                continue;
+            }
+            $end = ($stop->eventEndAt ?? $stop->eventStartAt)->setTime(0, 0);
+            for ($day = $start, $guard = 0; $day <= $end && $guard < 60; $day = $day->modify('+1 day'), $guard++) {
+                $byDay[$day->format('Y-m-d')][] = 'Stop ' . ($i + 1) . ': ' . $stop->title();
+            }
+        }
+
+        return $byDay;
     }
 
     public function handle(QueryInterface $query): array
@@ -75,7 +98,7 @@ final class ListRentalsInRangeHandler implements QueryHandlerInterface
                     )));
                 }
 
-                return new CalendarRentalEntry($rental, $customer, $labels);
+                return new CalendarRentalEntry($rental, $customer, $labels, $this->tourStopsByDay($rental));
             },
             $rentals
         )));

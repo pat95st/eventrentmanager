@@ -56,6 +56,8 @@ final class Rental
         public ?int $seriesIndex = null,
         // Dates were changed by hand; a later rule change leaves this occurrence as it is.
         public bool $seriesCustomized = false,
+        // Migration 177: tour with several stops (see App\Domain\Tour).
+        public bool $isTour = false,
     ) {
     }
 

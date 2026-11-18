@@ -86,6 +86,63 @@ final class PdoRentalChildDataCopier implements RentalChildDataCopierInterface
         });
     }
 
+    private const TOUR_STOP_TIMES = ['setup_at', 'event_start_at', 'event_end_at', 'teardown_end_at', 'arrive_at', 'depart_at'];
+
+    public function replaceTourStops(string $sourceRentalId, string $targetRentalId, int $dayOffset): void
+    {
+        $this->inTransaction(function () use ($sourceRentalId, $targetRentalId): void {
+            $this->pdo->prepare('UPDATE minute_programs SET tour_stop_id = NULL WHERE rental_id = :id')->execute(['id' => $targetRentalId]);
+            $this->pdo->prepare('DELETE FROM rental_tour_stops WHERE rental_id = :id')->execute(['id' => $targetRentalId]);
+            $now = date('Y-m-d H:i:s');
+            // Insert without links first, then map the links to the new ids.
+            $map = $this->copyRows('rental_tour_stops', 'rental_id', $sourceRentalId, ['rental_id' => $targetRentalId, 'after_stop_id' => null, 'created_at' => $now, 'updated_at' => $now]);
+            $source = $this->pdo->prepare('SELECT id, after_stop_id FROM rental_tour_stops WHERE rental_id = :id AND after_stop_id IS NOT NULL');
+            $source->execute(['id' => $sourceRentalId]);
+            $link = $this->pdo->prepare('UPDATE rental_tour_stops SET after_stop_id = :after WHERE id = :id');
+            foreach ($source->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                if (isset($map[$row['id']], $map[$row['after_stop_id']])) {
+                    $link->execute(['after' => $map[$row['after_stop_id']], 'id' => $map[$row['id']]]);
+                }
+            }
+            foreach ($map as $oldStop => $newStop) {
+                $items = $this->pdo->prepare('SELECT * FROM rental_tour_stop_items WHERE stop_id = :id');
+                $items->execute(['id' => $oldStop]);
+                foreach ($items->fetchAll(PDO::FETCH_ASSOC) as $item) {
+                    $this->pdo->prepare(
+                        'INSERT INTO rental_tour_stop_items (id, stop_id, article_id, delta, allocation, issue_waypoint_id, return_waypoint_id)
+                         VALUES (:id, :stop, :article, :delta, :allocation, :issue, :return)'
+                    )->execute([
+                        'id' => Uuid::v4(), 'stop' => $newStop, 'article' => $item['article_id'], 'delta' => $item['delta'],
+                        'allocation' => $item['allocation'],
+                        'issue' => $item['issue_waypoint_id'] !== null ? ($map[$item['issue_waypoint_id']] ?? null) : null,
+                        'return' => $item['return_waypoint_id'] !== null ? ($map[$item['return_waypoint_id']] ?? null) : null,
+                    ]);
+                }
+                $this->copyRows('rental_tour_stop_technicians', 'stop_id', (string) $oldStop, ['stop_id' => $newStop, 'created_at' => $now]);
+            }
+        });
+        $this->shiftTourStops($targetRentalId, $dayOffset);
+    }
+
+    public function shiftTourStops(string $rentalId, int $dayOffset): void
+    {
+        if ($dayOffset === 0) {
+            return;
+        }
+        $sets = implode(', ', array_map(static fn (string $c) => "{$c} = DATE_ADD({$c}, INTERVAL :days DAY)", self::TOUR_STOP_TIMES));
+        $sql = 'UPDATE rental_tour_stops SET ' . $sets . ' WHERE rental_id = :id';
+        // PDO does not allow reusing a named parameter without emulation: bind each occurrence.
+        $i = 0;
+        $sql = preg_replace_callback('/:days/', static function () use (&$i): string {
+            return ':days' . $i++;
+        }, $sql) ?? $sql;
+        $params = ['id' => $rentalId];
+        for ($k = 0; $k < $i; $k++) {
+            $params['days' . $k] = $dayOffset;
+        }
+        $this->pdo->prepare($sql)->execute($params);
+    }
+
     public function replaceTrades(string $sourceRentalId, string $targetRentalId): void
     {
         $this->inTransaction(function () use ($sourceRentalId, $targetRentalId): void {

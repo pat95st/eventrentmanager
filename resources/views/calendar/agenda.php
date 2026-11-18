@@ -49,6 +49,9 @@ $timeRange = static function ($r): string {
                                     <span class="block truncate text-xs text-slate-500 dark:text-slate-400">
                                         <?= e($entry->customer->displayName()) ?><?= $r->eventLocation ? ' · ' . e($r->eventLocation) : '' ?>
                                     </span>
+                                    <?php foreach ($entry->tourStopsOn($date) as $stopLabel): ?>
+                                        <span class="block truncate text-xs text-emerald-700 dark:text-emerald-400">🚚 <?= e($stopLabel) ?></span>
+                                    <?php endforeach; ?>
                                     <?php if ($entry->materialLabels !== []): ?>
                                         <span class="mt-0.5 block truncate text-xs text-slate-400 dark:text-slate-500"><?= e(implode(', ', $entry->materialLabels)) ?></span>
                                     <?php endif; ?>

@@ -637,6 +637,7 @@ Rental:
     - "series_id"
     - "series_index"
     - "series_customized"
+    - "is_tour"
   properties:
     id:
       type: "string"
@@ -697,6 +698,8 @@ Rental:
       nullable: true
     series_customized:
       type: "boolean"
+    is_tour:
+      type: "boolean"
 RentalItem:
   type: "object"
   description: "Geplante Position einer Veranstaltung"
@@ -709,6 +712,7 @@ RentalItem:
     - "created_at"
     - "updated_at"
     - "pre_issue_checks_confirmed"
+    - "tour_extra_quantity"
   properties:
     id:
       type: "string"
@@ -728,6 +732,8 @@ RentalItem:
       format: "date-time"
     pre_issue_checks_confirmed:
       type: "boolean"
+    tour_extra_quantity:
+      type: "integer"
 RentalIssuedItem:
   type: "object"
   description: "Ausgegebenes Exemplar"

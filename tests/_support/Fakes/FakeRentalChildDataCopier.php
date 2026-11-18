@@ -36,6 +36,16 @@ final class FakeRentalChildDataCopier implements RentalChildDataCopierInterface
         $this->calls[] = ['power_plan', $sourceRentalId, $targetRentalId, $keepVenueConnections];
     }
 
+    public function replaceTourStops(string $sourceRentalId, string $targetRentalId, int $dayOffset): void
+    {
+        $this->calls[] = ['tour_stops', $sourceRentalId, $targetRentalId, $dayOffset];
+    }
+
+    public function shiftTourStops(string $rentalId, int $dayOffset): void
+    {
+        $this->calls[] = ['shift_tour_stops', $rentalId, '', $dayOffset];
+    }
+
     public function replaceTrades(string $sourceRentalId, string $targetRentalId): void
     {
         $this->calls[] = ['trades', $sourceRentalId, $targetRentalId];

@@ -33,6 +33,7 @@ final class RentalCopier
         private readonly RentalTechnicianRepositoryInterface $technicians,
         private readonly VenueRepositoryInterface $venues,
         private readonly ?CommandBus $commands = null,
+        private readonly ?\App\Application\Tour\TourSync $tourSync = null,
     ) {
     }
 
@@ -80,6 +81,7 @@ final class RentalCopier
             updatedAt: $now,
             blocksOtherRentals: $source->blocksOtherRentals,
             noStrobe: $source->noStrobe,
+            isTour: $source->isTour && in_array(CopyScope::TourStops, $scopes, true),
             seriesId: $series->id,
             seriesIndex: $index,
             seriesCustomized: $customized,
@@ -138,6 +140,16 @@ final class RentalCopier
             $this->childData->replaceTrades($source->id, $target->id);
             $this->replaceTechnicians($source, $target);
         }
+        if (in_array(CopyScope::TourStops, $scopes, true) && $source->isTour) {
+            if (!$target->isTour) {
+                $target->isTour = true;
+                $this->rentals->save($target);
+            }
+            $this->childData->replaceTourStops($source->id, $target->id, self::dayOffset($source->startDate, $target->startDate));
+        }
+        if ($target->isTour) {
+            $this->tourSync?->sync($target);
+        }
     }
 
     /**
@@ -161,6 +173,9 @@ final class RentalCopier
         $rental->updatedAt = new DateTimeImmutable();
         $this->rentals->save($rental);
         $this->childData->shiftMinutePrograms($rental->id, $offset);
+        if ($rental->isTour) {
+            $this->childData->shiftTourStops($rental->id, $offset);
+        }
     }
 
     /** Technicians of the target that are not in the source are removed, the others are (re)requested. */

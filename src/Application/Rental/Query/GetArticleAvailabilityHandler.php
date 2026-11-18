@@ -54,7 +54,7 @@ final class GetArticleAvailabilityHandler implements QueryHandlerInterface
 
             while ($day <= $end) {
                 $key = $day->format('Y-m-d');
-                $reservedByDay[$key] = ($reservedByDay[$key] ?? 0) + $item->quantity;
+                $reservedByDay[$key] = ($reservedByDay[$key] ?? 0) + $item->issueQuantity();
                 $day = $day->modify('+1 day');
             }
         }

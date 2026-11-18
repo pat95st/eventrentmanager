@@ -21,7 +21,21 @@ eigene Migrationen (inkl. Übernahme in `database/schema.sql` und
     Der Jingle-Verweis im kopierten Minutenprogramm wird daher geleert.
   - Techniker werden über `AssignTechnician` neu angefragt (mit der
     üblichen Benachrichtigung je Termin).
-- Etappe 2 (Touren) und 3 (Route/Fahrzeuge): offen.
+- **Etappe 2 (Touren): umgesetzt** (Migration 177). Abweichungen vom Plan:
+  - Stromplanung je Stop entfällt vorerst: die Stromplanung hängt
+    (Primärschlüssel, Anschlüsse des Veranstaltungsorts) an der
+    Veranstaltung; eine Tour hat eine gemeinsame Stromplanung. Ein Umbau des
+    Strommoduls auf Stops wäre ein eigenes Paket.
+  - Material-Abweichungen je Stop nur auf Artikel-Ebene (Bundles/Sets
+    werden in der Grundliste ohnehin in Artikel aufgelöst).
+  - Ausgabe: `rental_items.tour_extra_quantity` = größter Zusatz eines
+    Stops je Artikel; die Ausgabe-Checkliste erlaubt Grundmenge + Zusatz.
+    Wann Zusatzmaterial physisch geladen wird, steht in den Ladelisten.
+  - Wer an Stops nicht mehr gebraucht wird, erhält eine einfache E-Mail
+    (keine Messenger-Nachricht).
+  - Kalender: Monats- und Listenansicht zeigen die Stops des Tages unter
+    der Tour; Wochenansicht und CalDAV zeigen die Tour als einen Eintrag.
+- Etappe 3 (Route/Fahrzeuge): offen.
 
 ## Gemeinsame Basis (Teil von Etappe 1)
 

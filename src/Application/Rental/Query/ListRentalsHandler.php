@@ -15,6 +15,7 @@ final class ListRentalsHandler implements QueryHandlerInterface
     public function __construct(
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
+        private readonly ?\App\Domain\Tour\TourRepositoryInterface $tours = null,
     ) {
     }
 
@@ -32,7 +33,9 @@ final class ListRentalsHandler implements QueryHandlerInterface
 
                 // Kunde könnte theoretisch parallel gelöscht worden sein; dann
                 // blenden wir die Zeile aus statt zu crashen (analog zu Cases).
-                return $customer !== null ? new RentalListEntry($rental, $customer) : null;
+                $stops = $rental->isTour && $this->tours !== null ? (new \App\Domain\Tour\TourPlan($this->tours->findStopsByRental($rental->id)))->stops() : [];
+
+                return $customer !== null ? new RentalListEntry($rental, $customer, $stops) : null;
             },
             $rentals
         )));

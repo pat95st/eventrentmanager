@@ -19,6 +19,7 @@ enum CopyScope: string
     case Technicians = 'technicians';
     case MinuteProgram = 'minute_program';
     case PowerPlan = 'power_plan';
+    case TourStops = 'tour_stops';
 
     public function label(): string
     {
@@ -29,6 +30,7 @@ enum CopyScope: string
             self::Technicians => 'Techniker und Gewerke (werden neu angefragt)',
             self::MinuteProgram => 'Minutenprogramm',
             self::PowerPlan => 'Stromplanung',
+            self::TourStops => 'Tour: Stops, Zwischenstopps und Abweichungen je Stop (verschoben)',
         };
     }
 

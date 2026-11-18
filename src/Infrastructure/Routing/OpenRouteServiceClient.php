@@ -43,7 +43,9 @@ final class OpenRouteServiceClient implements RoutingClientInterface
         }
         $body = [
             'coordinates' => array_map(static fn (RoutePoint $p) => [$p->longitude, $p->latitude], $points),
-            'instructions' => false,
+            // Segments (distance/duration per leg) are only part of the answer with instructions.
+            'instructions' => true,
+            'language' => 'de',
         ];
         if ($profile->isTruck()) {
             $body['options'] = ['vehicle_type' => 'hgv'];
@@ -83,28 +85,66 @@ final class OpenRouteServiceClient implements RoutingClientInterface
         return 'OpenRouteService HTTP ' . $status . ($hint !== null ? ' – ' . $hint : '') . ($detail !== '' ? ' (' . $detail . ')' : '');
     }
 
-    /** @param array<string, mixed> $json GeoJSON answer of the directions endpoint */
+    /**
+     * Splits the GeoJSON answer into one leg per pair of points. Per-leg
+     * distance/duration come from properties.segments; without segments
+     * (e.g. answers without instructions) the summary is split by the
+     * length of each leg's geometry.
+     *
+     * @param array<string, mixed> $json GeoJSON answer of the directions endpoint
+     */
     public static function parse(array $json, int $pointCount): RouteResult
     {
         $feature = $json['features'][0] ?? null;
         if (!is_array($feature)) {
-            throw new RoutingException('unerwartete Antwort');
+            throw new RoutingException('unerwartete Antwort (keine Route enthalten; Felder: ' . implode(', ', array_keys($json)) . ')');
         }
-        $coordinates = $feature['geometry']['coordinates'] ?? [];
-        $segments = $feature['properties']['segments'] ?? [];
-        $wayPoints = $feature['properties']['way_points'] ?? [];
-        if (!is_array($coordinates) || !is_array($segments) || count($segments) !== $pointCount - 1) {
-            throw new RoutingException('unerwartete Antwort');
+        $coordinates = $feature['geometry']['coordinates'] ?? null;
+        $properties = is_array($feature['properties'] ?? null) ? $feature['properties'] : [];
+        if (!is_array($coordinates) || count($coordinates) < 2) {
+            throw new RoutingException('unerwartete Antwort (keine Geometrie)');
         }
-        $legs = [];
-        foreach ($segments as $i => $segment) {
-            $from = (int) ($wayPoints[$i] ?? 0);
-            $to = (int) ($wayPoints[$i + 1] ?? count($coordinates) - 1);
+        $legCount = $pointCount - 1;
+        $wayPoints = is_array($properties['way_points'] ?? null) ? array_values($properties['way_points']) : [];
+        if (count($wayPoints) !== $pointCount) {
+            if ($legCount !== 1) {
+                throw new RoutingException('unerwartete Antwort (' . count($wayPoints) . ' Wegpunkte für ' . $pointCount . ' Punkte)');
+            }
+            $wayPoints = [0, count($coordinates) - 1];
+        }
+        $segments = is_array($properties['segments'] ?? null) ? array_values($properties['segments']) : [];
+        $useSegments = count($segments) === $legCount;
+        $summary = is_array($properties['summary'] ?? null) ? $properties['summary'] : [];
+
+        $geometries = [];
+        $lengths = [];
+        for ($i = 0; $i < $legCount; $i++) {
+            $from = (int) $wayPoints[$i];
+            $to = (int) $wayPoints[$i + 1];
             $geometry = [];
-            foreach (array_slice($coordinates, $from, $to - $from + 1) as $c) {
+            foreach (array_slice($coordinates, $from, max(1, $to - $from + 1)) as $c) {
                 $geometry[] = [round((float) $c[1], 6), round((float) $c[0], 6)];
             }
-            $legs[] = new RouteLeg($i, $i + 1, (float) ($segment['distance'] ?? 0), (float) ($segment['duration'] ?? 0), $geometry);
+            $geometries[] = $geometry;
+            $length = 0.0;
+            for ($k = 1, $n = count($geometry); $k < $n; $k++) {
+                $length += (new RoutePoint('', $geometry[$k - 1][0], $geometry[$k - 1][1], 'stop'))->distanceTo(new RoutePoint('', $geometry[$k][0], $geometry[$k][1], 'stop'));
+            }
+            $lengths[] = $length;
+        }
+        $totalLength = array_sum($lengths);
+
+        $legs = [];
+        for ($i = 0; $i < $legCount; $i++) {
+            if ($useSegments) {
+                $distance = (float) ($segments[$i]['distance'] ?? 0);
+                $duration = (float) ($segments[$i]['duration'] ?? 0);
+            } else {
+                $share = $totalLength > 0 ? $lengths[$i] / $totalLength : 1 / $legCount;
+                $distance = (float) ($summary['distance'] ?? $totalLength) * $share;
+                $duration = (float) ($summary['duration'] ?? 0) * $share;
+            }
+            $legs[] = new RouteLeg($i, $i + 1, $distance, $duration, $geometries[$i]);
         }
 
         return new RouteResult($legs, false);

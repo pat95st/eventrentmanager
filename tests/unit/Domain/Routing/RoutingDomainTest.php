@@ -102,6 +102,32 @@ final class RoutingDomainTest extends Unit
         $this->assertSame(27000.0, $result->totalDurationS());
     }
 
+    public function testOpenRouteServiceAnswerWithoutSegmentsUsesTheSummary(): void
+    {
+        // Answer shape without instructions: only summary + way_points, no segments.
+        $json = ['type' => 'FeatureCollection', 'features' => [[
+            'type' => 'Feature',
+            'geometry' => ['type' => 'LineString', 'coordinates' => [[10.0, 53.0], [10.0, 52.0], [10.0, 51.0], [10.0, 49.0]]],
+            'properties' => ['summary' => ['distance' => 450000.0, 'duration' => 15000.0], 'way_points' => [0, 2, 3]],
+        ]]];
+        $result = OpenRouteServiceClient::parse($json, 3);
+
+        $this->assertCount(2, $result->legs);
+        // Geometry lengths 2° and 2° of latitude: summary split half/half.
+        $this->assertEqualsWithDelta(225000.0, $result->legs[0]->distanceM, 1.0);
+        $this->assertEqualsWithDelta(7500.0, (float) $result->legs[1]->durationS, 1.0);
+
+        // Two points without way_points: one leg over the whole geometry.
+        $single = OpenRouteServiceClient::parse(['features' => [[
+            'geometry' => ['coordinates' => [[10.0, 53.5], [9.7, 52.4]]],
+            'properties' => ['summary' => ['distance' => 150000.0, 'duration' => 5400.0]],
+        ]]], 2);
+        $this->assertSame(5400.0, $single->totalDurationS());
+
+        $this->expectException(\App\Application\Routing\RoutingException::class);
+        OpenRouteServiceClient::parse(['routes' => []], 2);
+    }
+
     public function testOpenRouteServiceErrorsAreExplained(): void
     {
         $this->assertSame(
@@ -139,6 +165,7 @@ final class RoutingDomainTest extends Unit
         $this->assertSame('https://api.heigit.org/openrouteservice/v2/directions/driving-hgv/geojson', $sent['url']);
         $this->assertSame('key-123', $sent['headers']['Authorization']);
         $this->assertSame([[10.0, 53.5], [9.5, 51.3]], $sent['body']['coordinates']);
+        $this->assertTrue($sent['body']['instructions']); // segments per leg come with the instructions
         $this->assertSame(['height' => 3.4, 'length' => 8.0, 'weight' => 7.49], $sent['body']['options']['profile_params']['restrictions']);
     }
 }

@@ -65,11 +65,21 @@ final class View
             throw new \RuntimeException("View \"{$view}\" wurde unter \"{$path}\" nicht gefunden.");
         }
 
-        extract($data, EXTR_SKIP);
-        ob_start();
-        require $path;
+        // Render in an isolated scope so data keys like "view", "path" or
+        // "data" are not shadowed by this method's local variables (with
+        // EXTR_SKIP they were silently dropped, e.g. the calendar's
+        // 'view' => 'woche' became 'calendar/week' inside the template).
+        $render = static function (string $__viewFile, array $__viewData): string {
+            unset($__viewData['__viewFile'], $__viewData['__viewData']);
+            extract($__viewData, EXTR_SKIP);
+            unset($__viewData);
+            ob_start();
+            require $__viewFile;
 
-        return (string) ob_get_clean();
+            return (string) ob_get_clean();
+        };
+
+        return $render($path, $data);
     }
 }
 

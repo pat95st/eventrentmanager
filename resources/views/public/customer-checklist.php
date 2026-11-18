@@ -2,11 +2,6 @@
 /** @var \App\Application\Rental\Query\RentalCustomerChecklistView $checklist */
 /** @var string $token */
 
-// Hinweis: die Daten-Variable heißt bewusst NICHT "$view" — View::renderFile()
-// hat selbst einen gleichnamigen Parameter, und extract(..., EXTR_SKIP)
-// würde einen per data['view'] übergebenen Wert dadurch stillschweigend
-// verwerfen (siehe App\Infrastructure\Http\View).
-
 use App\Infrastructure\Http\Csrf;
 use function App\Infrastructure\Http\e;
 

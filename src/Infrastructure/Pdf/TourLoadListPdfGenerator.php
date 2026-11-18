@@ -41,9 +41,9 @@ final class TourLoadListPdfGenerator
                 continue;
             }
             $when = $stop->eventStartAt?->format('d.m.Y H:i') ?? '';
-            $this->heading('Stop ' . $entry->number . ': ' . $stop->title() . ($when !== '' ? ' – ' . $when : ''));
+            $this->heading('Tourstop ' . $entry->number . ': ' . $stop->title() . ($when !== '' ? ' – ' . $when : ''));
             if ($entry->changes !== []) {
-                $this->writer->text(self::MARGIN, $this->y, 'Änderungen gegenüber ' . ($entry->number === 1 ? 'der Grundliste' : 'dem vorherigen Stop') . ':', 10, true);
+                $this->writer->text(self::MARGIN, $this->y, 'Änderungen gegenüber ' . ($entry->number === 1 ? 'der Grundliste' : 'dem vorherigen Tourstop') . ':', 10, true);
                 $this->y -= self::LINE;
                 foreach ($entry->changes as $change) {
                     $this->ensureSpace(1);
@@ -54,7 +54,7 @@ final class TourLoadListPdfGenerator
                 }
                 $this->y -= 4;
             }
-            $this->writer->text(self::MARGIN, $this->y, 'Benötigt an diesem Stop:', 10, true);
+            $this->writer->text(self::MARGIN, $this->y, 'Benötigt an diesem Tourstop:', 10, true);
             $this->y -= self::LINE;
             $this->materialRows($tour, $entry->material);
         }

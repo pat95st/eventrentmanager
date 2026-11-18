@@ -61,6 +61,7 @@ final class TourCommandHandler implements CommandHandlerInterface
         private readonly ?TourCrewNotifierInterface $crewNotifier = null,
         private readonly ?DateTimeImmutable $now = null,
         private readonly ?\App\Application\Routing\CompanyLocator $companyLocator = null,
+        private readonly ?\App\Application\Routing\TourStopLocator $stopLocator = null,
     ) {
     }
 
@@ -99,6 +100,7 @@ final class TourCommandHandler implements CommandHandlerInterface
             eventStartAt: $rental->startDate->setTime(0, 0),
             eventEndAt: $rental->endDate->setTime(23, 59),
         ));
+        $this->sync->sync($rental);
 
         return null;
     }
@@ -108,7 +110,7 @@ final class TourCommandHandler implements CommandHandlerInterface
         $rental = $this->rental($command->rentalId);
         $stops = $this->sync->plan($rental->id)->stops();
         if (count($stops) > 1) {
-            throw new ValidationException(['tour' => 'Die Tour hat mehrere Stops. Bitte zuerst alle Stops bis auf einen löschen.']);
+            throw new ValidationException(['tour' => 'Die Tour hat mehrere Tourstops. Bitte zuerst alle Tourstops bis auf einen löschen.']);
         }
         foreach ($this->tours->findStopsByRental($rental->id) as $stop) {
             $this->tours->deleteStop($stop->id);
@@ -151,8 +153,14 @@ final class TourCommandHandler implements CommandHandlerInterface
         [$location, $venueId] = VenueResolver::resolve($this->venues, $command->location);
 
         $stop = $existing ?? new TourStop(Uuid::v4(), $rental->id, TourStopKind::Stop);
+        if ($stop->locationText !== $location || $stop->venueId !== $venueId) {
+            // New place: coordinates are determined again (route planning).
+            $stop->latitude = null;
+            $stop->longitude = null;
+        }
         $stop->locationText = $location;
         $stop->venueId = $venueId;
+        $this->stopLocator?->locate($stop);
         $stop->setupAt = $setup;
         $stop->eventStartAt = $start;
         $stop->eventEndAt = $end;
@@ -189,7 +197,7 @@ final class TourCommandHandler implements CommandHandlerInterface
         }
         $afterStopId = $kind === TourStopKind::Waypoint && trim($command->afterStopId) !== '' ? $command->afterStopId : null;
         if ($afterStopId !== null && !$this->stopOf($rental, $afterStopId)->isStop()) {
-            $errors['afterStopId'] = 'Bitte einen Stop auswählen.';
+            $errors['afterStopId'] = 'Bitte einen Tourstop auswählen.';
         }
 
         $waypoint = $existing ?? new TourStop(Uuid::v4(), $rental->id, $kind);
@@ -263,10 +271,10 @@ final class TourCommandHandler implements CommandHandlerInterface
 
     private function deleteStop(DeleteTourStop $command): null
     {
-        $stop = $this->tours->findStop($command->stopId) ?? throw new NotFoundException('Der Stop wurde nicht gefunden.');
+        $stop = $this->tours->findStop($command->stopId) ?? throw new NotFoundException('Der Tourstop wurde nicht gefunden.');
         $rental = $this->tour($stop->rentalId);
         if ($stop->isStop() && count($this->sync->plan($rental->id)->stops()) <= 1) {
-            throw new ValidationException(['stop' => 'Eine Tour braucht mindestens einen Stop.']);
+            throw new ValidationException(['stop' => 'Eine Tour braucht mindestens einen Tourstop.']);
         }
         $this->tours->deleteStop($stop->id);
         $this->sync->sync($rental);
@@ -379,7 +387,7 @@ final class TourCommandHandler implements CommandHandlerInterface
         }
 
         $plan = $this->sync->plan($rental->id);
-        $labels = array_map(fn (TourStop $s) => 'Stop ' . $plan->numberOf($s->id) . ': ' . $s->title() . ($s->eventStartAt !== null ? ' (' . $s->eventStartAt->format('d.m.Y') . ')' : ''), $stops);
+        $labels = array_map(fn (TourStop $s) => 'Tourstop ' . $plan->numberOf($s->id) . ': ' . $s->title() . ($s->eventStartAt !== null ? ' (' . $s->eventStartAt->format('d.m.Y') . ')' : ''), $stops);
 
         // A replacement or additional technician gets an ordinary request for the tour (with notification).
         $requested = false;
@@ -415,15 +423,15 @@ final class TourCommandHandler implements CommandHandlerInterface
 
     private function createMinuteProgram(CreateTourStopMinuteProgram $command): string
     {
-        $stop = $this->tours->findStop($command->stopId) ?? throw new NotFoundException('Der Stop wurde nicht gefunden.');
+        $stop = $this->tours->findStop($command->stopId) ?? throw new NotFoundException('Der Tourstop wurde nicht gefunden.');
         $rental = $this->tour($stop->rentalId);
         if (!$stop->isStop() || $this->commands === null) {
-            throw new ValidationException(['stop' => 'Ein Minutenprogramm kann nur für einen Stop angelegt werden.']);
+            throw new ValidationException(['stop' => 'Ein Minutenprogramm kann nur für einen Tourstop angelegt werden.']);
         }
         $number = $this->sync->plan($rental->id)->numberOf($stop->id);
         $programId = (string) $this->commands->dispatch(new CreateMinuteProgram(
             $rental->id,
-            mb_substr('Stop ' . $number . ' – ' . $stop->title(), 0, 255),
+            mb_substr('Tourstop ' . $number . ' – ' . $stop->title(), 0, 255),
             null,
             ($stop->eventStartAt ?? $rental->startDate)->format('Y-m-d\TH:i'),
             false,
@@ -456,7 +464,7 @@ final class TourCommandHandler implements CommandHandlerInterface
     {
         $stop = $this->tours->findStop($stopId);
         if ($stop === null || $stop->rentalId !== $rental->id) {
-            throw new NotFoundException('Der Stop wurde nicht gefunden.');
+            throw new NotFoundException('Der Tourstop wurde nicht gefunden.');
         }
 
         return $stop;
@@ -476,12 +484,12 @@ final class TourCommandHandler implements CommandHandlerInterface
             }
             $until = $stop->occupiedUntil();
             if ($until !== null && $until < $now) {
-                throw new ValidationException(['stops' => 'Stop „' . $stop->title() . '“ liegt in der Vergangenheit und kann nicht mehr geändert werden.']);
+                throw new ValidationException(['stops' => 'Tourstop „' . $stop->title() . '“ liegt in der Vergangenheit und kann nicht mehr geändert werden.']);
             }
             $stops[] = $stop;
         }
         if ($stops === []) {
-            throw new ValidationException(['stops' => 'Bitte mindestens einen Stop auswählen.']);
+            throw new ValidationException(['stops' => 'Bitte mindestens einen Tourstop auswählen.']);
         }
 
         return $stops;

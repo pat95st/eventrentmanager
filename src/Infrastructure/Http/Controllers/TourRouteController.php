@@ -32,20 +32,24 @@ final class TourRouteController
         private readonly VehicleRepositoryInterface $vehicles,
         private readonly TourRepositoryInterface $tours,
         private readonly RoutingSettingsRepositoryInterface $settings,
+        private readonly ?\App\Domain\Rental\RentalRepositoryInterface $rentals = null,
     ) {
     }
 
+    /**
+     * Page shell; the route itself (geocoding, OpenRouteService) is loaded
+     * afterwards from data() so the page appears at once with a spinner.
+     */
     public function show(Request $request): void
     {
         $rentalId = $request->param('id');
-        try {
-            $route = $this->queries->ask(new GetTourRoute($rentalId));
-        } catch (NotFoundException $e) {
-            Response::notFound($e->getMessage());
+        $rental = $this->rentals?->findById($rentalId);
+        if ($rental === null) {
+            Response::notFound('Die Veranstaltung wurde nicht gefunden.');
 
             return;
         }
-        if (!$route->rental->isTour) {
+        if (!$rental->isTour) {
             Response::redirect('/veranstaltungen/' . $rentalId);
 
             return;
@@ -64,11 +68,44 @@ final class TourRouteController
             }
         }
         echo View::page('rentals/tour/route', [
-            'route' => $route,
+            'rental' => $rental,
+            'profile' => \App\Domain\Routing\RouteProfile::tryFrom($rental->routeProfile) ?? \App\Domain\Routing\RouteProfile::Car,
             'planned' => $planned,
             'vehicles' => $this->vehicles->findAll(),
             'endpoints' => $endpoints,
-        ], activeNav: 'tours', title: 'Route – ' . $route->rental->eventName);
+        ], activeNav: 'tours', title: 'Route – ' . $rental->eventName);
+    }
+
+    /** JSON with the calculated route (route page and timing warnings of the tour page). */
+    public function data(Request $request): void
+    {
+        try {
+            $route = $this->queries->ask(new GetTourRoute($request->param('id')));
+        } catch (NotFoundException $e) {
+            Response::json(['error' => $e->getMessage()], 404);
+
+            return;
+        }
+        $result = $route->result;
+        Response::json([
+            'profile' => $route->profile->label(),
+            'restrictions' => $route->restrictions->describe(),
+            'straightLine' => $result?->straightLine ?? true,
+            'totalDistanceM' => $result?->totalDistanceM(),
+            'totalDurationS' => $result?->totalDurationS(),
+            'points' => array_map(static fn ($p) => ['label' => $p->label, 'lat' => $p->latitude, 'lng' => $p->longitude, 'kind' => $p->kind], $route->points),
+            'legs' => $result !== null ? array_map(static fn ($l) => [
+                'from' => $route->points[$l->from]->label ?? '',
+                'to' => $route->points[$l->to]->label ?? '',
+                'distanceM' => $l->distanceM,
+                'durationS' => $l->durationS,
+                'geometry' => $l->geometry,
+            ], $result->legs) : [],
+            'entries' => $route->entries,
+            'hints' => $route->hints,
+            'timingWarnings' => $route->timingWarnings,
+            'googleLinks' => $route->googleLinks,
+        ]);
     }
 
     public function setProfile(Request $request): void

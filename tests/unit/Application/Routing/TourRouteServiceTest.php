@@ -72,30 +72,7 @@ final class TourRouteServiceTest extends Unit
     private function service(): TourRouteService
     {
         $test = $this;
-        $warehouses = new class () implements WarehouseRepositoryInterface {
-            public function save(Warehouse $warehouse): void
-            {
-            }
-
-            public function findById(string $id): ?Warehouse
-            {
-                return null;
-            }
-
-            public function findAll(?string $search = null, ?int $limit = null, ?int $offset = null): array
-            {
-                return [];
-            }
-
-            public function countAll(?string $search = null): int
-            {
-                return 0;
-            }
-
-            public function delete(string $id): void
-            {
-            }
-        };
+        $warehouses = $this->warehouseRepository();
         $client = new class ($test) implements RoutingClientInterface {
             public function __construct(private readonly TourRouteServiceTest $test)
             {
@@ -131,7 +108,11 @@ final class TourRouteServiceTest extends Unit
         $route = $this->service()->forRental('tour');
 
         $this->assertSame(['start', 'stop', 'stop'], array_map(static fn ($p) => $p->kind, $route->points));
-        $this->assertStringContainsString('Stop 3: Freitext-Ort: keine Koordinaten', implode(' ', $route->hints));
+        $missing = array_values(array_filter($route->entries, static fn ($e) => !$e['included']));
+        // No destination warehouse in this test: listed as missing as well.
+        $this->assertSame(['Tourstop 3: Freitext-Ort', 'Ziel: kein Lager hinterlegt'], array_column($missing, 'label'));
+        $this->assertSame('/tour-stops/s3/bearbeiten', $missing[0]['editUrl']);
+        $this->assertStringContainsString('2 Punkte haben keine Koordinaten', implode(' ', $route->hints));
         // Teardown Hamburg 08:00, setup Kassel 11:00 → 180 min, needed 150 min + 30 min buffer = 180 → fine.
         $this->assertSame([], $route->timingWarnings);
 
@@ -141,6 +122,38 @@ final class TourRouteServiceTest extends Unit
         $this->assertSame('s2', $route->timingWarnings[0]['stopId']);
         $this->assertStringContainsString('2 h 30 min Fahrzeit plus 45 min Puffer', $route->timingWarnings[0]['message']);
         $this->assertCount(1, $route->googleLinks);
+    }
+
+    public function testFreeTextStopsAreGeocodedOnceAndRemembered(): void
+    {
+        $queries = [];
+        $geocoder = new class ($queries) implements \App\Infrastructure\Geocoding\GeocoderInterface {
+            /** @param string[] $queries */
+            public function __construct(private array &$queries)
+            {
+            }
+
+            public function geocode(string $street, string $postalCode, string $city, ?string $country): ?array
+            {
+                return null;
+            }
+
+            public function geocodeQuery(string $query): ?array
+            {
+                $this->queries[] = $query;
+
+                return [49.5, 11.3];
+            }
+        };
+        $locator = new \App\Application\Routing\TourStopLocator($this->venues, $geocoder);
+        $service = new TourRouteService($this->rentals, $this->tours, $this->venues, $this->warehouseRepository(), $this->plannedRepository(), $this->vehicleRepository(), $this->settingsRepository(), $this->cacheRepository(), null, $locator);
+
+        $route = $service->forRental('tour');
+        $service->forRental('tour');
+
+        $this->assertSame(['Freitext-Ort'], $queries);
+        $this->assertSame(['start', 'stop', 'stop', 'stop'], array_map(static fn ($p) => $p->kind, $route->points));
+        $this->assertSame(49.5, $this->tours->findStop('s3')?->latitude);
     }
 
     public function testRouteIsCachedUntilTheInputChanges(): void
@@ -209,6 +222,34 @@ final class TourRouteServiceTest extends Unit
     }
 
     // --- fakes ----------------------------------------------------------
+
+    private function warehouseRepository(): WarehouseRepositoryInterface
+    {
+        return new class () implements WarehouseRepositoryInterface {
+            public function save(Warehouse $warehouse): void
+            {
+            }
+
+            public function findById(string $id): ?Warehouse
+            {
+                return null;
+            }
+
+            public function findAll(?string $search = null, ?int $limit = null, ?int $offset = null): array
+            {
+                return [];
+            }
+
+            public function countAll(?string $search = null): int
+            {
+                return 0;
+            }
+
+            public function delete(string $id): void
+            {
+            }
+        };
+    }
 
     private function settingsRepository(): RoutingSettingsRepositoryInterface
     {

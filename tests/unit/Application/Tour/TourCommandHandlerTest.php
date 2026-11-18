@@ -136,6 +136,19 @@ final class TourCommandHandlerTest extends Unit
         $this->assertCount(3, $this->tours->stops);
         $this->assertSame('2027-06-01', $rental?->startDate->format('Y-m-d'));
         $this->assertSame('2027-06-05', $rental?->endDate->format('Y-m-d'));
+        // Deployment days: event days of the tour stops (01.06., 03.06., 05.06.), not the 5 days of the period.
+        $this->assertSame(3, $rental?->deploymentDays);
+    }
+
+    public function testEventDaysCountEventsAfterMidnightAsOneDay(): void
+    {
+        $stops = [
+            new TourStop('a', 'tour', \App\Domain\Tour\TourStopKind::Stop, eventStartAt: new DateTimeImmutable('2027-06-01 20:00'), eventEndAt: new DateTimeImmutable('2027-06-02 01:30')),
+            new TourStop('b', 'tour', \App\Domain\Tour\TourStopKind::Stop, eventStartAt: new DateTimeImmutable('2027-06-04 10:00'), eventEndAt: new DateTimeImmutable('2027-06-05 18:00')),
+            new TourStop('c', 'tour', \App\Domain\Tour\TourStopKind::Stop, eventStartAt: new DateTimeImmutable('2027-06-05 20:00')),
+        ];
+
+        $this->assertSame(3, TourSync::eventDays($stops));
     }
 
     public function testInvalidStopTimesAreRejected(): void

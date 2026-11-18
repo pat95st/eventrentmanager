@@ -72,13 +72,45 @@ final class TourSync
         }
         $from = $from->setTime(0, 0);
         $to = $to->setTime(0, 0);
-        if ($rental->startDate->format('Y-m-d') === $from->format('Y-m-d') && $rental->endDate->format('Y-m-d') === $to->format('Y-m-d')) {
-            return;
-        }
+        $changed = $rental->startDate->format('Y-m-d') !== $from->format('Y-m-d') || $rental->endDate->format('Y-m-d') !== $to->format('Y-m-d');
         $rental->startDate = $from;
         $rental->endDate = $to;
-        $rental->deploymentDays = min(max(1, $rental->deploymentDays), $rental->maxDeploymentDays());
+
+        // Deployment days of a tour: the days on which tour stops take place.
+        $days = min(max(1, self::eventDays($plan->stops())), $rental->maxDeploymentDays());
+        if ($days !== $rental->deploymentDays) {
+            $rental->deploymentDays = $days;
+            $changed = true;
+        }
+        if (!$changed) {
+            return;
+        }
         $rental->updatedAt = new DateTimeImmutable();
         $this->rentals->save($rental);
+    }
+
+    /**
+     * Number of different days with an event at a tour stop (event start to
+     * event end; setup and teardown days do not count, an end before 06:00
+     * belongs to the previous day).
+     *
+     * @param \App\Domain\Tour\TourStop[] $stops
+     */
+    public static function eventDays(array $stops): int
+    {
+        $days = [];
+        foreach ($stops as $stop) {
+            if ($stop->eventStartAt === null) {
+                continue;
+            }
+            $day = $stop->eventStartAt->setTime(0, 0);
+            // An event ending shortly after midnight (e.g. 20:00 – 01:00) counts as one day.
+            $end = ($stop->eventEndAt ?? $stop->eventStartAt)->modify('-6 hours')->setTime(0, 0);
+            for ($guard = 0; $day <= $end && $guard < 366; $day = $day->modify('+1 day'), $guard++) {
+                $days[$day->format('Y-m-d')] = true;
+            }
+        }
+
+        return count($days);
     }
 }

@@ -18,6 +18,7 @@ final class TourRoute
      * @param string[] $hints problems that make the route less accurate
      * @param list<array{stopId: string, message: string}> $timingWarnings
      * @param list<array{url: string, from: string, to: string}> $googleLinks
+     * @param list<array{label: string, kind: string, included: bool, detail: string, editUrl: ?string}> $entries all planned points in driving order
      */
     public function __construct(
         public readonly Rental $rental,
@@ -30,6 +31,7 @@ final class TourRoute
         public readonly array $googleLinks,
         public readonly bool $hasApiKey,
         public readonly int $bufferMinutes,
+        public readonly array $entries = [],
     ) {
     }
 

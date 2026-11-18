@@ -965,6 +965,7 @@ $commandBus->register(\App\Application\Rental\Command\ConfirmCustomerIdChecked::
 // Route planning (migration 178)
 $routingSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRoutingSettingsRepository($pdo);
 $plannedVehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPlannedVehicleRepository($pdo);
+$tourStopLocator = new \App\Application\Routing\TourStopLocator($venueRepository, $geocoder);
 $companyLocator = new \App\Application\Routing\CompanyLocator($companySettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbCompanyCoordinatesRepository($pdo), $geocoder);
 $routingCommandHandler = new \App\Application\Routing\Command\RoutingCommandHandler($routingSettingsRepository, $rentalRepository, $plannedVehicleRepository, $vehicleRepository);
 foreach (['SaveRoutingSettings', 'SetRouteProfile', 'AddPlannedVehicle', 'RemovePlannedVehicle'] as $routingCommand) {
@@ -980,6 +981,7 @@ $tourCommandHandler = new \App\Application\Tour\Command\TourCommandHandler(
     new \App\Application\Tour\MailTourCrewNotifier($mailer, $userRepository),
     null,
     $companyLocator,
+    $tourStopLocator,
 );
 foreach (['MakeTour', 'RevertTour', 'SaveTourStop', 'SaveTourWaypoint', 'DeleteTourStop', 'ApplyTourMaterialChange', 'DeleteTourStopItem', 'ApplyTourCrewChange', 'DeleteTourCrewDeviation', 'CreateTourStopMinuteProgram'] as $tourCommand) {
     $commandBus->register('App\\Application\\Tour\\Command\\' . $tourCommand, $tourCommandHandler);
@@ -1007,6 +1009,7 @@ $queryBus->register(\App\Application\Tour\Query\GetTourOverview::class, new \App
 $queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler(new \App\Application\Routing\TourRouteService(
     $rentalRepository, $tourRepository, $venueRepository, $warehouseRepository, $plannedVehicleRepository, $vehicleRepository,
     $routingSettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbRouteCacheRepository($pdo), new \App\Infrastructure\Routing\OpenRouteServiceClient(),
+    $tourStopLocator, $geocoder,
 )));
 $commandBus->register(\App\Application\Sale\Command\SellInventoryNumber::class, new \App\Application\Sale\Command\SellInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $customerRepository, $invoiceRepository, $saleRepository));
 $commandBus->register(\App\Application\Sale\Command\SellArticleFromStock::class, new \App\Application\Sale\Command\SellArticleFromStockHandler($articleRepository, $customerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository));
@@ -2452,7 +2455,8 @@ $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahm
 $router->post('/veranstaltungen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'destroy']));
 $router->post('/veranstaltungen/{id}/logistik', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateLogistics']));
 // Route planning (migration 178)
-$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository);
+$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository, $rentalRepository);
+$router->get('/veranstaltungen/{id}/tour/route.json', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'data']));
 $router->get('/veranstaltungen/{id}/tour/route', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'show']));
 $router->post('/veranstaltungen/{id}/tour/route/profil', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setProfile']));
 $router->post('/veranstaltungen/{id}/tour/route/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'addVehicle']));

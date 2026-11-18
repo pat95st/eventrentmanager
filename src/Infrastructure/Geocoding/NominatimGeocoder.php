@@ -27,7 +27,14 @@ final class NominatimGeocoder implements GeocoderInterface
     /** @return array{0: float, 1: float}|null [Breitengrad, Längengrad] oder null, wenn nicht ermittelbar */
     public function geocode(string $street, string $postalCode, string $city, ?string $country): ?array
     {
-        $query = trim($street . ', ' . trim($postalCode . ' ' . $city) . ($country !== null && $country !== '' ? ', ' . $country : ''));
+        $parts = array_filter([trim($street), trim($postalCode . ' ' . $city), trim((string) $country)], static fn (string $p) => $p !== '');
+
+        return $this->geocodeQuery(implode(', ', $parts));
+    }
+
+    public function geocodeQuery(string $query): ?array
+    {
+        $query = trim($query);
         if ($query === '') {
             return null;
         }
@@ -36,6 +43,7 @@ final class NominatimGeocoder implements GeocoderInterface
             'q' => $query,
             'format' => 'json',
             'limit' => 1,
+            'accept-language' => 'de',
         ]);
 
         if (!function_exists('curl_init')) {

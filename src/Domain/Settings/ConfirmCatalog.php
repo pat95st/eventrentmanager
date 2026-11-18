@@ -35,7 +35,7 @@ final class ConfirmCatalog
         'rentals.series.end' => ['Veranstaltungen', 'Serie beenden', true],
         'rentals.tour.make' => ['Veranstaltungen', 'Veranstaltung als Tour planen', false],
         'rentals.tour.revert' => ['Veranstaltungen', 'Tour-Planung entfernen', false],
-        'rentals.tour.stop.delete' => ['Veranstaltungen', 'Stop oder Zwischenstopp einer Tour löschen', false],
+        'rentals.tour.stop.delete' => ['Veranstaltungen', 'Tourstop oder Zwischenstopp einer Tour löschen', false],
         'rentals.technician.decline' => ['Veranstaltungen', 'Als Techniker für eine Veranstaltung absagen', false],
         'partners.request.cancel' => ['Veranstaltungen', 'Partner-Anfrage stornieren', false],
         'rentals.company_holiday' => ['Veranstaltungen', 'Veranstaltung trotz Betriebsurlaub speichern', false],

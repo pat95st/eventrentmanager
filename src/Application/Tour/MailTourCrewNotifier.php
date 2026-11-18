@@ -25,10 +25,10 @@ final class MailTourCrewNotifier implements TourCrewNotifierInterface
             return;
         }
         $text = 'Hallo ' . ($user->firstName ?: $user->displayName()) . ",\n\n"
-            . 'bei der Tour „' . $tour->eventName . '“ wirst du an folgenden Stops nicht mehr benötigt:' . "\n"
+            . 'bei der Tour „' . $tour->eventName . '“ wirst du an folgenden Tourstops nicht mehr benötigt:' . "\n"
             . implode("\n", array_map(static fn (string $l) => '- ' . $l, $stopLabels)) . "\n\n"
             . ($replacementName !== null ? 'Vertretung: ' . $replacementName . "\n\n" : '')
-            . "Für alle anderen Stops bleibt deine Einplanung bestehen.\n";
+            . "Für alle anderen Tourstops bleibt deine Einplanung bestehen.\n";
         try {
             $this->mailer->send($user->email, 'Änderung deiner Einplanung: ' . $tour->eventName, $text, [], null, MailCategory::TechnicianNotification);
         } catch (\Throwable) {

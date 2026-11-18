@@ -47,7 +47,7 @@ use function App\Infrastructure\Http\t;
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
                             <?php if ($entry->tourStops !== []): ?>
                                 <details data-row-link-ignore>
-                                    <summary class="cursor-pointer text-brand-700 dark:text-brand-400"><?= count($entry->tourStops) ?> Stops</summary>
+                                    <summary class="cursor-pointer text-brand-700 dark:text-brand-400"><?= count($entry->tourStops) ?> Tourstops</summary>
                                     <ol class="mt-1 list-inside list-decimal space-y-0.5 text-xs">
                                         <?php foreach ($entry->tourStops as $stop): ?>
                                             <li><?= e($stop->title()) ?><?= $stop->eventStartAt !== null ? ' · ' . e($stop->eventStartAt->format('d.m.')) : '' ?></li>

@@ -13,7 +13,7 @@ enum TourAllocation: string
     public function label(): string
     {
         return match ($this) {
-            self::StopsOnly => 'nur für die betroffenen Stops',
+            self::StopsOnly => 'nur für die betroffenen Tourstops',
             self::WholeTour => 'fährt die ganze Tour mit',
         };
     }

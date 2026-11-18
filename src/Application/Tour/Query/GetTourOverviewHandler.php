@@ -124,7 +124,7 @@ final class GetTourOverviewHandler implements QueryHandlerInterface
             if ($prevEnd !== null && $start !== null && $start < $prevEnd) {
                 foreach ($entries as $k => $entry) {
                     if ($entry->stop->id === $stops[$i]->id) {
-                        $entries[$k] = new TourStopView($entry->stop, $entry->number, $entry->locked, $entry->material, $entry->deviations, $entry->changes, $entry->crew, $entry->crewDeviations, $entry->conflicts, $entry->minutePrograms, [...$entry->warnings, 'Der Aufbau beginnt vor dem Abbau-Ende des vorherigen Stops.']);
+                        $entries[$k] = new TourStopView($entry->stop, $entry->number, $entry->locked, $entry->material, $entry->deviations, $entry->changes, $entry->crew, $entry->crewDeviations, $entry->conflicts, $entry->minutePrograms, [...$entry->warnings, 'Der Aufbau beginnt vor dem Abbau-Ende des vorherigen Tourstops.']);
                     }
                 }
             }

@@ -18,7 +18,7 @@ $table = static function (array $rows, string $empty): void {
     ?>
     <table class="w-full min-w-[640px] text-sm">
         <thead class="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            <tr><th class="px-4 py-2.5">Tour</th><th class="px-4 py-2.5">Kunde</th><th class="px-4 py-2.5">Zeitraum</th><th class="px-4 py-2.5">Stops</th><th class="px-4 py-2.5"></th></tr>
+            <tr><th class="px-4 py-2.5">Tour</th><th class="px-4 py-2.5">Kunde</th><th class="px-4 py-2.5">Zeitraum</th><th class="px-4 py-2.5">Tourstops</th><th class="px-4 py-2.5"></th></tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <?php foreach ($rows as $row): ?>
@@ -42,7 +42,7 @@ $table = static function (array $rows, string $empty): void {
 ?>
 <div class="mb-6">
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Touren</h1>
-    <p class="text-sm text-slate-500 dark:text-slate-400">Veranstaltungen mit mehreren Stops. Eine neue Tour entsteht aus einer Veranstaltung über „…“ › „Als Tour planen“.</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Veranstaltungen mit mehreren Tourstops. Eine neue Tour entsteht aus einer Veranstaltung über „…“ › „Als Tour planen“.</p>
 </div>
 
 <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Aktuelle und kommende Touren</h2>

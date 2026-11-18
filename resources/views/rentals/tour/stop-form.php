@@ -24,7 +24,7 @@ $heading = match (true) {
     $kind === 'start' => 'Start der Route',
     $kind === 'end' => 'Ziel der Route',
     $waypoint => $stop !== null ? 'Zwischenstopp bearbeiten' : 'Zwischenstopp hinzufügen',
-    default => $stop !== null ? 'Stop bearbeiten' : 'Stop hinzufügen',
+    default => $stop !== null ? 'Tourstop bearbeiten' : 'Tourstop hinzufügen',
 };
 ?>
 <div class="mb-6">
@@ -72,9 +72,9 @@ $heading = match (true) {
             <div>
                 <label class="<?= $label ?>" for="wp-after">Zwischen</label>
                 <select id="wp-after" name="after_stop_id" class="<?= $input ?>">
-                    <option value="">Tourstart und Stop 1</option>
+                    <option value="">Tourstart und Tourstop 1</option>
                     <?php foreach ($tour->stops() as $i => $entry): ?>
-                        <option value="<?= e($entry->stop->id) ?>"<?= $v('after_stop_id') === $entry->stop->id ? ' selected' : '' ?>>Stop <?= (int) $entry->number ?> (<?= e($entry->stop->title()) ?>) und <?= isset($tour->stops()[$i + 1]) ? 'Stop ' . ((int) $entry->number + 1) : 'Tourende' ?></option>
+                        <option value="<?= e($entry->stop->id) ?>"<?= $v('after_stop_id') === $entry->stop->id ? ' selected' : '' ?>>Tourstop <?= (int) $entry->number ?> (<?= e($entry->stop->title()) ?>) und <?= isset($tour->stops()[$i + 1]) ? 'Tourstop ' . ((int) $entry->number + 1) : 'Tourende' ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>

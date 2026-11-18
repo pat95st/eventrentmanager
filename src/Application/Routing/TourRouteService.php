@@ -40,6 +40,8 @@ final class TourRouteService
         private readonly RoutingSettingsRepositoryInterface $settings,
         private readonly RouteCacheRepositoryInterface $cache,
         private readonly ?RoutingClientInterface $client = null,
+        private readonly ?TourStopLocator $stopLocator = null,
+        private readonly ?\App\Infrastructure\Geocoding\GeocoderInterface $geocoder = null,
     ) {
     }
 
@@ -51,7 +53,7 @@ final class TourRouteService
         $profile = RouteProfile::tryFrom($rental->routeProfile) ?? RouteProfile::Car;
         $hints = [];
 
-        [$points, $pointHints] = $this->points($rental, $plan);
+        [$points, $pointHints, $entries] = $this->points($rental, $plan);
         $hints = array_merge($hints, $pointHints);
 
         $restrictions = new VehicleRestrictions();
@@ -88,27 +90,37 @@ final class TourRouteService
             googleLinks: GoogleMapsLinks::build($points),
             hasApiKey: $settings->hasApiKey(),
             bufferMinutes: $settings->bufferMinutes,
+            entries: $entries,
         );
     }
 
-    /** @return array{0: RoutePoint[], 1: string[]} */
+    /** Geocoding requests per page view (Nominatim allows about one per second). */
+    private const MAX_GEOCODING = 5;
+
+    private int $geocodingBudget = self::MAX_GEOCODING;
+
+    /** @return array{0: RoutePoint[], 1: string[], 2: list<array{label: string, kind: string, included: bool, detail: string, editUrl: ?string}>} */
     private function points(Rental $rental, TourPlan $plan): array
     {
         $points = [];
         $hints = [];
-
-        $start = $plan->start();
-        if ($start !== null) {
-            $start->hasCoordinates()
-                ? $points[] = new RoutePoint($start->title(), (float) $start->latitude, (float) $start->longitude, 'start', $start->id)
-                : $hints[] = 'Für den Start „' . $start->title() . '“ sind keine Koordinaten bekannt.';
-        } else {
-            $warehousePoint = $this->warehousePoint($rental->pickupWarehouseId, 'start', 'Start');
-            if ($warehousePoint !== null) {
-                $points[] = $warehousePoint;
-            } else {
-                $hints[] = 'Kein Start festgelegt und kein Ausgabelager mit Koordinaten – die Route beginnt beim ersten Stop.';
+        $entries = [];
+        $add = function (string $label, string $kind, ?array $coordinates, string $detail, ?string $editUrl, ?string $stopId) use (&$points, &$entries): void {
+            $entries[] = ['label' => $label, 'kind' => $kind, 'included' => $coordinates !== null, 'detail' => $detail, 'editUrl' => $editUrl];
+            if ($coordinates !== null) {
+                $points[] = new RoutePoint($label, $coordinates[0], $coordinates[1], $kind, $stopId);
             }
+        };
+
+        // Start: stored start, otherwise the pickup warehouse
+        $start = $plan->start();
+        $startUrl = '/veranstaltungen/' . $rental->id . '/tour/stops/neu?art=start';
+        if ($start !== null) {
+            $coordinates = $this->locate($start);
+            $add($start->title(), 'start', $coordinates, $coordinates !== null ? $start->addressLine() : 'Adresse nicht gefunden', $startUrl, $start->id);
+        } else {
+            [$label, $coordinates, $detail] = $this->warehouse($rental->pickupWarehouseId, 'Start');
+            $add($label, 'start', $coordinates, $detail, $startUrl, null);
         }
 
         $number = 0;
@@ -116,50 +128,77 @@ final class TourRouteService
             if ($stop->isStop()) {
                 $number++;
             }
-            $label = $stop->isStop() ? 'Stop ' . $number . ': ' . $stop->title() : $stop->title();
-            $coordinates = $this->coordinatesOf($stop);
-            if ($coordinates === null) {
-                $hints[] = $label . ': keine Koordinaten' . ($stop->isStop() ? ' (Ort ist kein gespeicherter Veranstaltungsort oder dessen Adresse wurde nicht gefunden)' : '') . ' – wird übersprungen.';
-                continue;
-            }
-            $points[] = new RoutePoint($label, $coordinates[0], $coordinates[1], $stop->isStop() ? 'stop' : 'waypoint', $stop->id);
+            $label = $stop->isStop() ? 'Tourstop ' . $number . ': ' . $stop->title() : $stop->title();
+            $coordinates = $this->locate($stop);
+            $detail = $coordinates !== null
+                ? ($stop->isStop() ? ($stop->venueId !== null ? 'gespeicherter Veranstaltungsort' : 'Ort per Suche gefunden') : $stop->addressLine())
+                : ($stop->isStop() ? 'Ort nicht gefunden – bitte einen gespeicherten Veranstaltungsort wählen oder den Ort genauer angeben (z. B. mit Ortsname)' : 'Adresse nicht gefunden – bitte Adresse prüfen');
+            $add($label, $stop->isStop() ? 'stop' : 'waypoint', $coordinates, $detail, '/tour-stops/' . $stop->id . '/bearbeiten', $stop->id);
         }
 
+        // Destination: stored destination, otherwise the return (or pickup) warehouse
         $end = $plan->end();
+        $endUrl = '/veranstaltungen/' . $rental->id . '/tour/stops/neu?art=ziel';
         if ($end !== null) {
-            $end->hasCoordinates()
-                ? $points[] = new RoutePoint($end->title(), (float) $end->latitude, (float) $end->longitude, 'end', $end->id)
-                : $hints[] = 'Für das Ziel „' . $end->title() . '“ sind keine Koordinaten bekannt.';
+            $coordinates = $this->locate($end);
+            $add($end->title(), 'end', $coordinates, $coordinates !== null ? $end->addressLine() : 'Adresse nicht gefunden', $endUrl, $end->id);
         } else {
-            $warehousePoint = $this->warehousePoint($rental->returnWarehouseId ?? $rental->pickupWarehouseId, 'end', 'Ziel');
-            if ($warehousePoint !== null) {
-                $points[] = $warehousePoint;
-            }
+            [$label, $coordinates, $detail] = $this->warehouse($rental->returnWarehouseId ?? $rental->pickupWarehouseId, 'Ziel');
+            $add($label, 'end', $coordinates, $detail, $endUrl, null);
         }
 
-        return [$points, $hints];
+        $missing = count(array_filter($entries, static fn ($e) => !$e['included']));
+        if ($missing > 0) {
+            $hints[] = $missing === 1
+                ? '1 Punkt hat keine Koordinaten und fehlt in der Route (siehe Liste der Routenpunkte).'
+                : $missing . ' Punkte haben keine Koordinaten und fehlen in der Route (siehe Liste der Routenpunkte).';
+        }
+
+        return [$points, $hints, $entries];
     }
 
     /** @return array{0: float, 1: float}|null */
-    private function coordinatesOf(TourStop $stop): ?array
+    private function locate(TourStop $stop): ?array
     {
-        if ($stop->isStop()) {
-            $venue = $stop->venueId !== null ? $this->venues->findById($stop->venueId) : null;
-
-            return $venue !== null && $venue->latitude !== null && $venue->longitude !== null ? [(float) $venue->latitude, (float) $venue->longitude] : null;
+        $locator = $this->stopLocator ?? new TourStopLocator($this->venues);
+        $before = [$stop->latitude, $stop->longitude];
+        $coordinates = $locator->locate($stop, $this->geocodingBudget > 0);
+        if ($before !== [$stop->latitude, $stop->longitude]) {
+            if ($before === [null, null]) {
+                $this->geocodingBudget--;
+            }
+            $this->tours->saveStop($stop); // remember found coordinates
+        } elseif ($coordinates === null) {
+            $this->geocodingBudget--;
         }
 
-        return $stop->hasCoordinates() ? [(float) $stop->latitude, (float) $stop->longitude] : null;
+        return $coordinates;
     }
 
-    private function warehousePoint(?string $warehouseId, string $kind, string $prefix): ?RoutePoint
+    /** @return array{0: string, 1: array{0: float, 1: float}|null, 2: string} */
+    private function warehouse(?string $warehouseId, string $prefix): array
     {
         $warehouse = $warehouseId !== null ? $this->warehouses->findById($warehouseId) : null;
-        if ($warehouse === null || $warehouse->latitude === null || $warehouse->longitude === null) {
-            return null;
+        if ($warehouse === null) {
+            return [$prefix . ': kein Lager hinterlegt', null, 'In der Logistik der Veranstaltung ein Lager wählen oder hier eine Adresse festlegen'];
+        }
+        if (($warehouse->latitude === null || $warehouse->longitude === null) && $this->geocoder !== null && $this->geocodingBudget-- > 0) {
+            try {
+                $found = $this->geocoder->geocode($warehouse->street, $warehouse->postalCode, $warehouse->city, $warehouse->country);
+            } catch (\Throwable) {
+                $found = null;
+            }
+            if ($found !== null) {
+                $warehouse->latitude = (float) $found[0];
+                $warehouse->longitude = (float) $found[1];
+                $this->warehouses->save($warehouse);
+            }
+        }
+        if ($warehouse->latitude === null || $warehouse->longitude === null) {
+            return [$prefix . ': ' . $warehouse->name, null, 'Adresse des Lagers nicht gefunden'];
         }
 
-        return new RoutePoint($prefix . ': ' . $warehouse->name, (float) $warehouse->latitude, (float) $warehouse->longitude, $kind);
+        return [$prefix . ': ' . $warehouse->name, [(float) $warehouse->latitude, (float) $warehouse->longitude], trim($warehouse->street . ', ' . $warehouse->postalCode . ' ' . $warehouse->city, ', ')];
     }
 
     private function restrictions(string $rentalId): VehicleRestrictions

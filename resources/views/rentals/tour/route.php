@@ -131,13 +131,64 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
         map.setView([51.16, 10.45], 6);
     }
 
-    const render = (data) => {
-        // Summary and Google Maps links
+    const legLines = [];
+    const legColor = (l) => (l.billed ? '#2563eb' : '#94a3b8'); // not billed: grey
+
+    const summarize = (data) => {
         let summary = data.restrictions ? '· ' + data.restrictions : '';
         if (data.legs.length) {
             summary += ' · ' + km(data.totalDistanceM) + (data.totalDurationS !== null ? ' · ' + time(data.totalDurationS) + ' Fahrzeit' : ' (Luftlinie)');
+            if (data.billableDistanceM !== null && Math.round(data.billableDistanceM) !== Math.round(data.totalDistanceM)) {
+                summary += ' · abzurechnen: ' + km(data.billableDistanceM);
+            }
         }
         $('[data-route-summary]').textContent = summary;
+    };
+
+    // Legs with a checkbox "abrechnen": the drive to a stop can be left out of the billable kilometres.
+    const renderLegs = (data) => {
+        if (data.legs.length === 0) {
+            $('[data-route-legs]').innerHTML = '<p class="text-sm text-slate-400">Für eine Route werden mindestens zwei Punkte mit Koordinaten gebraucht.</p>';
+            return;
+        }
+        const billable = data.billableDistanceM ?? data.totalDistanceM;
+        $('[data-route-legs]').innerHTML = '<table class="w-full text-sm"><thead class="text-left text-xs text-slate-500"><tr><th class="py-1 pr-2 font-medium">Von</th><th class="py-1 pr-2 font-medium">Nach</th><th class="py-1 pr-2 text-right font-medium">Strecke</th><th class="py-1 pr-2 text-right font-medium">Fahrzeit</th><th class="py-1 text-center font-medium" title="Strecke in die abzurechnenden Kilometer einrechnen">Abrechnen</th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800">'
+            + data.legs.map((l, i) => '<tr' + (l.billed ? '' : ' class="text-slate-400 dark:text-slate-500"') + '><td class="py-1 pr-2">' + esc(l.from) + '</td><td class="py-1 pr-2">' + esc(l.to) + '</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums' + (l.billed ? '' : ' line-through') + '">' + km(l.distanceM) + (data.straightLine ? ' <span class="text-xs text-slate-400">(Luftlinie)</span>' : '') + '</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + time(l.durationS) + '</td>'
+                + '<td class="py-1 text-center">' + (l.stopId
+                    ? '<input type="checkbox" data-leg-billing="' + i + '"' + (l.billed ? ' checked' : '') + ' aria-label="' + esc('Fahrt ' + l.from + ' → ' + l.to + ' abrechnen') + '">'
+                    : '<input type="checkbox" checked disabled title="Die Fahrt zum Rückgabelager wird immer abgerechnet. Für eine Ausnahme ein eigenes Ziel festlegen.">') + '</td></tr>').join('')
+            + '</tbody><tfoot class="border-t border-slate-200 text-sm font-medium dark:border-slate-700"><tr><td class="py-1 pr-2" colspan="2">Gesamt</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(data.totalDistanceM) + '</td><td colspan="2"></td></tr>'
+            + '<tr><td class="py-1 pr-2" colspan="2">Abzurechnen</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(billable) + '</td><td colspan="2"></td></tr></tfoot></table>'
+            + '<p class="mt-2 text-xs text-slate-500">Fährt z. B. ein Techniker ohne Material zwischen zwei Stops anderweitig mit, den Haken bei dieser Fahrt entfernen – sie zählt dann nicht zu den abzurechnenden Kilometern, bleibt aber für Fahrzeiten und Karte erhalten.</p>';
+        $('[data-route-legs]').querySelectorAll('[data-leg-billing]').forEach((box) => box.addEventListener('change', () => {
+            const leg = data.legs[Number(box.dataset.legBilling)];
+            box.disabled = true;
+            const body = new URLSearchParams({ billed: box.checked ? '1' : '0' });
+            fetch('/tour-stops/' + encodeURIComponent(leg.stopId) + '/km-abrechnung', {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'X-CSRF-Token': window.CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                body,
+            })
+                .then((r) => r.json().then((json) => { if (!r.ok) throw new Error(json.error || 'HTTP ' + r.status); return json; }))
+                .then((json) => {
+                    leg.billed = json.billed;
+                    legLines[Number(box.dataset.legBilling)]?.setStyle({ color: legColor(leg) });
+                    data.billableDistanceM = data.legs.reduce((sum, l) => sum + (l.billed ? l.distanceM : 0), 0);
+                    summarize(data);
+                    renderLegs(data);
+                })
+                .catch((err) => {
+                    box.checked = !box.checked;
+                    box.disabled = false;
+                    alert('Die Änderung konnte nicht gespeichert werden: ' + err.message);
+                });
+        }));
+    };
+
+    const render = (data) => {
+        // Summary and Google Maps links
+        summarize(data);
         $('[data-route-links]').innerHTML = data.googleLinks.map((l, i) =>
             '<a href="' + esc(l.url) + '" target="_blank" rel="noopener" class="<?= $secondaryButton ?>">In Google Maps öffnen'
             + (data.googleLinks.length > 1 ? ' (Teil ' + (i + 1) + ': ' + esc(l.from) + ' → ' + esc(l.to) + ')' : '') + '</a>').join('');
@@ -163,11 +214,7 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
         }).join('');
 
         // Legs
-        $('[data-route-legs]').innerHTML = data.legs.length === 0
-            ? '<p class="text-sm text-slate-400">Für eine Route werden mindestens zwei Punkte mit Koordinaten gebraucht.</p>'
-            : '<table class="w-full text-sm"><thead class="text-left text-xs text-slate-500"><tr><th class="py-1 pr-2 font-medium">Von</th><th class="py-1 pr-2 font-medium">Nach</th><th class="py-1 pr-2 text-right font-medium">Strecke</th><th class="py-1 text-right font-medium">Fahrzeit</th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800">'
-              + data.legs.map((l) => '<tr><td class="py-1 pr-2">' + esc(l.from) + '</td><td class="py-1 pr-2">' + esc(l.to) + '</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(l.distanceM) + (data.straightLine ? ' <span class="text-xs text-slate-400">(Luftlinie)</span>' : '') + '</td><td class="whitespace-nowrap py-1 text-right tabular-nums">' + time(l.durationS) + '</td></tr>').join('')
-              + '</tbody></table>';
+        renderLegs(data);
 
         // Map
         if (!map) return;
@@ -186,7 +233,7 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
             L.marker([p.lat, p.lng], { icon, title: p.label }).addTo(map).bindPopup(popup);
             bounds.push([p.lat, p.lng]);
         });
-        data.legs.forEach((l) => L.polyline(l.geometry, { color: '#2563eb', weight: 4, opacity: 0.8, dashArray: data.straightLine ? '6 8' : null }).addTo(map));
+        data.legs.forEach((l, i) => { legLines[i] = L.polyline(l.geometry, { color: legColor(l), weight: 4, opacity: 0.8, dashArray: data.straightLine ? '6 8' : null }).addTo(map); });
         if (bounds.length > 1) map.fitBounds(bounds, { padding: [30, 30] });
         else if (bounds.length === 1) map.setView(bounds[0], 12);
     };

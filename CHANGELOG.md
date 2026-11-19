@@ -4,6 +4,7 @@ All notable user-visible changes to this project are documented in this file.
 
 ## Unreleased
 
+- **New:** Tours: single legs of a route can be left out of the billable kilometres, e.g. when a technician without material rides along with someone else between two stops. The leg table on "Route & Fahrzeiten" has an "Abrechnen" checkbox per leg and shows the total and the billable kilometres; legs that are not billed stay on the map (grey) and still count for driving times. The drive back to the return warehouse is always billed unless a destination of its own is set. Requires migration 179.
 - **Changed:** The API documentation (`api-docs.html`, `docs/openapi/`) is now in English. Labels of the web interface are quoted in German with an English translation; error messages returned by the API remain German.
 - **Fixed:** "Verbindung testen" and route calculation failed with "unerwartete Antwort": the answer of OpenRouteService contains distance and driving time per leg only when instructions are requested. They are requested again, and answers with only a total are split over the legs.
 - **Fixed:** Route planning only showed straight lines: OpenRouteService has moved to api.heigit.org (the former host api.openrouteservice.org was shut down in November 2026). Routes are now requested from the new host; existing API keys keep working. If the service still fails, the route page and the tour page show the reason (e.g. invalid key, daily limit), and Settings > Routenplanung has a "Verbindung testen" button.

@@ -107,10 +107,10 @@ final class TourRouteService
         $points = [];
         $hints = [];
         $entries = [];
-        $add = function (string $label, string $kind, ?array $coordinates, string $detail, ?string $editUrl, ?string $stopId) use (&$points, &$entries): void {
+        $add = function (string $label, string $kind, ?array $coordinates, string $detail, ?string $editUrl, ?string $stopId, bool $notBilled = false) use (&$points, &$entries): void {
             $entries[] = ['label' => $label, 'kind' => $kind, 'included' => $coordinates !== null, 'detail' => $detail, 'editUrl' => $editUrl];
             if ($coordinates !== null) {
-                $points[] = new RoutePoint($label, $coordinates[0], $coordinates[1], $kind, $stopId);
+                $points[] = new RoutePoint($label, $coordinates[0], $coordinates[1], $kind, $stopId, $notBilled);
             }
         };
 
@@ -135,7 +135,7 @@ final class TourRouteService
             $detail = $coordinates !== null
                 ? ($stop->isStop() ? ($stop->venueId !== null ? 'gespeicherter Veranstaltungsort' : 'Ort per Suche gefunden') : $stop->addressLine())
                 : ($stop->isStop() ? 'Ort nicht gefunden – bitte einen gespeicherten Veranstaltungsort wählen oder den Ort genauer angeben (z. B. mit Ortsname)' : 'Adresse nicht gefunden – bitte Adresse prüfen');
-            $add($label, $stop->isStop() ? 'stop' : 'waypoint', $coordinates, $detail, '/tour-stops/' . $stop->id . '/bearbeiten', $stop->id);
+            $add($label, $stop->isStop() ? 'stop' : 'waypoint', $coordinates, $detail, '/tour-stops/' . $stop->id . '/bearbeiten', $stop->id, $stop->arrivalNotBilled);
         }
 
         // Destination: stored destination, otherwise the return (or pickup) warehouse
@@ -143,7 +143,7 @@ final class TourRouteService
         $endUrl = '/veranstaltungen/' . $rental->id . '/tour/stops/neu?art=ziel';
         if ($end !== null) {
             $coordinates = $this->locate($end);
-            $add($end->title(), 'end', $coordinates, $coordinates !== null ? $end->addressLine() : 'Adresse nicht gefunden', $endUrl, $end->id);
+            $add($end->title(), 'end', $coordinates, $coordinates !== null ? $end->addressLine() : 'Adresse nicht gefunden', $endUrl, $end->id, $end->arrivalNotBilled);
         } else {
             [$label, $coordinates, $detail] = $this->warehouse($rental->returnWarehouseId ?? $rental->pickupWarehouseId, 'Ziel');
             $add($label, 'end', $coordinates, $detail, $endUrl, null);

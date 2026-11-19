@@ -967,13 +967,13 @@ $routingSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRout
 $plannedVehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbPlannedVehicleRepository($pdo);
 $tourStopLocator = new \App\Application\Routing\TourStopLocator($venueRepository, $geocoder);
 $companyLocator = new \App\Application\Routing\CompanyLocator($companySettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbCompanyCoordinatesRepository($pdo), $geocoder);
-$routingCommandHandler = new \App\Application\Routing\Command\RoutingCommandHandler($routingSettingsRepository, $rentalRepository, $plannedVehicleRepository, $vehicleRepository);
-foreach (['SaveRoutingSettings', 'SetRouteProfile', 'AddPlannedVehicle', 'RemovePlannedVehicle'] as $routingCommand) {
+$tourRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTourRepository($pdo);
+$routingCommandHandler = new \App\Application\Routing\Command\RoutingCommandHandler($routingSettingsRepository, $rentalRepository, $plannedVehicleRepository, $vehicleRepository, $tourRepository);
+foreach (['SaveRoutingSettings', 'SetRouteProfile', 'AddPlannedVehicle', 'RemovePlannedVehicle', 'SetLegBilling'] as $routingCommand) {
     $commandBus->register('App\\Application\\Routing\\Command\\' . $routingCommand, $routingCommandHandler);
 }
 
 // Tours (migration 177)
-$tourRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTourRepository($pdo);
 $tourSync = new \App\Application\Tour\TourSync($tourRepository, $rentalRepository, $rentalItemRepository);
 $tourCommandHandler = new \App\Application\Tour\Command\TourCommandHandler(
     $tourRepository, $rentalRepository, $tourSync, $venueRepository, $articleRepository, $inventoryNumberRepository,
@@ -2482,6 +2482,7 @@ $router->get('/tour-stops/{stopId}/bearbeiten', $auth->guard(Permission::Ausgabe
 $router->post('/tour-stops/{stopId}', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'saveStop']));
 $router->post('/tour-stops/{stopId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'deleteStop']));
 $router->post('/tour-stops/{stopId}/minutenprogramm', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'createMinuteProgram']));
+$router->post('/tour-stops/{stopId}/km-abrechnung', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setLegBilling']));
 // Recurring events (migration 176)
 $rentalSeriesController = new \App\Infrastructure\Http\Controllers\RentalSeriesController($commandBus, $queryBus, $rentalRepository, $rentalSeriesRepository);
 $router->get('/serien', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'index']));

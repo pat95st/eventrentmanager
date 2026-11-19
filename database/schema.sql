@@ -5098,6 +5098,26 @@ CREATE TABLE rental_route_cache (
     CONSTRAINT fk_rental_route_cache_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- --- 179_vehicle_cost_per_km.sql ---
+-- Cost per kilometre of vehicles and trailers.
+--
+--  - vehicle_settings: default cost per km for cars (0.30 EUR) and trailers
+--    (0.15 EUR), editable under Einstellungen › Fahrzeuge.
+--  - vehicles.cost_per_km: individual cost per km of a vehicle; NULL means
+--    the default of its category from vehicle_settings applies.
+CREATE TABLE vehicle_settings (
+    id                           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    default_cost_per_km_auto     DECIMAL(6, 2) NOT NULL DEFAULT 0.30,
+    default_cost_per_km_trailer  DECIMAL(6, 2) NOT NULL DEFAULT 0.15,
+    updated_at                   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_vehicle_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO vehicle_settings (id) VALUES (1);
+
+ALTER TABLE vehicles
+    ADD COLUMN cost_per_km DECIMAL(6, 2) NULL AFTER gross_weight_kg;
+
 -- =======================================================================
 
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
@@ -5299,4 +5319,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('175_api_scopes_rate_limit.sql', NOW()),
     ('176_rental_series.sql', NOW()),
     ('177_rental_tours.sql', NOW()),
-    ('178_tour_routing.sql', NOW());
+    ('178_tour_routing.sql', NOW()),
+    ('179_vehicle_cost_per_km.sql', NOW());

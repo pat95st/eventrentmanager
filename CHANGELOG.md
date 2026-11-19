@@ -4,6 +4,7 @@ All notable user-visible changes to this project are documented in this file.
 
 ## Unreleased
 
+- **New:** Cost per kilometre for vehicles and trailers. Each vehicle has an optional field "Kilometerkosten" (€ per km); if it is left empty, the default of its category applies: 0.30 € for cars and 0.15 € for trailers. Both defaults can be changed under the new page Settings > Fahrzeuge. The vehicle list shows the cost per km and marks default values. Requires migration 179.
 - **Changed:** The API documentation (`api-docs.html`, `docs/openapi/`) is now in English. Labels of the web interface are quoted in German with an English translation; error messages returned by the API remain German.
 - **Fixed:** "Verbindung testen" and route calculation failed with "unerwartete Antwort": the answer of OpenRouteService contains distance and driving time per leg only when instructions are requested. They are requested again, and answers with only a total are split over the legs.
 - **Fixed:** Route planning only showed straight lines: OpenRouteService has moved to api.heigit.org (the former host api.openrouteservice.org was shut down in November 2026). Routes are now requested from the new host; existing API keys keep working. If the service still fails, the route page and the tour page show the reason (e.g. invalid key, daily limit), and Settings > Routenplanung has a "Verbindung testen" button.

@@ -3,6 +3,7 @@
 /** @var array<string, string> $errors */
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
+/** @var \App\Domain\Vehicle\VehicleSettings $vehicleSettings */
 
 use App\Domain\Vehicle\VehicleCategory;
 use function App\Infrastructure\Http\e;
@@ -128,6 +129,28 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
 
     <div class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Kilometerkosten</h3>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                Leer lassen, um den Standardwert aus den
+                <a href="/einstellungen/fahrzeuge" class="underline">Einstellungen</a> zu verwenden
+                (Auto: <?= e($amount($vehicleSettings->defaultCostPerKmAuto)) ?> €, Anhänger: <?= e($amount($vehicleSettings->defaultCostPerKmTrailer)) ?> €).
+            </p>
+        </div>
+        <div class="max-w-xs">
+            <label for="cost_per_km" class="block text-[11px] text-slate-500 dark:text-slate-400">€ pro km</label>
+            <input type="text" id="cost_per_km" name="cost_per_km" inputmode="decimal"
+                   data-cost-per-km-field
+                   data-default-auto="<?= e('Standard: ' . $amount($vehicleSettings->defaultCostPerKmAuto)) ?>"
+                   data-default-anhaenger="<?= e('Standard: ' . $amount($vehicleSettings->defaultCostPerKmTrailer)) ?>"
+                   placeholder="<?= e('Standard: ' . $amount($vehicleSettings->defaultCostPerKm(VehicleCategory::tryFrom($selectedCategory) ?? VehicleCategory::Auto))) ?>"
+                   value="<?= e($val('cost_per_km', $amount($vehicle?->costPerKm))) ?>"
+                   class="mt-1 w-full rounded-md border <?= isset($errors['costPerKm']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['costPerKm'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['costPerKm']) ?></p><?php endif; ?>
+        </div>
+    </div>
+
+    <div class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div>
             <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Maße für die Routenplanung</h3>
             <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Außenmaße und zulässiges Gesamtgewicht – damit berücksichtigt die LKW-Route Brückenhöhen, Durchfahrtsbreiten und Gewichtsbeschränkungen. Alle Felder sind optional.</p>
         </div>
@@ -228,6 +251,8 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
         // eine korrekte Anzeige).
         var loadAreaOpenTopCheckbox = form.querySelector('[data-load-area-open-top-checkbox]');
         var loadAreaHeightField = form.querySelector('[data-load-area-height-field]');
+        // Placeholder of the cost per km shows the default of the selected category.
+        var costPerKmField = form.querySelector('[data-cost-per-km-field]');
 
         function update() {
             var selected = form.querySelector('[data-category-radio]:checked');
@@ -236,6 +261,10 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
             sections.forEach(function (section) {
                 section.classList.toggle('hidden', section.getAttribute('data-category-section') !== category);
             });
+
+            if (costPerKmField) {
+                costPerKmField.placeholder = costPerKmField.getAttribute('data-default-' + category) || '';
+            }
 
             if (towCapacityField) {
                 towCapacityField.classList.toggle('hidden', !(towHitchCheckbox && towHitchCheckbox.checked));

@@ -48,7 +48,21 @@ final class Vehicle
         public ?string $widthCm = null,
         public ?string $lengthCm = null,
         public ?string $grossWeightKg = null,
+        // Migration 179: individual cost per km in EUR; null = default of the
+        // category from VehicleSettings.
+        public ?string $costPerKm = null,
     ) {
+    }
+
+    /** Cost per km that applies to this vehicle: its own value or the default of its category. */
+    public function effectiveCostPerKm(VehicleSettings $settings): string
+    {
+        return $this->costPerKm ?? $settings->defaultCostPerKm($this->category);
+    }
+
+    public function usesDefaultCostPerKm(): bool
+    {
+        return $this->costPerKm === null;
     }
 
     public function isAuto(): bool

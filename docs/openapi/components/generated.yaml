@@ -562,6 +562,7 @@ Vehicle:
     - "width_cm"
     - "length_cm"
     - "gross_weight_kg"
+    - "cost_per_km"
   properties:
     id:
       type: "string"
@@ -626,6 +627,9 @@ Vehicle:
       type: "string"
       nullable: true
     gross_weight_kg:
+      type: "string"
+      nullable: true
+    cost_per_km:
       type: "string"
       nullable: true
 Rental:
@@ -2561,6 +2565,9 @@ VehicleInput:
     gross_weight_kg:
       type: "string"
       nullable: true
+    cost_per_km:
+      type: "string"
+      nullable: true
 VehiclePatch:
   type: "object"
   description: "Update vehicle"
@@ -2619,6 +2626,9 @@ VehiclePatch:
       type: "string"
       nullable: true
     gross_weight_kg:
+      type: "string"
+      nullable: true
+    cost_per_km:
       type: "string"
       nullable: true
 RentalInput:

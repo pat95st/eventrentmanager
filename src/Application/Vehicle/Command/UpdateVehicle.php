@@ -30,6 +30,8 @@ final class UpdateVehicle implements CommandInterface
         public readonly ?string $widthCm = null,
         public readonly ?string $lengthCm = null,
         public readonly ?string $grossWeightKg = null,
+        // Migration 179: empty = default of the category from the settings
+        public readonly ?string $costPerKm = null,
     ) {
     }
 }

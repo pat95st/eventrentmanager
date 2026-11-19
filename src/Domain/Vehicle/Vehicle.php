@@ -54,7 +54,21 @@ final class Vehicle
         public ?string $grossWeightKg = null,
         // Migration 180: passenger seats (excluding the driver), only relevant for category = Auto.
         public ?int $passengerSeats = null,
+        // Migration 181: individual cost per km in EUR; null = default of the
+        // category from VehicleSettings.
+        public ?string $costPerKm = null,
     ) {
+    }
+
+    /** Cost per km that applies to this vehicle: its own value or the default of its category. */
+    public function effectiveCostPerKm(VehicleSettings $settings): string
+    {
+        return $this->costPerKm ?? $settings->defaultCostPerKm($this->category);
+    }
+
+    public function usesDefaultCostPerKm(): bool
+    {
+        return $this->costPerKm === null;
     }
 
     public function isAuto(): bool

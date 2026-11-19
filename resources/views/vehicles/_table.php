@@ -1,6 +1,7 @@
 <?php
 /** @var \App\Domain\Vehicle\Vehicle[] $vehicles */
 /** @var string $search */
+/** @var \App\Domain\Vehicle\VehicleSettings $vehicleSettings */
 
 use App\Domain\Vehicle\VehicleCategory;
 /** @var int $page */
@@ -35,15 +36,16 @@ if (!function_exists('formatVehicleDimension')) {
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Fahrzeuge gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full table-fixed text-left text-sm" style="min-width: 900px">
+        <table class="w-full table-fixed text-left text-sm" style="min-width: 1000px">
             <colgroup>
-                <col style="width: 18%">
-                <col style="width: 13%">
-                <col style="width: 12%">
-                <col style="width: 10%">
-                <col style="width: 17%">
+                <col style="width: 16%">
+                <col style="width: 11%">
+                <col style="width: 11%">
                 <col style="width: 9%">
+                <col style="width: 15%">
+                <col style="width: 8%">
                 <col style="width: 12%">
+                <col style="width: 9%">
                 <col style="width: 9%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
@@ -55,6 +57,7 @@ if (!function_exists('formatVehicleDimension')) {
                     <th class="break-words px-4 py-2.5">Ladefläche</th>
                     <th class="break-words px-4 py-2.5">Beifahrer&shy;plätze</th>
                     <th class="break-words px-4 py-2.5">Anhängekupplung / Leergewicht</th>
+                    <th class="break-words px-4 py-2.5">Kosten / km</th>
                     <th class="break-words px-4 py-2.5"></th>
                 </tr>
             </thead>
@@ -111,6 +114,12 @@ if (!function_exists('formatVehicleDimension')) {
                                 <?php endif; ?>
                             <?php else: ?>
                                 <?= $vehicle->emptyWeightKg !== null ? e($vehicle->emptyWeightKg) . ' kg' : '–' ?>
+                            <?php endif; ?>
+                        </td>
+                        <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
+                            <?= e(number_format((float) $vehicle->effectiveCostPerKm($vehicleSettings), 2, ',', '.')) ?> €
+                            <?php if ($vehicle->usesDefaultCostPerKm()): ?>
+                                <span class="block text-[11px] text-slate-400 dark:text-slate-500">Standard</span>
                             <?php endif; ?>
                         </td>
                         <td class="break-words px-4 py-3 text-right">

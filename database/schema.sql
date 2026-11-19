@@ -5120,6 +5120,26 @@ ALTER TABLE rental_tour_stops
 ALTER TABLE vehicles
     ADD COLUMN passenger_seats TINYINT UNSIGNED NULL AFTER gross_weight_kg;
 
+-- --- 181_vehicle_cost_per_km.sql ---
+-- Cost per kilometre of vehicles and trailers.
+--
+--  - vehicle_settings: default cost per km for cars (0.30 EUR) and trailers
+--    (0.15 EUR), editable under Einstellungen › Fahrzeuge.
+--  - vehicles.cost_per_km: individual cost per km of a vehicle; NULL means
+--    the default of its category from vehicle_settings applies.
+CREATE TABLE vehicle_settings (
+    id                           TINYINT      NOT NULL PRIMARY KEY DEFAULT 1,
+    default_cost_per_km_auto     DECIMAL(6, 2) NOT NULL DEFAULT 0.30,
+    default_cost_per_km_trailer  DECIMAL(6, 2) NOT NULL DEFAULT 0.15,
+    updated_at                   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_vehicle_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO vehicle_settings (id) VALUES (1);
+
+ALTER TABLE vehicles
+    ADD COLUMN cost_per_km DECIMAL(6, 2) NULL AFTER passenger_seats;
+
 -- =======================================================================
 
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
@@ -5323,4 +5343,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('177_rental_tours.sql', NOW()),
     ('178_tour_routing.sql', NOW()),
     ('179_tour_unbilled_legs.sql', NOW()),
-    ('180_vehicle_passenger_seats.sql', NOW());
+    ('180_vehicle_passenger_seats.sql', NOW()),
+    ('181_vehicle_cost_per_km.sql', NOW());

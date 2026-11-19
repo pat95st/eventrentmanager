@@ -35,7 +35,7 @@ trait ValidatesVehicleInput
      *     emptyWeightKg: string|null, notes: string|null,
      *     acquisitionYear: int|null, purchasePrice: string|null, currentValue: string|null,
      *     heightCm: string|null, widthCm: string|null, lengthCm: string|null,
-     *     grossWeightKg: string|null, passengerSeats: int|null
+     *     grossWeightKg: string|null, passengerSeats: int|null, costPerKm: string|null
      * }}
      */
     private function validateVehicleInput(
@@ -59,6 +59,7 @@ trait ValidatesVehicleInput
         ?string $lengthCm = null,
         ?string $grossWeightKg = null,
         ?string $passengerSeats = null,
+        ?string $costPerKm = null,
     ): array {
         $errors = [];
 
@@ -147,6 +148,9 @@ trait ValidatesVehicleInput
         $lengthCm = $this->parseOptionalDecimal($lengthCm, 'lengthCm', 'Bitte die Fahrzeuglänge als Zahl (cm) angeben.', $errors);
         $grossWeightKg = $this->parseOptionalDecimal($grossWeightKg, 'grossWeightKg', 'Bitte das zulässige Gesamtgewicht als Zahl (kg) angeben.', $errors);
 
+        // Cost per km (migration 181): empty = default of the category.
+        $costPerKm = $this->parseOptionalCostPerKm($costPerKm, $errors);
+
         return [$errors, [
             'category' => $category,
             'name' => $name,
@@ -168,7 +172,22 @@ trait ValidatesVehicleInput
             'lengthCm' => $lengthCm,
             'grossWeightKg' => $grossWeightKg,
             'passengerSeats' => $category === VehicleCategory::Auto ? $seats : null,
+            'costPerKm' => $costPerKm,
         ]];
+    }
+
+    /** @param array<string, string> $errors */
+    private function parseOptionalCostPerKm(?string $value, array &$errors): ?string
+    {
+        $message = 'Bitte die Kilometerkosten als Betrag in Euro angeben (z. B. 0,30).';
+        $amount = $this->parseOptionalAmount($value, 'costPerKm', $message, $errors);
+        if ($amount !== null && (float) $amount > 9999.99) {
+            $errors['costPerKm'] = $message;
+
+            return null;
+        }
+
+        return $amount;
     }
 
     /**

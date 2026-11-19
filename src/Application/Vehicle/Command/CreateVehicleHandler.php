@@ -45,6 +45,7 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             $command->lengthCm,
             $command->grossWeightKg,
             $command->passengerSeats,
+            $command->costPerKm,
         );
 
         if ($errors !== []) {
@@ -76,6 +77,7 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             lengthCm: $data['lengthCm'],
             grossWeightKg: $data['grossWeightKg'],
             passengerSeats: $data['passengerSeats'],
+            costPerKm: $data['costPerKm'],
         );
 
         $this->vehicles->save($vehicle);

@@ -15,6 +15,7 @@ use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Vehicle\Vehicle;
+use App\Domain\Vehicle\VehicleSettingsRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
 use App\Infrastructure\Http\Pagination;
@@ -27,6 +28,7 @@ final class VehicleController
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
+        private readonly VehicleSettingsRepositoryInterface $vehicleSettings,
     ) {
     }
 
@@ -40,6 +42,7 @@ final class VehicleController
 
         $viewData = [
             'vehicles' => $result->items,
+            'vehicleSettings' => $this->vehicleSettings->get(),
             'search' => $search ?? '',
             'page' => $result->page,
             'pageSize' => $result->pageSize,
@@ -88,6 +91,7 @@ final class VehicleController
             lengthCm: $this->nullIfEmpty($request->input('length_cm')),
             grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
             passengerSeats: $this->nullIfEmpty($request->input('passenger_seats')),
+            costPerKm: $this->nullIfEmpty($request->input('cost_per_km')),
         );
 
         try {
@@ -140,6 +144,7 @@ final class VehicleController
             lengthCm: $this->nullIfEmpty($request->input('length_cm')),
             grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
             passengerSeats: $this->nullIfEmpty($request->input('passenger_seats')),
+            costPerKm: $this->nullIfEmpty($request->input('cost_per_km')),
         );
 
         try {
@@ -176,6 +181,7 @@ final class VehicleController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
+            'vehicleSettings' => $this->vehicleSettings->get(),
         ], activeNav: 'vehicles', title: $vehicle !== null ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug');
     }
 
@@ -203,6 +209,7 @@ final class VehicleController
             'length_cm' => $command->lengthCm,
             'gross_weight_kg' => $command->grossWeightKg,
             'passenger_seats' => $command->passengerSeats,
+            'cost_per_km' => $command->costPerKm,
         ];
     }
 

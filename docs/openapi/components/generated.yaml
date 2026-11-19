@@ -563,6 +563,7 @@ Vehicle:
     - "length_cm"
     - "gross_weight_kg"
     - "passenger_seats"
+    - "cost_per_km"
   properties:
     id:
       type: "string"
@@ -631,6 +632,9 @@ Vehicle:
       nullable: true
     passenger_seats:
       type: "integer"
+      nullable: true
+    cost_per_km:
+      type: "string"
       nullable: true
 Rental:
   type: "object"
@@ -2568,6 +2572,9 @@ VehicleInput:
     passenger_seats:
       type: "string"
       nullable: true
+    cost_per_km:
+      type: "string"
+      nullable: true
 VehiclePatch:
   type: "object"
   description: "Update vehicle"
@@ -2629,6 +2636,9 @@ VehiclePatch:
       type: "string"
       nullable: true
     passenger_seats:
+      type: "string"
+      nullable: true
+    cost_per_km:
       type: "string"
       nullable: true
 RentalInput:

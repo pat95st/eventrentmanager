@@ -510,6 +510,7 @@ $securitySettings = $securitySettingsRepository->get();
 \App\Infrastructure\Http\Auth\SessionTimeout::configure($securitySettings->sessionTimeoutMinutes, __DIR__ . '/../storage/sessions');
 \App\Infrastructure\Http\ConfirmPolicy::configure($securitySettings);
 $vehicleRepository = new \App\Infrastructure\Persistence\Pdo\MariadbVehicleRepository($pdo);
+$vehicleSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbVehicleSettingsRepository($pdo);
 $rentalVehicleLoadRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalVehicleLoadRepository($pdo);
 $rentalVehicleTowRepository = new \App\Infrastructure\Persistence\Pdo\MariadbRentalVehicleTowRepository($pdo);
 $voucherRepository = new \App\Infrastructure\Persistence\Pdo\MariadbVoucherRepository($pdo);
@@ -917,6 +918,7 @@ $commandBus->register(\App\Application\Supplier\Command\DeleteSupplier::class, n
 $commandBus->register(\App\Application\Vehicle\Command\CreateVehicle::class, new \App\Application\Vehicle\Command\CreateVehicleHandler($vehicleRepository));
 $commandBus->register(\App\Application\Vehicle\Command\UpdateVehicle::class, new \App\Application\Vehicle\Command\UpdateVehicleHandler($vehicleRepository));
 $commandBus->register(\App\Application\Vehicle\Command\DeleteVehicle::class, new \App\Application\Vehicle\Command\DeleteVehicleHandler($vehicleRepository));
+$commandBus->register(\App\Application\Vehicle\Command\SaveVehicleSettings::class, new \App\Application\Vehicle\Command\SaveVehicleSettingsHandler($vehicleSettingsRepository));
 $commandBus->register(\App\Application\Vehicle\Command\AssignRentalVehicleLoad::class, new \App\Application\Vehicle\Command\AssignRentalVehicleLoadHandler($rentalIssuedItemRepository, $vehicleRepository, $rentalVehicleLoadRepository));
 $commandBus->register(\App\Application\Vehicle\Command\RemoveRentalVehicleLoad::class, new \App\Application\Vehicle\Command\RemoveRentalVehicleLoadHandler($rentalIssuedItemRepository, $rentalVehicleLoadRepository));
 $commandBus->register(\App\Application\Vehicle\Command\SetRentalVehicleTow::class, new \App\Application\Vehicle\Command\SetRentalVehicleTowHandler($rentalRepository, $vehicleRepository, $rentalVehicleTowRepository));
@@ -1805,7 +1807,8 @@ $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
 $salesController = new \App\Infrastructure\Http\Controllers\SalesController($queryBus);
-$vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus);
+$vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus, $vehicleSettingsRepository);
+$vehicleSettingsController = new \App\Infrastructure\Http\Controllers\VehicleSettingsController($commandBus, $vehicleSettingsRepository);
 $venueController = new VenueController($commandBus, $queryBus, $fileStorage);
 $warehouseController = new WarehouseController($commandBus, $queryBus);
 $packingListPdfGenerator = new PackingListPdfGenerator($fileStorage);
@@ -2464,6 +2467,8 @@ $router->post('/veranstaltungen/{id}/tour/route/fahrzeuge', $auth->guard(Permiss
 $router->post('/veranstaltungen/{id}/tour/route/fahrzeuge/{plannedId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'removeVehicle']));
 $router->get('/einstellungen/routenplanung', $auth->guard(Permission::Administration, [$tourRouteController, 'editSettings']));
 $router->post('/einstellungen/routenplanung', $auth->guard(Permission::Administration, [$tourRouteController, 'updateSettings']));
+$router->get('/einstellungen/fahrzeuge', $auth->guard(Permission::Administration, [$vehicleSettingsController, 'edit']));
+$router->post('/einstellungen/fahrzeuge', $auth->guard(Permission::Administration, [$vehicleSettingsController, 'update']));
 // Tours (migration 177)
 $tourController = new \App\Infrastructure\Http\Controllers\TourController($commandBus, $queryBus, $tourRepository, new \App\Infrastructure\Pdf\TourLoadListPdfGenerator(), $rentalRepository, $customerRepository);
 $router->get('/touren', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'index']));

@@ -23,7 +23,7 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
                 id, category, name, license_plate, payload_kg,
                 load_area_length_cm, load_area_width_cm, load_area_height_cm, load_area_open_top,
                 tow_hitch_available, tow_capacity_kg, empty_weight_kg,
-                acquisition_year, purchase_price, current_value, height_cm, width_cm, length_cm, gross_weight_kg, passenger_seats, notes, created_at, updated_at
+                acquisition_year, purchase_price, current_value, height_cm, width_cm, length_cm, gross_weight_kg, passenger_seats, cost_per_km, notes, created_at, updated_at
              ) VALUES (
                 :id, :category, :name, :license_plate, :payload_kg,
                 :load_area_length_cm, :load_area_width_cm, :load_area_height_cm, :load_area_open_top,
@@ -40,6 +40,7 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
                 purchase_price = :purchase_price2, current_value = :current_value2,
                 height_cm = :height_cm2, width_cm = :width_cm2, length_cm = :length_cm2, gross_weight_kg = :gross_weight_kg2,
                 passenger_seats = :passenger_seats2,
+                cost_per_km = :cost_per_km2,
                 notes = :notes2, updated_at = :updated_at2'
         );
 
@@ -64,6 +65,7 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'length_cm' => $vehicle->lengthCm,
             'gross_weight_kg' => $vehicle->grossWeightKg,
             'passenger_seats' => $vehicle->passengerSeats,
+            'cost_per_km' => $vehicle->costPerKm,
             'notes' => $vehicle->notes,
             'created_at' => $vehicle->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $vehicle->updatedAt->format('Y-m-d H:i:s'),
@@ -86,6 +88,7 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'length_cm2' => $vehicle->lengthCm,
             'gross_weight_kg2' => $vehicle->grossWeightKg,
             'passenger_seats2' => $vehicle->passengerSeats,
+            'cost_per_km2' => $vehicle->costPerKm,
             'notes2' => $vehicle->notes,
             'updated_at2' => $vehicle->updatedAt->format('Y-m-d H:i:s'),
         ]);
@@ -212,6 +215,7 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             lengthCm: $row['length_cm'] ?? null,
             grossWeightKg: $row['gross_weight_kg'] ?? null,
             passengerSeats: isset($row['passenger_seats']) ? (int) $row['passenger_seats'] : null,
+            costPerKm: $row['cost_per_km'] ?? null,
         );
     }
 }

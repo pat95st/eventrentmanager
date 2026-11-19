@@ -1,164 +1,166 @@
-# Abspielgerät-Schnittstelle (Raspberry Pi am Mischpult)
+# Player Device Interface (Raspberry Pi at the Mixing Desk)
 
-Stand: Migration 135 „Veranstaltungs-Audio“, Kopplung per Code seit Migration 141. Diese Beschreibung ist die Vorlage für die Pi-Software. Die Pi-Software wird separat entwickelt.
+Status: migration 135 "Veranstaltungs-Audio" (event audio), pairing by code since migration 141. This description is the specification for the Pi software, which is developed separately.
 
-## Ablauf
+The web interface is German; UI labels are quoted in German with an English translation.
 
-1. Gerät anlegen und der Veranstaltung zuordnen – zwei Wege:
-   - **Per Code (empfohlen, Migration 141):** In der Veranstaltung unter **Audio & Durchsagen › Abspielgerät per Code koppeln** einen 6-stelligen Code erzeugen. Am Pi die Adresse der Verwaltung und den Code eingeben. Der Pi ruft `POST /api/player/v1/pair` auf, erhält seinen Geräte-Token und ist sofort der Veranstaltung zugeordnet.
-   - **Manuell:** Unter **Einstellungen › Veranstaltungs-Audio** ein Abspielgerät anlegen. Der Geräte-Token (`mvp_…`) wird **nur einmal** angezeigt und muss auf dem Pi hinterlegt werden.
-2. Bei manueller Anlage: In der Veranstaltung unter **Audio & Durchsagen** das Gerät zuordnen.
-3. Der Pi fragt alle `poll_interval_seconds` (derzeit 2 s) `GET /api/player/v1/state` ab:
-   - Jede Abfrage zählt als Lebenszeichen. Nach 45 s ohne Abfrage gilt das Gerät als offline.
-   - Die Antwort enthält die aktive Veranstaltung, alle Audio-Dateien (Manifest), den Gong, die Sprachausgabe-Einstellungen und die Warteschlange.
-4. Der Pi hält die Dateien lokal vor:
-   - Er lädt neue oder geänderte Dateien herunter, erkennbar am Feld `version`.
-   - Dateien, die nicht mehr im Manifest stehen, löscht er.
-   - So funktioniert das Abspielen auch bei wackeligem Netz sofort.
-5. Die Aufträge aus `queue` arbeitet der Pi **der Reihe nach** ab (älteste zuerst):
-   - Zu Beginn meldet er `playing`, danach `done` bzw. `failed`.
-   - Ein Auftrag `stop` beendet sofort die laufende Wiedergabe.
-6. **Geplante Einspieler** (Migration 136): Erreicht ein geplanter Einspieler seine Startzeit, legt der Server bei der nächsten Abfrage von `state` automatisch einen normalen Auftrag (`jingle`/`audio`) in `queue` an. Der Pi muss dafür nichts Besonderes tun. Zur Information, etwa für eine Anzeige, liefert `state` die kommenden Einspieler zusätzlich in `scheduled`.
-7. Aufträge, die länger als „Aufträge verfallen nach (Min.)“ (Standard 10) nicht abgeholt wurden, bricht der Server selbst ab. So wird nichts Veraltetes nachgespielt, wenn das Gerät wieder online kommt.
+## Flow
 
-Die **aktive Veranstaltung** eines Geräts ist die zugeordnete Veranstaltung, die heute läuft. Als Fenster gilt der Zeitraum vom Vortag des Beginns bis zum Tag nach dem Ende. Bei Überschneidung zählt die früher beginnende Veranstaltung.
+1. Create the device and assign it to the event – two ways:
+   - **By code (recommended, migration 141):** In the event, generate a 6-digit code under **Audio & Durchsagen › Abspielgerät per Code koppeln** (audio & announcements › pair player device by code). Enter the address of the web application and the code on the Pi. The Pi calls `POST /api/player/v1/pair`, receives its device token and is immediately assigned to the event.
+   - **Manually:** Create a player device under **Einstellungen › Veranstaltungs-Audio** (settings › event audio). The device token (`mvp_…`) is shown **only once** and must be stored on the Pi.
+2. If created manually: assign the device in the event under **Audio & Durchsagen**.
+3. The Pi polls `GET /api/player/v1/state` every `poll_interval_seconds` (currently 2 s):
+   - Every poll counts as a heartbeat. After 45 s without a poll the device is considered offline.
+   - The response contains the active event, all audio files (manifest), the gong, the text-to-speech settings and the queue.
+4. The Pi keeps the files locally:
+   - It downloads new or changed files, recognizable by the field `version`.
+   - It deletes files that are no longer in the manifest.
+   - This way playback starts immediately even on a flaky network.
+5. The Pi processes the jobs in `queue` **in order** (oldest first):
+   - At the start it reports `playing`, afterwards `done` or `failed`.
+   - A `stop` job immediately ends the current playback.
+6. **Scheduled playback cues** (migration 136): when a scheduled cue reaches its start time, the server automatically adds a normal job (`jingle`/`audio`) to `queue` on the next `state` poll. The Pi does not need to do anything special for this. For information, e.g. for a display, `state` additionally lists the upcoming cues in `scheduled`.
+7. Jobs that have not been picked up for longer than „Aufträge verfallen nach (Min.)“ (jobs expire after (min.), default 10) are cancelled by the server itself. This prevents outdated content from being played when the device comes back online.
 
-## Authentifizierung
+The **active event** of a device is the assigned event that is running today. The window is the period from the day before the start until the day after the end. If events overlap, the one that starts earlier wins.
 
-Jede Anfrage sendet den Header `Authorization: Bearer <Geräte-Token>`. Bei ungültigem oder deaktiviertem Token antwortet der Server mit `401` und `{"error": "…"}`.
+## Authentication
 
-Es gibt weder CSRF-Schutz noch Cookies. Alle Pfade sind relativ zur Basis-URL der Verwaltung, z. B. `https://verleih.example.de`.
+Every request sends the header `Authorization: Bearer <device token>`. If the token is invalid or deactivated, the server responds with `401` and `{"error": "…"}`.
 
-## Endpunkte
+There is neither CSRF protection nor cookies. All paths are relative to the base URL of the web application, e.g. `https://verleih.example.de`.
 
-### `POST /api/player/v1/pair` (Migration 141)
+## Endpoints
 
-Koppelt ein Gerät per 6-stelligem Code an eine Veranstaltung. Der Endpunkt braucht **keinen** Bearer-Token.
+### `POST /api/player/v1/pair` (migration 141)
+
+Pairs a device with an event using a 6-digit code. The endpoint requires **no** bearer token.
 
 ```json
-{ "code": "123456", "name": "Pi Mischpult", "version": "1.0.0" }
+{ "code": "123456", "name": "Pi mixing desk", "version": "1.0.0" }
 ```
 
-- `code`: Pflicht. Leerzeichen und Bindestriche werden ignoriert (`123 456`).
-- `name`: optional, Gerätename in der Verwaltung (Standard „AutoEventPlay“).
-- Sendet das Gerät zusätzlich `Authorization: Bearer <vorhandener Token>` mit und ist dieser gültig, wird das **vorhandene** Gerät der neuen Veranstaltung zugeordnet. Es behält seinen Token, die Antwort enthält dann `"token": null`.
-- Sonst legt der Server ein neues Gerät an und liefert den Token **einmalig** in `token`.
+- `code`: required. Spaces and hyphens are ignored (`123 456`).
+- `name`: optional, device name in the web application (default "AutoEventPlay").
+- If the device additionally sends `Authorization: Bearer <existing token>` and that token is valid, the **existing** device is assigned to the new event. It keeps its token, and the response then contains `"token": null`.
+- Otherwise the server creates a new device and returns the token **once** in `token`.
 
-Antwort bei Erfolg:
+Response on success:
 
 ```json
 {
   "ok": true,
   "token": "mvp_…",
-  "player": { "id": "…", "name": "Pi Mischpult" },
-  "rental": { "id": "…", "name": "Stadtfest", "location": "Marktplatz", "start_date": "2026-11-09", "end_date": "2026-11-10" },
+  "player": { "id": "…", "name": "Pi mixing desk" },
+  "rental": { "id": "…", "name": "City festival", "location": "Market square", "start_date": "2026-11-09", "end_date": "2026-11-10" },
   "poll_interval_seconds": 2
 }
 ```
 
-Fehler:
-- `422` mit `{"error": "Der Code ist ungültig oder abgelaufen."}`.
-- `429`, wenn von derselben IP innerhalb von 15 Minuten 10 Fehlversuche kamen.
+Errors:
+- `422` with `{"error": "Der Code ist ungültig oder abgelaufen."}` (error messages are German).
+- `429` if 10 failed attempts came from the same IP address within 15 minutes.
 
-Ein Code ist 15 Minuten und nur einmal gültig. Ein neu erzeugter Code macht den vorherigen Code derselben Veranstaltung ungültig.
+A code is valid for 15 minutes and for one use only. Generating a new code invalidates the previous code of the same event.
 
-### `GET /api/player/v1/state?version=<pi-software-version>&playing=<was-gerade-läuft>`
+### `GET /api/player/v1/state?version=<pi-software-version>&playing=<what-is-playing>`
 
-Beide Parameter sind optional:
-- `version` wird in der Geräteübersicht angezeigt.
-- `playing` ist ein Klartext wie „Opener“ oder „Durchsage“. Er erscheint in der Live-Oberfläche als „spielt gerade“. Leer bedeutet: nichts läuft.
+Both parameters are optional:
+- `version` is shown in the device overview.
+- `playing` is plain text such as "Opener" or "Announcement". It appears in the live interface as "currently playing". Empty means: nothing is playing.
 
 ```json
 {
   "server_time": "2026-11-09T21:13:56+01:00",
   "poll_interval_seconds": 2,
-  "player": { "id": "…", "name": "Pi Mischpult" },
+  "player": { "id": "…", "name": "Pi mixing desk" },
   "tts": { "language": "de-DE", "voice": "de_DE-thorsten-high", "rate": 1.0 },
   "gong": { "url": "/api/player/v1/gong", "version": "gong-1a2b3c4d.mp3", "mime": "audio/mpeg" },
   "rental": {
-    "id": "…", "name": "Stadtfest", "location": "Marktplatz",
+    "id": "…", "name": "City festival", "location": "Market square",
     "start_date": "2026-11-09", "end_date": "2026-11-10", "gong_by_default": true,
     "tts_languages": ["de-DE", "en-GB"]
   },
   "files": [
-    { "id": "…", "kind": "jingle", "title": "Opener", "description": "Vor Programmstart",
+    { "id": "…", "kind": "jingle", "title": "Opener", "description": "Before the show starts",
       "filename": "opener.mp3", "mime": "audio/mpeg", "size": 123456,
       "version": "<id>.mp3", "url": "/api/player/v1/files/<id>" }
   ],
   "minute_programs": [
-    { "id": "…", "name": "Siegerehrung", "start_at": "2026-11-09T18:35:00+01:00",
+    { "id": "…", "name": "Award ceremony", "start_at": "2026-11-09T18:35:00+01:00",
       "jingle_before": true, "jingle_file_id": "<id>" }
   ],
   "scheduled": [
-    { "id": "…", "file_id": "<id>", "play_at": "2026-11-09T19:00:00+01:00", "note": "Einlass",
+    { "id": "…", "file_id": "<id>", "play_at": "2026-11-09T19:00:00+01:00", "note": "Doors open",
       "repeat_interval_minutes": 10, "repeat_until": "2026-11-09T22:00:00+01:00", "repeat_max": null, "repeat_count": 3 }
   ],
   "queue": [
-    { "id": "…", "kind": "tts", "label": "Die Siegerehrung…", "file_id": null, "file_url": null,
-      "text": "Die Siegerehrung beginnt in fünf Minuten.", "language": "de-DE", "recording_url": null, "recording_mime": null,
-      "with_gong": true, "requested_by": "Veranstalter", "created_at": "…",
+    { "id": "…", "kind": "tts", "label": "The award ceremony…", "file_id": null, "file_url": null,
+      "text": "The award ceremony starts in five minutes.", "language": "en-GB", "recording_url": null, "recording_mime": null,
+      "with_gong": true, "requested_by": "Organizer", "created_at": "…",
       "status_url": "/api/player/v1/requests/<id>/status" }
   ]
 }
 ```
 
-Hinweise zu den Feldern:
-- `gong` ist `null`, wenn kein eigener Gong hinterlegt ist. Dann spielt der Pi seinen **eingebauten** Gong.
-- `rental` ist `null`, wenn das Gerät gerade keiner laufenden Veranstaltung zugeordnet ist. `files`, `minute_programs` und `queue` sind dann leer.
-- `queue[].language` (Migration 138) ist die Sprache der Durchsage als BCP-47-Code, z. B. `en-GB`. Sie ist immer gesetzt: feste Sprache der Veranstaltung, sonst die in der Live-Oberfläche gewählte, sonst `tts.language`. Passt `tts.voice` nicht zur Sprache, soll der Pi eine passende Stimme für `language` wählen. `rental.tts_languages` (Migration 140) listet nur zur Information die festen Sprachen der Veranstaltung. Bei mehreren Sprachen kommen mehrsprachige Durchsagen als einzelne `tts`-Aufträge direkt hintereinander, einer je Sprache. Nur der erste hat `with_gong`; der Pi spielt sie einfach der Reihe nach.
-- `tts.voice` ist ein freier, gerätespezifischer Name, z. B. eine Piper-Stimme. Er kann `null` sein. `tts.rate` liegt zwischen 0,5 und 2,0.
-- Zyklische Einspieler (Migration 139) erscheinen in `scheduled` als ein Eintrag mit `repeat_*`. `play_at` ist dabei immer der nächste Termin. Ausgelöst wird jede Wiederholung wie gewohnt als normaler Auftrag in `queue`.
-- `scheduled` listet nur die noch nicht ausgelösten Einspieler, sortiert nach Zeit. Ist eine Startzeit länger als die Verfallszeit vorbei, ohne dass das Gerät `state` abgefragt hat, markiert der Server den Einspieler als „verpasst“. Er wird dann nicht nachgespielt.
-- `minute_programs[].start_at` enthält bereits die live gepflegte Verzögerung. Die Liste ist informativ, z. B. für eine Anzeige oder optionales automatisches Abspielen. Die Live-Oberfläche erzeugt für „Jingle zum Programmpunkt“ normale `jingle`-Aufträge.
+Notes on the fields:
+- `gong` is `null` if no custom gong has been uploaded. The Pi then plays its **built-in** gong.
+- `rental` is `null` if the device is currently not assigned to a running event. `files`, `minute_programs` and `queue` are empty in that case.
+- `queue[].language` (migration 138) is the language of the announcement as a BCP 47 code, e.g. `en-GB`. It is always set: the fixed language of the event, otherwise the one selected in the live interface, otherwise `tts.language`. If `tts.voice` does not match the language, the Pi should pick a suitable voice for `language`. `rental.tts_languages` (migration 140) lists the fixed languages of the event for information only. With several languages, multilingual announcements arrive as individual `tts` jobs directly one after another, one per language. Only the first has `with_gong`; the Pi simply plays them in order.
+- `tts.voice` is a free, device-specific name, e.g. a Piper voice. It may be `null`. `tts.rate` is between 0.5 and 2.0.
+- Recurring playback cues (migration 139) appear in `scheduled` as one entry with `repeat_*`. `play_at` is always the next date. Each repetition is triggered as a normal job in `queue`, as usual.
+- `scheduled` lists only cues that have not been triggered yet, sorted by time. If a start time passed longer ago than the expiry time without the device polling `state`, the server marks the cue as "missed". It is then not played afterwards.
+- `minute_programs[].start_at` already includes the delay maintained live. The list is informational, e.g. for a display or optional automatic playback. For „Jingle zum Programmpunkt“ (jingle for program item), the live interface creates normal `jingle` jobs.
 
-### Auftragsarten (`queue[].kind`)
+### Job types (`queue[].kind`)
 
-| kind        | Inhalt                                    | Abspielen                                                        |
+| kind        | Content                                   | Playback                                                         |
 |-------------|-------------------------------------------|------------------------------------------------------------------|
-| `jingle`    | `file_id`/`file_url`                      | Datei abspielen (aus dem lokalen Cache)                          |
-| `audio`     | `file_id`/`file_url`                      | Datei abspielen                                                  |
-| `tts`       | `text`, `language`                        | ggf. Gong → Text per Sprachausgabe in `language` sprechen (Stimme/Tempo aus `tts.*`) |
-| `recording` | `recording_url`, `recording_mime`         | ggf. Gong → Aufnahme abspielen                                   |
-| `stop`      | –                                         | laufende Wiedergabe sofort beenden, dann `done` melden           |
+| `jingle`    | `file_id`/`file_url`                      | Play the file (from the local cache)                             |
+| `audio`     | `file_id`/`file_url`                      | Play the file                                                    |
+| `tts`       | `text`, `language`                        | Gong if applicable → speak the text via text-to-speech in `language` (voice/rate from `tts.*`) |
+| `recording` | `recording_url`, `recording_mime`         | Gong if applicable → play the recording                          |
+| `stop`      | –                                         | Stop the current playback immediately, then report `done`        |
 
-Zu den Formaten:
-- `with_gong` ist nur bei `tts` und `recording` gesetzt.
-- Hochgeladene Dateien sind WAV, FLAC, AAC/M4A oder MP3.
-- Mikrofon-Aufnahmen kommen je nach Browser als `audio/webm` (Opus), `audio/mp4` (AAC, iOS) oder `audio/ogg`. Zum Abspielen empfiehlt sich z. B. `ffmpeg`/`ffplay` oder `mpv`.
+About the formats:
+- `with_gong` is only set for `tts` and `recording`.
+- Uploaded files are WAV, FLAC, AAC/M4A or MP3.
+- Depending on the browser, microphone recordings arrive as `audio/webm` (Opus), `audio/mp4` (AAC, iOS) or `audio/ogg`. For playback, e.g. `ffmpeg`/`ffplay` or `mpv` are recommended.
 
 ### `POST /api/player/v1/requests/{id}/status`
 
-Der Body ist JSON (`Content-Type: application/json`) oder ein Formular:
+The body is JSON (`Content-Type: application/json`) or a form:
 
 ```json
 { "status": "playing" }
 { "status": "done" }
-{ "status": "failed", "error": "Datei nicht abspielbar" }
+{ "status": "failed", "error": "File not playable" }
 ```
 
-- Erlaubte Werte: `playing`, `done`, `failed`, `cancelled`.
-- Antwort bei Erfolg: `{"ok": true}`.
-- `404`, wenn der Auftrag nicht zur Veranstaltung dieses Geräts gehört. `422` bei ungültigem Status.
+- Allowed values: `playing`, `done`, `failed`, `cancelled`.
+- Response on success: `{"ok": true}`.
+- `404` if the job does not belong to this device's event. `422` for an invalid status.
 
 ### `GET /api/player/v1/files/{id}`
 
-Liefert die Audio-Datei. Range-Anfragen werden unterstützt. Abrufbar sind nur Dateien von Veranstaltungen, die diesem Gerät zugeordnet sind.
+Returns the audio file. Range requests are supported. Only files of events assigned to this device can be retrieved.
 
 ### `GET /api/player/v1/requests/{id}/recording`
 
-Liefert die Mikrofon-Aufnahme eines Auftrags.
+Returns the microphone recording of a job.
 
 ### `GET /api/player/v1/gong`
 
-Liefert den eigenen Gong. Ist keiner hinterlegt, antwortet der Server mit `404`.
+Returns the custom gong. If none has been uploaded, the server responds with `404`.
 
-## Empfehlungen für die Pi-Software
+## Recommendations for the Pi software
 
-- **Lautstärke:** Lautstärke und Ausgabegerät legt der Pi lokal fest. Das Mischpult regelt den Pegel.
-- **Netzwerk:**
-  - Ausfälle tolerieren und mit Backoff erneut abfragen.
-  - Aufträge nicht doppelt abspielen: bereits bearbeitete IDs lokal merken.
-- **Wiedergabe:**
-  - Zwischen Gong und Durchsage etwa 300 ms Pause einhalten.
-  - Laufende Jingles bei einer neuen Durchsage nicht automatisch abbrechen. Abbrechen nur mit `stop`.
-- **Sprachausgabe:** Sie läuft offline, z. B. mit Piper. Bevorzugt die Stimme aus `tts.voice` nutzen, sonst eine deutsche Standardstimme.
+- **Volume:** The Pi sets volume and output device locally. The mixing desk controls the level.
+- **Network:**
+  - Tolerate outages and poll again with backoff.
+  - Do not play jobs twice: remember the IDs already processed locally.
+- **Playback:**
+  - Keep a pause of about 300 ms between the gong and the announcement.
+  - Do not automatically stop running jingles when a new announcement arrives. Stop only on `stop`.
+- **Text-to-speech:** It runs offline, e.g. with Piper. Prefer the voice from `tts.voice`, otherwise a default German voice.

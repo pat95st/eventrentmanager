@@ -4,7 +4,7 @@ parameters:
     name: id
     in: path
     required: true
-    description: ID (UUID) der Ressource.
+    description: ID (UUID) of the resource.
     schema:
       type: string
   ImageId:
@@ -16,21 +16,22 @@ parameters:
   Q:
     name: q
     in: query
-    description: 'Suchbegriff: Teilstring (ohne Groß-/Kleinschreibung) in allen Textfeldern der obersten Ebene.'
+    description: 'Search term: case-insensitive substring in all top-level text fields.'
     schema:
       type: string
   UpdatedSince:
     name: updated_since
     in: query
-    description: Nur Einträge mit `updated_at` ≥ diesem Zeitpunkt (ISO 8601), z. B. `2026-11-01T00:00:00+01:00`.
-      Für Ressourcen ohne `updated_at` → `400`.
+    description: Only entries with `updated_at` ≥ this point in time (ISO 8601), e.g.
+      `2026-11-01T00:00:00+01:00`. For resources without `updated_at` → `400`.
     schema:
       type: string
       format: date-time
   Sort:
     name: sort
     in: query
-    description: Sortierfeld (Feldname der obersten Ebene), absteigend mit vorangestelltem `-`, z. B. `-updated_at`.
+    description: Sort field (top-level field name), descending with a leading `-`,
+      e.g. `-updated_at`.
     schema:
       type: string
   Page:
@@ -52,22 +53,22 @@ parameters:
     name: from
     in: query
     required: true
-    description: Beginn (Y-m-d).
+    description: Start (Y-m-d).
     schema:
       type: string
       format: date
   To:
     name: to
     in: query
-    description: Ende (Y-m-d), Standard = `from`.
+    description: End (Y-m-d), default = `from`.
     schema:
       type: string
       format: date
 responses:
   NoContent:
-    description: Erfolgreich, keine Antwortdaten.
+    description: Success, no response body.
   Ok:
-    description: Erfolgreich.
+    description: Success.
     content:
       application/json:
         schema:
@@ -77,43 +78,44 @@ responses:
               type: boolean
               example: true
   BadRequest:
-    description: Ungültige Anfrage (z. B. kaputtes JSON oder unbekannter Filter).
+    description: Bad request (e.g. malformed JSON or unknown filter).
     content:
       application/json:
         schema:
           $ref: '#/schemas/Error'
   Unauthorized:
-    description: Kein, ein unbekanntes oder ein deaktiviertes Token.
+    description: No token, an unknown token or a deactivated token.
     content:
       application/json:
         schema:
           $ref: '#/schemas/Error'
   Forbidden:
-    description: Scope fehlt, Token ist „Nur lesen“ oder die IP-Adresse ist nicht freigegeben.
+    description: Scope missing, token is read only or the IP address is not allowed.
     content:
       application/json:
         schema:
           $ref: '#/schemas/Error'
   NotFound:
-    description: Nicht gefunden (oder API deaktiviert).
+    description: Not found (or API disabled).
     content:
       application/json:
         schema:
           $ref: '#/schemas/Error'
   Conflict:
-    description: Im aktuellen Zustand nicht möglich (z. B. festgeschriebene Rechnung ändern).
+    description: Not possible in the current state (e.g. updating a finalized invoice).
     content:
       application/json:
         schema:
           $ref: '#/schemas/Error'
   Unprocessable:
-    description: Validierungsfehler; `errors` nennt die Felder.
+    description: Validation error; `errors` names the fields.
     content:
       application/json:
         schema:
           $ref: '#/schemas/ValidationError'
   TooManyRequests:
-    description: Ratenbegrenzung überschritten. `Retry-After` nennt die Sekunden bis zur nächsten Minute.
+    description: Rate limit exceeded. `Retry-After` gives the seconds until the next
+      minute.
     headers:
       Retry-After:
         schema:
@@ -123,20 +125,20 @@ responses:
         schema:
           $ref: '#/schemas/Error'
   MailFailed:
-    description: Der E-Mail-Versand ist fehlgeschlagen (SMTP).
+    description: Sending the e-mail failed (SMTP).
     content:
       application/json:
         schema:
           $ref: '#/schemas/Error'
   Pdf:
-    description: PDF-Dokument.
+    description: PDF document.
     content:
       application/pdf:
         schema:
           type: string
           format: binary
   Xml:
-    description: E-Rechnung (XRechnung, UBL).
+    description: E-invoice (XRechnung, UBL).
     content:
       application/xml:
         schema:
@@ -214,8 +216,8 @@ schemas:
         example: true
   ContactRow:
     type: object
-    description: Ansprechpartner. Vorhandene behalten ihre `id`, wenn sie mitgeschickt wird; nicht mitgeschickte
-      werden entfernt.
+    description: Contacts. Existing contacts keep their `id` if it is sent; contacts
+      not sent are removed.
     required:
     - name
     properties:
@@ -256,7 +258,7 @@ schemas:
         type: string
       alternative_ids:
         type: string
-        description: Kommagetrennte Artikel-IDs gleichwertiger Alternativen.
+        description: Comma-separated article IDs of equivalent alternatives.
   SetItemRow:
     type: object
     required:
@@ -272,7 +274,8 @@ schemas:
         type: string
   SetRuleRow:
     type: object
-    description: 'Zeitregel: `type` jährlich (Beginn/Ende als `TT.MM.`) oder fester Zeitraum (`Y-m-d`).'
+    description: 'Time rule: `type` yearly (start/end as `DD.MM.`) or fixed period
+      (`Y-m-d`).'
     properties:
       type:
         type: string
@@ -303,7 +306,7 @@ schemas:
           $ref: '#/schemas/SetItemRow'
   DocumentItemRow:
     type: object
-    description: Mietposition.
+    description: Rental item.
     required:
     - article_id
     - quantity
@@ -317,7 +320,7 @@ schemas:
         type: string
       unit_price:
         type: string
-        description: Preis pro Tag, Dezimalpunkt.
+        description: Price per day, decimal point.
       line_note:
         type: string
       sort_order:
@@ -327,10 +330,10 @@ schemas:
         enum:
         - '1'
         - '0'
-        description: 'Nur Rechnungen: Mietposition (1) oder Verkauf/Pauschale (0).'
+        description: 'Invoices only: rental item (1) or sale/flat rate (0).'
   LaborItemRow:
     type: object
-    description: Arbeitszeit-Position.
+    description: Labor time item.
     required:
     - labor_article_id
     - hours
@@ -342,10 +345,10 @@ schemas:
         readOnly: true
       labor_user_id:
         type: string
-        description: Mitarbeiter (optional).
+        description: Employee (optional).
       hours:
         type: string
-        description: Stunden bzw. Tage (siehe `labor_billing_unit`).
+        description: Hours or days (see `labor_billing_unit`).
       labor_billing_unit:
         type: string
         enum:
@@ -353,7 +356,7 @@ schemas:
         - day
   SaleItemRow:
     type: object
-    description: Verkaufsposition (nur Angebote).
+    description: Sale item (offers only).
     required:
     - article_id
     - source
@@ -368,7 +371,7 @@ schemas:
         enum:
         - inventory_number
         - stock
-        description: Konkretes Exemplar aus dem Vermietpool oder Verkaufsbestand.
+        description: Specific unit from the rental pool or sales stock.
       inventory_number_id:
         type: string
       quantity:
@@ -396,7 +399,7 @@ schemas:
         type: string
   SectionTextRow:
     type: object
-    description: Zwischenüberschrift.
+    description: Section heading.
     required:
     - heading
     properties:
@@ -438,16 +441,16 @@ schemas:
     allOf:
     - $ref: generated.yaml#/Article
     - type: object
-      description: Felder der ersten API-Version bleiben erhalten.
+      description: Fields of the first API version are retained.
       properties:
         manufacturer:
           type: string
           nullable: true
-          description: Name des Herstellers
+          description: Name of the manufacturer
         category:
           type: string
           nullable: true
-          description: Name der Kategorie
+          description: Name of the category
         weight:
           type: object
           nullable: true
@@ -473,7 +476,7 @@ schemas:
         stock_count:
           type: integer
           nullable: true
-          description: 'Nur in Listen: Verkaufsbestand.'
+          description: 'Lists only: sales stock.'
   InventoryNumberEntry:
     allOf:
     - $ref: generated.yaml#/InventoryNumber
@@ -513,7 +516,8 @@ schemas:
             $ref: '#/schemas/BundleComponentRow'
   Availability:
     type: object
-    description: Verfügbarkeit = Anzahl aktiver Inventarnummern minus eingeplante Menge je Tag.
+    description: Availability = number of active inventory numbers minus the quantity
+      scheduled per day.
     properties:
       article_id:
         type: string
@@ -525,10 +529,10 @@ schemas:
         format: date
       total:
         type: integer
-        description: Aktive Inventarnummern.
+        description: Active inventory numbers.
       available:
         type: integer
-        description: Mindestens verfügbar über den ganzen Zeitraum.
+        description: Minimum available over the whole period.
       days:
         type: array
         items:
@@ -809,7 +813,7 @@ schemas:
       properties:
         amount:
           type: number
-          description: Betrag in Euro (Einnahme positiv).
+          description: Amount in euros (income positive).
         balance_after:
           type: number
           nullable: true

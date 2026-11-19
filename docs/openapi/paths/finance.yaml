@@ -2,8 +2,8 @@
 /api/v1/receipts:
   get:
     tags:
-    - Finanzen
-    summary: Belege auflisten
+    - Finance
+    summary: List receipts
     description: |
       **Scopes:** `finance:read`
     operationId: FinanceReceipts
@@ -23,7 +23,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -48,10 +48,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Finanzen
-    summary: Beleg anlegen
+    - Finance
+    summary: Create receipt
     description: |
-      `multipart/form-data`: die Felder unten plus die Datei (PDF/JPG/PNG) im Feld `file`.
+      `multipart/form-data`: the fields below plus the file (PDF/JPG/PNG) in the field `file`.
 
       **Scopes:** `finance:write`
     operationId: FinanceStoreReceipt
@@ -73,7 +73,7 @@
                   format: binary
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -94,8 +94,8 @@
 /api/v1/receipts/{id}:
   get:
     tags:
-    - Finanzen
-    summary: Beleg abrufen
+    - Finance
+    summary: Get receipt
     description: |
       **Scopes:** `finance:read`
     operationId: FinanceReceipt
@@ -107,7 +107,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -127,10 +127,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Finanzen
-    summary: Beleg ändern
+    - Finance
+    summary: Update receipt
     description: |
-      `PATCH` mit JSON (nur gesendete Felder) oder `POST` als `multipart/form-data`, um zusätzlich die Datei (`file`) zu ersetzen.
+      `PATCH` with JSON (only the fields sent) or `POST` as `multipart/form-data` to also replace the file (`file`).
 
       **Scopes:** `finance:write`
     operationId: FinanceUpdateReceipt
@@ -148,7 +148,7 @@
             $ref: ../components/generated.yaml#/ReceiptPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -170,10 +170,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Finanzen
-    summary: Beleg ändern
+    - Finance
+    summary: Update receipt
     description: |
-      `PATCH` mit JSON (nur gesendete Felder) oder `POST` als `multipart/form-data`, um zusätzlich die Datei (`file`) zu ersetzen.
+      `PATCH` with JSON (only the fields sent) or `POST` as `multipart/form-data` to also replace the file (`file`).
 
       **Scopes:** `finance:write`
     operationId: FinanceUpdateReceiptPost
@@ -197,7 +197,7 @@
                   format: binary
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -219,8 +219,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Finanzen
-    summary: Beleg löschen
+    - Finance
+    summary: Delete receipt
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceDestroyReceipt
@@ -246,8 +246,8 @@
 /api/v1/receipts/{id}/file:
   get:
     tags:
-    - Finanzen
-    summary: Belegdatei herunterladen
+    - Finance
+    summary: Download receipt file
     description: |
       **Scopes:** `finance:read`
     operationId: FinanceReceiptFile
@@ -259,7 +259,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Datei.
+        description: File.
         content:
           application/octet-stream:
             schema:
@@ -276,8 +276,8 @@
 /api/v1/receipts/{id}/mark-paid:
   post:
     tags:
-    - Finanzen
-    summary: Beleg als bezahlt markieren
+    - Finance
+    summary: Mark receipt as paid
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceMarkReceiptPaid
@@ -289,7 +289,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -314,8 +314,8 @@
 /api/v1/receipts/{id}/mark-open:
   post:
     tags:
-    - Finanzen
-    summary: Beleg als offen markieren
+    - Finance
+    summary: Mark receipt as open
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceMarkReceiptOpen
@@ -327,7 +327,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -352,8 +352,8 @@
 /api/v1/bank-accounts:
   get:
     tags:
-    - Finanzen
-    summary: Bankkonten auflisten
+    - Finance
+    summary: List bank accounts
     description: |
       **Scopes:** `finance:read`
     operationId: FinanceBankAccounts
@@ -369,7 +369,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -395,8 +395,8 @@
 /api/v1/bank-accounts/{id}/ledger:
   get:
     tags:
-    - Finanzen
-    summary: Kontobuchungen eines Zeitraums
+    - Finance
+    summary: Account transactions of a period
     description: |
       **Scopes:** `finance:read`
     operationId: FinanceLedger
@@ -417,13 +417,13 @@
         default: jahr
     - name: date
       in: query
-      description: Stichtag im gewünschten Zeitraum (Y-m-d), Standard heute.
+      description: Reference date within the desired period (Y-m-d), default today.
       schema:
         type: string
         format: date
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -448,8 +448,8 @@
 /api/v1/purchase-orders:
   get:
     tags:
-    - Finanzen
-    summary: Bestellungen auflisten
+    - Finance
+    summary: List purchase orders
     description: |
       **Scopes:** `finance:read`
     operationId: FinancePurchaseOrders
@@ -465,7 +465,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -490,8 +490,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Finanzen
-    summary: Bestellung anlegen
+    - Finance
+    summary: Create purchase order
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceStorePurchaseOrder
@@ -507,7 +507,7 @@
             $ref: ../components/generated.yaml#/PurchaseOrderInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -528,8 +528,8 @@
 /api/v1/purchase-orders/{id}:
   get:
     tags:
-    - Finanzen
-    summary: Bestellung abrufen
+    - Finance
+    summary: Get purchase order
     description: |
       **Scopes:** `finance:read`
     operationId: FinancePurchaseOrder
@@ -541,7 +541,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -561,10 +561,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Finanzen
-    summary: Bestellung ändern
+    - Finance
+    summary: Update purchase order
     description: |
-      Teilweise Änderung; ohne `items` bleiben die Positionen erhalten.
+      Partial update; without `items` the existing items are kept.
 
       **Scopes:** `finance:write`
     operationId: FinanceUpdatePurchaseOrder
@@ -582,7 +582,7 @@
             $ref: ../components/generated.yaml#/PurchaseOrderPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -606,8 +606,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Finanzen
-    summary: Bestellung löschen
+    - Finance
+    summary: Delete purchase order
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceDestroyPurchaseOrder
@@ -633,8 +633,8 @@
 /api/v1/purchase-orders/{id}/mark-ordered:
   post:
     tags:
-    - Finanzen
-    summary: Als bestellt markieren
+    - Finance
+    summary: Mark as ordered
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceMarkPurchaseOrderOrdered
@@ -646,7 +646,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -671,8 +671,8 @@
 /api/v1/purchase-orders/{id}/cancel:
   post:
     tags:
-    - Finanzen
-    summary: Bestellung stornieren
+    - Finance
+    summary: Cancel purchase order
     description: |
       **Scopes:** `finance:write`
     operationId: FinanceCancelPurchaseOrder
@@ -684,7 +684,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -709,10 +709,10 @@
 /api/v1/purchase-order-items/{id}/receive:
   post:
     tags:
-    - Finanzen
-    summary: Wareneingang buchen
+    - Finance
+    summary: Book goods receipt
     description: |
-      Bucht die gelieferte Menge einer Bestellposition (Vermietpool: neue Inventarnummern, Verkaufsbestand: Lagerzugang).
+      Books the delivered quantity of a purchase order item (rental pool: new inventory numbers, sales stock: stock receipt).
 
       **Scopes:** `finance:write`
     operationId: FinanceReceivePurchaseOrderItem

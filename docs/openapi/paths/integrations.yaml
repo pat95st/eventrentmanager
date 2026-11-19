@@ -2,22 +2,22 @@
 /api/federation/v1/invitations/{code}:
   get:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationInvitation
     security: []
-    summary: Einladung prüfen
-    description: Liefert Name, Basis-URL und Anschrift der einladenden Instanz.
+    summary: Check invitation
+    description: Returns the name, base URL and address of the inviting instance.
     parameters:
     - $ref: ../components/legacy.yaml#/parameters/InvitationCode
     responses:
       '200':
-        description: Einladende Instanz.
+        description: Inviting instance.
         content:
           application/json:
             schema:
               $ref: ../components/legacy.yaml#/schemas/FederationSelf
       '404':
-        description: Link ungültig, abgelaufen (7 Tage) oder bereits verwendet.
+        description: Link invalid, expired (7 days) or already used.
         content:
           application/json:
             schema:
@@ -25,17 +25,14 @@
 /api/federation/v1/invitations/{code}/accept:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationAcceptInvitation
     security: []
-    summary: Einladung annehmen
-    description: 'Die eingeladene Instanz nimmt an. `token` ist der Token, mit dem die einladende Instanz
-
-      künftig den Absender aufruft; die Antwort enthält umgekehrt den Token für den Absender.
-
-      Die Partnerschaft steht danach auf `pending_confirmation` bei der einladenden Instanz.
-
-      '
+    summary: Accept invitation
+    description: |
+      The invited instance accepts. `token` is the token the inviting instance will use to call
+      the sender in the future; in turn, the response contains the token for the sender.
+      Afterwards the partnership is in state `pending_confirmation` at the inviting instance.
     parameters:
     - $ref: ../components/legacy.yaml#/parameters/InvitationCode
     requestBody:
@@ -72,7 +69,7 @@
                 example: 10
     responses:
       '200':
-        description: Angenommen.
+        description: Accepted.
         content:
           application/json:
             schema:
@@ -82,11 +79,11 @@
                 properties:
                   token:
                     type: string
-                    description: Token für künftige Aufrufe des Absenders.
+                    description: Token for future calls to the sender.
       '404':
         $ref: ../components/legacy.yaml#/responses/Error
       '409':
-        description: Es besteht bereits eine Partnerschaft mit dieser Instanz.
+        description: A partnership with this instance already exists.
         content:
           application/json:
             schema:
@@ -96,10 +93,10 @@
 /api/federation/v1/partnership:
   get:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationPartnership
-    summary: Status der Partnerschaft
-    description: Auch als Verbindungstest nutzbar.
+    summary: Partnership status
+    description: Can also be used as a connection test.
     security:
     - federationToken: []
     responses:
@@ -112,10 +109,10 @@
 /api/federation/v1/partnership/confirm:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationConfirm
-    summary: Partnerschaft bestätigen oder ablehnen
-    description: Nur wenn die Partnerschaft auf `awaiting_partner` steht.
+    summary: Confirm or decline partnership
+    description: Only while the partnership is in state `awaiting_partner`.
     security:
     - federationToken: []
     requestBody:
@@ -134,7 +131,7 @@
                 $ref: ../components/legacy.yaml#/schemas/DiscountAction
     responses:
       '200':
-        description: Bei `accept` der neue Partnerschaftsstand, bei `decline` nur `status`.
+        description: For `accept` the new partnership state, for `decline` only `status`.
         content:
           application/json:
             schema:
@@ -152,10 +149,10 @@
 /api/federation/v1/partnership/discount:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationDiscount
-    summary: Rabatt vorschlagen, annehmen oder ablehnen
-    description: Bis zur Zustimmung gilt der bisher vereinbarte Rabatt.
+    summary: Propose, accept or decline a discount
+    description: Until agreed, the previously agreed discount applies.
     security:
     - federationToken: []
     requestBody:
@@ -178,15 +175,15 @@
 /api/federation/v1/partnership/end:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationEnd
-    summary: Partnerschaft beenden
-    description: Danach antworten alle Endpunkte mit `403`.
+    summary: End partnership
+    description: Afterwards all endpoints respond with `403`.
     security:
     - federationToken: []
     responses:
       '200':
-        description: Beendet.
+        description: Ended.
         content:
           application/json:
             schema:
@@ -198,22 +195,22 @@
 /api/federation/v1/articles:
   get:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationArticles
-    summary: Materialpool des Partners
-    description: Vermietbare Artikel mit Verfügbarkeit im Zeitraum, 25 je Seite.
+    summary: Partner's material pool
+    description: Rentable articles with availability in the period, 25 per page.
     security:
     - federationToken: []
     parameters:
     - name: from
       in: query
-      description: Beginn (Standard heute).
+      description: Start (default today).
       schema:
         type: string
         format: date
     - name: to
       in: query
-      description: Ende (Standard = `from`).
+      description: End (default = `from`).
       schema:
         type: string
         format: date
@@ -230,7 +227,7 @@
         default: 1
     responses:
       '200':
-        description: Artikel.
+        description: Articles.
         content:
           application/json:
             schema:
@@ -267,15 +264,15 @@
 /api/federation/v1/technicians:
   get:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationTechnicians
-    summary: Techniker und Gewerke des Partners
-    description: Geteilt werden nur Namen, keine E-Mail-Adressen.
+    summary: Partner's technicians and trades
+    description: Only names are shared, no e-mail addresses.
     security:
     - federationToken: []
     responses:
       '200':
-        description: Techniker.
+        description: Technicians.
         content:
           application/json:
             schema:
@@ -306,14 +303,12 @@
 /api/federation/v1/requests:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationCreateRequest
-    summary: Material- oder Techniker-Anfrage stellen
-    description: 'Wiederholtes Senden derselben `reference` liefert den bestehenden Stand. Bei Material und
-
-      aktivem „automatisch zusagen“ wird die Anfrage sofort zugesagt, sofern alles verfügbar ist.
-
-      '
+    summary: Submit a material or technician request
+    description: |
+      Sending the same `reference` again returns the existing state. For material requests with
+      "confirm automatically" enabled, the request is confirmed immediately if everything is available.
     security:
     - federationToken: []
     requestBody:
@@ -334,9 +329,9 @@
 /api/federation/v1/requests/{reference}:
   get:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationRequestStatus
-    summary: Stand einer Anfrage des Absenders
+    summary: State of a request made by the sender
     security:
     - federationToken: []
     parameters:
@@ -353,9 +348,9 @@
 /api/federation/v1/requests/{reference}/cancel:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationCancelRequest
-    summary: Anfrage stornieren
+    summary: Cancel request
     security:
     - federationToken: []
     parameters:
@@ -372,10 +367,11 @@
 /api/federation/v1/requests/{reference}/status:
   post:
     tags:
-    - Partner-Instanzen
+    - Partner instances
     operationId: federationReceiveStatus
-    summary: Entscheidung zu einer Anfrage melden
-    description: Der anbietende Partner meldet den neuen Stand einer Anfrage, die der Empfänger gestellt hat.
+    summary: Report a decision on a request
+    description: The providing partner reports the new state of a request made by
+      the recipient.
     security:
     - federationToken: []
     parameters:
@@ -419,17 +415,14 @@
 /api/payments/sumup/webhook:
   post:
     tags:
-    - Online-Zahlung
+    - Online payment
     operationId: sumUpWebhook
     security: []
-    summary: SumUp-Webhook
-    description: 'Benachrichtigung von SumUp über einen Checkout. Der Server ordnet die Checkout-ID der
-
-      zugehörigen Rechnung zu und bestätigt deren Online-Zahlung. Unbekannte Checkouts werden
-
-      ignoriert; die Antwort ist immer `{"ok": true}`.
-
-      '
+    summary: SumUp webhook
+    description: |
+      Notification from SumUp about a checkout. The server maps the checkout ID to the
+      corresponding invoice and confirms its online payment. Unknown checkouts are
+      ignored; the response is always `{"ok": true}`.
     requestBody:
       content:
         application/json:
@@ -439,7 +432,7 @@
               id:
                 type: string
                 maxLength: 100
-                description: Checkout-ID.
+                description: Checkout ID.
     responses:
       '200':
         $ref: ../components/legacy.yaml#/responses/Ok

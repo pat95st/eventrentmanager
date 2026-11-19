@@ -2,10 +2,10 @@
 /api/v1/rentals:
   get:
     tags:
-    - Veranstaltungen
-    summary: Veranstaltungen auflisten
+    - Events
+    summary: List events
     description: |
-      Ausgabe und Rücknahme (Unterschrift, Ausweis- und Zubehörprüfung) bleiben in der Weboberfläche.
+      Issuing and returning material (signature, ID and accessory checks) remain in the web interface.
 
       **Scopes:** `rentals:read`
     operationId: RentalsIndex
@@ -25,7 +25,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -50,8 +50,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Veranstaltungen
-    summary: Veranstaltung anlegen
+    - Events
+    summary: Create event
     description: |
       **Scopes:** `rentals:write`
     operationId: RentalsStore
@@ -67,7 +67,7 @@
             $ref: ../components/generated.yaml#/RentalInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -88,8 +88,8 @@
 /api/v1/rentals/{id}:
   get:
     tags:
-    - Veranstaltungen
-    summary: Veranstaltung abrufen
+    - Events
+    summary: Get event
     description: |
       **Scopes:** `rentals:read`
     operationId: RentalsShow
@@ -101,7 +101,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -121,10 +121,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Veranstaltungen
-    summary: Veranstaltung ändern
+    - Events
+    summary: Update event
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `rentals:write`
     operationId: RentalsUpdate
@@ -142,7 +142,7 @@
             $ref: ../components/generated.yaml#/RentalPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -164,8 +164,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Veranstaltungen
-    summary: Veranstaltung löschen
+    - Events
+    summary: Delete event
     description: |
       **Scopes:** `rentals:write`
     operationId: RentalsDestroy
@@ -191,8 +191,8 @@
 /api/v1/rentals/{id}/logistics:
   patch:
     tags:
-    - Veranstaltungen
-    summary: Abholung und Rückgabe ändern
+    - Events
+    summary: Update pickup and return
     description: |
       **Scopes:** `rentals:write`
     operationId: RentalsUpdateLogistics
@@ -210,7 +210,7 @@
             $ref: ../components/generated.yaml#/RentalLogisticsPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -233,10 +233,10 @@
 /api/v1/rentals/{id}/items:
   post:
     tags:
-    - Veranstaltungen
-    summary: Artikel einplanen
+    - Events
+    summary: Schedule article
     description: |
-      Bundles und Sets werden wie in der Oberfläche aufgelöst.
+      Bundles and sets are resolved as in the web interface.
 
       **Scopes:** `rentals:write`
     operationId: RentalsAddItem
@@ -254,7 +254,7 @@
             $ref: ../components/generated.yaml#/RentalItemInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -277,8 +277,8 @@
 /api/v1/rental-items/{id}:
   patch:
     tags:
-    - Veranstaltungen
-    summary: Menge einer Position ändern
+    - Events
+    summary: Change quantity of an item
     description: |
       **Scopes:** `rentals:write`
     operationId: RentalsUpdateItem
@@ -309,8 +309,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Veranstaltungen
-    summary: Position entfernen
+    - Events
+    summary: Remove item
     description: |
       **Scopes:** `rentals:write`
     operationId: RentalsDeleteItem
@@ -336,8 +336,8 @@
 /api/v1/rentals/{id}/technicians:
   get:
     tags:
-    - Veranstaltungen
-    summary: Techniker einer Veranstaltung
+    - Events
+    summary: Technicians of an event
     description: |
       **Scopes:** `rentals:read`
     operationId: RentalsTechnicians
@@ -349,7 +349,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -377,8 +377,8 @@
 /api/v1/rentals/{id}/packing-list.pdf:
   get:
     tags:
-    - Veranstaltungen
-    summary: Packliste als PDF
+    - Events
+    summary: Packing list as PDF
     description: |
       **Scopes:** `rentals:read`
     operationId: RentalsPackingListPdf
@@ -402,10 +402,10 @@
 /api/v1/rentals/{id}/packing-list/email:
   post:
     tags:
-    - Veranstaltungen
-    summary: Packliste per E-Mail versenden
+    - Events
+    summary: Send packing list by e-mail
     description: |
-      Versendet das Dokument als PDF-Anhang an `recipient_email` (der Versand wird wie in der Oberfläche archiviert).
+      Sends the document as a PDF attachment to `recipient_email` (the e-mail is archived as in the web interface).
 
       **Scopes:** `rentals:read`, `email:send`
     operationId: RentalsEmailPackingList
@@ -424,7 +424,7 @@
             $ref: ../components/generated.yaml#/EmailInput
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -444,10 +444,10 @@
 /api/v1/rentals/{id}/invoice:
   post:
     tags:
-    - Veranstaltungen
-    summary: Rechnung aus Veranstaltung erzeugen
+    - Events
+    summary: Create invoice from event
     description: |
-      Legt einen Rechnungsentwurf mit den Positionen der Veranstaltung an.
+      Creates an invoice draft with the items of the event.
 
       **Scopes:** `rentals:read`, `invoices:write`
     operationId: RentalsCreateInvoice
@@ -460,7 +460,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -485,10 +485,10 @@
 /api/v1/calendar:
   get:
     tags:
-    - Veranstaltungen
-    summary: 'Kalender: Veranstaltungen im Zeitraum'
+    - Events
+    summary: 'Calendar: events in a period'
     description: |
-      Veranstaltungen, die den Zeitraum überschneiden (Standard: 30 Tage ab `from`).
+      Events overlapping the period (default: 30 days from `from`).
 
       **Scopes:** `rentals:read`
     operationId: RentalsCalendar
@@ -506,7 +506,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -532,8 +532,8 @@
 /api/v1/rentals/{id}/minute-programs:
   get:
     tags:
-    - Minutenprogramme
-    summary: Minutenprogramme einer Veranstaltung
+    - Minute programs
+    summary: Minute programs of an event
     description: |
       **Scopes:** `minute_programs:read`
     operationId: RentalsMinutePrograms
@@ -550,7 +550,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -578,10 +578,10 @@
 /api/v1/minute-programs/{id}:
   get:
     tags:
-    - Minutenprogramme
-    summary: Minutenprogramm mit Programmpunkten
+    - Minute programs
+    summary: Minute program with program items
     description: |
-      Für den Live-Stand siehe die Run-Sheet- bzw. Display-Schnittstelle.
+      For the live state, see the run sheet or display interface.
 
       **Scopes:** `minute_programs:read`
     operationId: RentalsMinuteProgram
@@ -593,7 +593,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -614,8 +614,8 @@
 /api/v1/minute-program-templates:
   get:
     tags:
-    - Minutenprogramme
-    summary: Vorlagen auflisten
+    - Minute programs
+    summary: List templates
     description: |
       **Scopes:** `minute_programs:read`
     operationId: ReportsMinuteProgramTemplates
@@ -631,7 +631,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -657,8 +657,8 @@
 /api/v1/minute-program-templates/{id}:
   get:
     tags:
-    - Minutenprogramme
-    summary: Vorlage abrufen
+    - Minute programs
+    summary: Get template
     description: |
       **Scopes:** `minute_programs:read`
     operationId: ReportsMinuteProgramTemplate
@@ -670,7 +670,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:

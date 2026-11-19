@@ -846,33 +846,36 @@ Muster wie der Dark-Mode:
   Benutzerkonten hat, gilt die Wahl je Gerät/Browser, genau wie der
   Dark-Mode.
 
-## REST-API und API-Dokumentation
+## REST API and API documentation
 
-Unter *Einstellungen › API* lässt sich die REST-API `/api/v1` einschalten.
-Dort werden auch Tokens mit Scopes je Fachbereich (lesen/schreiben,
-`invoices:finalize`, `email:send`), dem Schalter „Nur lesen“, IP-Filter und
-eigenem Anfragelimit verwaltet. Die Ratenbegrenzung zählt wahlweise in der
-Datenbank oder in Redis (Unix-Socket, TCP oder TLS; ohne PHP-Erweiterung, bei
-Ausfall automatisch zurück auf die Datenbank). Schreibende Zugriffe werden 90
-Tage protokolliert (Migration 175).
+The REST API `/api/v1` can be switched on under *Einstellungen › API*
+(Settings › API). Tokens are managed there as well, with scopes per area
+(read/write, `invoices:finalize`, `email:send`), the „Nur lesen“ (read only)
+switch, an IP filter and an individual request limit. Rate limiting counts
+either in the database or in Redis (Unix socket, TCP or TLS; no PHP extension
+needed, automatic fallback to the database on failure). Write requests are
+logged for 90 days (migration 175).
 
-Alle maschinenlesbaren Schnittstellen (REST-API v1, Abspielgerät, Run-Sheet,
-Stage-/FOH-Displays, Partner-Instanzen, SumUp-Webhook) sind in
-`docs/openapi/` (OpenAPI 3) beschrieben. Die Spezifikation ist aufgeteilt in:
+All machine-readable interfaces (REST API v1, player device, run sheet,
+stage/FOH displays, partner instances, SumUp webhook) are described in
+`docs/openapi/` (OpenAPI 3). The specification is split into:
 
-- `openapi.yaml`: Einstieg, Beschreibung, Tags
-- `paths/*.yaml`: ein File je Bereich
-- `components/common.yaml`: gemeinsame Parameter, Antworten und Schemas
-- `components/generated.yaml`: aus den Domain-Klassen und Commands erzeugt, nicht von Hand ändern
+- `openapi.yaml`: entry point, description, tags
+- `paths/*.yaml`: one file per area
+- `components/common.yaml`: shared parameters, responses and schemas
+- `components/generated.yaml`: generated from the domain classes and commands, do not edit by hand
 
-Die daraus mit Redoc erzeugte, eigenständige Doku liegt als `api-docs.html` im
-Wurzelverzeichnis und lässt sich direkt im Browser öffnen.
+The standalone documentation built from it with Redoc is `api-docs.html` in the
+repository root and can be opened directly in the browser. The API
+documentation is written in English; detailed descriptions of the device and
+integration interfaces are in `docs/abspielgeraet-api.md`, `docs/display-api.md`,
+`docs/stagedisplay-api.md` and `docs/partner-instanzen-api.md`.
 
-- Neu bauen mit `bin/build-api-docs.sh`. Das Skript benötigt Node.js/npx und
-  ruft auch `bin/generate-api-schemas.php` auf.
-- Die Routen stehen in `src/Infrastructure/Http/Api/ApiRoutes.php`.
-- `ApiDocumentationTest` schlägt fehl, wenn eine Route nicht dokumentiert ist
-  oder `generated.yaml` veraltet ist.
+- Rebuild with `bin/build-api-docs.sh`. The script requires Node.js/npx and
+  also runs `bin/generate-api-schemas.php`.
+- The routes are defined in `src/Infrastructure/Http/Api/ApiRoutes.php`.
+- `ApiDocumentationTest` fails if a route is not documented or
+  `generated.yaml` is stale.
 
 ## Statische Analyse (PHPStan)
 

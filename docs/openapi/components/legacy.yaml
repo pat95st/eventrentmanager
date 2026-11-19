@@ -4,21 +4,21 @@ parameters:
     name: id
     in: path
     required: true
-    description: ID des Auftrags aus `queue`.
+    description: ID of the job from `queue`.
     schema:
       type: string
   ShareToken:
     name: token
     in: path
     required: true
-    description: Token eines Freigabe-Links des Minutenprogramms.
+    description: Token of a share link of the minute program.
     schema:
       type: string
   ItemId:
     name: itemId
     in: path
     required: true
-    description: ID des Programmpunkts.
+    description: ID of the program item.
     schema:
       type: string
   MessageId:
@@ -31,20 +31,20 @@ parameters:
     name: code
     in: path
     required: true
-    description: Geheimer Code aus dem Einladungslink.
+    description: Secret code from the invitation link.
     schema:
       type: string
   Reference:
     name: reference
     in: path
     required: true
-    description: UUID der Anfrage (auf beiden Seiten gleich).
+    description: UUID of the request (identical on both sides).
     schema:
       type: string
       format: uuid
 requestBodies:
   DelayInput:
-    description: Genau eine Angabe; Vorrang in der Reihenfolge der Felder. Maximal ±24 Stunden.
+    description: Exactly one value; precedence follows the order of the fields. At most ±24 hours.
     content:
       application/json:
         schema:
@@ -63,7 +63,7 @@ requestBodies:
           $ref: '#/schemas/StartInput'
 responses:
   Ok:
-    description: Erfolg.
+    description: Success.
     content:
       application/json:
         schema:
@@ -73,55 +73,55 @@ responses:
               type: boolean
               example: true
   Error:
-    description: Fehler.
+    description: Error.
     content:
       application/json:
         schema:
           $ref: common.yaml#/schemas/Error
   Unauthorized:
-    description: Token fehlt, ist ungültig oder deaktiviert.
+    description: Token missing, invalid or deactivated.
     content:
       application/json:
         schema:
           $ref: common.yaml#/schemas/Error
   FederationForbidden:
-    description: Partnerschaft beendet/abgelehnt, noch nicht bestätigt oder Aktion nicht freigegeben.
+    description: Partnership ended/declined, not yet confirmed or action not permitted.
     content:
       application/json:
         schema:
           $ref: common.yaml#/schemas/Error
   OkFalse401:
-    description: Ungültiger Token oder deaktiviertes Display.
+    description: Invalid token or deactivated display.
     content:
       application/json:
         schema:
           $ref: '#/schemas/OkFalse'
   OkFalse403:
-    description: Zugang erlaubt nur das Lesen bzw. Display darf nicht steuern.
+    description: Access only allows reading, or the display is not allowed to control.
     content:
       application/json:
         schema:
           $ref: '#/schemas/OkFalse'
   OkFalse404:
-    description: Unbekannter/widerrufener Token oder unbekannter Programmpunkt bzw. Nachricht.
+    description: Unknown/revoked token or unknown program item or message.
     content:
       application/json:
         schema:
           $ref: '#/schemas/OkFalse'
   OkFalse409:
-    description: Dem Display ist gerade kein Minutenprogramm zugeordnet.
+    description: No minute program is currently assigned to the display.
     content:
       application/json:
         schema:
           $ref: '#/schemas/OkFalse'
   OkFalse422:
-    description: Ungültige Eingabe (z. B. Verzug nicht lesbar).
+    description: Invalid input (e.g. delay not parseable).
     content:
       application/json:
         schema:
           $ref: '#/schemas/OkFalse'
   RunSheetOk:
-    description: Erfolg, mit komplettem neuen Live-Stand.
+    description: Success, with the complete new live state.
     content:
       application/json:
         schema:
@@ -133,7 +133,7 @@ responses:
                 example: true
           - $ref: '#/schemas/RunSheet'
   DisplayOk:
-    description: Erfolg, mit komplettem neuen Stand (wie `GET /api/display/v1/state`).
+    description: Success, with the complete new state (as `GET /api/display/v1/state`).
     content:
       application/json:
         schema:
@@ -145,13 +145,13 @@ responses:
                 example: true
           - $ref: '#/schemas/DisplayState'
   Partnership:
-    description: Stand der Partnerschaft.
+    description: State of the partnership.
     content:
       application/json:
         schema:
           $ref: '#/schemas/Partnership'
   FederationRequestState:
-    description: Stand der Anfrage.
+    description: State of the request.
     content:
       application/json:
         schema:
@@ -177,7 +177,7 @@ schemas:
         type: string
       name:
         type: string
-        example: Pi Mischpult
+        example: Pi mixing desk
   PlayerRental:
     type: object
     nullable: true
@@ -186,11 +186,11 @@ schemas:
         type: string
       name:
         type: string
-        example: Stadtfest
+        example: City festival
       location:
         type: string
         nullable: true
-        example: Marktplatz
+        example: Market square
       start_date:
         type: string
         format: date
@@ -226,7 +226,7 @@ schemas:
       gong:
         type: object
         nullable: true
-        description: '`null` = eingebauten Gong verwenden.'
+        description: '`null` = use the built-in gong.'
         properties:
           url:
             type: string
@@ -237,7 +237,7 @@ schemas:
             type: string
             example: audio/mpeg
       rental:
-        description: '`null`, wenn gerade keine laufende Veranstaltung zugeordnet ist.'
+        description: '`null` if no running event is currently assigned.'
         allOf:
         - $ref: '#/schemas/PlayerRental'
         - type: object
@@ -274,7 +274,7 @@ schemas:
               type: integer
             version:
               type: string
-              description: Ändert sich bei neuer Datei – dann neu herunterladen.
+              description: Changes when the file changes – download it again then.
             url:
               type: string
       minute_programs:
@@ -289,7 +289,7 @@ schemas:
             start_at:
               type: string
               format: date-time
-              description: Inkl. live gepflegter Verzögerung.
+              description: Including the delay maintained live.
             jingle_before:
               type: boolean
             jingle_file_id:
@@ -297,7 +297,7 @@ schemas:
               nullable: true
       scheduled:
         type: array
-        description: Noch nicht ausgelöste geplante Einspieler, nach Zeit sortiert (nur zur Information).
+        description: Scheduled playback cues not yet triggered, sorted by time (for information only).
         items:
           type: object
           properties:
@@ -308,7 +308,7 @@ schemas:
             play_at:
               type: string
               format: date-time
-              description: Nächster Termin.
+              description: Next date.
             note:
               type: string
               nullable: true
@@ -326,7 +326,7 @@ schemas:
               type: integer
       queue:
         type: array
-        description: Der Reihe nach abzuarbeiten (älteste zuerst).
+        description: To be processed in order (oldest first).
         items:
           $ref: '#/schemas/PlayerQueueItem'
   PlayerQueueItem:
@@ -355,7 +355,7 @@ schemas:
         nullable: true
       language:
         type: string
-        description: BCP-47-Code der Durchsage.
+        description: BCP 47 code of the announcement.
         example: de-DE
       recording_url:
         type: string
@@ -365,7 +365,7 @@ schemas:
         nullable: true
       with_gong:
         type: boolean
-        description: Nur bei `tts` und `recording`.
+        description: Only for `tts` and `recording`.
       requested_by:
         type: string
         nullable: true
@@ -389,34 +389,34 @@ schemas:
         - cancelled
       error:
         type: string
-        description: Fehlerbeschreibung bei `failed`.
+        description: Error description for `failed`.
   DelayInput:
     type: object
     properties:
       adopt:
         type: boolean
-        description: Prognostizierten Verzug übernehmen.
+        description: Apply the forecast delay.
       adjust_seconds:
         type: integer
-        description: Relativ zum aktuellen Verzug.
+        description: Relative to the current delay.
         example: 60
       delay_seconds:
         type: integer
-        description: Absolut in Sekunden (negativ = Vorsprung).
+        description: Absolute in seconds (negative = ahead of schedule).
         example: 270
       delay:
         type: string
-        description: Absolut als Text – Minuten (`5`, `-2`, `1,5`), `mm:ss` oder `h:mm:ss`.
+        description: Absolute as text – minutes (`5`, `-2`, `1,5`), `mm:ss` or `h:mm:ss`.
         example: '4:30'
   StartInput:
     type: object
     properties:
       started_at:
         type: string
-        description: Uhrzeit (`20:13:20`) oder ISO-8601-Zeitstempel, falls der Punkt früher begonnen hat.
+        description: Time of day (`20:13:20`) or ISO 8601 timestamp, if the item started earlier.
   Notes:
     type: object
-    description: Kompatibilitätsfelder; für neue Displays `tradeNotes` verwenden.
+    description: Compatibility fields; new displays should use `tradeNotes`.
     properties:
       general:
         type: string
@@ -479,11 +479,11 @@ schemas:
         nullable: true
       elapsedSeconds:
         type: integer
-        description: Beim nächsten Punkt negativ (Zeit bis zum Start).
+        description: Negative for the next item (time until start).
       remainingSeconds:
         type: integer
         nullable: true
-        description: < 0 = überzogen.
+        description: < 0 = overrun.
       actualStart:
         type: string
         format: date-time
@@ -521,14 +521,14 @@ schemas:
       plannedStart:
         type: string
         format: date-time
-        description: Plan ohne Verzug.
+        description: Plan without delay.
       plannedEnd:
         type: string
         format: date-time
       currentStart:
         type: string
         format: date-time
-        description: Plan + gesetzter Verzug.
+        description: Plan + delay set.
       projectedStart:
         type: string
         format: date-time
@@ -580,14 +580,14 @@ schemas:
         format: date-time
       revision:
         type: string
-        description: Ändert sich bei jeder Änderung von Plan oder Live-Stand.
+        description: Changes with every change to the plan or live state.
         example: bd7c8561a5b09953
       event:
         type: object
         properties:
           name:
             type: string
-            example: Firmengala 2026
+            example: Company gala 2026
           noStrobe:
             type: boolean
       program:
@@ -645,12 +645,12 @@ schemas:
             - finished
           tracking:
             type: boolean
-            description: '`true` = FOH-Modus, `false` = Uhr-Modus.'
+            description: '`true` = FOH mode, `false` = clock mode.'
           delaySeconds:
             type: integer
           projectedDelaySeconds:
             type: integer
-            description: Wert für die Anzeige.
+            description: Value for display.
           overrunSeconds:
             type: integer
           finishedAt:
@@ -690,7 +690,7 @@ schemas:
             type: string
           name:
             type: string
-            example: Bühnenmonitor links
+            example: Stage monitor left
           role:
             type: string
             enum:
@@ -767,7 +767,7 @@ schemas:
           configRevision:
             type: string
       runSheet:
-        description: Live-Stand des gezeigten Minutenprogramms oder `null`.
+        description: Live state of the minute program shown, or `null`.
         nullable: true
         type: object
         allOf:
@@ -867,7 +867,7 @@ schemas:
         type: integer
       available:
         type: integer
-        description: Verfügbar im Zeitraum.
+        description: Available in the period.
       discount_percent:
         type: number
       discounted_daily_price:
@@ -944,7 +944,7 @@ schemas:
         nullable: true
       items:
         type: array
-        description: Nur bei `material`.
+        description: Only for `material`.
         items:
           type: object
           required:
@@ -958,18 +958,18 @@ schemas:
               minimum: 1
       trades:
         type: array
-        description: Nur bei `technician`.
+        description: Only for `technician`.
         items:
           type: string
       technician_count:
         type: integer
         minimum: 1
         maximum: 50
-        description: Nur bei `technician`.
+        description: Only for `technician`.
       preferred_technician_id:
         type: string
         nullable: true
-        description: Nur bei `technician`.
+        description: Only for `technician`.
   FederationRequestState:
     type: object
     properties:

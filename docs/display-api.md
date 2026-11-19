@@ -1,43 +1,45 @@
-# Display-Schnittstelle für Stage- und FOH-Displays
+# Display Interface for Stage and FOH Displays
 
-Stand: Migration 168 „Stage- & FOH-Displays“. Diese Beschreibung ist die Vorlage für Display-Clients (Bühnenmonitor, Konfidenzmonitor, Regie-Bildschirm). Eine fertige Umsetzung im Browser liefert die Verwaltung selbst unter `/display` mit.
+Status: migration 168 "Stage- & FOH-Displays". This description is the specification for display clients (stage monitor, confidence monitor, control room screen). The web application itself ships a ready-made browser implementation at `/display`.
 
-## Überblick
+The web interface is German; UI labels are quoted in German with an English translation.
 
-- Displays werden unter **Einstellungen › Veranstaltungen & Planung › Stage- & FOH-Displays** angelegt. Jedes Display hat einen eigenen **Geräte-Token** (`mvd_…`), der nur beim Anlegen bzw. Neu-Erzeugen einmal angezeigt wird.
-- Jedes Display hat eine **Rolle**: `stage` (Stagedisplay) oder `foh` (FOH-Display). Die Rolle lässt sich jederzeit umstellen, ohne dass sich am Gerät etwas ändert. **Ein Client soll daher beide Darstellungen beherrschen** und anhand von `display.role` und `display.options` entscheiden, was er zeigt.
-- Welches **Minutenprogramm** ein Display zeigt, wird zentral festgelegt:
-  1. ein fest gewähltes Minutenprogramm, sonst
-  2. das jeweils laufende Programm einer gewählten Veranstaltung, sonst
-  3. das jeweils laufende Programm aller heute laufenden Veranstaltungen (Vortag des Beginns bis Tag nach dem Ende).
+## Overview
 
-  Bei 2. und 3. kann zusätzlich auf einen **Raum** eingeschränkt werden. Gewählt wird ein laufendes Programm (am FOH gestartet oder zwischen Beginn und voraussichtlichem Ende), sonst das nächste anstehende, sonst das zuletzt begonnene.
-- Die Ablaufdaten (`runSheet`) haben **genau dasselbe Format** wie die Run-Sheet-API (`/api/runsheet/v1/{token}`, siehe [stagedisplay-api.md](stagedisplay-api.md)). Ein vorhandener Client für die Run-Sheet-API lässt sich also leicht umstellen.
+- Displays are created under **Einstellungen › Veranstaltungen & Planung › Stage- & FOH-Displays** (settings › events & planning › stage & FOH displays). Each display has its own **device token** (`mvd_…`), which is shown only once when the display is created or the token is regenerated.
+- Each display has a **role**: `stage` (stage display) or `foh` (FOH display). The role can be changed at any time without anything changing on the device. **A client should therefore support both presentations** and decide what to show based on `display.role` and `display.options`.
+- Which **minute program** a display shows is configured centrally:
+  1. a fixed minute program, otherwise
+  2. the currently running program of a selected event, otherwise
+  3. the currently running program of all events running today (day before the start until the day after the end).
 
-## Authentifizierung
+  For 2. and 3., the selection can additionally be restricted to a **room**. A running program is chosen (started at the FOH or between start and expected end), otherwise the next upcoming one, otherwise the one started most recently.
+- The run sheet data (`runSheet`) has **exactly the same format** as the run sheet API (`/api/runsheet/v1/{token}`, see [stagedisplay-api.md](stagedisplay-api.md)). An existing client for the run sheet API can therefore easily be switched over.
 
-Jede Anfrage sendet `Authorization: Bearer <Display-Token>`. Bei ungültigem Token oder deaktiviertem Display antwortet der Server mit `401` und `{"ok": false, "error": "…"}`.
+## Authentication
 
-Es gibt weder Cookies noch CSRF-Schutz. Alle Antworten senden `Access-Control-Allow-Origin: *` (inkl. `Authorization` in den erlaubten Headern), ein Browser-Client auf einer anderen Domain kann die API also direkt abfragen. Alle Pfade sind relativ zur Basis-URL der Verwaltung, z. B. `https://verleih.example.de`.
+Every request sends `Authorization: Bearer <display token>`. If the token is invalid or the display is deactivated, the server responds with `401` and `{"ok": false, "error": "…"}`.
 
-## Endpunkte
+There are neither cookies nor CSRF protection. All responses send `Access-Control-Allow-Origin: *` (incl. `Authorization` in the allowed headers), so a browser client on another domain can query the API directly. All paths are relative to the base URL of the web application, e.g. `https://verleih.example.de`.
 
-| Methode | Pfad                                         | Zweck                          | Erlaubt                          |
+## Endpoints
+
+| Method  | Path                                         | Purpose                        | Allowed for                      |
 |---------|----------------------------------------------|--------------------------------|----------------------------------|
-| GET     | `/api/display/v1/state?version=<client>`     | Konfiguration + Live-Stand     | jedes Display                    |
-| POST    | `/api/display/v1/delay`                      | Verzug setzen/ändern           | FOH-Display mit „Steuern erlauben“ |
-| POST    | `/api/display/v1/items/{itemId}/start`       | Programmpunkt starten          | FOH-Display mit „Steuern erlauben“ |
-| POST    | `/api/display/v1/finish`                     | Programm beenden               | FOH-Display mit „Steuern erlauben“ |
-| POST    | `/api/display/v1/reset`                      | Live-Stand zurücksetzen        | FOH-Display mit „Steuern erlauben“ |
-| POST    | `/api/display/v1/messages/{id}/seen`         | Nachricht als gesehen markieren | FOH-Display mit „Steuern erlauben“ |
-| POST    | `/api/display/v1/messages/{id}/hide`         | Nachricht ausblenden (auch auf der Bühne) | FOH-Display mit „Steuern erlauben“ |
+| GET     | `/api/display/v1/state?version=<client>`     | Configuration + live state     | every display                    |
+| POST    | `/api/display/v1/delay`                      | Set/change delay               | FOH display with „Steuern erlauben“ (allow control) |
+| POST    | `/api/display/v1/items/{itemId}/start`       | Start program item             | FOH display with „Steuern erlauben“ |
+| POST    | `/api/display/v1/finish`                     | End program                    | FOH display with „Steuern erlauben“ |
+| POST    | `/api/display/v1/reset`                      | Reset live state               | FOH display with „Steuern erlauben“ |
+| POST    | `/api/display/v1/messages/{id}/seen`         | Mark message as seen           | FOH display with „Steuern erlauben“ |
+| POST    | `/api/display/v1/messages/{id}/hide`         | Hide message (also on stage)   | FOH display with „Steuern erlauben“ |
 
-- Jede Abfrage von `state` zählt als Lebenszeichen; nach 45 s ohne Abfrage gilt das Display in der Verwaltung als offline. `version` (optional) erscheint in der Geräteübersicht.
-- Die POST-Endpunkte nehmen dieselben Daten wie die Run-Sheet-API (`adopt`, `adjust_seconds`, `delay_seconds`, `delay` bzw. `started_at`), als JSON oder Formular. Sie wirken auf das Programm, das das Display gerade zeigt. Die Antwort enthält `"ok": true` und den kompletten neuen Stand (wie `GET …/state`).
+- Every `state` request counts as a heartbeat; after 45 s without a request the display is shown as offline in the web application. `version` (optional) appears in the device overview.
+- The POST endpoints accept the same data as the run sheet API (`adopt`, `adjust_seconds`, `delay_seconds`, `delay` or `started_at`), as JSON or as a form. They act on the program the display is currently showing. The response contains `"ok": true` and the complete new state (as `GET …/state`).
 
-Fehler: `401` ungültiger Token, `403` Display darf nicht steuern, `404` unbekannter Programmpunkt, `409` dem Display ist gerade kein Minutenprogramm zugeordnet, `422` ungültige Eingabe.
+Errors: `401` invalid token, `403` display is not allowed to control, `404` unknown program item, `409` no minute program is currently assigned to the display, `422` invalid input.
 
-## Antwort von `GET /api/display/v1/state`
+## Response of `GET /api/display/v1/state`
 
 ```json
 {
@@ -46,11 +48,11 @@ Fehler: `401` ungültiger Token, `403` Display darf nicht steuern, `404` unbekan
   "pollIntervalSeconds": 3,
   "display": {
     "id": "…",
-    "name": "Bühnenmonitor links",
+    "name": "Stage monitor left",
     "role": "stage",
     "roleLabel": "Stagedisplay",
     "canControl": false,
-    "assignment": { "mode": "rental", "rentalId": "…", "minuteProgramId": null, "room": "Großer Saal" },
+    "assignment": { "mode": "rental", "rentalId": "…", "minuteProgramId": null, "room": "Main hall" },
     "options": {
       "notes": ["general", "stage"],
       "showClock": true,
@@ -66,36 +68,38 @@ Fehler: `401` ungültiger Token, `403` Display darf nicht steuern, `404` unbekan
     "thresholds": { "warnSeconds": 120, "criticalSeconds": 30 },
     "configRevision": "4f0c2a9e1b7d3c55"
   },
-  "runSheet": { "…": "Format wie GET /api/runsheet/v1/{token}, oder null" }
+  "runSheet": { "…": "format as GET /api/runsheet/v1/{token}, or null" }
 }
 ```
 
-### Felder
+`roleLabel` is a German label provided by the server.
 
-| Feld | Bedeutung |
-|------|-----------|
-| `pollIntervalSeconds` | Empfohlener Abstand der Abfragen (Einstellung „Abfrageintervall“). |
-| `display.role` | `stage` oder `foh`. Bestimmt die Darstellung. |
-| `display.canControl` | `true` nur bei FOH-Displays mit „Steuern erlauben“. Nur dann Steuer-Elemente zeigen. Entspricht `runSheet.live.canControl`. |
-| `display.assignment.mode` | `program` (fest gewähltes Programm), `rental` (laufendes Programm einer Veranstaltung) oder `auto`. Nur zur Information. |
-| `display.options.notes` | Gewerke, deren Hinweise angezeigt werden sollen: `general`, `sound`, `light`, `video`, `stage` (Schlüssel von `runSheet.*.notes`). Hinweise frei angelegter Gewerke stehen in `runSheet.*.tradeNotes` (siehe stagedisplay-api.md). |
-| `display.options.show*` | Uhrzeit, Verzug, nächster Punkt, Ablaufliste, Beschreibung, Mikrofonanzahl ein/aus. |
-| `display.options.theme` | `dark` oder `light`. |
-| `display.options.fontScale` | Schriftgröße in Prozent (50–200). |
-| `display.thresholds` | Restzeit in Sekunden, ab der der Countdown gelb (`warnSeconds`) bzw. rot (`criticalSeconds`, sowie beim Überziehen) dargestellt werden soll. |
-| `display.configRevision` | Ändert sich, sobald sich die Konfiguration des Displays ändert. Zusammen mit `runSheet.revision` für „nur bei Änderung neu zeichnen“. |
-| `runSheet` | Live-Stand des gezeigten Minutenprogramms oder `null`, wenn gerade keins zugeordnet ist (dann z. B. den Display-Namen und „kein Programm“ zeigen). |
-| `runSheet.messages` | Aktive Nachrichten des Veranstalters (Format siehe [stagedisplay-api.md](stagedisplay-api.md)). **Stagedisplays** erhalten nur Nachrichten an die Bühne (`stage = true`), **FOH-Displays** alle. Ein FOH-Display mit Steuerung kann sie als gesehen markieren oder ausblenden. |
+### Fields
 
-Innerhalb von `apiVersion` 1 kommen nur neue Felder hinzu; Clients müssen unbekannte Felder (auch unbekannte Optionen) ignorieren.
+| Field | Meaning |
+|-------|---------|
+| `pollIntervalSeconds` | Recommended interval between requests (setting „Abfrageintervall“ / polling interval). |
+| `display.role` | `stage` or `foh`. Determines the presentation. |
+| `display.canControl` | `true` only for FOH displays with „Steuern erlauben“ (allow control). Show controls only then. Equals `runSheet.live.canControl`. |
+| `display.assignment.mode` | `program` (fixed program), `rental` (running program of an event) or `auto`. For information only. |
+| `display.options.notes` | Trades whose notes should be shown: `general`, `sound`, `light`, `video`, `stage` (keys of `runSheet.*.notes`). Notes of freely created trades are in `runSheet.*.tradeNotes` (see stagedisplay-api.md). |
+| `display.options.show*` | Clock, delay, next item, item list, description, number of microphones on/off. |
+| `display.options.theme` | `dark` or `light`. |
+| `display.options.fontScale` | Font size in percent (50–200). |
+| `display.thresholds` | Remaining time in seconds from which the countdown should be shown yellow (`warnSeconds`) or red (`criticalSeconds`, and when overrunning). |
+| `display.configRevision` | Changes as soon as the display's configuration changes. Use together with `runSheet.revision` to "redraw only on change". |
+| `runSheet` | Live state of the minute program shown, or `null` if none is currently assigned (then show e.g. the display name and "no program"). |
+| `runSheet.messages` | Active messages from the organizer (format see [stagedisplay-api.md](stagedisplay-api.md)). **Stage displays** receive only messages to the stage (`stage = true`), **FOH displays** receive all. An FOH display with control can mark them as seen or hide them. |
 
-## Empfehlungen
+Within `apiVersion` 1 only new fields are added; clients must ignore unknown fields (including unknown options).
 
-- Im Abstand von `pollIntervalSeconds` abfragen, Countdowns lokal jede Sekunde aus `startsAt`/`endsAt` und dem Uhren-Offset (`serverTime`) berechnen – siehe die Empfehlungen in [stagedisplay-api.md](stagedisplay-api.md).
-- Bei Netzwerkfehlern den letzten Stand weiter anzeigen und sichtbar als „offline“ markieren.
-- `event.noStrobe` oder `current.noStrobe` deutlich als „Kein Stroboskop“ anzeigen.
-- Nachrichten (`runSheet.messages`) gut sichtbar zeigen, dringende (`urgent`) besonders auffällig.
+## Recommendations
 
-## Browser-Client `/display`
+- Poll at intervals of `pollIntervalSeconds`, and calculate countdowns locally every second from `startsAt`/`endsAt` and the clock offset (`serverTime`) – see the recommendations in [stagedisplay-api.md](stagedisplay-api.md).
+- On network errors, keep showing the last state and visibly mark it as "offline".
+- Show `event.noStrobe` or `current.noStrobe` clearly as "No strobe".
+- Show messages (`runSheet.messages`) prominently, urgent ones (`urgent`) especially conspicuously.
 
-Die Verwaltung liefert unter `/display` einen fertigen Client (eine Seite, ohne Anmeldung). Beim ersten Aufruf wird der Display-Token eingegeben und im Browser gespeichert. Alternativ den Link `/display#token=mvd_…` öffnen, den die Einstellungsseite nach dem Anlegen anzeigt – der Anker wird nicht an den Server übertragen und danach aus der Adresszeile entfernt. Taste `f` schaltet den Vollbildmodus um. Für Kiosk-Geräte (z. B. Raspberry Pi mit Chromium im Kiosk-Modus) genügt es, diese Adresse als Startseite einzutragen.
+## Browser client `/display`
+
+The web application ships a ready-made client at `/display` (a single page, no login). On the first visit the display token is entered and stored in the browser. Alternatively, open the link `/display#token=mvd_…` that the settings page shows after creating the display – the fragment is not sent to the server and is then removed from the address bar. The `f` key toggles full-screen mode. For kiosk devices (e.g. a Raspberry Pi with Chromium in kiosk mode) it is enough to set this address as the start page.

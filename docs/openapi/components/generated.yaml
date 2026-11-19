@@ -2,7 +2,7 @@
 # Field lists of the entities returned by the REST API (see Normalizer).
 Customer:
   type: "object"
-  description: "Kunde"
+  description: "Customer"
   required:
     - "id"
     - "customer_number"
@@ -71,7 +71,7 @@ Customer:
       nullable: true
 CustomerContact:
   type: "object"
-  description: "Ansprechpartner eines Kunden"
+  description: "Contact of a customer"
   required:
     - "id"
     - "name"
@@ -117,7 +117,7 @@ CustomerContact:
       nullable: true
 Article:
   type: "object"
-  description: "Artikel (Rohfelder)"
+  description: "Article (raw fields)"
   required:
     - "id"
     - "name"
@@ -217,7 +217,7 @@ Article:
         - "9.5"
 InventoryNumber:
   type: "object"
-  description: "Inventarnummer (Exemplar eines Artikels)"
+  description: "Inventory number (unit of an article)"
   required:
     - "id"
     - "article_id"
@@ -281,7 +281,7 @@ InventoryNumber:
       nullable: true
 ArticleSet:
   type: "object"
-  description: "Set (Festpreis-Paket)"
+  description: "Set (fixed-price package)"
   required:
     - "id"
     - "name"
@@ -313,7 +313,7 @@ ArticleSet:
       format: "date-time"
 Category:
   type: "object"
-  description: "Kategorie"
+  description: "Category"
   required:
     - "id"
     - "name"
@@ -336,7 +336,7 @@ Category:
       format: "date-time"
 Manufacturer:
   type: "object"
-  description: "Hersteller"
+  description: "Manufacturer"
   required:
     - "id"
     - "name"
@@ -362,7 +362,7 @@ Manufacturer:
       type: "boolean"
 LaborTimeArticle:
   type: "object"
-  description: "Arbeitszeit-Artikel"
+  description: "Labor time article"
   required:
     - "id"
     - "name"
@@ -388,7 +388,7 @@ LaborTimeArticle:
       nullable: true
 Supplier:
   type: "object"
-  description: "Lieferant"
+  description: "Supplier"
   required:
     - "id"
     - "name"
@@ -434,7 +434,7 @@ Supplier:
       format: "date-time"
 Venue:
   type: "object"
-  description: "Veranstaltungsort"
+  description: "Venue"
   required:
     - "id"
     - "name"
@@ -494,7 +494,7 @@ Venue:
       format: "date-time"
 Warehouse:
   type: "object"
-  description: "Lagerort"
+  description: "Warehouse"
   required:
     - "id"
     - "name"
@@ -538,7 +538,7 @@ Warehouse:
       format: "date-time"
 Vehicle:
   type: "object"
-  description: "Fahrzeug"
+  description: "Vehicle"
   required:
     - "id"
     - "category"
@@ -630,7 +630,7 @@ Vehicle:
       nullable: true
 Rental:
   type: "object"
-  description: "Veranstaltung (Vermietung)"
+  description: "Event (rental)"
   required:
     - "id"
     - "customer_id"
@@ -721,7 +721,7 @@ Rental:
       type: "string"
 RentalItem:
   type: "object"
-  description: "Geplante Position einer Veranstaltung"
+  description: "Scheduled item of an event"
   required:
     - "id"
     - "rental_id"
@@ -755,7 +755,7 @@ RentalItem:
       type: "integer"
 RentalIssuedItem:
   type: "object"
-  description: "Ausgegebenes Exemplar"
+  description: "Issued unit"
   required:
     - "id"
     - "rental_id"
@@ -790,7 +790,7 @@ RentalIssuedItem:
       nullable: true
 RentalTechnician:
   type: "object"
-  description: "Techniker-Zuordnung"
+  description: "Technician assignment"
   required:
     - "id"
     - "rental_id"
@@ -845,7 +845,7 @@ RentalTechnician:
       format: "date-time"
 Offer:
   type: "object"
-  description: "Angebot"
+  description: "Offer"
   required:
     - "id"
     - "offer_number"
@@ -939,7 +939,7 @@ Offer:
       nullable: true
 OrderConfirmation:
   type: "object"
-  description: "Auftragsbestätigung"
+  description: "Order confirmation"
   required:
     - "id"
     - "order_confirmation_number"
@@ -1027,7 +1027,7 @@ OrderConfirmation:
       nullable: true
 Invoice:
   type: "object"
-  description: "Rechnung"
+  description: "Invoice"
   required:
     - "id"
     - "customer_id"
@@ -1172,7 +1172,7 @@ Invoice:
       nullable: true
 InvoiceCorrection:
   type: "object"
-  description: "Rechnungskorrektur"
+  description: "Invoice correction"
   required:
     - "id"
     - "invoice_id"
@@ -1250,7 +1250,7 @@ InvoiceCorrection:
       nullable: true
 DunningNotice:
   type: "object"
-  description: "Mahnung"
+  description: "Dunning notice"
   required:
     - "id"
     - "invoice_id"
@@ -1303,7 +1303,7 @@ DunningNotice:
       type: "string"
 DocumentTotals:
   type: "object"
-  description: "Summen eines Belegs (netto/Steuer/brutto)"
+  description: "Totals of a document (net/tax/gross)"
   required:
     - "rental_net_total"
     - "accessory_flat_rate_amount"
@@ -1344,7 +1344,7 @@ DocumentTotals:
       type: "number"
 Receipt:
   type: "object"
-  description: "Beleg (Eingangsrechnung)"
+  description: "Receipt (incoming invoice)"
   required:
     - "id"
     - "supplier_id"
@@ -1406,7 +1406,7 @@ Receipt:
       format: "date-time"
 BankAccount:
   type: "object"
-  description: "Bankkonto"
+  description: "Bank account"
   required:
     - "id"
     - "label"
@@ -1446,7 +1446,7 @@ BankAccount:
       type: "boolean"
 AccountTransaction:
   type: "object"
-  description: "Kontobuchung (Beträge in Cent)"
+  description: "Account transaction (amounts in cents)"
   required:
     - "id"
     - "bank_account_id"
@@ -1499,7 +1499,7 @@ AccountTransaction:
       format: "date-time"
 PurchaseOrder:
   type: "object"
-  description: "Bestellung beim Lieferanten"
+  description: "Purchase order to a supplier"
   required:
     - "id"
     - "supplier_id"
@@ -1535,7 +1535,7 @@ PurchaseOrder:
       format: "date-time"
 PurchaseOrderItem:
   type: "object"
-  description: "Bestellposition"
+  description: "Purchase order item"
   required:
     - "id"
     - "purchase_order_id"
@@ -1654,7 +1654,7 @@ Rack:
       format: "date-time"
 Rma:
   type: "object"
-  description: "RMA / Reparatur"
+  description: "RMA / repair"
   required:
     - "id"
     - "inventory_number_id"
@@ -1709,7 +1709,7 @@ Rma:
       format: "date-time"
 ElectricalInspection:
   type: "object"
-  description: "Elektroprüfung (DGUV V3)"
+  description: "Electrical inspection (DGUV V3)"
   required:
     - "id"
     - "inventory_number_id"
@@ -1762,7 +1762,7 @@ ElectricalInspection:
       format: "date-time"
 Sale:
   type: "object"
-  description: "Verkauf"
+  description: "Sale"
   required:
     - "id"
     - "inventory_number_id"
@@ -1810,7 +1810,7 @@ Sale:
       format: "date-time"
 MinuteProgram:
   type: "object"
-  description: "Minutenprogramm"
+  description: "Minute program"
   required:
     - "id"
     - "rental_id"
@@ -1875,7 +1875,7 @@ MinuteProgram:
       nullable: true
 MinuteProgramTemplate:
   type: "object"
-  description: "Vorlage für Minutenprogramme"
+  description: "Template for minute programs"
   required:
     - "id"
     - "name"
@@ -1908,7 +1908,7 @@ MinuteProgramTemplate:
       nullable: true
 CustomerInput:
   type: "object"
-  description: "Neuer Kunde"
+  description: "New customer"
   required:
     - "type"
     - "first_name"
@@ -1956,7 +1956,7 @@ CustomerInput:
       nullable: true
 CustomerPatch:
   type: "object"
-  description: "Kunde ändern (nur gesendete Felder)"
+  description: "Update customer (only the fields sent)"
   properties:
     type:
       type: "string"
@@ -1997,7 +1997,7 @@ CustomerPatch:
       nullable: true
 ArticleInput:
   type: "object"
-  description: "Neuer Artikel. Sonderangaben (Stromverteiler, Leitung, Stagebox, Mischpult) nur über die Weboberfläche."
+  description: "New article. Special details (power distributor, cable, stagebox, mixing console) only via the web interface."
   required:
     - "name"
     - "manufacturer_id"
@@ -2078,7 +2078,7 @@ ArticleInput:
         - ""
 ArticlePatch:
   type: "object"
-  description: "Artikel ändern (nur gesendete Felder)"
+  description: "Update article (only the fields sent)"
   properties:
     name:
       type: "string"
@@ -2155,7 +2155,7 @@ ArticlePatch:
         - ""
 InventoryNumberInput:
   type: "object"
-  description: "Neue Inventarnummer (Nummer wird automatisch vergeben)"
+  description: "New inventory number (the number is assigned automatically)"
   properties:
     acquisition_date:
       type: "string"
@@ -2177,7 +2177,7 @@ InventoryNumberInput:
       nullable: true
 InventoryNumberPatch:
   type: "object"
-  description: "Inventarnummer ändern (nur gesendete Felder)"
+  description: "Update inventory number (only the fields sent)"
   properties:
     acquisition_date:
       type: "string"
@@ -2202,7 +2202,7 @@ InventoryNumberPatch:
       nullable: true
 ArticleSetInput:
   type: "object"
-  description: "Neues Set"
+  description: "New set"
   required:
     - "name"
     - "is_active"
@@ -2237,7 +2237,7 @@ ArticleSetInput:
         $ref: "common.yaml#/schemas/SetUpgradeRow"
 ArticleSetPatch:
   type: "object"
-  description: "Set ändern (nur gesendete Felder)"
+  description: "Update set (only the fields sent)"
   properties:
     name:
       type: "string"
@@ -2266,7 +2266,7 @@ ArticleSetPatch:
         $ref: "common.yaml#/schemas/SetUpgradeRow"
 CategoryInput:
   type: "object"
-  description: "Neue Kategorie"
+  description: "New category"
   required:
     - "name"
   properties:
@@ -2277,7 +2277,7 @@ CategoryInput:
       nullable: true
 CategoryPatch:
   type: "object"
-  description: "Kategorie ändern"
+  description: "Update category"
   properties:
     name:
       type: "string"
@@ -2286,7 +2286,7 @@ CategoryPatch:
       nullable: true
 ManufacturerInput:
   type: "object"
-  description: "Neuer Hersteller"
+  description: "New manufacturer"
   required:
     - "name"
     - "prefix"
@@ -2297,7 +2297,7 @@ ManufacturerInput:
       type: "string"
 ManufacturerPatch:
   type: "object"
-  description: "Hersteller ändern"
+  description: "Update manufacturer"
   properties:
     name:
       type: "string"
@@ -2305,7 +2305,7 @@ ManufacturerPatch:
       type: "string"
 LaborTimeArticleInput:
   type: "object"
-  description: "Neuer Arbeitszeit-Artikel"
+  description: "New labor time article"
   required:
     - "name"
     - "hourly_rate"
@@ -2319,7 +2319,7 @@ LaborTimeArticleInput:
       default: ""
 LaborTimeArticlePatch:
   type: "object"
-  description: "Arbeitszeit-Artikel ändern"
+  description: "Update labor time article"
   properties:
     name:
       type: "string"
@@ -2330,7 +2330,7 @@ LaborTimeArticlePatch:
       default: ""
 SupplierInput:
   type: "object"
-  description: "Neuer Lieferant"
+  description: "New supplier"
   required:
     - "name"
     - "type"
@@ -2362,7 +2362,7 @@ SupplierInput:
       nullable: true
 SupplierPatch:
   type: "object"
-  description: "Lieferant ändern"
+  description: "Update supplier"
   properties:
     name:
       type: "string"
@@ -2388,7 +2388,7 @@ SupplierPatch:
       nullable: true
 VenueInput:
   type: "object"
-  description: "Neuer Veranstaltungsort"
+  description: "New venue"
   required:
     - "name"
     - "street"
@@ -2425,7 +2425,7 @@ VenueInput:
         - ""
 VenuePatch:
   type: "object"
-  description: "Veranstaltungsort ändern"
+  description: "Update venue"
   properties:
     name:
       type: "string"
@@ -2457,7 +2457,7 @@ VenuePatch:
         - ""
 WarehouseInput:
   type: "object"
-  description: "Neuer Lagerort"
+  description: "New warehouse"
   required:
     - "name"
     - "street"
@@ -2480,7 +2480,7 @@ WarehouseInput:
       nullable: true
 WarehousePatch:
   type: "object"
-  description: "Lagerort ändern"
+  description: "Update warehouse"
   properties:
     name:
       type: "string"
@@ -2498,7 +2498,7 @@ WarehousePatch:
       nullable: true
 VehicleInput:
   type: "object"
-  description: "Neues Fahrzeug"
+  description: "New vehicle"
   required:
     - "category"
     - "name"
@@ -2563,7 +2563,7 @@ VehicleInput:
       nullable: true
 VehiclePatch:
   type: "object"
-  description: "Fahrzeug ändern"
+  description: "Update vehicle"
   properties:
     category:
       type: "string"
@@ -2623,7 +2623,7 @@ VehiclePatch:
       nullable: true
 RentalInput:
   type: "object"
-  description: "Neue Veranstaltung"
+  description: "New event"
   required:
     - "customer_id"
     - "start_date"
@@ -2661,7 +2661,7 @@ RentalInput:
       default: false
 RentalPatch:
   type: "object"
-  description: "Veranstaltung ändern (nur gesendete Felder)"
+  description: "Update event (only the fields sent)"
   properties:
     customer_id:
       type: "string"
@@ -2692,7 +2692,7 @@ RentalPatch:
       default: false
 RentalLogisticsPatch:
   type: "object"
-  description: "Abholung/Rückgabe ändern (nur gesendete Felder)"
+  description: "Update pickup/return (only the fields sent)"
   properties:
     pickup_warehouse_id:
       type: "string"
@@ -2711,7 +2711,7 @@ RentalLogisticsPatch:
       nullable: true
 RentalItemInput:
   type: "object"
-  description: "Artikel einplanen"
+  description: "Schedule article"
   required:
     - "article_id"
     - "quantity"
@@ -2722,7 +2722,7 @@ RentalItemInput:
       type: "string"
 RentalItemPatch:
   type: "object"
-  description: "Menge ändern"
+  description: "Change quantity"
   required:
     - "quantity"
   properties:
@@ -2730,7 +2730,7 @@ RentalItemPatch:
       type: "string"
 OfferInput:
   type: "object"
-  description: "Neues Angebot (Entwurf)"
+  description: "New offer (draft)"
   required:
     - "customer_id"
     - "start_date"
@@ -2795,7 +2795,7 @@ OfferInput:
       nullable: true
 OfferPatch:
   type: "object"
-  description: "Angebot ändern (nicht gesendete Positionslisten bleiben unverändert)"
+  description: "Update offer (item lists not sent remain unchanged)"
   properties:
     customer_id:
       type: "string"
@@ -2852,7 +2852,7 @@ OfferPatch:
       nullable: true
 OrderConfirmationInput:
   type: "object"
-  description: "Neue Auftragsbestätigung"
+  description: "New order confirmation"
   required:
     - "customer_id"
     - "start_date"
@@ -2906,7 +2906,7 @@ OrderConfirmationInput:
       nullable: true
 OrderConfirmationPatch:
   type: "object"
-  description: "Auftragsbestätigung ändern"
+  description: "Update order confirmation"
   properties:
     customer_id:
       type: "string"
@@ -2953,7 +2953,7 @@ OrderConfirmationPatch:
       nullable: true
 InvoiceInput:
   type: "object"
-  description: "Neue Rechnung als Entwurf (noch ohne Rechnungsnummer)"
+  description: "New invoice as draft (no invoice number yet)"
   required:
     - "customer_id"
     - "start_date"
@@ -3032,7 +3032,7 @@ InvoiceInput:
       nullable: true
 InvoicePatch:
   type: "object"
-  description: "Rechnungsentwurf ändern"
+  description: "Update invoice draft"
   properties:
     customer_id:
       type: "string"
@@ -3103,7 +3103,7 @@ InvoicePatch:
       nullable: true
 EmailInput:
   type: "object"
-  description: "E-Mail-Versand an den Kunden"
+  description: "Send e-mail to the customer"
   required:
     - "recipient_email"
   properties:
@@ -3114,7 +3114,7 @@ EmailInput:
       nullable: true
 DunningEmailInput:
   type: "object"
-  description: "Mahnung per E-Mail versenden"
+  description: "Send dunning notice by e-mail"
   required:
     - "recipient_email"
   properties:
@@ -3122,7 +3122,7 @@ DunningEmailInput:
       type: "string"
 ReceiptInput:
   type: "object"
-  description: "Neuer Beleg (multipart/form-data, Datei im Feld \"file\")"
+  description: "New receipt (multipart/form-data, file in the field \"file\")"
   required:
     - "supplier_id"
     - "receipt_number"
@@ -3150,7 +3150,7 @@ ReceiptInput:
       type: "string"
 ReceiptPatch:
   type: "object"
-  description: "Beleg ändern (nur gesendete Felder)"
+  description: "Update receipt (only the fields sent)"
   properties:
     supplier_id:
       type: "string"
@@ -3171,7 +3171,7 @@ ReceiptPatch:
       type: "string"
 PurchaseOrderInput:
   type: "object"
-  description: "Neue Bestellung"
+  description: "New purchase order"
   required:
     - "supplier_id"
     - "note"
@@ -3187,7 +3187,7 @@ PurchaseOrderInput:
         $ref: "common.yaml#/schemas/PurchaseOrderItemRow"
 PurchaseOrderPatch:
   type: "object"
-  description: "Bestellung ändern"
+  description: "Update purchase order"
   properties:
     supplier_id:
       type: "string"
@@ -3199,7 +3199,7 @@ PurchaseOrderPatch:
         $ref: "common.yaml#/schemas/PurchaseOrderItemRow"
 ReceiveInput:
   type: "object"
-  description: "Wareneingang buchen"
+  description: "Book goods receipt"
   required:
     - "quantity"
   properties:
@@ -3207,7 +3207,7 @@ ReceiveInput:
       type: "string"
 ElectricalInspectionInput:
   type: "object"
-  description: "Elektroprüfung erfassen"
+  description: "Record electrical inspection"
   required:
     - "passed"
   properties:

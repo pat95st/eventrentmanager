@@ -2,10 +2,10 @@
 /api/v1/invoices:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnungen auflisten
+    - Invoices
+    summary: List invoices
     description: |
-      Neue Rechnungen sind Entwürfe ohne Rechnungsnummer; ändern und löschen geht nur im Status `draft`.
+      New invoices are drafts without an invoice number; they can only be updated and deleted in status `draft`.
 
       **Scopes:** `invoices:read`
     operationId: InvoicesIndex
@@ -30,7 +30,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -55,8 +55,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Rechnungen
-    summary: Rechnung anlegen
+    - Invoices
+    summary: Create invoice
     description: |
       **Scopes:** `invoices:write`
     operationId: InvoicesStore
@@ -72,7 +72,7 @@
             $ref: ../components/generated.yaml#/InvoiceInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -93,8 +93,8 @@
 /api/v1/invoices/{id}:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnung abrufen
+    - Invoices
+    summary: Get invoice
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesShow
@@ -106,7 +106,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -126,10 +126,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Rechnungen
-    summary: Rechnung ändern
+    - Invoices
+    summary: Update invoice
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `invoices:write`
     operationId: InvoicesUpdate
@@ -147,7 +147,7 @@
             $ref: ../components/generated.yaml#/InvoicePatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -171,8 +171,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Rechnungen
-    summary: Rechnung löschen
+    - Invoices
+    summary: Delete invoice
     description: |
       **Scopes:** `invoices:write`
     operationId: InvoicesDestroy
@@ -198,10 +198,10 @@
 /api/v1/invoices/{id}/finalize:
   post:
     tags:
-    - Rechnungen
-    summary: Rechnung festschreiben
+    - Invoices
+    summary: Finalize invoice
     description: |
-      **Unumkehrbar (GoBD):** vergibt die fortlaufende Rechnungsnummer und setzt den Status auf `sent`. Benötigt den eigenen Scope `invoices:finalize`.
+      **Irreversible (GoBD):** assigns the sequential invoice number and sets the status to `sent`. Requires the separate scope `invoices:finalize`.
 
       **Scopes:** `invoices:finalize`
     operationId: InvoicesFinalize
@@ -213,7 +213,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -238,10 +238,10 @@
 /api/v1/invoices/{id}/cancel:
   post:
     tags:
-    - Rechnungen
-    summary: Rechnung stornieren
+    - Invoices
+    summary: Cancel invoice
     description: |
-      Benötigt `invoices:finalize`. Für Teilgutschriften die Rechnungskorrektur in der Oberfläche verwenden.
+      Requires `invoices:finalize`. For partial credits, use the invoice correction in the web interface.
 
       **Scopes:** `invoices:finalize`
     operationId: InvoicesCancel
@@ -253,7 +253,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -278,10 +278,10 @@
 /api/v1/invoices/{id}/mark-paid:
   post:
     tags:
-    - Rechnungen
-    summary: Als bezahlt markieren
+    - Invoices
+    summary: Mark as paid
     description: |
-      Nur für festgeschriebene Rechnungen (Status `sent`).
+      Only for finalized invoices (status `sent`).
 
       **Scopes:** `invoices:write`
     operationId: InvoicesMarkPaid
@@ -293,7 +293,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -318,10 +318,10 @@
 /api/v1/invoices/{id}/pdf:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnung als PDF
+    - Invoices
+    summary: Invoice as PDF
     description: |
-      Entwürfe werden als „Entwurf“ gekennzeichnet.
+      Drafts are marked as „Entwurf“ (draft).
 
       **Scopes:** `invoices:read`
     operationId: InvoicesPdf
@@ -345,10 +345,10 @@
 /api/v1/invoices/{id}/xrechnung:
   get:
     tags:
-    - Rechnungen
-    summary: E-Rechnung (XRechnung)
+    - Invoices
+    summary: E-invoice (XRechnung)
     description: |
-      Nur für festgeschriebene Rechnungen, sonst `409`.
+      Only for finalized invoices, otherwise `409`.
 
       **Scopes:** `invoices:read`
     operationId: InvoicesXrechnung
@@ -374,10 +374,10 @@
 /api/v1/invoices/{id}/email:
   post:
     tags:
-    - Rechnungen
-    summary: Rechnung per E-Mail versenden
+    - Invoices
+    summary: Send invoice by e-mail
     description: |
-      Versendet das Dokument als PDF-Anhang an `recipient_email` (der Versand wird wie in der Oberfläche archiviert). Zusätzlich wird wie in der Oberfläche per Messenger benachrichtigt (falls eingerichtet).
+      Sends the document as a PDF attachment to `recipient_email` (the e-mail is archived as in the web interface). In addition, a messenger notification is sent as in the web interface (if configured).
 
       **Scopes:** `invoices:read`, `email:send`
     operationId: InvoicesEmail
@@ -396,7 +396,7 @@
             $ref: ../components/generated.yaml#/EmailInput
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -418,8 +418,8 @@
 /api/v1/invoices/{id}/dunning-notices:
   get:
     tags:
-    - Rechnungen
-    summary: Mahnungen einer Rechnung
+    - Invoices
+    summary: Dunning notices of an invoice
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesDunningNotices
@@ -436,7 +436,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -464,8 +464,8 @@
 /api/v1/dunning-notices/{id}:
   get:
     tags:
-    - Rechnungen
-    summary: Mahnung abrufen
+    - Invoices
+    summary: Get dunning notice
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesDunningNotice
@@ -477,7 +477,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -498,8 +498,8 @@
 /api/v1/dunning-notices/{id}/pdf:
   get:
     tags:
-    - Rechnungen
-    summary: Mahnung als PDF
+    - Invoices
+    summary: Dunning notice as PDF
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesDunningNoticePdf
@@ -523,8 +523,8 @@
 /api/v1/dunning-notices/{id}/email:
   post:
     tags:
-    - Rechnungen
-    summary: Mahnung per E-Mail versenden
+    - Invoices
+    summary: Send dunning notice by e-mail
     description: |
       **Scopes:** `invoices:read`, `email:send`
     operationId: InvoicesEmailDunningNotice
@@ -543,7 +543,7 @@
             $ref: ../components/generated.yaml#/DunningEmailInput
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -565,8 +565,8 @@
 /api/v1/invoice-corrections:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnungskorrekturen auflisten
+    - Invoices
+    summary: List invoice corrections
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesCorrections
@@ -586,7 +586,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -612,8 +612,8 @@
 /api/v1/invoice-corrections/{id}:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnungskorrektur abrufen
+    - Invoices
+    summary: Get invoice correction
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesCorrection
@@ -625,7 +625,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -646,8 +646,8 @@
 /api/v1/invoice-corrections/{id}/pdf:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnungskorrektur als PDF
+    - Invoices
+    summary: Invoice correction as PDF
     description: |
       **Scopes:** `invoices:read`
     operationId: InvoicesCorrectionPdf
@@ -671,10 +671,10 @@
 /api/v1/invoice-corrections/{id}/xrechnung:
   get:
     tags:
-    - Rechnungen
-    summary: Rechnungskorrektur als XRechnung
+    - Invoices
+    summary: Invoice correction as XRechnung
     description: |
-      Nur für ausgestellte Korrekturen.
+      Only for issued corrections.
 
       **Scopes:** `invoices:read`
     operationId: InvoicesCorrectionXRechnung
@@ -700,8 +700,8 @@
 /api/v1/invoice-corrections/{id}/email:
   post:
     tags:
-    - Rechnungen
-    summary: Rechnungskorrektur per E-Mail versenden
+    - Invoices
+    summary: Send invoice correction by e-mail
     description: |
       **Scopes:** `invoices:read`, `email:send`
     operationId: InvoicesEmailCorrection
@@ -720,7 +720,7 @@
             $ref: ../components/generated.yaml#/EmailInput
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:

@@ -4,212 +4,194 @@ info:
   title: Materialverleih – API
   version: '1.1'
   description: |
-    Maschinenlesbare Schnittstellen der Materialverleih-Software.
+    Machine-readable interfaces of the Materialverleih software.
 
-    Alle Pfade sind relativ zur Basis-URL der Installation, z. B. `https://verleih.example.de`.
-    Keine Schnittstelle nutzt Session-Cookies oder CSRF-Schutz.
+    All paths are relative to the base URL of the installation, e.g. `https://verleih.example.de`.
+    No interface uses session cookies or CSRF protection.
 
-    | Bereich | Pfad-Präfix | Zugang |
+    | Area | Path prefix | Access |
     |---|---|---|
-    | **REST-API v1** (Kunden, Artikel, Veranstaltungen, Angebote, Rechnungen, Finanzen, Lager, Berichte) | `/api/v1` | API-Token mit Scopes (*Einstellungen › API*) |
-    | Abspielgerät | `/api/player/v1` | Geräte-Token `mvp_…` |
-    | Run-Sheet / Stagedisplay | `/api/runsheet/v1/{token}` | Token eines Freigabe-Links |
-    | Stage- & FOH-Displays | `/api/display/v1` | Display-Token `mvd_…` |
-    | Partner-Instanzen | `/api/federation/v1` | Partnerschafts-Token / Einladungscode |
-    | Online-Zahlung | `/api/payments` | – (Webhook) |
+    | **REST API v1** (customers, articles, events, offers, invoices, finance, inventory, reports) | `/api/v1` | API token with scopes (*Einstellungen › API*, i.e. Settings › API) |
+    | Player device | `/api/player/v1` | Device token `mvp_…` |
+    | Run sheet / stage display | `/api/runsheet/v1/{token}` | Token of a share link |
+    | Stage & FOH displays | `/api/display/v1` | Display token `mvd_…` |
+    | Partner instances | `/api/federation/v1` | Partnership token / invitation code |
+    | Online payment | `/api/payments` | – (webhook) |
 
-    # REST-API v1
+    The web interface itself is German; UI labels are quoted in German with an English translation where helpful.
 
-    ## Aktivieren und Tokens
+    # REST API v1
 
-    Die API wird unter **Einstellungen › API** eingeschaltet; ausgeschaltet antwortet jeder Endpunkt mit `404`.
-    Dort werden auch die Tokens angelegt. Ein Token wird nur einmal angezeigt und bei jeder Anfrage mitgeschickt:
+    ## Enabling the API and tokens
+
+    The API is switched on under **Einstellungen › API** (Settings › API); while it is switched off, every endpoint
+    responds with `404`. Tokens are created there as well. A token is shown only once and must be sent with every request:
 
     ```
     Authorization: Bearer mv_…
     ```
 
-    Je Token lassen sich **Scopes**, ein **IP-Filter**, der Schalter **„Nur lesen“** (lehnt jede schreibende Anfrage
-    mit `403` ab, egal welche Scopes gesetzt sind) und ein eigenes **Anfragelimit** festlegen.
+    Per token you can set **scopes**, an **IP filter**, the **„Nur lesen“** (read only) switch (rejects every write
+    request with `403`, regardless of the scopes granted) and an individual **request limit**.
 
     ## Scopes
 
-    Jeder Endpunkt nennt die nötigen Scopes („**Scopes:**“); alle genannten müssen gewährt sein. Ein `write`-Scope
-    schließt den `read`-Scope nicht ein.
+    Every endpoint lists the scopes it requires ("**Scopes:**"); all of them must be granted. A `write` scope does
+    not include the corresponding `read` scope.
 
-    | Scope | Erlaubt |
+    | Scope | Allows |
     |---|---|
-    | `customers:read` | Kunden lesen |
-    | `customers:write` | Kunden schreiben |
-    | `articles:read` | Artikel lesen (inkl. Inventurnummern, Kategorien, Hersteller, Sets, Verfügbarkeit) |
-    | `articles:write` | Artikel schreiben |
-    | `master_data:read` | Stammdaten lesen (Lieferanten, Veranstaltungsorte, Lagerorte, Fahrzeuge) |
-    | `master_data:write` | Stammdaten schreiben |
-    | `rentals:read` | Veranstaltungen lesen (inkl. Positionen, Techniker, Kalender) |
-    | `rentals:write` | Veranstaltungen schreiben |
-    | `sales:read` | Angebote & Auftragsbestätigungen lesen |
-    | `sales:write` | Angebote & Auftragsbestätigungen schreiben |
-    | `invoices:read` | Rechnungen lesen (inkl. Korrekturen, Mahnungen) |
-    | `invoices:write` | Rechnungsentwürfe schreiben, als bezahlt markieren |
-    | `invoices:finalize` | Rechnungen festschreiben & stornieren (vergibt Rechnungsnummer, unumkehrbar) |
-    | `finance:read` | Finanzen lesen (Belege, Konten, Bestellungen) |
-    | `finance:write` | Finanzen schreiben (Belege, Bestellungen) |
-    | `inventory:read` | Lager & Technik lesen (Cases, Racks, RMA, E-Prüfungen, Verkäufe) |
-    | `inventory:write` | E-Prüfungen erfassen |
-    | `minute_programs:read` | Minutenprogramme lesen |
-    | `reports:read` | Berichte lesen |
-    | `email:send` | E-Mails an Kunden versenden (Angebote, Rechnungen, Mahnungen, Packlisten) |
+    | `customers:read` | Read customers |
+    | `customers:write` | Write customers |
+    | `articles:read` | Read articles (incl. inventory numbers, categories, manufacturers, sets, availability) |
+    | `articles:write` | Write articles |
+    | `master_data:read` | Read master data (suppliers, venues, warehouses, vehicles) |
+    | `master_data:write` | Write master data |
+    | `rentals:read` | Read events (incl. items, technicians, calendar) |
+    | `rentals:write` | Write events |
+    | `sales:read` | Read offers & order confirmations |
+    | `sales:write` | Write offers & order confirmations |
+    | `invoices:read` | Read invoices (incl. corrections, dunning notices) |
+    | `invoices:write` | Write invoice drafts, mark invoices as paid |
+    | `invoices:finalize` | Finalize & cancel invoices (assigns the invoice number, irreversible) |
+    | `finance:read` | Read finance data (receipts, bank accounts, purchase orders) |
+    | `finance:write` | Write finance data (receipts, purchase orders) |
+    | `inventory:read` | Read inventory & equipment (cases, racks, RMAs, electrical inspections, sales) |
+    | `inventory:write` | Record electrical inspections |
+    | `minute_programs:read` | Read minute programs |
+    | `reports:read` | Read reports |
+    | `email:send` | Send e-mails to customers (offers, invoices, dunning notices, packing lists) |
 
-    Bestehende Tokens aus der Zeit vor den Scopes haben nur `articles:read` und sind „Nur lesen“.
+    Tokens created before scopes were introduced only have `articles:read` and are read only.
 
-    ## Konventionen
+    ## Conventions
 
-    - **JSON**: Anfragen mit `Content-Type: application/json`, Felder in `snake_case`. Einzelne Ressourcen kommen als
-      `{"data": …}`, Listen als `{"data": [...], "meta": {"page", "page_size", "total", "total_pages"}}`.
-    - **Listen** unterstützen `q` (Suche in Textfeldern), `updated_since` (ISO 8601, für den Abgleich nur geänderter
-      Datensätze), `sort` (`feld` oder `-feld`) und `page`/`page_size` (Standard 100, höchstens 500).
-      Gelöschte Datensätze erscheinen dabei nicht.
-    - **Anlegen** per `POST` → `201` mit der neuen Ressource. **Ändern** per `PATCH`: nur die gesendeten Felder ändern
-      sich, alles andere bleibt (auch Positionslisten von Belegen, solange sie nicht mitgeschickt werden). Positionslisten
-      werden im selben Format zurückgegeben, wie sie geschrieben werden. **Löschen** per `DELETE` → `204`.
-    - **Fachaktionen** sind `POST /…/{id}/<aktion>`, z. B. `/offers/{id}/accept` oder `/invoices/{id}/finalize`.
-    - Es gelten dieselben Prüfungen und Geschäftsregeln wie in der Weboberfläche.
-    - **Fehler** kommen als `{"error": "…"}`; Validierungsfehler (`422`) zusätzlich mit `errors` (Feld → Meldung).
-      `401` Token fehlt/ungültig, `403` Scope fehlt oder „Nur lesen“, `404` nicht gefunden, `409` im aktuellen Zustand
-      nicht möglich, `429` Limit überschritten, `502` E-Mail-Versand fehlgeschlagen.
-    - **Datum/Zeit**: ISO 8601; reine Datumsfelder als `Y-m-d`.
-    - **Dateien**: PDFs (`…/pdf`), XRechnung (`…/xrechnung`) und Belegdateien als Download. Uploads (Artikelbilder,
-      Belege) als `multipart/form-data` mit der Datei im Feld `file`.
+    - **JSON**: requests with `Content-Type: application/json`, fields in `snake_case`. Single resources are returned as
+      `{"data": …}`, lists as `{"data": [...], "meta": {"page", "page_size", "total", "total_pages"}}`.
+    - **Lists** support `q` (search in text fields), `updated_since` (ISO 8601, to sync only changed records),
+      `sort` (`field` or `-field`) and `page`/`page_size` (default 100, at most 500).
+      Deleted records are not included.
+    - **Create** via `POST` → `201` with the new resource. **Update** via `PATCH`: only the fields sent are changed,
+      everything else stays as it is (including the item lists of documents as long as they are not sent). Item lists
+      are returned in the same format in which they are written. **Delete** via `DELETE` → `204`.
+    - **Business actions** are `POST /…/{id}/<action>`, e.g. `/offers/{id}/accept` or `/invoices/{id}/finalize`.
+    - The same validations and business rules apply as in the web interface.
+    - **Errors** are returned as `{"error": "…"}`; validation errors (`422`) additionally contain `errors` (field → message).
+      `401` token missing/invalid, `403` scope missing or token is read only, `404` not found, `409` not possible in the
+      current state, `429` limit exceeded, `502` sending the e-mail failed.
+      Error messages are returned in German, as in the web interface.
+    - **Date/time**: ISO 8601; date-only fields as `Y-m-d`.
+    - **Files**: PDFs (`…/pdf`), XRechnung (`…/xrechnung`) and receipt files as downloads. Uploads (article images,
+      receipts) as `multipart/form-data` with the file in the field `file`.
 
-    ## Ratenbegrenzung
+    ## Rate limiting
 
-    Anfragen werden je Token und Minute gezählt (Standard 600, einstellbar global und je Token; 0 = unbegrenzt).
-    Jede Antwort enthält `X-RateLimit-Limit`, `X-RateLimit-Remaining` und `X-RateLimit-Reset` (Unix-Zeit).
-    Beim Überschreiten folgt `429` mit `Retry-After` (Sekunden). Gezählt wird in der Datenbank oder in Redis
-    (Unix-Socket, TCP oder TLS); ist Redis nicht erreichbar, zählt die API automatisch in der Datenbank weiter.
+    Requests are counted per token and minute (default 600, configurable globally and per token; 0 = unlimited).
+    Every response contains `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset` (Unix time).
+    When the limit is exceeded, the API responds with `429` and `Retry-After` (seconds). Requests are counted in the
+    database or in Redis (Unix socket, TCP or TLS); if Redis is unreachable, the API automatically falls back to the database.
 
-    ## Protokoll
+    ## Log
 
-    Jede schreibende Anfrage (`POST`, `PATCH`, `PUT`, `DELETE`) wird mit Zeit, Token, Pfad, Statuscode und IP
-    protokolliert und unter *Einstellungen › API* angezeigt (Aufbewahrung 90 Tage).
+    Every write request (`POST`, `PATCH`, `PUT`, `DELETE`) is logged with time, token, path, status code and IP address
+    and shown under *Einstellungen › API* (Settings › API); entries are kept for 90 days.
 
-    ## Was bleibt in der Weboberfläche?
+    ## What remains in the web interface?
 
-    Ausgabe und Rücknahme von Material (Unterschrift, Ausweis-/Zubehörprüfung), Rechnungskorrekturen und Mahnungen
-    anlegen, Bankimport, DATEV-Export, KI-Funktionen, Benutzer und Einstellungen.
+    Issuing and returning material (signature, ID/accessory checks), creating invoice corrections and dunning notices,
+    bank import, DATEV export, AI features, users and settings.
 
     ---
 
-    Diese Dokumentation wird aus `docs/openapi/` erzeugt: `bin/generate-api-schemas.php` (Felder aus den
-    Domain-Klassen), danach `bin/build-api-docs.sh` (ergibt `api-docs.html`).
+    This documentation is generated from `docs/openapi/`: `bin/generate-api-schemas.php` (fields from the domain
+    classes), followed by `bin/build-api-docs.sh` (produces `api-docs.html`).
 servers:
 - url: https://verleih.example.de
-  description: Beispiel-Installation (eigene Basis-URL einsetzen)
+  description: Example installation (use your own base URL)
 tags:
-- name: Kunden
-  description: Kunden inkl. Ansprechpartnern. Scopes `customers:*`.
-- name: Artikel
-  description: Artikel, Inventarnummern, Verfügbarkeit, Sets, Kategorien, Hersteller, Arbeitszeit-Artikel. Scopes
-    `articles:*`.
-- name: Stammdaten
-  description: Lieferanten, Veranstaltungsorte, Lagerorte, Fahrzeuge. Scopes `master_data:*`.
-- name: Veranstaltungen
-  description: Veranstaltungen (Vermietungen), Positionen, Techniker, Kalender, Packliste. Scopes `rentals:*`.
-- name: Minutenprogramme
-  description: Minutenprogramme und Vorlagen (lesend). Scope `minute_programs:read`.
-- name: Angebote
-  description: Angebote und Auftragsbestätigungen. Scopes `sales:*`.
-- name: Rechnungen
-  description: Rechnungen, Rechnungskorrekturen und Mahnungen. Scopes `invoices:*`, Festschreiben mit `invoices:finalize`.
-- name: Finanzen
-  description: Belege, Bankkonten und Bestellungen. Scopes `finance:*`.
-- name: Lager & Technik
-  description: Cases, Racks, RMA, Elektroprüfungen, Verkäufe. Scopes `inventory:*`.
-- name: Berichte
-  description: Auswertungen. Scope `reports:read`.
-- name: Abspielgerät
-  description: 'Schnittstelle für das Abspielgerät (Raspberry Pi am Mischpult) für Veranstaltungs-Audio:
+- name: Customers
+  description: Customers incl. contacts. Scopes `customers:*`.
+- name: Articles
+  description: Articles, inventory numbers, availability, sets, categories, manufacturers,
+    labor time articles. Scopes `articles:*`.
+- name: Master data
+  description: Suppliers, venues, warehouses, vehicles. Scopes `master_data:*`.
+- name: Events
+  description: Events (rentals), items, technicians, calendar, packing list. Scopes
+    `rentals:*`.
+- name: Minute programs
+  description: Minute programs and templates (read only). Scope `minute_programs:read`.
+- name: Offers
+  description: Offers and order confirmations. Scopes `sales:*`.
+- name: Invoices
+  description: Invoices, invoice corrections and dunning notices. Scopes `invoices:*`,
+    finalizing with `invoices:finalize`.
+- name: Finance
+  description: Receipts, bank accounts and purchase orders. Scopes `finance:*`.
+- name: Inventory & equipment
+  description: Cases, racks, RMAs, electrical inspections, sales. Scopes `inventory:*`.
+- name: Reports
+  description: Evaluations. Scope `reports:read`.
+- name: Player device
+  description: |
+    Interface for the player device (Raspberry Pi at the mixing desk) for event audio:
+    pairing, manifest of the audio files, queue of announcements/playback cues and
+    status reporting. The device polls `state` every `poll_interval_seconds`; every poll
+    counts as a heartbeat (offline after 45 s).
 
-    Kopplung, Manifest der Audio-Dateien, Warteschlange von Durchsagen/Einspielern und
-
-    Statusrückmeldung. Das Gerät fragt `state` alle `poll_interval_seconds` ab; jede Abfrage
-
-    zählt als Lebenszeichen (offline nach 45 s).
-
-
-    | `queue[].kind` | Inhalt | Abspielen |
-
+    | `queue[].kind` | Content | Playback |
     |---|---|---|
-
-    | `jingle` | `file_id`/`file_url` | Datei aus dem lokalen Cache abspielen |
-
-    | `audio` | `file_id`/`file_url` | Datei abspielen |
-
-    | `tts` | `text`, `language` | ggf. Gong → Text per Sprachausgabe sprechen |
-
-    | `recording` | `recording_url`, `recording_mime` | ggf. Gong → Aufnahme abspielen |
-
-    | `stop` | – | laufende Wiedergabe sofort beenden, dann `done` melden |
-
-    '
-- name: Run-Sheet
-  description: 'Live-Stand eines Minutenprogramms für Stagedisplays und andere externe Clients.
-
-    Zugang ist der Token eines **Freigabe-Links** des Minutenprogramms: „Nur lesen“ erlaubt
-
-    `GET`, „Lesen & bearbeiten“ zusätzlich die steuernden `POST`-Endpunkte. Wird der Link
-
-    widerrufen, antwortet die API mit `404`. Alle Antworten senden `Access-Control-Allow-Origin: *`.
-
-    '
+    | `jingle` | `file_id`/`file_url` | Play the file from the local cache |
+    | `audio` | `file_id`/`file_url` | Play the file |
+    | `tts` | `text`, `language` | Gong if applicable → speak the text via text-to-speech |
+    | `recording` | `recording_url`, `recording_mime` | Gong if applicable → play the recording |
+    | `stop` | – | Stop the current playback immediately, then report `done` |
+- name: Run sheet
+  description: |
+    Live state of a minute program for stage displays and other external clients.
+    Access is granted by the token of a **share link** of the minute program: „Nur lesen“ (read only) allows
+    `GET`, „Lesen & bearbeiten“ (read & edit) additionally allows the controlling `POST` endpoints. If the link
+    is revoked, the API responds with `404`. All responses send `Access-Control-Allow-Origin: *`.
 - name: Display
-  description: 'Schnittstelle für fest eingerichtete Stage- und FOH-Displays mit eigenem Geräte-Token.
-
-    Welches Minutenprogramm ein Display zeigt, wird zentral in der Verwaltung festgelegt.
-
-    `runSheet` hat genau das Format der Run-Sheet-API. Steuernde Endpunkte sind nur für
-
-    FOH-Displays mit „Steuern erlauben“ zulässig. CORS ist offen (inkl. `Authorization`).
-
-    '
-- name: Partner-Instanzen
-  description: 'Server-zu-Server-Protokoll zwischen zwei Installationen („Föderation“). Werte sind immer
-
-    **aus Sicht des Absenders** angegeben (`discount_granted` = Rabatt, den der Absender dem
-
-    Empfänger gewährt). Die Einladungs-Endpunkte werden über den geheimen Code im Pfad
-
-    authentifiziert, alle anderen über den beim Annehmen ausgetauschten Bearer-Token.
-
-    '
-- name: Online-Zahlung
-  description: Eingehende Benachrichtigungen von Zahlungsanbietern.
+  description: |
+    Interface for permanently installed stage and FOH displays with their own device token.
+    Which minute program a display shows is configured centrally in the web interface.
+    `runSheet` has exactly the format of the run sheet API. Controlling endpoints are only allowed for
+    FOH displays with „Steuern erlauben“ (allow control) enabled. CORS is open (incl. `Authorization`).
+- name: Partner instances
+  description: |
+    Server-to-server protocol between two installations ("federation"). Values are always given
+    **from the sender's point of view** (`discount_granted` = discount the sender grants the
+    recipient). The invitation endpoints are authenticated by the secret code in the path,
+    all others by the bearer token exchanged when the invitation is accepted.
+- name: Online payment
+  description: Incoming notifications from payment providers.
 x-tagGroups:
-- name: 'REST-API v1: Stammdaten'
+- name: 'REST API v1: Master data'
   tags:
-  - Kunden
-  - Artikel
-  - Stammdaten
-- name: 'REST-API v1: Veranstaltungen & Verkauf'
+  - Customers
+  - Articles
+  - Master data
+- name: 'REST API v1: Events & sales'
   tags:
-  - Veranstaltungen
-  - Minutenprogramme
-  - Angebote
-  - Rechnungen
-- name: 'REST-API v1: Finanzen, Lager & Berichte'
+  - Events
+  - Minute programs
+  - Offers
+  - Invoices
+- name: 'REST API v1: Finance, inventory & reports'
   tags:
-  - Finanzen
-  - Lager & Technik
-  - Berichte
-- name: Veranstaltungstechnik
+  - Finance
+  - Inventory & equipment
+  - Reports
+- name: Event technology
   tags:
-  - Abspielgerät
-  - Run-Sheet
+  - Player device
+  - Run sheet
   - Display
-- name: Integrationen
+- name: Integrations
   tags:
-  - Partner-Instanzen
-  - Online-Zahlung
+  - Partner instances
+  - Online payment
 paths:
   /api/v1/customers:
     $ref: paths/customers.yaml#/~1api~1v1~1customers
@@ -478,17 +460,18 @@ components:
     apiToken:
       type: http
       scheme: bearer
-      description: 'API-Token aus *Einstellungen › API* (`Authorization: Bearer mv_…`). Die nötigen Scopes stehen
-        beim jeweiligen Endpunkt.'
+      description: 'API token from *Einstellungen › API* (Settings › API), sent as
+        `Authorization: Bearer mv_…`. The required scopes are listed at each endpoint.'
     playerToken:
       type: http
       scheme: bearer
-      description: Geräte-Token des Abspielgeräts (`mvp_…`).
+      description: Device token of the player device (`mvp_…`).
     displayToken:
       type: http
       scheme: bearer
-      description: Display-Token (`mvd_…`), wird beim Anlegen bzw. Neu-Erzeugen einmal angezeigt.
+      description: Display token (`mvd_…`), shown once when the display is created
+        or the token is regenerated.
     federationToken:
       type: http
       scheme: bearer
-      description: Beim Annehmen der Einladung ausgetauschter Partnerschafts-Token.
+      description: Partnership token exchanged when the invitation is accepted.

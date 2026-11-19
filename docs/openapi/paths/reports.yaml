@@ -2,8 +2,8 @@
 /api/v1/reports/income-expense:
   get:
     tags:
-    - Berichte
-    summary: Einnahmen und Ausgaben je Monat
+    - Reports
+    summary: Income and expenses per month
     description: |
       **Scopes:** `reports:read`
     operationId: ReportsIncomeExpense
@@ -19,7 +19,7 @@
         example: 2026
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -40,8 +40,8 @@
 /api/v1/reports/revenue-forecast:
   get:
     tags:
-    - Berichte
-    summary: Umsatzprognose
+    - Reports
+    summary: Revenue forecast
     description: |
       **Scopes:** `reports:read`
     operationId: ReportsRevenueForecast
@@ -63,7 +63,7 @@
         default: 5
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -84,8 +84,8 @@
 /api/v1/reports/depreciation:
   get:
     tags:
-    - Berichte
-    summary: Abschreibungen (AfA)
+    - Reports
+    summary: Depreciation (AfA)
     description: |
       **Scopes:** `reports:read`
     operationId: ReportsDepreciation
@@ -100,7 +100,7 @@
         type: integer
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:

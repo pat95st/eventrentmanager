@@ -2,8 +2,8 @@
 /api/v1/cases:
   get:
     tags:
-    - Lager & Technik
-    summary: Cases auflisten
+    - Inventory & equipment
+    summary: List cases
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryCases
@@ -23,7 +23,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -49,8 +49,8 @@
 /api/v1/cases/{id}:
   get:
     tags:
-    - Lager & Technik
-    summary: Case abrufen
+    - Inventory & equipment
+    summary: Get case
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryCaseItem
@@ -62,7 +62,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -83,8 +83,8 @@
 /api/v1/racks:
   get:
     tags:
-    - Lager & Technik
-    summary: Racks auflisten
+    - Inventory & equipment
+    summary: List racks
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryRacks
@@ -100,7 +100,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -126,8 +126,8 @@
 /api/v1/racks/{id}:
   get:
     tags:
-    - Lager & Technik
-    summary: Rack abrufen
+    - Inventory & equipment
+    summary: Get rack
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryRack
@@ -139,7 +139,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -160,8 +160,8 @@
 /api/v1/rmas:
   get:
     tags:
-    - Lager & Technik
-    summary: RMAs auflisten
+    - Inventory & equipment
+    summary: List RMAs
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryRmas
@@ -185,7 +185,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -211,8 +211,8 @@
 /api/v1/rmas/{id}:
   get:
     tags:
-    - Lager & Technik
-    summary: RMA abrufen
+    - Inventory & equipment
+    summary: Get RMA
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryRma
@@ -224,7 +224,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -245,10 +245,10 @@
 /api/v1/electrical-inspections:
   get:
     tags:
-    - Lager & Technik
-    summary: Letzte Elektroprüfungen
+    - Inventory & equipment
+    summary: Latest electrical inspections
     description: |
-      Die bis zu 500 jüngsten Prüfungen über alle Inventarnummern.
+      The up to 500 most recent inspections across all inventory numbers.
 
       **Scopes:** `inventory:read`
     operationId: InventoryElectricalInspections
@@ -264,7 +264,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -290,8 +290,8 @@
 /api/v1/electrical-inspections/{id}:
   get:
     tags:
-    - Lager & Technik
-    summary: Elektroprüfung abrufen
+    - Inventory & equipment
+    summary: Get electrical inspection
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryElectricalInspection
@@ -303,7 +303,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -324,8 +324,8 @@
 /api/v1/inventory-numbers/{id}/electrical-inspections:
   get:
     tags:
-    - Lager & Technik
-    summary: Elektroprüfungen einer Inventarnummer
+    - Inventory & equipment
+    summary: Electrical inspections of an inventory number
     description: |
       **Scopes:** `inventory:read`
     operationId: InventoryInventoryNumberInspections
@@ -342,7 +342,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -369,10 +369,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Lager & Technik
-    summary: Elektroprüfung erfassen
+    - Inventory & equipment
+    summary: Record electrical inspection
     description: |
-      Z. B. aus einem Prüfgerät oder einer App.
+      E.g. from a test device or an app.
 
       **Scopes:** `inventory:write`
     operationId: InventoryStoreInspection
@@ -390,7 +390,7 @@
             $ref: ../components/generated.yaml#/ElectricalInspectionInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -413,8 +413,8 @@
 /api/v1/sales:
   get:
     tags:
-    - Lager & Technik
-    summary: Verkäufe auflisten
+    - Inventory & equipment
+    summary: List sales
     description: |
       **Scopes:** `inventory:read`
     operationId: InventorySales
@@ -430,7 +430,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:

@@ -15,7 +15,7 @@ use App\Domain\Vehicle\VehicleSettings;
 use App\Domain\Vehicle\VehicleSettingsRepositoryInterface;
 use Codeception\Test\Unit;
 
-/** Cost per km of vehicles and trailers with defaults from the settings (migration 179). */
+/** Cost per km of vehicles and trailers with defaults from the settings (migration 181). */
 final class VehicleCostPerKmTest extends Unit
 {
     public function testDefaultsAreThirtyCentForCarsAndFifteenForTrailers(): void

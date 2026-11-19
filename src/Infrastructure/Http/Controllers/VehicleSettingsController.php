@@ -13,7 +13,7 @@ use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
 use App\Infrastructure\Http\View;
 
-/** Settings page "Fahrzeuge" (migration 179): default cost per km per category. */
+/** Settings page "Fahrzeuge" (migration 181): default cost per km per category. */
 final class VehicleSettingsController
 {
     public function __construct(

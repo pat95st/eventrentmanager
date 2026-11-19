@@ -7,6 +7,7 @@ namespace Tests\Unit\Application\Routing;
 use App\Application\Routing\Command\AddPlannedVehicle;
 use App\Application\Routing\Command\RoutingCommandHandler;
 use App\Application\Routing\Command\SaveRoutingSettings;
+use App\Application\Routing\Command\SetLegBilling;
 use App\Application\Routing\RoutingClientInterface;
 use App\Application\Routing\RoutingException;
 use App\Application\Routing\TourRouteService;
@@ -219,6 +220,29 @@ final class TourRouteServiceTest extends Unit
         $this->assertSame(20, $this->settings->bufferMinutes);
         $handler->handle(new SaveRoutingSettings('', '20', true));
         $this->assertNull($this->settings->apiKey);
+    }
+
+    public function testLegsMarkedAsNotBilledAreLeftOutOfTheBillableKilometres(): void
+    {
+        $route = $this->service()->forRental('tour');
+        // start → Hamburg → Kassel, 100 km each (Freitext-Ort has no coordinates)
+        $this->assertEqualsWithDelta(200000.0, (float) $route->billableDistanceM(), 0.1);
+
+        $handler = new RoutingCommandHandler($this->settingsRepository(), $this->rentals, $this->plannedRepository(), $this->vehicleRepository(), $this->tours);
+        $this->assertSame('tour', $handler->handle(new SetLegBilling('s2', false)));
+        $this->assertTrue($this->tours->findStop('s2')?->arrivalNotBilled);
+
+        $route = $this->service()->forRental('tour');
+        $this->assertSame(1, $this->calls, 'billing does not change the cached route');
+        $this->assertEqualsWithDelta(200000.0, $route->result?->totalDistanceM() ?? 0.0, 0.1);
+        $this->assertEqualsWithDelta(100000.0, (float) $route->billableDistanceM(), 0.1);
+        $this->assertSame([true, false], array_map($route->isLegBilled(...), $route->result?->legs ?? []));
+
+        $handler->handle(new SetLegBilling('s2', true));
+        $this->assertEqualsWithDelta(200000.0, (float) $this->service()->forRental('tour')->billableDistanceM(), 0.1);
+
+        $this->expectException(ValidationException::class);
+        $handler->handle(new SetLegBilling('start', false));
     }
 
     // --- fakes ----------------------------------------------------------

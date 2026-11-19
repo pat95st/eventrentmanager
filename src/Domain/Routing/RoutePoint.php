@@ -13,6 +13,7 @@ final class RoutePoint
         public readonly float $longitude,
         public readonly string $kind, // start | stop | waypoint | end
         public readonly ?string $stopId = null,
+        public readonly bool $arrivalNotBilled = false, // the leg ending here is not billed
     ) {
     }
 

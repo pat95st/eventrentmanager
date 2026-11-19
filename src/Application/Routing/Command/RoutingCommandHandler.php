@@ -13,6 +13,8 @@ use App\Domain\Routing\PlannedVehicle;
 use App\Domain\Routing\PlannedVehicleRepositoryInterface;
 use App\Domain\Routing\RouteProfile;
 use App\Domain\Routing\RoutingSettingsRepositoryInterface;
+use App\Domain\Tour\TourRepositoryInterface;
+use App\Domain\Tour\TourStopKind;
 use App\Domain\Vehicle\VehicleRepositoryInterface;
 use App\Shared\Uuid;
 use DateTimeImmutable;
@@ -25,6 +27,7 @@ final class RoutingCommandHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly PlannedVehicleRepositoryInterface $plannedVehicles,
         private readonly VehicleRepositoryInterface $vehicles,
+        private readonly ?TourRepositoryInterface $tours = null,
     ) {
     }
 
@@ -35,6 +38,7 @@ final class RoutingCommandHandler implements CommandHandlerInterface
             $command instanceof SetRouteProfile => $this->setProfile($command),
             $command instanceof AddPlannedVehicle => $this->addVehicle($command),
             $command instanceof RemovePlannedVehicle => $this->removeVehicle($command),
+            $command instanceof SetLegBilling => $this->setLegBilling($command),
             default => throw new \InvalidArgumentException('Unsupported command ' . $command::class),
         };
     }
@@ -107,5 +111,18 @@ final class RoutingCommandHandler implements CommandHandlerInterface
         }
 
         return null;
+    }
+
+    /** Returns the rental id of the stop. */
+    private function setLegBilling(SetLegBilling $command): string
+    {
+        $stop = $this->tours?->findStop($command->stopId) ?? throw new NotFoundException('Der Tourstop wurde nicht gefunden.');
+        if ($stop->kind === TourStopKind::Start) {
+            throw new ValidationException(['stop' => 'Zum Start der Tour gibt es keine Anfahrt.']);
+        }
+        $stop->arrivalNotBilled = !$command->billed;
+        $this->tours->saveStop($stop);
+
+        return $stop->rentalId;
     }
 }

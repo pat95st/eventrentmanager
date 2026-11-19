@@ -1,6 +1,6 @@
 <?php
 /**
- * Fleet settings: default cost per km of cars and trailers (migration 179).
+ * Fleet settings: default cost per km of cars and trailers (migration 181).
  *
  * @var \App\Domain\Vehicle\VehicleSettings $settings
  * @var array<string, string> $errors

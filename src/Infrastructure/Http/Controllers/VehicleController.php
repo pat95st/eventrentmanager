@@ -90,6 +90,7 @@ final class VehicleController
             widthCm: $this->nullIfEmpty($request->input('width_cm')),
             lengthCm: $this->nullIfEmpty($request->input('length_cm')),
             grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
+            passengerSeats: $this->nullIfEmpty($request->input('passenger_seats')),
             costPerKm: $this->nullIfEmpty($request->input('cost_per_km')),
         );
 
@@ -142,6 +143,7 @@ final class VehicleController
             widthCm: $this->nullIfEmpty($request->input('width_cm')),
             lengthCm: $this->nullIfEmpty($request->input('length_cm')),
             grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
+            passengerSeats: $this->nullIfEmpty($request->input('passenger_seats')),
             costPerKm: $this->nullIfEmpty($request->input('cost_per_km')),
         );
 
@@ -206,6 +208,7 @@ final class VehicleController
             'width_cm' => $command->widthCm,
             'length_cm' => $command->lengthCm,
             'gross_weight_kg' => $command->grossWeightKg,
+            'passenger_seats' => $command->passengerSeats,
             'cost_per_km' => $command->costPerKm,
         ];
     }

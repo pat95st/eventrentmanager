@@ -15,4 +15,4 @@ CREATE TABLE vehicle_settings (
 INSERT INTO vehicle_settings (id) VALUES (1);
 
 ALTER TABLE vehicles
-    ADD COLUMN cost_per_km DECIMAL(6, 2) NULL AFTER gross_weight_kg;
+    ADD COLUMN cost_per_km DECIMAL(6, 2) NULL AFTER passenger_seats;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Vehicle;
 
 /**
- * Fleet-wide vehicle settings (migration 179): default cost per kilometre
+ * Fleet-wide vehicle settings (migration 181): default cost per kilometre
  * per category. A vehicle without its own value (Vehicle::$costPerKm = null)
  * uses the default of its category. Amounts are strings like "0.30" (see
  * Vehicle for why decimals are kept as strings).

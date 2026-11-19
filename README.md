@@ -175,7 +175,7 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   Höhenbegrenzung). Bei „Auto“ zusätzlich: ob eine Anhängekupplung
   vorhanden ist und, falls ja, die Anhängelast (kg). Bei „Anhänger“
   zusätzlich: das Leergewicht (kg). Außerdem Kilometerkosten (€/km,
-  Migration 179): ohne eigenen Wert gilt der Standard der Kategorie aus
+  Migration 181): ohne eigenen Wert gilt der Standard der Kategorie aus
   „Einstellungen › Fahrzeuge“ (Auto 0,30 €, Anhänger 0,15 €, beide
   änderbar). Ein Fahrzeug lässt sich nicht löschen,
   solange es noch in einer Beladungsliste oder einer Zugfahrzeug-Zuordnung

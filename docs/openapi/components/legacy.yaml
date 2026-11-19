@@ -440,7 +440,7 @@ schemas:
         type: string
       trade:
         type: string
-        example: Sound
+        example: Ton
       color:
         type: string
         example: '#3b82f6'

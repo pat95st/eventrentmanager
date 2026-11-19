@@ -1,79 +1,81 @@
-# Ablauf-Schnittstelle für Stagedisplays (Run-Sheet-API)
+# Run Sheet Interface for Stage Displays (Run Sheet API)
 
-Stand: Migration 158 „Ablauf am FOH“. Diese Beschreibung ist die Vorlage für ein separat entwickeltes Stagedisplay (Bühnenmonitor, Konfidenzmonitor, Countdown-Anzeige o. Ä.). Dieselben Daten zeigt die FOH-Oberfläche **Ablauf am FOH** (`/minutenprogramme/{id}/foh`).
+Status: migration 158 "Ablauf am FOH" (run sheet at the FOH). This description is the specification for a separately developed stage display (stage monitor, confidence monitor, countdown display or similar). The FOH page **Ablauf am FOH** (`/minutenprogramme/{id}/foh`) shows the same data.
 
-> Für fest installierte Displays mit eigenem Geräte-Token, zentraler Zuordnung und Rolle (Stagedisplay/FOH-Display) gibt es seit Migration 168 die Display-Schnittstelle, siehe [display-api.md](display-api.md). Sie liefert die Ablaufdaten im selben Format.
+The web interface is German; UI labels are quoted in German with an English translation.
 
-## Überblick
+> For permanently installed displays with their own device token, central assignment and a role (stage display/FOH display), the display interface is available since migration 168, see [display-api.md](display-api.md). It returns the run sheet data in the same format.
 
-- Ein **Minutenprogramm** besteht aus Programmpunkten mit Dauer. Die geplante Startzeit eines Punkts ergibt sich aus dem Programmbeginn plus der Summe der Dauern davor.
-- Am FOH wird der **Verzug** gepflegt – entweder als exakter Wert (z. B. `+4:30`) oder indem bei einem Programmpunkt **Start** gedrückt wird. Dann gilt: Verzug = tatsächlicher Start − geplanter Start.
-- Nach einem Start bleibt dieser Punkt **aktuell**, bis der nächste gestartet wird („FOH-Modus“, `live.tracking = true`). Überzieht er, wächst der **prognostizierte Verzug** (`live.projectedDelaySeconds`) sekündlich mit, ohne dass jemand etwas eingeben muss.
-- Ohne Start gilt der „Uhr-Modus“: aktuell ist der letzte Punkt, dessen verschobene Startzeit erreicht ist.
-- **Programm beenden** markiert das Programm als beendet (`live.state = "finished"`), **Zurücksetzen** stellt den ursprünglichen Plan wieder her.
-- **Nachrichten** (Migration 167): Der Veranstalter kann über die Live-Oberfläche „Audio & Durchsagen“ (`/live/{id}`) kurze Texte an das Stagedisplay und/oder den FOH schicken. Das Stagedisplay erhält in `messages` alle aktiven Nachrichten, die an die Bühne gerichtet sind. Eine Nachricht bleibt aktiv, bis der Absender sie beendet oder der FOH sie ausblendet – dann fehlt sie in der nächsten Antwort. Auch der **FOH** kann auf der Seite „Ablauf am FOH“ Nachrichten an die Bühne schicken (`fromFoh = true`); sie bleiben aktiv, bis sie zurückgezogen werden.
+## Overview
 
-## Zugang (Token)
+- A **minute program** consists of program items with a duration. The planned start time of an item is the program start plus the sum of the durations before it.
+- The **delay** is maintained at the FOH – either as an exact value (e.g. `+4:30`) or by pressing **Start** on a program item. Then: delay = actual start − planned start.
+- After a start, this item stays **current** until the next one is started ("FOH mode", `live.tracking = true`). If it overruns, the **projected delay** (`live.projectedDelaySeconds`) grows every second without anyone having to enter anything.
+- Without a start, "clock mode" applies: the current item is the last one whose shifted start time has been reached.
+- **End program** marks the program as finished (`live.state = "finished"`), **Reset** restores the original plan.
+- **Messages** (migration 167): the organizer can send short texts to the stage display and/or the FOH via the live page „Audio & Durchsagen“ (audio & announcements, `/live/{id}`). The stage display receives all active messages addressed to the stage in `messages`. A message stays active until the sender ends it or the FOH hides it – then it is missing from the next response. The **FOH** can also send messages to the stage on the page „Ablauf am FOH“ (`fromFoh = true`); they stay active until they are withdrawn.
 
-Zugang ist der Token eines **Freigabe-Links** des Minutenprogramms (Minutenprogramm › Freigabe-Links):
+## Access (token)
 
-| Link-Modus           | Lesen | Steuern (Verzug, Start, Ende, Zurücksetzen) |
-|----------------------|:-----:|:-------------------------------------------:|
-| Nur lesen            |   ✓   |                      –                      |
-| Lesen & bearbeiten   |   ✓   |                      ✓                      |
+Access is granted by the token of a **share link** of the minute program (*Minutenprogramm › Freigabe-Links* / minute program › share links):
 
-Für ein reines Anzeigegerät einen Link **„Nur lesen“** verwenden. Wird der Link widerrufen, ist der Zugang sofort gesperrt (`404`).
+| Link mode                                  | Read | Control (delay, start, end, reset) |
+|--------------------------------------------|:----:|:----------------------------------:|
+| „Nur lesen“ (read only)                    |  ✓   |                 –                  |
+| „Lesen & bearbeiten“ (read & edit)         |  ✓   |                 ✓                  |
 
-Der Token steht im Pfad. Es gibt weder Cookies noch CSRF-Schutz. Alle Antworten senden `Access-Control-Allow-Origin: *`, eine Browser-Anwendung auf einer anderen Domain kann die API also direkt abfragen. Alle Pfade sind relativ zur Basis-URL der Verwaltung, z. B. `https://verleih.example.de`.
+For a pure display device, use a **read only** link. If the link is revoked, access is blocked immediately (`404`).
 
-## Endpunkte
+The token is part of the path. There are neither cookies nor CSRF protection. All responses send `Access-Control-Allow-Origin: *`, so a browser application on another domain can query the API directly. All paths are relative to the base URL of the web application, e.g. `https://verleih.example.de`.
 
-| Methode | Pfad                                              | Zweck                         | Modus              |
+## Endpoints
+
+| Method  | Path                                              | Purpose                       | Mode               |
 |---------|---------------------------------------------------|-------------------------------|--------------------|
-| GET     | `/api/runsheet/v1/{token}`                        | kompletter Live-Stand         | lesen              |
-| POST    | `/api/runsheet/v1/{token}/delay`                  | Verzug setzen/ändern          | lesen & bearbeiten |
-| POST    | `/api/runsheet/v1/{token}/items/{itemId}/start`   | Programmpunkt starten         | lesen & bearbeiten |
-| POST    | `/api/runsheet/v1/{token}/finish`                 | Programm beenden              | lesen & bearbeiten |
-| POST    | `/api/runsheet/v1/{token}/reset`                  | Live-Stand zurücksetzen       | lesen & bearbeiten |
+| GET     | `/api/runsheet/v1/{token}`                        | Complete live state           | read               |
+| POST    | `/api/runsheet/v1/{token}/delay`                  | Set/change delay              | read & edit        |
+| POST    | `/api/runsheet/v1/{token}/items/{itemId}/start`   | Start program item            | read & edit        |
+| POST    | `/api/runsheet/v1/{token}/finish`                 | End program                   | read & edit        |
+| POST    | `/api/runsheet/v1/{token}/reset`                  | Reset live state              | read & edit        |
 
-POST-Daten dürfen als JSON (`Content-Type: application/json`) oder als Formular (`application/x-www-form-urlencoded`) gesendet werden. Jede erfolgreiche POST-Antwort enthält `"ok": true` und zusätzlich den kompletten neuen Live-Stand (gleiches Format wie `GET`).
+POST data may be sent as JSON (`Content-Type: application/json`) or as a form (`application/x-www-form-urlencoded`). Every successful POST response contains `"ok": true` and additionally the complete new live state (same format as `GET`).
 
 ### `POST …/delay`
 
-Genau eine der folgenden Angaben (Vorrang in dieser Reihenfolge):
+Exactly one of the following values (precedence in this order):
 
-| Feld             | Beispiel   | Bedeutung                                                         |
-|------------------|------------|-------------------------------------------------------------------|
-| `adopt`          | `true`     | den prognostizierten Verzug (inkl. laufender Überziehung) übernehmen |
-| `adjust_seconds` | `60`, `-300` | relativ zum aktuellen Verzug ändern                            |
-| `delay_seconds`  | `270`      | absoluter Verzug in Sekunden (negativ = Vorsprung)                |
-| `delay`          | `"4:30"`   | absoluter Verzug als Text: Minuten (`5`, `-2`, `1,5`), `mm:ss` oder `h:mm:ss` |
+| Field            | Example      | Meaning                                                           |
+|------------------|--------------|-------------------------------------------------------------------|
+| `adopt`          | `true`       | Apply the projected delay (incl. the current overrun)             |
+| `adjust_seconds` | `60`, `-300` | Change relative to the current delay                              |
+| `delay_seconds`  | `270`        | Absolute delay in seconds (negative = ahead of schedule)          |
+| `delay`          | `"4:30"`     | Absolute delay as text: minutes (`5`, `-2`, `1,5`), `mm:ss` or `h:mm:ss` |
 
-Maximal ±24 Stunden.
+At most ±24 hours.
 
 ### `POST …/items/{itemId}/start`
 
-Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher begonnen hat:
-`"20:13:20"` (Uhrzeit, wird dem Tag zugeordnet, der der geplanten Zeit am nächsten liegt) oder ein ISO-8601-Zeitstempel.
+Without data, "now" is used. Optionally `started_at` if the item started earlier:
+`"20:13:20"` (time of day, assigned to the day closest to the planned time) or an ISO 8601 timestamp.
 
-### Fehler
+### Errors
 
-`{"ok": false, "error": "…"}` mit
+`{"ok": false, "error": "…"}` with
 
-- `403` – Link erlaubt nur Lesen,
-- `404` – unbekannter/widerrufener Token oder unbekannter Programmpunkt,
-- `422` – ungültige Eingabe (z. B. Verzug nicht lesbar).
+- `403` – the link only allows reading,
+- `404` – unknown/revoked token or unknown program item,
+- `422` – invalid input (e.g. delay not parseable).
 
-## Antwort von `GET /api/runsheet/v1/{token}`
+## Response of `GET /api/runsheet/v1/{token}`
 
 ```json
 {
   "apiVersion": 1,
   "serverTime": "2026-11-15T20:12:00+01:00",
   "revision": "bd7c8561a5b09953",
-  "event": { "name": "Firmengala 2026", "noStrobe": false },
+  "event": { "name": "Company gala 2026", "noStrobe": false },
   "program": {
-    "id": "…", "name": "Abendprogramm", "room": "Großer Saal",
+    "id": "…", "name": "Evening program", "room": "Main hall",
     "plannedStart": "2026-11-15T20:00:00+01:00",
     "currentStart": "2026-11-15T20:01:00+01:00",
     "plannedEnd": "2026-11-15T21:13:00+01:00",
@@ -97,12 +99,12 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
     "canControl": false
   },
   "current": {
-    "id": "…", "position": 2, "name": "Begrüßung", "description": "…",
+    "id": "…", "position": 2, "name": "Welcome", "description": "…",
     "notes": { "general": "…", "sound": "HH 1", "light": "…", "video": null, "stage": null },
     "tradeNotes": [
       { "tradeId": "…", "trade": "Ton", "color": "#3b82f6", "text": "HH 1" },
       { "tradeId": "…", "trade": "Licht", "color": "#f59e0b", "text": "…" },
-      { "tradeId": "…", "trade": "Rigging", "color": "#a855f7", "text": "Banner fährt ein" }
+      { "tradeId": "…", "trade": "Rigging", "color": "#a855f7", "text": "Banner flies in" }
     ],
     "noStrobe": true,
     "durationSeconds": 300,
@@ -112,10 +114,10 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
     "remainingSeconds": 240,
     "actualStart": "2026-11-15T20:11:00+01:00"
   },
-  "next": { "…": "gleiches Format wie current" },
+  "next": { "…": "same format as current" },
   "items": [
     {
-      "id": "…", "position": 1, "name": "Einlass", "description": null,
+      "id": "…", "position": 1, "name": "Doors open", "description": null,
       "notes": { "general": null, "sound": "…", "light": "…", "video": null, "stage": null },
       "tradeNotes": [ { "tradeId": "…", "trade": "Ton", "color": "#3b82f6", "text": "…" } ],
       "noStrobe": false,
@@ -130,12 +132,12 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
   "messages": [
     {
       "id": "…",
-      "text": "Redner kommt 5 Minuten später",
+      "text": "Speaker arrives 5 minutes late",
       "urgent": false,
       "stage": true, "foh": true,
       "allPrograms": true,
       "sentAt": "2026-11-15T20:09:30+01:00",
-      "sentBy": "Max Muster (Veranstalter)",
+      "sentBy": "Max Muster (Organizer)",
       "fromFoh": false,
       "acknowledgedAt": null, "acknowledgedBy": null
     }
@@ -143,45 +145,47 @@ Ohne Daten gilt „jetzt“. Optional `started_at`, wenn der Punkt schon früher
 }
 ```
 
-### Felder
+The trades „Ton“ (sound) and „Licht“ (light) are user-defined names; see `notes` below for why these German names matter.
 
-| Feld | Bedeutung |
-|------|-----------|
-| `serverTime` | Serverzeit der Antwort. Zum Ausgleich der Geräteuhr: `offset = serverTime − lokale Zeit beim Empfang`. |
-| `revision` | Ändert sich, sobald sich Plan oder Live-Stand ändern (nicht mit der Uhrzeit). Für „nur bei Änderung neu zeichnen“. |
-| `live.state` | `pending` (vor Beginn), `running`, `finished`. |
-| `live.tracking` | `true`: aktueller Punkt wurde per Start gesetzt und bleibt aktuell, bis der nächste startet. `false`: Uhr-Modus. |
-| `live.delaySeconds` | Gesetzter Verzug (negativ = Vorsprung). |
-| `live.projectedDelaySeconds` | Verzug inklusive laufender Überziehung des aktuellen Punkts. **Das ist der Wert für die Anzeige.** |
-| `live.overrunSeconds` | Wie weit der aktuelle Punkt über die geplante Startzeit des nächsten hinaus läuft. |
-| `live.canControl` | Token darf steuern. |
-| `current` / `next` | Aktueller bzw. nächster Punkt oder `null`. `startsAt` = tatsächlicher bzw. voraussichtlicher Beginn, `endsAt` = Beginn + Dauer (`null` ohne Dauer). `elapsedSeconds` ist beim nächsten Punkt negativ (= Zeit bis zum Start). `remainingSeconds < 0` = überzogen. |
+### Fields
+
+| Field | Meaning |
+|-------|---------|
+| `serverTime` | Server time of the response. To compensate for the device clock: `offset = serverTime − local time on receipt`. |
+| `revision` | Changes as soon as the plan or live state changes (not with the time of day). Use it to "redraw only on change". |
+| `live.state` | `pending` (before the start), `running`, `finished`. |
+| `live.tracking` | `true`: the current item was set by a start and stays current until the next one starts. `false`: clock mode. |
+| `live.delaySeconds` | Delay set (negative = ahead of schedule). |
+| `live.projectedDelaySeconds` | Delay including the current overrun of the current item. **This is the value to display.** |
+| `live.overrunSeconds` | How far the current item runs past the planned start time of the next one. |
+| `live.canControl` | The token is allowed to control. |
+| `current` / `next` | Current or next item, or `null`. `startsAt` = actual or expected start, `endsAt` = start + duration (`null` without a duration). `elapsedSeconds` is negative for the next item (= time until start). `remainingSeconds < 0` = overrun. |
 | `items[].status` | `done`, `current`, `next`, `upcoming`. |
-| `items[].plannedStart` | Ursprünglicher Plan ohne Verzug. |
-| `items[].currentStart` | Plan + gesetzter Verzug. |
-| `items[].projectedStart` | Tatsächlicher Beginn (falls gestartet), sonst voraussichtlicher Beginn inkl. laufender Überziehung. |
-| `trades` | Gewerke, für die das Minutenprogramm Hinweise führt (festgelegt oder automatisch aus Veranstaltung/Technikern), in der Reihenfolge der Einstellungen. `color` ist eine feste Farbe je Gewerk (`#rrggbb`). |
-| `tradeNotes` | Hinweise je Gewerk (bei `current`, `next`, `items[]`): nur nicht-leere Hinweise der Gewerke aus `trades`, in deren Reihenfolge. **Für neue Displays verwenden.** |
-| `notes` | `general`: allgemeiner Hinweis. `sound`, `light`, `video`, `stage`: Kompatibilitätsfelder aus der Zeit fester Gewerke – gefüllt mit dem Hinweis des Gewerks namens „Ton“, „Licht“, „Video“ bzw. „Bühne“ (sonst `null`). Hinweise anderer Gewerke stehen nur in `tradeNotes`. |
-| `event.noStrobe` | `true`: Bei der gesamten Veranstaltung darf kein Stroboskop-Licht eingesetzt werden. |
-| `noStrobe` (bei `current`, `next`, `items[]`) | `true`: Bei diesem Programmpunkt darf kein Stroboskop-Licht eingesetzt werden. Gilt zusätzlich zu `event.noStrobe` – ein Display sollte den Hinweis zeigen, wenn eines der beiden `true` ist. |
-| `messages` | Aktive Nachrichten des Veranstalters und des FOH an die Bühne, älteste zuerst (leeres Array, wenn keine). Über die API kommen nur Nachrichten mit `stage = true`; reine FOH-Nachrichten erscheinen nur auf der FOH-Seite. |
-| `messages[].text` | Nachrichtentext (max. 500 Zeichen, kann Zeilenumbrüche enthalten). |
-| `messages[].urgent` | Als dringend markiert – auffällig darstellen (z. B. rot, blinkend). |
-| `messages[].stage` / `foh` | Ziele, an die die Nachricht geschickt wurde. |
-| `messages[].sentBy` / `fromFoh` | Anzeigename des Absenders; `fromFoh = true`: am FOH geschrieben (sonst vom Veranstalter bzw. aus der Live-Oberfläche). |
-| `messages[].allPrograms` | `true`: gilt für alle Minutenprogramme der Veranstaltung, `false`: nur für dieses. |
-| `messages[].acknowledgedAt` / `acknowledgedBy` | Wann/von wem der FOH die Nachricht als gesehen markiert hat (sonst `null`). Sie bleibt trotzdem aktiv. |
+| `items[].plannedStart` | Original plan without delay. |
+| `items[].currentStart` | Plan + delay set. |
+| `items[].projectedStart` | Actual start (if started), otherwise expected start incl. the current overrun. |
+| `trades` | Trades for which the minute program keeps notes (configured or automatically from the event/technicians), in the order of the settings. `color` is a fixed color per trade (`#rrggbb`). |
+| `tradeNotes` | Notes per trade (for `current`, `next`, `items[]`): only non-empty notes of the trades from `trades`, in their order. **Use this for new displays.** |
+| `notes` | `general`: general note. `sound`, `light`, `video`, `stage`: compatibility fields from the time of fixed trades – filled with the note of the trade named „Ton“, „Licht“, „Video“ or „Bühne“ respectively (otherwise `null`). Notes of other trades are only in `tradeNotes`. |
+| `event.noStrobe` | `true`: no strobe light may be used during the entire event. |
+| `noStrobe` (for `current`, `next`, `items[]`) | `true`: no strobe light may be used during this program item. Applies in addition to `event.noStrobe` – a display should show the notice if either of the two is `true`. |
+| `messages` | Active messages from the organizer and the FOH to the stage, oldest first (empty array if there are none). Only messages with `stage = true` are returned by the API; FOH-only messages appear only on the FOH page. |
+| `messages[].text` | Message text (max. 500 characters, may contain line breaks). |
+| `messages[].urgent` | Marked as urgent – show conspicuously (e.g. red, blinking). |
+| `messages[].stage` / `foh` | Targets the message was sent to. |
+| `messages[].sentBy` / `fromFoh` | Display name of the sender; `fromFoh = true`: written at the FOH (otherwise by the organizer or from the live page). |
+| `messages[].allPrograms` | `true`: applies to all minute programs of the event, `false`: only to this one. |
+| `messages[].acknowledgedAt` / `acknowledgedBy` | When/by whom the FOH marked the message as seen (otherwise `null`). It nevertheless stays active. |
 
-Alle Zeitangaben sind ISO 8601 mit Zeitzonen-Offset. Innerhalb von `apiVersion` 1 kommen nur neue Felder hinzu; Clients müssen unbekannte Felder ignorieren.
+All times are ISO 8601 with a time zone offset. Within `apiVersion` 1 only new fields are added; clients must ignore unknown fields.
 
-## Empfehlungen für das Stagedisplay
+## Recommendations for the stage display
 
-- Alle **2–5 s** `GET` abfragen. Countdowns lokal jede Sekunde aus `startsAt`/`endsAt` und dem Uhren-Offset berechnen – nicht auf die nächste Antwort warten.
-- Im FOH-Modus (`live.tracking`) den Verzug lokal fortschreiben: Ist der nächste Punkt überfällig, gilt `projectedDelaySeconds ≈ delaySeconds + (jetzt − next.currentStart)` (Wert `currentStart` aus `items`).
-- Bei Netzwerkfehlern den letzten Stand weiter anzeigen und sichtbar als „offline“ markieren.
-- Nachrichten (`messages`) gut lesbar über bzw. neben dem Countdown einblenden; neue Nachrichten (unbekannte `id`) kurz hervorheben. Fehlt eine `id` in einer späteren Antwort, wurde sie beendet und ist auszublenden.
-- Beispiel (Browser):
+- Poll `GET` every **2–5 s**. Calculate countdowns locally every second from `startsAt`/`endsAt` and the clock offset – do not wait for the next response.
+- In FOH mode (`live.tracking`), extrapolate the delay locally: if the next item is overdue, `projectedDelaySeconds ≈ delaySeconds + (now − next.currentStart)` (value `currentStart` from `items`).
+- On network errors, keep showing the last state and visibly mark it as "offline".
+- Show messages (`messages`) legibly above or next to the countdown; briefly highlight new messages (unknown `id`). If an `id` is missing from a later response, the message has been ended and must be hidden.
+- Example (browser):
 
 ```js
 const BASE = 'https://verleih.example.de/api/runsheet/v1/<token>';

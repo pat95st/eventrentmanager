@@ -86,9 +86,9 @@ $availabilityStatusMeta = [
 ?>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
-    <div>
+    <div class="min-w-0">
         <a href="/artikel" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.show.back')) ?></a>
-        <h1 class="mt-1 text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($article, $detail->manufacturer)) ?></h1>
+        <h1 class="mt-1 break-words text-xl font-semibold text-slate-900 dark:text-slate-100"><?= e(ArticleDisplayName::of($article, $detail->manufacturer)) ?></h1>
         <p class="text-sm text-slate-500 dark:text-slate-400">
             <?php if ($detail->category !== null): ?><?= e($detail->category->name) ?><?php endif; ?>
             <?php if ($detail->manufacturer?->prefix !== null && $article->prefix !== null): ?>
@@ -181,7 +181,7 @@ $availabilityStatusMeta = [
             </div>
         <?php endif; ?>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
         <a href="/artikel/<?= e($article->id) ?>/bearbeiten" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
             <?= e(t('common.edit')) ?>
         </a>

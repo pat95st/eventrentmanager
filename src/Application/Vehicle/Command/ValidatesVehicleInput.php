@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Vehicle\Command;
 
+use App\Domain\Vehicle\Vehicle;
 use App\Domain\Vehicle\VehicleCategory;
 
 /**
@@ -18,6 +19,9 @@ use App\Domain\Vehicle\VehicleCategory;
  *   (sonst könnte die Überladungsprüfung des Anhängers nie durchgeführt werden).
  * - Das Leergewicht ist nur bei category = Anhaenger relevant; bei category =
  *   Auto wird es stillschweigend auf null gesetzt.
+ * - Beifahrerplätze (0..Vehicle::MAX_PASSENGER_SEATS, ohne Fahrer) sind nur bei
+ *   category = Auto relevant; bei category = Anhaenger werden sie
+ *   stillschweigend auf null gesetzt.
  */
 trait ValidatesVehicleInput
 {
@@ -29,7 +33,9 @@ trait ValidatesVehicleInput
      *     loadAreaOpenTop: bool,
      *     towHitchAvailable: bool|null, towCapacityKg: string|null,
      *     emptyWeightKg: string|null, notes: string|null,
-     *     acquisitionYear: int|null, purchasePrice: string|null, currentValue: string|null
+     *     acquisitionYear: int|null, purchasePrice: string|null, currentValue: string|null,
+     *     heightCm: string|null, widthCm: string|null, lengthCm: string|null,
+     *     grossWeightKg: string|null, passengerSeats: int|null
      * }}
      */
     private function validateVehicleInput(
@@ -52,6 +58,7 @@ trait ValidatesVehicleInput
         ?string $widthCm = null,
         ?string $lengthCm = null,
         ?string $grossWeightKg = null,
+        ?string $passengerSeats = null,
     ): array {
         $errors = [];
 
@@ -105,6 +112,17 @@ trait ValidatesVehicleInput
             $towCapacityKg = null;
         }
 
+        // Passenger seats (migration 179): whole number 0..max, cars only.
+        $seats = null;
+        $passengerSeats = $passengerSeats !== null ? trim($passengerSeats) : '';
+        if ($category !== VehicleCategory::Anhaenger && $passengerSeats !== '') {
+            if (preg_match('/^\d+$/', $passengerSeats) !== 1 || (int) $passengerSeats > Vehicle::MAX_PASSENGER_SEATS) {
+                $errors['passengerSeats'] = 'Die Anzahl der Beifahrerplätze muss zwischen 0 und ' . Vehicle::MAX_PASSENGER_SEATS . ' liegen.';
+            } else {
+                $seats = (int) $passengerSeats;
+            }
+        }
+
         $notes = $notes !== null ? trim($notes) : null;
         if ($notes === '') {
             $notes = null;
@@ -149,6 +167,7 @@ trait ValidatesVehicleInput
             'widthCm' => $widthCm,
             'lengthCm' => $lengthCm,
             'grossWeightKg' => $grossWeightKg,
+            'passengerSeats' => $category === VehicleCategory::Auto ? $seats : null,
         ]];
     }
 

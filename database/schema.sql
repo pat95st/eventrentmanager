@@ -5098,6 +5098,17 @@ CREATE TABLE rental_route_cache (
     CONSTRAINT fk_rental_route_cache_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- --- 179_vehicle_passenger_seats.sql ---
+-- Passenger seats of a vehicle (excluding the driver), 0..8.
+--
+--  - vehicles.passenger_seats: only relevant for category = 'auto'; NULL =
+--    not specified, always NULL for trailers. The application enforces the
+--    range and the category rule (see ValidatesVehicleInput and
+--    Vehicle::MAX_PASSENGER_SEATS), not the database — analogous to
+--    tow_capacity_kg/empty_weight_kg.
+ALTER TABLE vehicles
+    ADD COLUMN passenger_seats TINYINT UNSIGNED NULL AFTER gross_weight_kg;
+
 -- =======================================================================
 
 -- Stand dieses Snapshots (maschinell ausgewertet — NICHT entfernen).
@@ -5299,4 +5310,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('175_api_scopes_rate_limit.sql', NOW()),
     ('176_rental_series.sql', NOW()),
     ('177_rental_tours.sql', NOW()),
-    ('178_tour_routing.sql', NOW());
+    ('178_tour_routing.sql', NOW()),
+    ('179_vehicle_passenger_seats.sql', NOW());

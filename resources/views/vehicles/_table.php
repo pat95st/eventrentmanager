@@ -35,15 +35,16 @@ if (!function_exists('formatVehicleDimension')) {
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Fahrzeuge gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full table-fixed text-left text-sm" style="min-width: 800px">
+        <table class="w-full table-fixed text-left text-sm" style="min-width: 900px">
             <colgroup>
-                <col style="width: 20%">
-                <col style="width: 15%">
-                <col style="width: 13%">
-                <col style="width: 11%">
                 <col style="width: 18%">
                 <col style="width: 13%">
+                <col style="width: 12%">
                 <col style="width: 10%">
+                <col style="width: 17%">
+                <col style="width: 9%">
+                <col style="width: 12%">
+                <col style="width: 9%">
             </colgroup>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
@@ -52,6 +53,7 @@ if (!function_exists('formatVehicleDimension')) {
                     <th class="break-words px-4 py-2.5">Kennzeichen</th>
                     <th class="break-words px-4 py-2.5">Zuladung</th>
                     <th class="break-words px-4 py-2.5">Ladefläche</th>
+                    <th class="break-words px-4 py-2.5">Beifahrer&shy;plätze</th>
                     <th class="break-words px-4 py-2.5">Anhängekupplung / Leergewicht</th>
                     <th class="break-words px-4 py-2.5"></th>
                 </tr>
@@ -96,6 +98,9 @@ if (!function_exists('formatVehicleDimension')) {
 
                             echo $label !== '' ? e($label) : '–';
                             ?>
+                        </td>
+                        <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
+                            <?= $vehicle->category === VehicleCategory::Auto && $vehicle->passengerSeats !== null ? (int) $vehicle->passengerSeats : '–' ?>
                         </td>
                         <td class="break-words px-4 py-3 text-slate-600 dark:text-slate-400">
                             <?php if ($vehicle->category === VehicleCategory::Auto): ?>

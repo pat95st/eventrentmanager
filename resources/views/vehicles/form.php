@@ -4,6 +4,7 @@
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
 
+use App\Domain\Vehicle\Vehicle;
 use App\Domain\Vehicle\VehicleCategory;
 use function App\Infrastructure\Http\e;
 
@@ -101,6 +102,13 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
 
     <div data-category-section="auto" class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
         <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nur bei Kategorie "Auto"</h3>
+        <div>
+            <label for="passenger_seats" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Beifahrerplätze (ohne Fahrer)</label>
+            <input type="number" id="passenger_seats" name="passenger_seats" min="0" max="<?= Vehicle::MAX_PASSENGER_SEATS ?>" step="1" inputmode="numeric" placeholder="z. B. 2"
+                   value="<?= e($val('passenger_seats', $vehicle?->passengerSeats !== null ? (string) $vehicle->passengerSeats : null)) ?>"
+                   class="mt-1 w-full max-w-xs rounded-md border <?= isset($errors['passengerSeats']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <?php if (isset($errors['passengerSeats'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['passengerSeats']) ?></p><?php endif; ?>
+        </div>
         <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
             <input type="checkbox" id="tow_hitch_available" name="tow_hitch_available" value="1" data-tow-hitch-checkbox
                    <?= $towHitchChecked ? 'checked' : '' ?>>

@@ -29,6 +29,8 @@ final class CreateVehicle implements CommandInterface
         public readonly ?string $widthCm = null,
         public readonly ?string $lengthCm = null,
         public readonly ?string $grossWeightKg = null,
+        // Migration 179: passenger seats (0..8, excluding the driver), cars only
+        public readonly ?string $passengerSeats = null,
     ) {
     }
 }

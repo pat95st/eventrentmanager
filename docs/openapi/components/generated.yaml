@@ -562,6 +562,7 @@ Vehicle:
     - "width_cm"
     - "length_cm"
     - "gross_weight_kg"
+    - "passenger_seats"
   properties:
     id:
       type: "string"
@@ -627,6 +628,9 @@ Vehicle:
       nullable: true
     gross_weight_kg:
       type: "string"
+      nullable: true
+    passenger_seats:
+      type: "integer"
       nullable: true
 Rental:
   type: "object"
@@ -2561,6 +2565,9 @@ VehicleInput:
     gross_weight_kg:
       type: "string"
       nullable: true
+    passenger_seats:
+      type: "string"
+      nullable: true
 VehiclePatch:
   type: "object"
   description: "Update vehicle"
@@ -2619,6 +2626,9 @@ VehiclePatch:
       type: "string"
       nullable: true
     gross_weight_kg:
+      type: "string"
+      nullable: true
+    passenger_seats:
       type: "string"
       nullable: true
 RentalInput:

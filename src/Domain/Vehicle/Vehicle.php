@@ -10,7 +10,8 @@ use DateTimeImmutable;
  * Ein Fahrzeug des Fuhrparks (Auto oder Anhänger), siehe VehicleCategory.
  * Zuladung und Ladeflächenmaße werden bei beiden Kategorien gepflegt.
  * towHitchAvailable/towCapacityKg sind nur bei category = Auto relevant,
- * emptyWeightKg nur bei category = Anhaenger — die Anwendung erzwingt das
+ * emptyWeightKg nur bei category = Anhaenger. passengerSeats (0..8, ohne
+ * Fahrer) ist ebenfalls nur bei category = Auto relevant — die Anwendung erzwingt das
  * (siehe ValidatesVehicleInput), nicht die Domain-Klasse selbst (analog zu
  * Article::is19Inch/heightUnits).
  *
@@ -23,6 +24,9 @@ use DateTimeImmutable;
  */
 final class Vehicle
 {
+    /** Maximum number of passenger seats (excluding the driver) of a car. */
+    public const MAX_PASSENGER_SEATS = 8;
+
     public function __construct(
         public readonly string $id,
         public VehicleCategory $category,
@@ -48,6 +52,8 @@ final class Vehicle
         public ?string $widthCm = null,
         public ?string $lengthCm = null,
         public ?string $grossWeightKg = null,
+        // Migration 179: passenger seats (excluding the driver), only relevant for category = Auto.
+        public ?int $passengerSeats = null,
     ) {
     }
 

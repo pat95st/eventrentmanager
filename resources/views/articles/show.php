@@ -899,12 +899,19 @@ $sectionClose = '</div></details>';
         <!-- Inventurnummern -->
         <div id="inventurnummern" class="scroll-mt-20 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    <?= e(t('articles.show.inventory_numbers_title')) ?>
-                    <?php if ($detail->inventoryNumbers !== []): ?>
-                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300"><?= count($detail->inventoryNumbers) ?></span>
-                    <?php endif; ?>
-                </h2>
+                <?php if ($detail->inventoryNumbers === []): ?>
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.inventory_numbers_title')) ?></h2>
+                <?php else: ?>
+                    <!-- Collapsible list: expanded without JavaScript; collapsed by default on small screens (see script below) -->
+                    <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <button type="button" id="inventory-list-toggle" aria-expanded="true" aria-controls="inventory-list"
+                                class="-mx-2 -my-1 flex items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-800/60 dark:active:bg-slate-800">
+                            <svg class="h-4 w-4 shrink-0 rotate-90 text-slate-400 transition-transform duration-200 ease-out motion-reduce:transition-none" data-inventory-chevron viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L11.94 9 7.21 4.29a.75.75 0 111.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clip-rule="evenodd"/></svg>
+                            <?= e(t('articles.show.inventory_numbers_title')) ?>
+                            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300"><?= count($detail->inventoryNumbers) ?></span>
+                        </button>
+                    </h2>
+                <?php endif; ?>
                 <?php if ($detail->nextInventoryNumberPreview !== null): ?>
                     <button type="button" data-dialog-open="dlg-inventory-new"
                             class="inline-flex items-center gap-1 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white transition-transform duration-100 hover:bg-brand-700 active:scale-[0.97] motion-reduce:transition-none">
@@ -916,6 +923,7 @@ $sectionClose = '</div></details>';
             <?php if ($detail->inventoryNumbers === []): ?>
                 <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_numbers_none')) ?></p>
             <?php else: ?>
+              <div id="inventory-list">
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
                     <?php foreach ($inventoryPageEntries as $entry): ?>
                         <?php $inv = $entry->inventoryNumber; ?>
@@ -995,6 +1003,26 @@ $sectionClose = '</div></details>';
                         'paginationFragment' => 'inventurnummern',
                     ]) ?>
                 <?php endif; ?>
+              </div>
+              <script>
+              // Runs inline (before first paint) so phones never flash the full list.
+              // Collapsed on small screens unless the user was sent to this card
+              // (#inventurnummern after paging, saving or deleting) or edits a number.
+              (function () {
+                  var toggle = document.getElementById('inventory-list-toggle');
+                  var list = document.getElementById('inventory-list');
+                  var chevron = toggle.querySelector('[data-inventory-chevron]');
+                  function setOpen(open) {
+                      list.hidden = !open;
+                      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                      chevron.classList.toggle('rotate-90', open);
+                  }
+                  var targeted = window.location.hash === '#inventurnummern'
+                      || window.location.search.indexOf('edit_inventory=') !== -1;
+                  if (!targeted && window.matchMedia('(max-width: 639px)').matches) { setOpen(false); }
+                  toggle.addEventListener('click', function () { setOpen(list.hidden); });
+              })();
+              </script>
             <?php endif; ?>
 
             <?php if ($detail->nextInventoryNumberPreview === null): ?>

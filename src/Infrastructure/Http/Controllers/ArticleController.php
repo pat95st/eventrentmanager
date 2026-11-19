@@ -68,6 +68,9 @@ use App\Infrastructure\Pdf\PriceListPdfGenerator;
 
 final class ArticleController
 {
+    /** Upper limit for creating several inventory numbers in one go. */
+    public const MAX_INVENTORY_BATCH = 50;
+
     public function __construct(
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
@@ -959,11 +962,36 @@ final class ArticleController
         $storageLocation = $this->nullIfEmpty($request->input('storage_location'));
         $installedFirmwareVersionId = $this->nullIfEmpty($request->input('installed_firmware_version_id'));
 
+        // Batch creation from the modal: the same details are applied to every
+        // new number. Network addresses are unique per device, so they are only
+        // accepted when exactly one number is created.
+        $rawQuantity = trim((string) ($request->input('quantity') ?? '1'));
+        if ($rawQuantity === '') {
+            $rawQuantity = '1';
+        }
+        if (preg_match('/^\d+$/', $rawQuantity) !== 1 || (int) $rawQuantity < 1 || (int) $rawQuantity > self::MAX_INVENTORY_BATCH) {
+            Flash::error(t('articles.show.inventory_batch_invalid_quantity', ['max' => (string) self::MAX_INVENTORY_BATCH]));
+            Response::redirect('/artikel/' . $articleId);
+
+            return;
+        }
+        $quantity = (int) $rawQuantity;
+        $networkInterfaces = $quantity === 1 ? $this->networkInterfacesFromRequest($request) : null;
+
+        $created = 0;
         try {
-            $this->commands->dispatch(new AddInventoryNumber($articleId, $acquisitionDate, $supplierId, $receiptId, $purchasePriceOverride, $storageLocation, $installedFirmwareVersionId, $this->networkInterfacesFromRequest($request)));
-            Flash::success('Inventurnummer wurde angelegt.');
+            for ($i = 0; $i < $quantity; $i++) {
+                $this->commands->dispatch(new AddInventoryNumber($articleId, $acquisitionDate, $supplierId, $receiptId, $purchasePriceOverride, $storageLocation, $installedFirmwareVersionId, $networkInterfaces));
+                $created++;
+            }
+            Flash::success($created === 1
+                ? 'Inventurnummer wurde angelegt.'
+                : t('articles.show.inventory_batch_created', ['count' => (string) $created]));
         } catch (ValidationException $e) {
-            Flash::error(implode(' ', $e->errors()));
+            // Validation runs before anything is saved, so a failure normally
+            // happens on the first number; report partial success otherwise.
+            $prefix = $created > 0 ? t('articles.show.inventory_batch_partial', ['count' => (string) $created]) . ' ' : '';
+            Flash::error($prefix . implode(' ', $e->errors()));
         } catch (NotFoundException $e) {
             Response::notFound($e->getMessage());
 

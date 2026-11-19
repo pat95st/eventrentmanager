@@ -83,6 +83,25 @@ $availabilityStatusMeta = [
     2 => ['label' => t('articles.show.status_booked_out'), 'icon' => '✗', 'classes' => 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-800'],
     3 => ['label' => t('articles.show.status_none'), 'icon' => '–', 'classes' => 'bg-slate-50 text-slate-400 ring-slate-200 dark:bg-slate-800/60 dark:text-slate-500 dark:ring-slate-700'],
 ];
+
+// Secondary sections (accessories, checks, firmware, documents, ...) are
+// collapsible <details> elements: closed by default so the page leads with
+// the essentials, opened automatically while one of their rows is edited.
+// Which sections a user keeps open is remembered in the browser (see script below).
+$sectionOpen = static function (string $key, string $title, int $count = 0, bool $forceOpen = false): string {
+    $badge = $count > 0
+        ? '<span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300">' . $count . '</span>'
+        : '';
+
+    return '<details class="article-section group rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900" data-article-section="' . e($key) . '"' . ($forceOpen ? ' open data-force-open' : '') . '>'
+        . '<summary class="flex cursor-pointer select-none list-none items-center gap-2 rounded-lg px-4 py-3 transition-colors hover:bg-slate-50 active:bg-slate-100 group-open:rounded-b-none dark:hover:bg-slate-800/60 dark:active:bg-slate-800 [&::-webkit-details-marker]:hidden">'
+        . '<svg class="h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ease-out group-open:rotate-90 motion-reduce:transition-none" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L11.94 9 7.21 4.29a.75.75 0 111.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clip-rule="evenodd"/></svg>'
+        . '<h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">' . e($title) . '</h2>'
+        . '<span class="ml-auto">' . $badge . '</span>'
+        . '</summary>'
+        . '<div class="px-4 pb-4 pt-1">';
+};
+$sectionClose = '</div></details>';
 ?>
 
 <div class="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -445,6 +464,274 @@ $availabilityStatusMeta = [
             </div>
         <?php endif; ?>
 
+        <?php if (!$article->isBundle): /* Bundles haben keine Inventarnummern (Migration 111) */ ?>
+        <!-- Inventurnummern -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <?= e(t('articles.show.inventory_numbers_title')) ?>
+                    <?php if ($detail->inventoryNumbers !== []): ?>
+                        <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600 dark:bg-slate-800 dark:text-slate-300"><?= count($detail->inventoryNumbers) ?></span>
+                    <?php endif; ?>
+                </h2>
+                <?php if ($detail->nextInventoryNumberPreview !== null): ?>
+                    <button type="button" data-dialog-open="dlg-inventory-new"
+                            class="inline-flex items-center gap-1 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white transition-transform duration-100 hover:bg-brand-700 active:scale-[0.97] motion-reduce:transition-none">
+                        <span aria-hidden="true" class="text-base leading-none">+</span> <?= e(t('articles.show.inventory_add_button')) ?>
+                    </button>
+                <?php endif; ?>
+            </div>
+
+            <?php if ($detail->inventoryNumbers === []): ?>
+                <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_numbers_none')) ?></p>
+            <?php else: ?>
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->inventoryNumbers as $entry): ?>
+                        <?php $inv = $entry->inventoryNumber; ?>
+                        <?php if ($editInventoryId === $inv->id): ?>
+                            <form method="post" action="/inventurnummern/<?= e($inv->id) ?>" class="js-inventory-number-form flex flex-wrap items-end gap-3 py-3">
+                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_number_label')) ?></label>
+                                    <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($inv->number) ?></p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.acquisition_date')) ?></label>
+                                    <input type="date" name="acquisition_date" value="<?= e($inv->acquisitionDate?->format('Y-m-d')) ?>"
+                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.receipt')) ?></label>
+                                    <select name="receipt_id" class="js-receipt-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                        <option value=""><?= e(t('articles.show.no_receipt')) ?></option>
+                                        <?php foreach ($receipts as $receiptEntry): ?>
+                                            <option value="<?= e($receiptEntry->receipt->id) ?>" <?= $inv->receiptId === $receiptEntry->receipt->id ? 'selected' : '' ?>><?= e($receiptLabel($receiptEntry->receipt)) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.supplier')) ?></label>
+                                    <select name="supplier_id" class="js-supplier-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700" <?= $inv->receiptId !== null ? 'disabled' : '' ?>>
+                                        <option value=""><?= e(t('articles.show.no_supplier')) ?></option>
+                                        <?php foreach ($suppliers as $supplier): ?>
+                                            <option value="<?= e($supplier->id) ?>" <?= $inv->supplierId === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.receipt_hint')) ?></p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.purchase_price_override')) ?></label>
+                                    <input type="number" step="0.01" min="0" name="purchase_price" placeholder="<?= e($article->purchasePrice ?? '–') ?>"
+                                           value="<?= e($inv->purchasePriceOverride ?? '') ?>"
+                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <div>
+                                    <?php $articleFixedCurrentValue = \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article->id); ?>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400">Zeitwert</label>
+                                    <input type="hidden" name="current_value_section" value="1">
+                                    <input type="number" step="0.01" min="0" name="current_value"
+                                           placeholder="<?= e($articleFixedCurrentValue ?? '–') ?>"
+                                           title="<?= e($articleFixedCurrentValue !== null ? 'Leer = fester Zeitwert des Artikels' : 'Geschätzter Zeitwert für die Versicherungsliste') ?>"
+                                           value="<?= e($inv->currentValue ?? '') ?>"
+                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.storage_location')) ?></label>
+                                    <input type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>"
+                                           value="<?= e($inv->storageLocation ?? '') ?>"
+                                           class="mt-1 w-44 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <?php if ($article->hasFirmware): ?>
+                                    <div>
+                                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.installed_firmware_version')) ?></label>
+                                        <select name="installed_firmware_version_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                            <option value=""><?= e(t('articles.show.installed_firmware_version_none')) ?></option>
+                                            <?php foreach ($detail->firmwareVersions as $firmwareVersion): ?>
+                                                <option value="<?= e($firmwareVersion->id) ?>" <?= $inv->installedFirmwareVersionId === $firmwareVersion->id ? 'selected' : '' ?>><?= e($firmwareVersion->version) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($networkEditForm !== null && !$networkEditForm->isEmpty()): ?>
+                                    <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkEditForm, 'formId' => 'inv-edit']) ?>
+                                <?php endif; ?>
+                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
+                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
+                            </form>
+                        <?php else: ?>
+                            <div class="-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($inv->id) ?>">
+                                <div>
+                                    <a href="/inventurnummern/<?= e($inv->id) ?>" class="font-mono text-sm text-brand-700 hover:underline dark:text-brand-400"><?= e($inv->number) ?></a>
+                                    <?php if ($entry->sale !== null): ?>
+                                        <span class="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600">
+                                            <?= e(t('articles.show.sold_badge', [
+                                                'date' => $entry->sale->soldAt->format('d.m.Y'),
+                                                'price' => number_format((float) $entry->sale->salePrice, 2, ',', '.'),
+                                            ])) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                    <p class="text-xs text-slate-400 dark:text-slate-500">
+                                        <?= e(t('articles.show.acquired_on')) ?>: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
+                                        <?php if ($inv->receiptId !== null && isset($receiptById[$inv->receiptId])): ?>
+                                            <?php $linkedReceiptEntry = $receiptById[$inv->receiptId]; ?>
+                                            · <?= e(t('articles.show.receipt')) ?>:
+                                            <a href="/belege/<?= e($linkedReceiptEntry->receipt->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedReceiptEntry->receipt->receiptNumber ?? $linkedReceiptEntry->receipt->receiptDate->format('d.m.Y')) ?></a>
+                                            <?php if ($linkedReceiptEntry->supplier !== null): ?>
+                                                · <?= e(t('articles.show.supplier')) ?>: <?= e($linkedReceiptEntry->supplier->name) ?>
+                                            <?php endif; ?>
+                                        <?php elseif ($inv->supplierId !== null && isset($supplierById[$inv->supplierId])): ?>
+                                            · <?= e(t('articles.show.supplier')) ?>: <?= e($supplierById[$inv->supplierId]->name) ?>
+                                        <?php endif; ?>
+                                        <?php $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice); ?>
+                                        <?php if ($effectivePrice !== null): ?>
+                                            · <?= e(t('articles.show.purchase_price_short')) ?>: <?= e($effectivePrice) ?> €<?= $inv->purchasePriceOverride !== null ? ' (' . e(t('articles.show.deviating')) . ')' : '' ?>
+                                        <?php endif; ?>
+                                        <?php if ($inv->storageLocation !== null): ?>
+                                            · <?= e(t('articles.show.storage_location')) ?>: <?= e($inv->storageLocation) ?>
+                                        <?php endif; ?>
+                                        <?php if ($inv->currentValue !== null): ?>
+                                            · Zeitwert: <?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €<?= $inv->isCurrentValueAiEstimate() ? ' (KI)' : '' ?>
+                                        <?php endif; ?>
+                                        <?php if ($article->hasFirmware && $entry->installedFirmwareVersion !== null): ?>
+                                            · <?= e(t('articles.show.installed_firmware_version')) ?>: <?= e($entry->installedFirmwareVersion->version) ?>
+                                            <?php if ($entry->firmwareOutdated): ?>
+                                                <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700"><?= e(t('articles.show.firmware_update_available_badge')) ?></span>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </p>
+                                    <?php if ($networkOverview !== null && $networkOverview->assignmentsFor($inv->id) !== []): ?>
+                                        <?= \App\Infrastructure\Http\View::render('networks/_assignment-list', ['assignments' => $networkOverview->assignmentsFor($inv->id), 'networks' => $networkOverview->networks]) ?>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <a href="/inventurnummern/<?= e($inv->id) ?>/rma" class="inline-flex items-center gap-1 rounded-full <?= $entry->openRmaCount > 0 ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700' ?> px-2.5 py-1 text-xs font-medium hover:opacity-80">
+                                        RMA
+                                        <?php if ($entry->totalRmaCount > 0): ?>
+                                            <span class="font-mono"><?= $entry->openRmaCount > 0 ? $entry->openRmaCount . ' ' . e(t('articles.show.open_count')) : $entry->totalRmaCount ?></span>
+                                        <?php endif; ?>
+                                    </a>
+                                    <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
+                                    <?php if ($entry->sale === null): ?>
+                                        <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm-key="articles.inventory_number.delete" data-confirm="<?= e(t('articles.show.confirm_delete_inventory_number')) ?>" data-confirm-style="danger">
+                                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                            <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
+                                        </form>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($detail->nextInventoryNumberPreview === null): ?>
+                <div class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
+                        <?= t('articles.show.inventory_numbers_missing_prefixes', ['link' => '<a href="/artikel/' . e($article->id) . '/bearbeiten" class="underline">' . e(t('articles.show.edit_article_link')) . '</a>']) ?>
+                    </p>
+                </div>
+            <?php else: ?>
+                <?php
+                $invLabel = 'block text-xs font-medium text-slate-500 dark:text-slate-400';
+                $invInput = 'mt-1 w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900';
+                $maxBatch = \App\Infrastructure\Http\Controllers\ArticleController::MAX_INVENTORY_BATCH;
+                ?>
+                <!-- New inventory numbers: modal instead of an always-visible form; several numbers at once -->
+                <dialog id="dlg-inventory-new" aria-labelledby="dlg-inventory-new-title" class="modal-panel rounded-lg border border-slate-200 bg-white p-0 dark:border-slate-700 dark:bg-slate-900">
+                    <form method="post" action="/artikel/<?= e($article->id) ?>/inventurnummern"
+                          class="js-inventory-number-form js-inventory-batch-form space-y-5 p-4"
+                          data-next-number="<?= e($detail->nextInventoryNumberPreview) ?>"
+                          data-max="<?= $maxBatch ?>"
+                          data-label-one="<?= e(t('articles.show.inventory_submit_one')) ?>"
+                          data-label-many="<?= e(t('articles.show.inventory_submit_many')) ?>">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <div>
+                            <h2 id="dlg-inventory-new-title" class="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"><?= e(t('articles.show.inventory_modal_title')) ?></h2>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_modal_subtitle')) ?></p>
+                        </div>
+
+                        <div class="flex flex-wrap items-end gap-4 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
+                            <div>
+                                <label for="inv-new-quantity" class="<?= $invLabel ?>"><?= e(t('articles.show.inventory_quantity')) ?></label>
+                                <div class="mt-1 inline-flex items-stretch overflow-hidden rounded-md border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+                                    <button type="button" data-quantity-step="-1" aria-label="<?= e(t('articles.show.inventory_quantity_decrease')) ?>"
+                                            class="px-3 text-lg leading-none text-slate-600 transition-transform duration-100 hover:bg-slate-100 active:scale-95 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-800">−</button>
+                                    <input id="inv-new-quantity" type="number" name="quantity" value="1" min="1" max="<?= $maxBatch ?>" step="1" inputmode="numeric" required
+                                           class="w-16 border-x border-y-0 border-slate-300 py-1.5 text-center text-sm font-semibold tabular-nums [appearance:textfield] dark:border-slate-700 dark:bg-slate-900 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none">
+                                    <button type="button" data-quantity-step="1" aria-label="<?= e(t('articles.show.inventory_quantity_increase')) ?>"
+                                            class="px-3 text-lg leading-none text-slate-600 transition-transform duration-100 hover:bg-slate-100 active:scale-95 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-800">+</button>
+                                </div>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="<?= $invLabel ?>"><?= e(t('articles.show.inventory_preview')) ?></p>
+                                <p class="mt-1 py-1.5 font-mono text-sm font-medium text-slate-800 dark:text-slate-200" data-inventory-preview aria-live="polite"><?= e($detail->nextInventoryNumberPreview) ?></p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="inv-new-date" class="<?= $invLabel ?>"><?= e(t('articles.show.acquisition_date')) ?></label>
+                                <input id="inv-new-date" type="date" name="acquisition_date" class="<?= $invInput ?>">
+                            </div>
+                            <div>
+                                <label for="inv-new-location" class="<?= $invLabel ?>"><?= e(t('articles.show.storage_location')) ?></label>
+                                <input id="inv-new-location" type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>" class="<?= $invInput ?>">
+                            </div>
+                            <div>
+                                <label for="inv-new-receipt" class="<?= $invLabel ?>"><?= e(t('articles.show.receipt')) ?></label>
+                                <select id="inv-new-receipt" name="receipt_id" class="js-receipt-select <?= $invInput ?>">
+                                    <option value=""><?= e(t('articles.show.no_receipt')) ?></option>
+                                    <?php foreach ($receipts as $receiptEntry): ?>
+                                        <option value="<?= e($receiptEntry->receipt->id) ?>"><?= e($receiptLabel($receiptEntry->receipt)) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="inv-new-supplier" class="<?= $invLabel ?>"><?= e(t('articles.show.supplier')) ?></label>
+                                <select id="inv-new-supplier" name="supplier_id" class="js-supplier-select <?= $invInput ?> disabled:opacity-60">
+                                    <option value=""><?= e(t('articles.show.no_supplier')) ?></option>
+                                    <?php foreach ($suppliers as $supplier): ?>
+                                        <option value="<?= e($supplier->id) ?>"><?= e($supplier->name) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.receipt_hint')) ?></p>
+                            </div>
+                            <div>
+                                <label for="inv-new-price" class="<?= $invLabel ?>"><?= e(t('articles.show.purchase_price_override')) ?></label>
+                                <input id="inv-new-price" type="number" step="0.01" min="0" name="purchase_price" placeholder="<?= e($article->purchasePrice ?? '–') ?>" class="<?= $invInput ?>">
+                            </div>
+                            <?php if ($article->hasFirmware): ?>
+                                <div>
+                                    <label for="inv-new-firmware" class="<?= $invLabel ?>"><?= e(t('articles.show.installed_firmware_version')) ?></label>
+                                    <select id="inv-new-firmware" name="installed_firmware_version_id" class="<?= $invInput ?>">
+                                        <option value=""><?= e(t('articles.show.installed_firmware_version_none')) ?></option>
+                                        <?php foreach ($detail->firmwareVersions as $firmwareVersion): ?>
+                                            <option value="<?= e($firmwareVersion->id) ?>"><?= e($firmwareVersion->version) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ($networkAddForm !== null && !$networkAddForm->isEmpty()): ?>
+                            <fieldset data-inventory-network class="m-0 min-w-0 border-0 p-0">
+                                <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkAddForm, 'formId' => 'inv-new']) ?>
+                            </fieldset>
+                            <p data-inventory-network-hint hidden class="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-800 ring-1 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-800"><?= e(t('articles.show.inventory_network_batch_hint')) ?></p>
+                        <?php endif; ?>
+
+                        <div class="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+                            <button type="button" data-dialog-close class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.cancel')) ?></button>
+                            <button type="submit" data-inventory-submit class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium tabular-nums text-white hover:bg-brand-700 active:scale-[0.97]"><?= e(t('articles.show.inventory_submit_one')) ?></button>
+                        </div>
+                    </form>
+                </dialog>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
         <!-- Bilder -->
         <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.images_title')) ?></h2>
@@ -487,9 +774,374 @@ $availabilityStatusMeta = [
             </div>
         </div>
 
+        <!-- Secondary sections: collapsed by default, opened state is remembered per browser -->
+        <div class="space-y-2">
+            <h2 class="px-1 pt-2 text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500"><?= e(t('articles.show.more_sections')) ?></h2>
+        <!-- Zubehör -->
+        <?= $sectionOpen('accessories', t('articles.show.accessories_title'), count($detail->accessories), $editAccessoryId !== null) ?>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('articles.show.accessories_hint')) ?>
+            </p>
+
+            <?php if ($detail->accessories === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessories_none')) ?></p>
+            <?php else: ?>
+                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->accessories as $accessory): ?>
+                        <?php if ($editAccessoryId === $accessory->id): ?>
+                            <form method="post" action="/zubehoer/<?= e($accessory->id) ?>" class="flex flex-wrap items-end gap-3 py-3">
+                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_quantity')) ?></label>
+                                    <input type="number" name="quantity" min="1" value="<?= e((string) $accessory->quantity) ?>"
+                                           class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_description')) ?></label>
+                                    <input type="text" name="description" value="<?= e($accessory->description) ?>" required
+                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
+                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
+                            </form>
+                        <?php else: ?>
+                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                                <p class="text-sm text-slate-700 dark:text-slate-300">
+                                    <span class="font-mono text-slate-500 dark:text-slate-400"><?= $accessory->quantity ?>×</span>
+                                    <?= e($accessory->description) ?>
+                                </p>
+                                <div class="flex items-center gap-3">
+                                    <a href="/artikel/<?= e($article->id) ?>?edit_accessory=<?= e($accessory->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
+                                    <form method="post" action="/zubehoer/<?= e($accessory->id) ?>/loeschen" data-confirm-key="articles.accessory.delete" data-confirm="<?= e(t('articles.show.confirm_delete_accessory')) ?>" data-confirm-style="danger">
+                                      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/artikel/<?= e($article->id) ?>/zubehoer" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_quantity')) ?></label>
+                    <input type="number" name="quantity" min="1" value="1" class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_description')) ?></label>
+                    <input type="text" name="description" placeholder="z. B. Netzkabel" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('articles.show.add')) ?>
+                </button>
+            </form>
+        <?= $sectionClose ?>
+
+
+        <!-- Vor-Ausgabe-Checks -->
+        <?= $sectionOpen('pre-issue-checks', t('articles.show.pre_issue_checks_title'), count($detail->preIssueChecks), $editPreIssueCheckId !== null) ?>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('articles.show.pre_issue_checks_hint')) ?>
+            </p>
+
+            <?php if ($detail->preIssueChecks === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_checks_none')) ?></p>
+            <?php else: ?>
+                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->preIssueChecks as $preIssueCheck): ?>
+                        <?php if ($editPreIssueCheckId === $preIssueCheck->id): ?>
+                            <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>" class="flex flex-wrap items-end gap-3 py-3">
+                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <div>
+                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_check_description')) ?></label>
+                                    <input type="text" name="description" value="<?= e($preIssueCheck->description) ?>" required
+                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                                </div>
+                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
+                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
+                            </form>
+                        <?php else: ?>
+                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                                <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($preIssueCheck->description) ?></p>
+                                <div class="flex items-center gap-3">
+                                    <a href="/artikel/<?= e($article->id) ?>?edit_pre_issue_check=<?= e($preIssueCheck->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
+                                    <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>/loeschen" data-confirm-key="articles.pre_issue_check.delete" data-confirm="<?= e(t('articles.show.confirm_delete_pre_issue_check')) ?>" data-confirm-style="danger">
+                                      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/artikel/<?= e($article->id) ?>/vor-ausgabe-checks" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_check_description')) ?></label>
+                    <input type="text" name="description" placeholder="z. B. Default Show geladen" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('articles.show.add')) ?>
+                </button>
+            </form>
+        <?= $sectionClose ?>
+
+        <!-- Firmware-Versionen -->
+        <?php if ($article->hasFirmware): ?>
+            <?= $sectionOpen('firmware', t('articles.show.firmware_versions_title'), count($detail->firmwareVersions)) ?>
+                <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.firmware_versions_hint')) ?></p>
+
+                <?php if ($detail->firmwareVersions === []): ?>
+                    <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.firmware_versions_none')) ?></p>
+                <?php else: ?>
+                    <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
+                        <?php foreach ($detail->firmwareVersions as $i => $firmwareVersion): ?>
+                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                                <p class="text-sm text-slate-700 dark:text-slate-300">
+                                    <span class="font-mono font-medium text-slate-900 dark:text-slate-100"><?= e($firmwareVersion->version) ?></span>
+                                    <?php if ($i === 0): ?>
+                                        <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-700"><?= e(t('articles.show.firmware_latest_badge')) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($firmwareVersion->releasedAt !== null): ?>
+                                        <span class="ml-2 text-xs text-slate-400 dark:text-slate-500"><?= e($firmwareVersion->releasedAt->format('d.m.Y')) ?></span>
+                                    <?php endif; ?>
+                                </p>
+                                <form method="post" action="/firmware-versionen/<?= e($firmwareVersion->id) ?>/loeschen" data-confirm-key="articles.firmware.delete" data-confirm="<?= e(t('articles.show.confirm_delete_firmware_version')) ?>" data-confirm-style="danger">
+                                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
+                                </form>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <form method="post" action="/artikel/<?= e($article->id) ?>/firmware-versionen" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.firmware_version_label')) ?></label>
+                        <input type="text" name="version" maxlength="100" required placeholder="z. B. 2.3.1"
+                               class="mt-1 w-32 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.firmware_released_at')) ?></label>
+                        <input type="date" name="released_at" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                    </div>
+                    <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                        <?= e(t('articles.show.add')) ?>
+                    </button>
+                </form>
+            <?= $sectionClose ?>
+        <?php endif; ?>
+
+        <?php if (!$article->isBundle): /* Bundles haben keinen Verkaufsbestand (Migration 111) */ ?>
+        <!-- Verkaufsbestand -->
+        <?= $sectionOpen('sale-stock', t('articles.show.sale_stock_title'), $saleStockQuantity, ($saleStockErrors ?? []) !== []) ?>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= e(t('articles.show.sale_stock_hint')) ?>
+            </p>
+
+            <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
+                <?= e(t('articles.show.sale_stock_quantity', ['quantity' => (string) $saleStockQuantity])) ?>
+            </p>
+
+            <?php if ($saleStockLots === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_none')) ?></p>
+            <?php else: ?>
+                <div class="mb-4 overflow-x-auto">
+                    <table class="w-full min-w-[500px] text-left text-sm">
+                        <thead class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            <tr>
+                                <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_received_at')) ?></th>
+                                <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_remaining')) ?></th>
+                                <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_received_quantity')) ?></th>
+                                <th class="px-2 py-2 text-right"><?= e(t('articles.show.sale_stock_lot_unit_price')) ?></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <?php foreach ($saleStockLots as $lot): ?>
+                                <?php if ($lot->quantityRemaining <= 0) continue; ?>
+                                <tr>
+                                    <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= e($lot->receivedAt->format('d.m.Y')) ?></td>
+                                    <td class="px-2 py-2 text-slate-800 dark:text-slate-200"><?= $lot->quantityRemaining ?></td>
+                                    <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= $lot->quantityReceived ?></td>
+                                    <td class="px-2 py-2 text-right text-slate-600 dark:text-slate-400"><?= number_format((float) $lot->unitPurchasePrice, 2, ',', '.') ?> €</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($saleStockQuantity > 0): ?>
+                <form method="post" action="/artikel/<?= e($article->id) ?>/verkaufsbestand-verkaufen" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_quantity')) ?></label>
+                        <input type="number" name="quantity" min="1" max="<?= $saleStockQuantity ?>" value="1"
+                               class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_customer')) ?></label>
+                        <select name="customer_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                            <option value=""><?= e(t('articles.show.sale_stock_form_no_customer')) ?></option>
+                            <?php foreach ($saleCustomers as $saleCustomer): ?>
+                                <option value="<?= e($saleCustomer->id) ?>"><?= e($saleCustomer->displayName()) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_sale_price')) ?></label>
+                        <input type="number" step="0.01" min="0" name="sale_price" required
+                               class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_shipping')) ?></label>
+                        <input type="number" step="0.01" min="0" name="shipping_amount"
+                               class="mt-1 w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                    </div>
+                    <div class="grow">
+                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_note')) ?></label>
+                        <input type="text" name="note" maxlength="255"
+                               class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                    </div>
+                    <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
+                        <?= e(t('articles.show.sale_stock_form_submit')) ?>
+                    </button>
+                </form>
+            <?php endif; ?>
+        <?= $sectionClose ?>
+        <?php endif; ?>
+
+        <!-- Bedienungsanleitungen & Hinweisdokumente -->
+        <?= $sectionOpen('notice-documents', t('articles.show.notice_documents_title'), count($detail->noticeDocuments) + count($detail->inheritedNoticeDocuments)) ?>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= t('articles.show.notice_documents_hint', ['link' => '<a href="/hinweisdokumente" class="underline">' . e(t('articles.show.notice_documents_settings_link')) . '</a>']) ?>
+            </p>
+
+            <?php if ($detail->inheritedNoticeDocuments !== []): ?>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_inherited')) ?></p>
+                <div class="mb-3 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->inheritedNoticeDocuments as $inherited): ?>
+                        <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                            <p class="text-sm text-slate-700 dark:text-slate-300">
+                                <?= e($inherited['document']->name) ?>
+                                <span class="text-xs text-slate-400 dark:text-slate-500">· <a href="/artikel/<?= e($inherited['sourceArticleId']) ?>" class="hover:underline"><?= e($inherited['sourceLabel']) ?></a></span>
+                            </p>
+                            <a href="/hinweisdokumente/<?= e($inherited['document']->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php if ($detail->noticeDocuments !== []): ?>
+                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_own')) ?></p>
+                <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($detail->noticeDocuments === [] && $detail->inheritedNoticeDocuments === []): ?>
+                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_none')) ?></p>
+            <?php elseif ($detail->noticeDocuments === []): ?>
+            <?php else: ?>
+                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach ($detail->noticeDocuments as $noticeDocument): ?>
+                        <div class="flex flex-wrap items-center justify-between gap-2 py-2">
+                            <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($noticeDocument->name) ?></p>
+                            <div class="flex items-center gap-3">
+                                <a href="/hinweisdokumente/<?= e($noticeDocument->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
+                                <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente/<?= e($noticeDocument->id) ?>/entfernen" data-confirm-key="articles.notice_document.remove" data-confirm="<?= e(t('articles.show.confirm_remove_notice_document')) ?>" data-confirm-style="danger">
+                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.notice_document_remove')) ?></button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_document_name')) ?></label>
+                    <input type="text" name="name" placeholder="<?= e(t('articles.show.notice_document_name_placeholder')) ?>" required
+                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_document_file')) ?></label>
+                    <input type="file" name="document" accept="application/pdf,image/jpeg,image/png,image/webp" required
+                           class="mt-1 block text-sm text-slate-700 dark:text-slate-300">
+                </div>
+                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                    <?= e(t('articles.show.notice_document_upload')) ?>
+                </button>
+            </form>
+            <p class="mt-1 text-[11px] text-slate-400"><?= e(t('articles.show.notice_document_file_hint')) ?></p>
+        <?= $sectionClose ?>
+
+        <!-- Verkaufskanäle -->
+        <?= $sectionOpen('channels', t('articles.show.channels.title'), count(array_filter($detail->channelListings, static fn ($listing) => $listing->enabled))) ?>
+            <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
+                <?= t('articles.show.channels.hint', ['link' => '<a href="/einstellungen/integrationen" class="underline">' . e(t('articles.show.channels.settings_link')) . '</a>']) ?>
+            </p>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                <?php foreach (\App\Domain\Article\SalesChannel::cases() as $channel): ?>
+                    <?php $listing = $detail->channelListings[$channel->value] ?? null; ?>
+                    <div class="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($channel->label()) ?></p>
+                            <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                                <?php if ($listing !== null && $listing->enabled): ?>
+                                    <span class="inline-flex items-center gap-1 rounded-full <?= $listing->status->badgeClasses() ?> px-2 py-0.5 text-xs font-medium ring-1 ring-inset">
+                                        <?= e($listing->status->label()) ?>
+                                    </span>
+                                    <?php if ($listing->externalLink !== null): ?>
+                                        <a href="<?= e($listing->externalLink) ?>" target="_blank" rel="noopener" class="text-xs text-brand-700 hover:underline dark:text-brand-400">
+                                            <?= e(t('articles.show.channels.link_label')) ?>
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if ($listing->status === \App\Domain\Article\ChannelSyncStatus::Failed && $listing->lastError !== null): ?>
+                                        <span class="text-xs text-red-600 dark:text-red-400"><?= e($listing->lastError) ?></span>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.channels.not_enabled')) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <div class="flex shrink-0 items-center gap-2">
+                            <?php if ($listing !== null && $listing->enabled): ?>
+                                <form method="post" action="/artikel/<?= e($article->id) ?>/kanaele/<?= e($channel->value) ?>/synchronisieren">
+                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <button type="submit" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                        <?= e(t('articles.show.channels.resync')) ?>
+                                    </button>
+                                </form>
+                                <form method="post" action="/artikel/<?= e($article->id) ?>/kanaele/<?= e($channel->value) ?>/deaktivieren">
+                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <button type="submit" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                                        <?= e(t('articles.show.channels.disable')) ?>
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <form method="post" action="/artikel/<?= e($article->id) ?>/kanaele/<?= e($channel->value) ?>/aktivieren">
+                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                    <button type="submit" class="rounded-md bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700">
+                                        <?= e(t('articles.show.channels.enable')) ?>
+                                    </button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?= $sectionClose ?>
+
         <!-- Werbebilder (KI-generiert) -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.ad_images_title')) ?></h2>
+        <?= $sectionOpen('ad-images', t('articles.show.ad_images_title'), count($detail->adImages)) ?>
             <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
                 <?= t('articles.show.ad_images_hint', ['link' => '<a href="/einstellungen/ki-werbebilder" class="underline">' . e(t('articles.show.ad_images_settings_link')) . '</a>']) ?>
             </p>
@@ -847,591 +1499,7 @@ $availabilityStatusMeta = [
                 });
             })();
             </script>
-        </div>
-
-        <!-- Bedienungsanleitungen & Hinweisdokumente -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.notice_documents_title')) ?></h2>
-            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
-                <?= t('articles.show.notice_documents_hint', ['link' => '<a href="/hinweisdokumente" class="underline">' . e(t('articles.show.notice_documents_settings_link')) . '</a>']) ?>
-            </p>
-
-            <?php if ($detail->inheritedNoticeDocuments !== []): ?>
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_inherited')) ?></p>
-                <div class="mb-3 divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach ($detail->inheritedNoticeDocuments as $inherited): ?>
-                        <div class="flex flex-wrap items-center justify-between gap-2 py-2">
-                            <p class="text-sm text-slate-700 dark:text-slate-300">
-                                <?= e($inherited['document']->name) ?>
-                                <span class="text-xs text-slate-400 dark:text-slate-500">· <a href="/artikel/<?= e($inherited['sourceArticleId']) ?>" class="hover:underline"><?= e($inherited['sourceLabel']) ?></a></span>
-                            </p>
-                            <a href="/hinweisdokumente/<?= e($inherited['document']->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php if ($detail->noticeDocuments !== []): ?>
-                    <p class="text-xs font-medium text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_own')) ?></p>
-                <?php endif; ?>
-            <?php endif; ?>
-            <?php if ($detail->noticeDocuments === [] && $detail->inheritedNoticeDocuments === []): ?>
-                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_documents_none')) ?></p>
-            <?php elseif ($detail->noticeDocuments === []): ?>
-            <?php else: ?>
-                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach ($detail->noticeDocuments as $noticeDocument): ?>
-                        <div class="flex flex-wrap items-center justify-between gap-2 py-2">
-                            <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($noticeDocument->name) ?></p>
-                            <div class="flex items-center gap-3">
-                                <a href="/hinweisdokumente/<?= e($noticeDocument->id) ?>/herunterladen" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.notice_document_download')) ?></a>
-                                <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente/<?= e($noticeDocument->id) ?>/entfernen" data-confirm-key="articles.notice_document.remove" data-confirm="<?= e(t('articles.show.confirm_remove_notice_document')) ?>" data-confirm-style="danger">
-                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.notice_document_remove')) ?></button>
-                                </form>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="/artikel/<?= e($article->id) ?>/hinweisdokumente" enctype="multipart/form-data" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_document_name')) ?></label>
-                    <input type="text" name="name" placeholder="<?= e(t('articles.show.notice_document_name_placeholder')) ?>" required
-                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.notice_document_file')) ?></label>
-                    <input type="file" name="document" accept="application/pdf,image/jpeg,image/png,image/webp" required
-                           class="mt-1 block text-sm text-slate-700 dark:text-slate-300">
-                </div>
-                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                    <?= e(t('articles.show.notice_document_upload')) ?>
-                </button>
-            </form>
-            <p class="mt-1 text-[11px] text-slate-400"><?= e(t('articles.show.notice_document_file_hint')) ?></p>
-        </div>
-
-        <!-- Verkaufskanäle -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.channels.title')) ?></h2>
-            <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">
-                <?= t('articles.show.channels.hint', ['link' => '<a href="/einstellungen/integrationen" class="underline">' . e(t('articles.show.channels.settings_link')) . '</a>']) ?>
-            </p>
-            <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                <?php foreach (\App\Domain\Article\SalesChannel::cases() as $channel): ?>
-                    <?php $listing = $detail->channelListings[$channel->value] ?? null; ?>
-                    <div class="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($channel->label()) ?></p>
-                            <div class="mt-0.5 flex flex-wrap items-center gap-2">
-                                <?php if ($listing !== null && $listing->enabled): ?>
-                                    <span class="inline-flex items-center gap-1 rounded-full <?= $listing->status->badgeClasses() ?> px-2 py-0.5 text-xs font-medium ring-1 ring-inset">
-                                        <?= e($listing->status->label()) ?>
-                                    </span>
-                                    <?php if ($listing->externalLink !== null): ?>
-                                        <a href="<?= e($listing->externalLink) ?>" target="_blank" rel="noopener" class="text-xs text-brand-700 hover:underline dark:text-brand-400">
-                                            <?= e(t('articles.show.channels.link_label')) ?>
-                                        </a>
-                                    <?php endif; ?>
-                                    <?php if ($listing->status === \App\Domain\Article\ChannelSyncStatus::Failed && $listing->lastError !== null): ?>
-                                        <span class="text-xs text-red-600 dark:text-red-400"><?= e($listing->lastError) ?></span>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <span class="text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.channels.not_enabled')) ?></span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                        <div class="flex shrink-0 items-center gap-2">
-                            <?php if ($listing !== null && $listing->enabled): ?>
-                                <form method="post" action="/artikel/<?= e($article->id) ?>/kanaele/<?= e($channel->value) ?>/synchronisieren">
-                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                    <button type="submit" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                                        <?= e(t('articles.show.channels.resync')) ?>
-                                    </button>
-                                </form>
-                                <form method="post" action="/artikel/<?= e($article->id) ?>/kanaele/<?= e($channel->value) ?>/deaktivieren">
-                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                    <button type="submit" class="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                                        <?= e(t('articles.show.channels.disable')) ?>
-                                    </button>
-                                </form>
-                            <?php else: ?>
-                                <form method="post" action="/artikel/<?= e($article->id) ?>/kanaele/<?= e($channel->value) ?>/aktivieren">
-                                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                    <button type="submit" class="rounded-md bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700">
-                                        <?= e(t('articles.show.channels.enable')) ?>
-                                    </button>
-                                </form>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <!-- Firmware-Versionen -->
-        <?php if ($article->hasFirmware): ?>
-            <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-                <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.firmware_versions_title')) ?></h2>
-                <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.firmware_versions_hint')) ?></p>
-
-                <?php if ($detail->firmwareVersions === []): ?>
-                    <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.firmware_versions_none')) ?></p>
-                <?php else: ?>
-                    <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
-                        <?php foreach ($detail->firmwareVersions as $i => $firmwareVersion): ?>
-                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
-                                <p class="text-sm text-slate-700 dark:text-slate-300">
-                                    <span class="font-mono font-medium text-slate-900 dark:text-slate-100"><?= e($firmwareVersion->version) ?></span>
-                                    <?php if ($i === 0): ?>
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-700"><?= e(t('articles.show.firmware_latest_badge')) ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($firmwareVersion->releasedAt !== null): ?>
-                                        <span class="ml-2 text-xs text-slate-400 dark:text-slate-500"><?= e($firmwareVersion->releasedAt->format('d.m.Y')) ?></span>
-                                    <?php endif; ?>
-                                </p>
-                                <form method="post" action="/firmware-versionen/<?= e($firmwareVersion->id) ?>/loeschen" data-confirm-key="articles.firmware.delete" data-confirm="<?= e(t('articles.show.confirm_delete_firmware_version')) ?>" data-confirm-style="danger">
-                                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                    <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
-                                </form>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <form method="post" action="/artikel/<?= e($article->id) ?>/firmware-versionen" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.firmware_version_label')) ?></label>
-                        <input type="text" name="version" maxlength="100" required placeholder="z. B. 2.3.1"
-                               class="mt-1 w-32 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.firmware_released_at')) ?></label>
-                        <input type="date" name="released_at" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                        <?= e(t('articles.show.add')) ?>
-                    </button>
-                </form>
-            </div>
-        <?php endif; ?>
-
-        <?php if (!$article->isBundle): /* Bundles haben keine Inventarnummern und keinen Verkaufsbestand (Migration 111) */ ?>
-        <!-- Inventurnummern -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.inventory_numbers_title')) ?></h2>
-
-            <?php if ($detail->inventoryNumbers === []): ?>
-                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_numbers_none')) ?></p>
-            <?php else: ?>
-                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach ($detail->inventoryNumbers as $entry): ?>
-                        <?php $inv = $entry->inventoryNumber; ?>
-                        <?php if ($editInventoryId === $inv->id): ?>
-                            <form method="post" action="/inventurnummern/<?= e($inv->id) ?>" class="js-inventory-number-form flex flex-wrap items-end gap-3 py-3">
-                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_number_label')) ?></label>
-                                    <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($inv->number) ?></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.acquisition_date')) ?></label>
-                                    <input type="date" name="acquisition_date" value="<?= e($inv->acquisitionDate?->format('Y-m-d')) ?>"
-                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.receipt')) ?></label>
-                                    <select name="receipt_id" class="js-receipt-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                        <option value=""><?= e(t('articles.show.no_receipt')) ?></option>
-                                        <?php foreach ($receipts as $receiptEntry): ?>
-                                            <option value="<?= e($receiptEntry->receipt->id) ?>" <?= $inv->receiptId === $receiptEntry->receipt->id ? 'selected' : '' ?>><?= e($receiptLabel($receiptEntry->receipt)) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.supplier')) ?></label>
-                                    <select name="supplier_id" class="js-supplier-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700" <?= $inv->receiptId !== null ? 'disabled' : '' ?>>
-                                        <option value=""><?= e(t('articles.show.no_supplier')) ?></option>
-                                        <?php foreach ($suppliers as $supplier): ?>
-                                            <option value="<?= e($supplier->id) ?>" <?= $inv->supplierId === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.receipt_hint')) ?></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.purchase_price_override')) ?></label>
-                                    <input type="number" step="0.01" min="0" name="purchase_price" placeholder="<?= e($article->purchasePrice ?? '–') ?>"
-                                           value="<?= e($inv->purchasePriceOverride ?? '') ?>"
-                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <?php $articleFixedCurrentValue = \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article->id); ?>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400">Zeitwert</label>
-                                    <input type="hidden" name="current_value_section" value="1">
-                                    <input type="number" step="0.01" min="0" name="current_value"
-                                           placeholder="<?= e($articleFixedCurrentValue ?? '–') ?>"
-                                           title="<?= e($articleFixedCurrentValue !== null ? 'Leer = fester Zeitwert des Artikels' : 'Geschätzter Zeitwert für die Versicherungsliste') ?>"
-                                           value="<?= e($inv->currentValue ?? '') ?>"
-                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.storage_location')) ?></label>
-                                    <input type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>"
-                                           value="<?= e($inv->storageLocation ?? '') ?>"
-                                           class="mt-1 w-44 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <?php if ($article->hasFirmware): ?>
-                                    <div>
-                                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.installed_firmware_version')) ?></label>
-                                        <select name="installed_firmware_version_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                            <option value=""><?= e(t('articles.show.installed_firmware_version_none')) ?></option>
-                                            <?php foreach ($detail->firmwareVersions as $firmwareVersion): ?>
-                                                <option value="<?= e($firmwareVersion->id) ?>" <?= $inv->installedFirmwareVersionId === $firmwareVersion->id ? 'selected' : '' ?>><?= e($firmwareVersion->version) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                <?php endif; ?>
-                                <?php if ($networkEditForm !== null && !$networkEditForm->isEmpty()): ?>
-                                    <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkEditForm, 'formId' => 'inv-edit']) ?>
-                                <?php endif; ?>
-                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
-                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
-                            </form>
-                        <?php else: ?>
-                            <div class="-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($inv->id) ?>">
-                                <div>
-                                    <a href="/inventurnummern/<?= e($inv->id) ?>" class="font-mono text-sm text-brand-700 hover:underline dark:text-brand-400"><?= e($inv->number) ?></a>
-                                    <?php if ($entry->sale !== null): ?>
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600">
-                                            <?= e(t('articles.show.sold_badge', [
-                                                'date' => $entry->sale->soldAt->format('d.m.Y'),
-                                                'price' => number_format((float) $entry->sale->salePrice, 2, ',', '.'),
-                                            ])) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                    <p class="text-xs text-slate-400 dark:text-slate-500">
-                                        <?= e(t('articles.show.acquired_on')) ?>: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
-                                        <?php if ($inv->receiptId !== null && isset($receiptById[$inv->receiptId])): ?>
-                                            <?php $linkedReceiptEntry = $receiptById[$inv->receiptId]; ?>
-                                            · <?= e(t('articles.show.receipt')) ?>:
-                                            <a href="/belege/<?= e($linkedReceiptEntry->receipt->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedReceiptEntry->receipt->receiptNumber ?? $linkedReceiptEntry->receipt->receiptDate->format('d.m.Y')) ?></a>
-                                            <?php if ($linkedReceiptEntry->supplier !== null): ?>
-                                                · <?= e(t('articles.show.supplier')) ?>: <?= e($linkedReceiptEntry->supplier->name) ?>
-                                            <?php endif; ?>
-                                        <?php elseif ($inv->supplierId !== null && isset($supplierById[$inv->supplierId])): ?>
-                                            · <?= e(t('articles.show.supplier')) ?>: <?= e($supplierById[$inv->supplierId]->name) ?>
-                                        <?php endif; ?>
-                                        <?php $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice); ?>
-                                        <?php if ($effectivePrice !== null): ?>
-                                            · <?= e(t('articles.show.purchase_price_short')) ?>: <?= e($effectivePrice) ?> €<?= $inv->purchasePriceOverride !== null ? ' (' . e(t('articles.show.deviating')) . ')' : '' ?>
-                                        <?php endif; ?>
-                                        <?php if ($inv->storageLocation !== null): ?>
-                                            · <?= e(t('articles.show.storage_location')) ?>: <?= e($inv->storageLocation) ?>
-                                        <?php endif; ?>
-                                        <?php if ($inv->currentValue !== null): ?>
-                                            · Zeitwert: <?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €<?= $inv->isCurrentValueAiEstimate() ? ' (KI)' : '' ?>
-                                        <?php endif; ?>
-                                        <?php if ($article->hasFirmware && $entry->installedFirmwareVersion !== null): ?>
-                                            · <?= e(t('articles.show.installed_firmware_version')) ?>: <?= e($entry->installedFirmwareVersion->version) ?>
-                                            <?php if ($entry->firmwareOutdated): ?>
-                                                <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700"><?= e(t('articles.show.firmware_update_available_badge')) ?></span>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                    </p>
-                                    <?php if ($networkOverview !== null && $networkOverview->assignmentsFor($inv->id) !== []): ?>
-                                        <?= \App\Infrastructure\Http\View::render('networks/_assignment-list', ['assignments' => $networkOverview->assignmentsFor($inv->id), 'networks' => $networkOverview->networks]) ?>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <a href="/inventurnummern/<?= e($inv->id) ?>/rma" class="inline-flex items-center gap-1 rounded-full <?= $entry->openRmaCount > 0 ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700' ?> px-2.5 py-1 text-xs font-medium hover:opacity-80">
-                                        RMA
-                                        <?php if ($entry->totalRmaCount > 0): ?>
-                                            <span class="font-mono"><?= $entry->openRmaCount > 0 ? $entry->openRmaCount . ' ' . e(t('articles.show.open_count')) : $entry->totalRmaCount ?></span>
-                                        <?php endif; ?>
-                                    </a>
-                                    <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                                    <?php if ($entry->sale === null): ?>
-                                        <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm-key="articles.inventory_number.delete" data-confirm="<?= e(t('articles.show.confirm_delete_inventory_number')) ?>" data-confirm-style="danger">
-                                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                            <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
-                                        </form>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($detail->nextInventoryNumberPreview === null): ?>
-                <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <p class="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-800">
-                        <?= t('articles.show.inventory_numbers_missing_prefixes', ['link' => '<a href="/artikel/' . e($article->id) . '/bearbeiten" class="underline">' . e(t('articles.show.edit_article_link')) . '</a>']) ?>
-                    </p>
-                </div>
-            <?php else: ?>
-                <form method="post" action="/artikel/<?= e($article->id) ?>/inventurnummern" class="js-inventory-number-form flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.new_inventory_number')) ?></label>
-                        <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($detail->nextInventoryNumberPreview) ?></p>
-                        <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.assigned_automatically')) ?></p>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.acquisition_date')) ?></label>
-                        <input type="date" name="acquisition_date" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.receipt')) ?></label>
-                        <select name="receipt_id" class="js-receipt-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                            <option value=""><?= e(t('articles.show.no_receipt')) ?></option>
-                            <?php foreach ($receipts as $receiptEntry): ?>
-                                <option value="<?= e($receiptEntry->receipt->id) ?>"><?= e($receiptLabel($receiptEntry->receipt)) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.supplier')) ?></label>
-                        <select name="supplier_id" class="js-supplier-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                            <option value=""><?= e(t('articles.show.no_supplier')) ?></option>
-                            <?php foreach ($suppliers as $supplier): ?>
-                                <option value="<?= e($supplier->id) ?>"><?= e($supplier->name) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.receipt_hint')) ?></p>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.purchase_price_override')) ?></label>
-                        <input type="number" step="0.01" min="0" name="purchase_price" placeholder="<?= e($article->purchasePrice ?? '–') ?>"
-                               class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.storage_location')) ?></label>
-                        <input type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>"
-                               class="mt-1 w-44 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <?php if ($article->hasFirmware): ?>
-                        <div>
-                            <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.installed_firmware_version')) ?></label>
-                            <select name="installed_firmware_version_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                <option value=""><?= e(t('articles.show.installed_firmware_version_none')) ?></option>
-                                <?php foreach ($detail->firmwareVersions as $firmwareVersion): ?>
-                                    <option value="<?= e($firmwareVersion->id) ?>"><?= e($firmwareVersion->version) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($networkAddForm !== null && !$networkAddForm->isEmpty()): ?>
-                        <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkAddForm, 'formId' => 'inv-new']) ?>
-                    <?php endif; ?>
-                    <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                        <?= e(t('articles.show.add')) ?>
-                    </button>
-                </form>
-            <?php endif; ?>
-        </div>
-
-        <!-- Verkaufsbestand -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.sale_stock_title')) ?></h2>
-            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
-                <?= e(t('articles.show.sale_stock_hint')) ?>
-            </p>
-
-            <p class="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                <?= e(t('articles.show.sale_stock_quantity', ['quantity' => (string) $saleStockQuantity])) ?>
-            </p>
-
-            <?php if ($saleStockLots === []): ?>
-                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_none')) ?></p>
-            <?php else: ?>
-                <div class="mb-4 overflow-x-auto">
-                    <table class="w-full min-w-[500px] text-left text-sm">
-                        <thead class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            <tr>
-                                <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_received_at')) ?></th>
-                                <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_remaining')) ?></th>
-                                <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_received_quantity')) ?></th>
-                                <th class="px-2 py-2 text-right"><?= e(t('articles.show.sale_stock_lot_unit_price')) ?></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                            <?php foreach ($saleStockLots as $lot): ?>
-                                <?php if ($lot->quantityRemaining <= 0) continue; ?>
-                                <tr>
-                                    <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= e($lot->receivedAt->format('d.m.Y')) ?></td>
-                                    <td class="px-2 py-2 text-slate-800 dark:text-slate-200"><?= $lot->quantityRemaining ?></td>
-                                    <td class="px-2 py-2 text-slate-600 dark:text-slate-400"><?= $lot->quantityReceived ?></td>
-                                    <td class="px-2 py-2 text-right text-slate-600 dark:text-slate-400"><?= number_format((float) $lot->unitPurchasePrice, 2, ',', '.') ?> €</td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($saleStockQuantity > 0): ?>
-                <form method="post" action="/artikel/<?= e($article->id) ?>/verkaufsbestand-verkaufen" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_quantity')) ?></label>
-                        <input type="number" name="quantity" min="1" max="<?= $saleStockQuantity ?>" value="1"
-                               class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_customer')) ?></label>
-                        <select name="customer_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                            <option value=""><?= e(t('articles.show.sale_stock_form_no_customer')) ?></option>
-                            <?php foreach ($saleCustomers as $saleCustomer): ?>
-                                <option value="<?= e($saleCustomer->id) ?>"><?= e($saleCustomer->displayName()) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_sale_price')) ?></label>
-                        <input type="number" step="0.01" min="0" name="sale_price" required
-                               class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_shipping')) ?></label>
-                        <input type="number" step="0.01" min="0" name="shipping_amount"
-                               class="mt-1 w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <div class="grow">
-                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_form_note')) ?></label>
-                        <input type="text" name="note" maxlength="255"
-                               class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                    </div>
-                    <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
-                        <?= e(t('articles.show.sale_stock_form_submit')) ?>
-                    </button>
-                </form>
-            <?php endif; ?>
-        </div>
-
-        <?php endif; ?>
-
-        <!-- Zubehör -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.accessories_title')) ?></h2>
-            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
-                <?= e(t('articles.show.accessories_hint')) ?>
-            </p>
-
-            <?php if ($detail->accessories === []): ?>
-                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessories_none')) ?></p>
-            <?php else: ?>
-                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach ($detail->accessories as $accessory): ?>
-                        <?php if ($editAccessoryId === $accessory->id): ?>
-                            <form method="post" action="/zubehoer/<?= e($accessory->id) ?>" class="flex flex-wrap items-end gap-3 py-3">
-                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_quantity')) ?></label>
-                                    <input type="number" name="quantity" min="1" value="<?= e((string) $accessory->quantity) ?>"
-                                           class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_description')) ?></label>
-                                    <input type="text" name="description" value="<?= e($accessory->description) ?>" required
-                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
-                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
-                            </form>
-                        <?php else: ?>
-                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
-                                <p class="text-sm text-slate-700 dark:text-slate-300">
-                                    <span class="font-mono text-slate-500 dark:text-slate-400"><?= $accessory->quantity ?>×</span>
-                                    <?= e($accessory->description) ?>
-                                </p>
-                                <div class="flex items-center gap-3">
-                                    <a href="/artikel/<?= e($article->id) ?>?edit_accessory=<?= e($accessory->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                                    <form method="post" action="/zubehoer/<?= e($accessory->id) ?>/loeschen" data-confirm-key="articles.accessory.delete" data-confirm="<?= e(t('articles.show.confirm_delete_accessory')) ?>" data-confirm-style="danger">
-                                      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
-                                    </form>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="/artikel/<?= e($article->id) ?>/zubehoer" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_quantity')) ?></label>
-                    <input type="number" name="quantity" min="1" value="1" class="mt-1 w-20 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                </div>
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.accessory_description')) ?></label>
-                    <input type="text" name="description" placeholder="z. B. Netzkabel" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                </div>
-                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                    <?= e(t('articles.show.add')) ?>
-                </button>
-            </form>
-        </div>
-
-        <!-- Vor-Ausgabe-Checks -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.pre_issue_checks_title')) ?></h2>
-            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
-                <?= e(t('articles.show.pre_issue_checks_hint')) ?>
-            </p>
-
-            <?php if ($detail->preIssueChecks === []): ?>
-                <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_checks_none')) ?></p>
-            <?php else: ?>
-                <div class="mb-4 divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach ($detail->preIssueChecks as $preIssueCheck): ?>
-                        <?php if ($editPreIssueCheckId === $preIssueCheck->id): ?>
-                            <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>" class="flex flex-wrap items-end gap-3 py-3">
-                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_check_description')) ?></label>
-                                    <input type="text" name="description" value="<?= e($preIssueCheck->description) ?>" required
-                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
-                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
-                            </form>
-                        <?php else: ?>
-                            <div class="flex flex-wrap items-center justify-between gap-2 py-2">
-                                <p class="text-sm text-slate-700 dark:text-slate-300"><?= e($preIssueCheck->description) ?></p>
-                                <div class="flex items-center gap-3">
-                                    <a href="/artikel/<?= e($article->id) ?>?edit_pre_issue_check=<?= e($preIssueCheck->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                                    <form method="post" action="/vor-ausgabe-checks/<?= e($preIssueCheck->id) ?>/loeschen" data-confirm-key="articles.pre_issue_check.delete" data-confirm="<?= e(t('articles.show.confirm_delete_pre_issue_check')) ?>" data-confirm-style="danger">
-                                      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
-                                    </form>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="/artikel/<?= e($article->id) ?>/vor-ausgabe-checks" class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <div>
-                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.pre_issue_check_description')) ?></label>
-                    <input type="text" name="description" placeholder="z. B. Default Show geladen" required class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                </div>
-                <button type="submit" class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                    <?= e(t('articles.show.add')) ?>
-                </button>
-            </form>
+        <?= $sectionClose ?>
         </div>
     </div>
 
@@ -1551,15 +1619,6 @@ $availabilityStatusMeta = [
                 <?php endif; ?>
             <?php endif; ?>
         </div>
-
-        <?php if (!$article->isBundle): ?>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.note_title')) ?></h2>
-            <p class="text-slate-500 dark:text-slate-400">
-                <?= e(t('articles.show.note_text')) ?>
-            </p>
-        </div>
-        <?php endif; ?>
     </div>
 </div>
 
@@ -1595,6 +1654,97 @@ $availabilityStatusMeta = [
 
         receiptSelect.addEventListener('change', syncSupplierField);
         syncSupplierField();
+    });
+})();
+</script>
+<script>
+(function () {
+    // Modal dialogs on this page ([data-dialog-open] -> <dialog id>).
+    document.addEventListener('click', function (event) {
+        var opener = event.target.closest('[data-dialog-open]');
+        if (opener) {
+            var dialog = document.getElementById(opener.getAttribute('data-dialog-open'));
+            if (dialog && typeof dialog.showModal === 'function') {
+                dialog.showModal();
+                var first = dialog.querySelector('input:not([type=hidden]), select');
+                if (first) { first.focus(); first.select && first.select(); }
+            }
+            return;
+        }
+        var closer = event.target.closest('[data-dialog-close]');
+        if (closer) { closer.closest('dialog').close(); return; }
+        // Click on the backdrop closes the dialog as well.
+        if (event.target.tagName === 'DIALOG' && event.target.open) {
+            var r = event.target.getBoundingClientRect();
+            if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) {
+                event.target.close();
+            }
+        }
+    });
+
+    // Batch creation of inventory numbers: stepper, live preview of the
+    // numbers that will be assigned, submit label and network fields
+    // (only meaningful for a single device).
+    var form = document.querySelector('.js-inventory-batch-form');
+    if (form) {
+        var input = form.querySelector('input[name="quantity"]');
+        var preview = form.querySelector('[data-inventory-preview]');
+        var submit = form.querySelector('[data-inventory-submit]');
+        var network = form.querySelector('[data-inventory-network]');
+        var networkHint = form.querySelector('[data-inventory-network-hint]');
+        var max = parseInt(form.getAttribute('data-max'), 10) || 50;
+        var next = form.getAttribute('data-next-number') || '';
+        var match = next.match(/^(.*?)(\d+)$/);
+
+        var numberAt = function (offset) {
+            if (!match) { return next; }
+            var n = String(parseInt(match[2], 10) + offset);
+            while (n.length < match[2].length) { n = '0' + n; }
+            return match[1] + n;
+        };
+        var quantity = function () {
+            var q = parseInt(input.value, 10);
+            return isNaN(q) ? 1 : Math.min(max, Math.max(1, q));
+        };
+        var render = function () {
+            var q = quantity();
+            preview.textContent = q === 1 || !match ? numberAt(0) : numberAt(0) + ' – ' + numberAt(q - 1);
+            submit.textContent = q === 1
+                ? form.getAttribute('data-label-one')
+                : form.getAttribute('data-label-many').replace('{count}', String(q));
+            form.querySelector('[data-quantity-step="-1"]').disabled = q <= 1;
+            form.querySelector('[data-quantity-step="1"]').disabled = q >= max;
+            if (network) {
+                network.disabled = q > 1;
+                network.hidden = q > 1;
+                if (networkHint) { networkHint.hidden = q === 1; }
+            }
+        };
+        form.querySelectorAll('[data-quantity-step]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                input.value = String(Math.min(max, Math.max(1, quantity() + parseInt(button.getAttribute('data-quantity-step'), 10))));
+                render();
+            });
+        });
+        input.addEventListener('input', render);
+        input.addEventListener('blur', function () { input.value = String(quantity()); render(); });
+        render();
+    }
+
+    // Collapsible sections: remember which ones are open (per browser).
+    var storageKey = 'article-sections-open';
+    var stored = [];
+    try { stored = JSON.parse(window.localStorage.getItem(storageKey) || '[]') || []; } catch (e) { stored = []; }
+    document.querySelectorAll('details[data-article-section]').forEach(function (section) {
+        var key = section.getAttribute('data-article-section');
+        if (stored.indexOf(key) !== -1) { section.open = true; }
+        section.addEventListener('toggle', function () {
+            if (section.hasAttribute('data-force-open')) { return; }
+            var list = stored.filter(function (k) { return k !== key; });
+            if (section.open) { list.push(key); }
+            stored = list;
+            try { window.localStorage.setItem(storageKey, JSON.stringify(list)); } catch (e) { /* storage unavailable */ }
+        });
     });
 })();
 </script>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Routing;
 
 use App\Domain\Rental\Rental;
+use App\Domain\Routing\RouteLeg;
 use App\Domain\Routing\RoutePoint;
 use App\Domain\Routing\RouteProfile;
 use App\Domain\Routing\RouteResult;
@@ -34,6 +35,22 @@ final class TourRoute
         public readonly array $entries = [],
         public readonly ?string $error = null, // why the route service failed (straight lines shown instead)
     ) {
+    }
+
+    /** Whether a leg counts for the billable kilometres (migration 179). */
+    public function isLegBilled(RouteLeg $leg): bool
+    {
+        return !($this->points[$leg->to]->arrivalNotBilled ?? false);
+    }
+
+    /** Kilometres to bill in metres: total distance without the legs marked as not billed. */
+    public function billableDistanceM(): ?float
+    {
+        if ($this->result === null) {
+            return null;
+        }
+
+        return array_sum(array_map(fn (RouteLeg $l) => $this->isLegBilled($l) ? $l->distanceM : 0.0, $this->result->legs));
     }
 
     /** @return string[] */

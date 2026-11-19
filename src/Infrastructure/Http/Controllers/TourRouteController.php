@@ -9,6 +9,7 @@ use App\Application\Query\QueryBus;
 use App\Application\Routing\Command\AddPlannedVehicle;
 use App\Application\Routing\Command\RemovePlannedVehicle;
 use App\Application\Routing\Command\SaveRoutingSettings;
+use App\Application\Routing\Command\SetLegBilling;
 use App\Application\Routing\Command\SetRouteProfile;
 use App\Application\Routing\Query\GetTourRoute;
 use App\Domain\Exception\NotFoundException;
@@ -94,6 +95,7 @@ final class TourRouteController
             'straightLine' => $result?->straightLine ?? true,
             'totalDistanceM' => $result?->totalDistanceM(),
             'totalDurationS' => $result?->totalDurationS(),
+            'billableDistanceM' => $route->billableDistanceM(),
             'points' => array_map(static fn ($p) => ['label' => $p->label, 'lat' => $p->latitude, 'lng' => $p->longitude, 'kind' => $p->kind], $route->points),
             'legs' => $result !== null ? array_map(static fn ($l) => [
                 'from' => $route->points[$l->from]->label ?? '',
@@ -101,6 +103,9 @@ final class TourRouteController
                 'distanceM' => $l->distanceM,
                 'durationS' => $l->durationS,
                 'geometry' => $l->geometry,
+                'billed' => $route->isLegBilled($l),
+                // stop whose arrival this leg is; null = default destination warehouse (cannot be marked)
+                'stopId' => $route->points[$l->to]->stopId ?? null,
             ], $result->legs) : [],
             'entries' => $route->entries,
             'error' => $route->error,
@@ -115,6 +120,30 @@ final class TourRouteController
     {
         $rentalId = $request->param('id');
         $this->run(fn () => $this->commands->dispatch(new SetRouteProfile($rentalId, $request->input('profile', '') ?? '')), 'Fahrprofil gespeichert.');
+        Response::redirect('/veranstaltungen/' . $rentalId . '/tour/route');
+    }
+
+    /** Marks the drive to a stop as (not) billed; JSON for the route page, redirect otherwise. */
+    public function setLegBilling(Request $request): void
+    {
+        $billed = $request->input('billed') === '1';
+        try {
+            $rentalId = $this->commands->dispatch(new SetLegBilling($request->param('stopId'), $billed));
+        } catch (NotFoundException $e) {
+            Response::json(['error' => $e->getMessage()], 404);
+
+            return;
+        } catch (ValidationException $e) {
+            Response::json(['error' => implode(' ', $e->errors())], 422);
+
+            return;
+        }
+        if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
+            Response::json(['billed' => $billed]);
+
+            return;
+        }
+        Flash::success($billed ? 'Die Fahrt wird abgerechnet.' : 'Die Fahrt wird nicht abgerechnet.');
         Response::redirect('/veranstaltungen/' . $rentalId . '/tour/route');
     }
 

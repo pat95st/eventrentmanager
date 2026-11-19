@@ -13,17 +13,19 @@
  * @var int $totalPages Gesamtanzahl der Seiten (siehe PaginatedResult::totalPages()).
  * @var string $paginationBaseUrl Pfad der Liste, z. B. "/artikel".
  * @var array<string, string> $paginationQuery Aktive Filterparameter ohne "page"/"pageSize" (für Links im Nicht-JS-Fall).
+ * @var string $paginationFragment Optional anchor (without "#") appended to the links, e.g. for a list inside a detail page.
  */
 
 use function App\Infrastructure\Http\e;
 use function App\Infrastructure\Http\t;
 
-$buildUrl = static function (int $targetPage) use ($paginationBaseUrl, $paginationQuery, $pageSize): string {
+$paginationFragment ??= '';
+$buildUrl = static function (int $targetPage) use ($paginationBaseUrl, $paginationQuery, $pageSize, $paginationFragment): string {
     $params = $paginationQuery;
     $params['page'] = (string) $targetPage;
     $params['pageSize'] = (string) $pageSize;
 
-    return $paginationBaseUrl . '?' . http_build_query($params);
+    return $paginationBaseUrl . '?' . http_build_query($params) . ($paginationFragment !== '' ? '#' . $paginationFragment : '');
 };
 
 // Zeigt maximal 5 Seitenzahlen um die aktuelle Seite herum, damit die Leiste

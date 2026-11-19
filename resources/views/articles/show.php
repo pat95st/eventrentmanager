@@ -13,6 +13,34 @@ $mixingConsole ??= null;
 /** @var \App\Domain\MixingConsole\CompatibleConsole[] $compatibleConsoles Pulte, die diese Stagebox als kompatibel führen */
 $compatibleConsoles ??= [];
 /** @var string|null $editInventoryId */
+/** @var \App\Application\Article\Query\InventoryNumberWithRmaInfo[] $inventoryPageEntries Inventory numbers on the current list page */
+$inventoryPageEntries ??= $detail->inventoryNumbers;
+/** @var int $inventoryPage */
+$inventoryPage ??= 1;
+/** @var int $inventoryPageSize */
+$inventoryPageSize ??= \App\Infrastructure\Http\Pagination::DEFAULT_PAGE_SIZE;
+/** @var int $inventoryTotalPages */
+$inventoryTotalPages ??= 1;
+/** @var array<string, string> $inventoryListQuery Other query parameters of the page (kept by pagination links) */
+$inventoryListQuery ??= [];
+/** @var \App\Application\Article\Query\InventoryNumberWithRmaInfo|null $editInventoryEntry Inventory number shown in the edit dialog */
+$editInventoryEntry ??= null;
+// Article URL showing the inventory number list on the given page, optionally with the edit dialog open.
+$inventoryListUrl = static function (int $page, ?string $editId = null) use ($detail, $inventoryPageSize, $inventoryListQuery): string {
+    $params = $inventoryListQuery;
+    if ($page > 1) {
+        $params['page'] = (string) $page;
+    }
+    if ($inventoryPageSize !== (\App\Infrastructure\Http\Auth\CurrentUser::get()?->defaultPageSize ?? \App\Infrastructure\Http\Pagination::DEFAULT_PAGE_SIZE)) {
+        $params['pageSize'] = (string) $inventoryPageSize;
+    }
+    if ($editId !== null) {
+        $params['edit_inventory'] = $editId;
+    }
+    $query = http_build_query($params);
+
+    return '/artikel/' . $detail->article->id . ($query !== '' ? '?' . $query : '') . '#inventurnummern';
+};
 /** @var \App\Application\Network\Query\ArticleNetworkOverview|null $networkOverview Netzwerke (Migration 155) */
 $networkOverview ??= null;
 /** @var \App\Application\Network\NetworkInterfaceForm|null $networkAddForm */
@@ -464,9 +492,412 @@ $sectionClose = '</div></details>';
             </div>
         <?php endif; ?>
 
+        <!-- Bilder -->
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.images_title')) ?></h2>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.document_image_hint')) ?></p>
+            <div class="flex flex-wrap gap-3">
+                <?php foreach ($article->images as $image): ?>
+                    <?php $isDocumentImage = $article->documentImageId === $image->id; ?>
+                    <div class="flex flex-col items-center gap-1">
+                    <div class="relative h-24 w-24 overflow-hidden rounded-md <?= $isDocumentImage ? 'ring-2 ring-brand-500' : 'ring-1 ring-slate-200 dark:ring-slate-700' ?>">
+                        <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-images" data-gallery-src="/artikel-bilder/<?= e($image->filePath) ?>" data-gallery-caption="<?= e($article->name) ?>" aria-label="<?= e(t('gallery.open')) ?>">
+                            <img src="/artikel-bilder/<?= e($image->filePath) ?>" alt="" class="h-full w-full object-cover">
+                        </button>
+                        <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm-key="articles.image.delete" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
+                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                            <button type="submit" aria-label="<?= e(t('common.delete')) ?>" title="<?= e(t('common.delete')) ?>" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
+                        </form>
+                    </div>
+                    <!-- Dokumentbild (Migration 109): erscheint klein links neben dem Artikelnamen auf Angebot, AB und Rechnung -->
+                    <form method="post" action="/artikel/<?= e($article->id) ?>/dokumentbild">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <input type="hidden" name="image_id" value="<?= $isDocumentImage ? '' : e($image->id) ?>">
+                        <?php if ($isDocumentImage): ?>
+                            <button type="submit" title="<?= e(t('articles.show.document_image_remove')) ?>" class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400">✓ <?= e(t('articles.show.document_image_selected')) ?></button>
+                        <?php else: ?>
+                            <button type="submit" class="text-[11px] text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.show.document_image_select')) ?></button>
+                        <?php endif; ?>
+                    </form>
+                    </div>
+                <?php endforeach; ?>
+
+                <form method="post" action="/artikel/<?= e($article->id) ?>/bilder" enctype="multipart/form-data">
+                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <label class="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-500 dark:hover:bg-slate-800">
+                        <span class="text-xl leading-none">+</span>
+                        <span class="mt-1 text-[11px]"><?= e(t('articles.show.add_image')) ?></span>
+                        <input type="file" name="image" accept="image/*" class="hidden" onchange="this.form.submit()">
+                    </label>
+                </form>
+            </div>
+        </div>
+
+        <!-- Werbebilder (KI-generiert) -->
+        <?= $sectionOpen('ad-images', t('articles.show.ad_images_title'), count($detail->adImages)) ?>
+            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
+                <?= t('articles.show.ad_images_hint', ['link' => '<a href="/einstellungen/ki-werbebilder" class="underline">' . e(t('articles.show.ad_images_settings_link')) . '</a>']) ?>
+            </p>
+
+            <?php if ($detail->adImages === []): ?>
+                <p data-ad-image-empty class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_none')) ?></p>
+            <?php endif; ?>
+            <div data-ad-image-gallery class="mb-4 flex-wrap gap-3 <?= $detail->adImages === [] ? 'hidden' : 'flex' ?>">
+                <?php foreach ($detail->adImages as $adImage): ?>
+                    <div class="w-32 space-y-1">
+                        <div class="relative h-32 w-32 overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
+                            <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-ad-images" data-gallery-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" data-gallery-caption="<?= e($adImage->format->label()) ?>" data-gallery-download="/artikel-werbebilder/<?= e($adImage->filePath) ?>" aria-label="<?= e(t('gallery.open')) ?>">
+                                <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
+                            </button>
+                        </div>
+                        <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?><?php if ($adImage->sourceAdImageId !== null): ?> · <?= e(t('articles.show.ad_images_refined_badge')) ?><?php endif; ?></p>
+                        <div class="flex flex-wrap items-center gap-x-2" data-row-actions="off">
+                            <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
+                            <button type="button" data-ad-image-refine
+                                    data-action="/werbebilder/<?= e($adImage->id) ?>/ueberarbeiten"
+                                    data-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>"
+                                    data-format="<?= e($adImage->format->label()) ?>"
+                                    class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_refine')) ?></button>
+                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/in-galerie">
+                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <button type="submit" title="<?= e(t('articles.show.ad_images_add_to_gallery_title')) ?>" class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_add_to_gallery')) ?></button>
+                            </form>
+                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm-key="articles.ad_image.delete" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
+                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                <button type="submit" class="text-[11px] font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.ad_images_delete')) ?></button>
+                            </form>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <?php
+            // Shared spinner markup: rendered inside the submit button and cloned
+            // into the placeholder tiles by the script below.
+            $adImageSpinner = '<svg class="h-4 w-4 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+                . '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25"></circle>'
+                . '<path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>';
+            ?>
+            <form method="post" action="/artikel/<?= e($article->id) ?>/werbebilder" data-ad-image-form data-no-loading-indicator
+                  data-label-one="<?= e(t('articles.show.ad_images_generate')) ?>"
+                  data-label-many="<?= e(t('articles.show.ad_images_generate_many')) ?>"
+                  data-status-one="<?= e(t('articles.show.ad_images_generating_status_one')) ?>"
+                  data-status-many="<?= e(t('articles.show.ad_images_generating_status_many')) ?>"
+                  data-tile-label="<?= e(t('articles.show.ad_images_generating_tile')) ?>"
+                  data-overlay-one="<?= e(t('articles.show.ad_images_overlay_one')) ?>"
+                  data-overlay-many="<?= e(t('articles.show.ad_images_overlay_many')) ?>"
+                  class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                <div>
+                    <label for="ad_image_format" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_format')) ?></label>
+                    <select id="ad_image_format" name="format" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                        <?php foreach (\App\Domain\Article\ArticleAdImageFormat::cases() as $format): ?>
+                            <option value="<?= e($format->value) ?>"><?= e($format->label()) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div>
+                    <label for="ad_image_count" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_count')) ?></label>
+                    <select id="ad_image_count" name="count" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900">
+                        <?php for ($n = 1; $n <= \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_COUNT; $n++): ?>
+                            <option value="<?= $n ?>"><?= $n ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <?php if (count($article->images) > 1): ?>
+                    <div data-ad-image-source-wrapper>
+                        <label for="ad_image_source" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_source_photo')) ?></label>
+                        <select id="ad_image_source" name="source_article_image_id" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
+                            <option value=""><?= e(t('articles.show.ad_images_source_all', ['count' => (string) \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_REFERENCE_IMAGES])) ?></option>
+                            <?php foreach ($article->images as $image): ?>
+                                <option value="<?= e($image->id) ?>"><?= e(t('articles.show.ad_images_source_single', ['number' => (string) ($image->position + 1)])) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                <?php endif; ?>
+                <div class="min-w-[220px] flex-1">
+                    <label for="ad_image_instructions" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_additional_instructions')) ?></label>
+                    <input id="ad_image_instructions" type="text" name="additional_instructions" placeholder="<?= e(t('articles.show.ad_images_additional_instructions_placeholder')) ?>"
+                           class="mt-1 w-full disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
+                </div>
+                <div class="space-y-1 pb-1">
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                        <input type="checkbox" name="include_article_name" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
+                        <?= e(t('articles.show.ad_images_include_name')) ?>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300" title="<?= e(t('articles.show.ad_images_include_properties_hint')) ?>">
+                        <input type="checkbox" name="include_properties" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
+                        <?= e(t('articles.show.ad_images_include_properties')) ?>
+                    </label>
+                    <?php $adImageHasPrice = $article->isBillable && $article->dailyRentalPrice !== null && trim($article->dailyRentalPrice) !== ''; ?>
+                    <label class="flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasPrice ? 'articles.show.ad_images_include_price_hint' : 'articles.show.ad_images_include_price_unavailable')) ?>">
+                        <input type="checkbox" name="include_price" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? '' : ' disabled data-ad-image-unavailable' ?>>
+                        <?= e(t('articles.show.ad_images_include_price')) ?>
+                    </label>
+                    <label class="ml-6 flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t('articles.show.ad_images_price_as_from_hint')) ?>">
+                        <input type="checkbox" name="price_as_from" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
+                        <?= e(t('articles.show.ad_images_price_as_from')) ?>
+                    </label>
+                    <?php $adImageHasGallery = $article->images !== []; ?>
+                    <label class="flex items-center gap-2 text-sm <?= $adImageHasGallery ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasGallery ? 'articles.show.ad_images_use_gallery_hint' : 'articles.show.ad_images_use_gallery_unavailable')) ?>">
+                        <input type="checkbox" name="use_gallery_images" value="1" data-ad-image-use-gallery class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasGallery ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
+                        <?= e(t('articles.show.ad_images_use_gallery')) ?>
+                    </label>
+                </div>
+                <div>
+                    <button type="submit" data-ad-image-submit
+                            class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:border-brand-300 disabled:bg-brand-50 disabled:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:disabled:border-brand-800 dark:disabled:bg-brand-950 dark:disabled:text-brand-300">
+                        <span data-ad-image-spinner class="hidden"><?= $adImageSpinner ?></span>
+                        <span data-ad-image-label><?= e(t('articles.show.ad_images_generate')) ?></span>
+                        <span data-ad-image-busy-label class="hidden"><?= e(t('articles.show.ad_images_generating')) ?></span>
+                    </button>
+                    <p data-ad-image-hint class="mt-1 text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
+                </div>
+                <p data-ad-image-status role="status" aria-live="polite" class="hidden w-full text-xs text-brand-700 dark:text-brand-300">
+                    <span data-ad-image-status-text></span>
+                    <span data-ad-image-elapsed class="ml-1 tabular-nums text-slate-400 dark:text-slate-500"></span>
+                </p>
+            </form>
+
+            <dialog data-ad-image-refine-dialog aria-labelledby="ad_image_refine_title" class="modal-panel w-full max-w-lg rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
+                <form method="post" action="" data-ad-image-refine-form data-no-loading-indicator data-overlay-label="<?= e(t('articles.show.ad_images_overlay_refine')) ?>" class="space-y-3 p-4">
+                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                    <h3 id="ad_image_refine_title" class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('articles.show.ad_images_refine_title')) ?></h3>
+                    <div class="flex gap-3">
+                        <img data-ad-image-refine-preview src="" alt="" class="h-24 w-24 shrink-0 rounded-md object-cover ring-1 ring-slate-200 dark:ring-slate-700">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            <span data-ad-image-refine-format class="block font-medium text-slate-700 dark:text-slate-300"></span>
+                            <?= e(t('articles.show.ad_images_refine_hint')) ?>
+                        </p>
+                    </div>
+                    <div>
+                        <label for="ad_image_refine_instructions" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_instructions')) ?></label>
+                        <textarea id="ad_image_refine_instructions" name="instructions" rows="3" required maxlength="<?= \App\Application\Article\Command\RefineArticleAdImageHandler::MAX_INSTRUCTIONS_LENGTH ?>"
+                                  placeholder="<?= e(t('articles.show.ad_images_refine_instructions_placeholder')) ?>"
+                                  class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"></textarea>
+                    </div>
+                    <div>
+                        <label for="ad_image_refine_count" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_count')) ?></label>
+                        <select id="ad_image_refine_count" name="count" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900">
+                            <?php for ($n = 1; $n <= \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_COUNT; $n++): ?>
+                                <option value="<?= $n ?>"><?= $n ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <p data-ad-image-refine-hint class="text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" data-ad-image-refine-cancel
+                                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+                            <?= e(t('common.cancel')) ?>
+                        </button>
+                        <button type="submit" data-ad-image-refine-submit
+                                class="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
+                            <span data-ad-image-refine-spinner class="hidden"><?= $adImageSpinner ?></span>
+                            <span data-ad-image-refine-label><?= e(t('articles.show.ad_images_refine_submit')) ?></span>
+                            <span data-ad-image-refine-busy class="hidden"><?= e(t('articles.show.ad_images_refining')) ?></span>
+                        </button>
+                    </div>
+                </form>
+            </dialog>
+            <script>
+            (function () {
+                var dialog = document.querySelector('[data-ad-image-refine-dialog]');
+                if (!dialog) return;
+                var form = dialog.querySelector('[data-ad-image-refine-form]');
+                var submit = form.querySelector('[data-ad-image-refine-submit]');
+                var instructions = form.querySelector('[name="instructions"]');
+                var hint = form.querySelector('[data-ad-image-refine-hint]');
+
+                function setBusy(busy) {
+                    submit.disabled = busy;
+                    submit.toggleAttribute('aria-busy', busy);
+                    form.querySelector('[data-ad-image-refine-spinner]').classList.toggle('hidden', !busy);
+                    form.querySelector('[data-ad-image-refine-label]').classList.toggle('hidden', busy);
+                    form.querySelector('[data-ad-image-refine-busy]').classList.toggle('hidden', !busy);
+                }
+
+                document.querySelectorAll('[data-ad-image-refine]').forEach(function (trigger) {
+                    trigger.addEventListener('click', function () {
+                        form.action = trigger.dataset.action;
+                        dialog.querySelector('[data-ad-image-refine-preview]').src = trigger.dataset.src;
+                        dialog.querySelector('[data-ad-image-refine-format]').textContent = trigger.dataset.format;
+                        setBusy(false);
+                        dialog.showModal();
+                        instructions.focus();
+                    });
+                });
+                dialog.querySelector('[data-ad-image-refine-cancel]').addEventListener('click', function () { dialog.close(); });
+                // Keep the dialog open while the request runs (it takes a while).
+                dialog.addEventListener('cancel', function (event) { if (submit.disabled) event.preventDefault(); });
+                form.addEventListener('submit', function (event) {
+                    if (event.defaultPrevented || submit.disabled) return;
+                    var li = window.loadingIndicator;
+                    var count = parseInt(form.querySelector('[name="count"]').value, 10) || 1;
+                    if (li) li.start();
+                    if (li && typeof li.showOverlay === 'function') {
+                        li.showOverlay({ label: form.dataset.overlayLabel, detail: hint.textContent, maxMs: (150 + 60 * (count - 1)) * 1000 });
+                    }
+                    // Disable only after the browser has collected the form data.
+                    setTimeout(function () { setBusy(true); }, 0);
+                });
+                window.addEventListener('pageshow', function (event) {
+                    if (!event.persisted) return;
+                    if (submit.disabled && window.loadingIndicator) {
+                        window.loadingIndicator.stop();
+                        if (typeof window.loadingIndicator.hideOverlay === 'function') window.loadingIndicator.hideOverlay();
+                    }
+                    setBusy(false);
+                    dialog.close();
+                });
+            })();
+            </script>
+
+            <template data-ad-image-tile>
+                <div class="w-32 space-y-1" data-ad-image-placeholder>
+                    <div class="flex h-32 w-32 items-center justify-center rounded-md border border-dashed border-brand-300 bg-brand-50 text-brand-600 dark:border-brand-800 dark:bg-brand-950 dark:text-brand-400">
+                        <span class="animate-pulse motion-reduce:animate-none"><?= str_replace('h-4 w-4', 'h-7 w-7', $adImageSpinner) ?></span>
+                    </div>
+                    <p class="truncate text-[11px] text-slate-500 dark:text-slate-400" data-ad-image-tile-format></p>
+                    <p class="text-[11px] font-medium text-brand-700 dark:text-brand-400" data-ad-image-tile-label></p>
+                </div>
+            </template>
+
+            <script>
+            (function () {
+                var form = document.querySelector('[data-ad-image-form]');
+                if (!form) return;
+                var countSelect = form.querySelector('[name="count"]');
+                var formatSelect = form.querySelector('[name="format"]');
+                var button = form.querySelector('[data-ad-image-submit]');
+                var label = form.querySelector('[data-ad-image-label]');
+                var gallery = document.querySelector('[data-ad-image-gallery]');
+                var emptyText = document.querySelector('[data-ad-image-empty]');
+                var tileTemplate = document.querySelector('[data-ad-image-tile]');
+                var status = form.querySelector('[data-ad-image-status]');
+                var elapsed = form.querySelector('[data-ad-image-elapsed]');
+                var timer = null;
+
+                function count() { return parseInt(countSelect.value, 10) || 1; }
+                function fill(text, n) { return text.replace('{count}', String(n)); }
+                function toggle(selector, visible) {
+                    form.querySelector(selector).classList.toggle('hidden', !visible);
+                }
+
+                function updateLabel() {
+                    var n = count();
+                    label.textContent = n === 1 ? form.dataset.labelOne : fill(form.dataset.labelMany, n);
+                }
+                countSelect.addEventListener('change', updateLabel);
+                updateLabel();
+
+                // The photo choice only matters while gallery images are used.
+                var useGallery = form.querySelector('[data-ad-image-use-gallery]');
+                var sourceWrapper = form.querySelector('[data-ad-image-source-wrapper]');
+                function updateSource() {
+                    if (sourceWrapper) sourceWrapper.classList.toggle('hidden', !useGallery.checked);
+                }
+                if (useGallery) {
+                    useGallery.addEventListener('change', updateSource);
+                    updateSource();
+                }
+
+                var overlayDetail = null;
+                function formatElapsed(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+                form.addEventListener('submit', function (event) {
+                    if (event.defaultPrevented || button.disabled) return;
+                    var n = count();
+                    var formatLabel = formatSelect.options[formatSelect.selectedIndex].text;
+
+                    // The form opts out of the global loading indicator (it would add a
+                    // second spinner to the button and hide its large spinner after 30 s);
+                    // show its top bar and large spinner here, for as long as the request
+                    // may take (server timeout: 120 s + 60 s per additional image).
+                    var li = window.loadingIndicator;
+                    if (li) li.start();
+                    if (li && typeof li.showOverlay === 'function') {
+                        var shown = li.showOverlay({
+                            label: n === 1 ? form.dataset.overlayOne : fill(form.dataset.overlayMany, n),
+                            detail: form.querySelector('[data-ad-image-hint]').textContent,
+                            maxMs: (150 + 60 * (n - 1)) * 1000,
+                        });
+                        overlayDetail = shown ? shown.querySelector('.page-loading-detail') : null;
+                    }
+
+                    // Disable only after the browser has collected the form data,
+                    // otherwise disabled fields would be missing from the request.
+                    setTimeout(function () {
+                        button.disabled = true;
+                        button.setAttribute('aria-busy', 'true');
+                        toggle('[data-ad-image-spinner]', true);
+                        toggle('[data-ad-image-label]', false);
+                        toggle('[data-ad-image-busy-label]', true);
+                        toggle('[data-ad-image-hint]', false);
+                        form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = true; });
+
+                        var hintText = form.querySelector('[data-ad-image-hint]').textContent;
+                        form.querySelector('[data-ad-image-status-text]').textContent =
+                            n === 1 ? form.dataset.statusOne : fill(form.dataset.statusMany, n);
+                        status.classList.remove('hidden');
+
+                        if (emptyText) emptyText.classList.add('hidden');
+                        gallery.classList.remove('hidden');
+                        gallery.classList.add('flex');
+                        for (var i = 0; i < n; i++) {
+                            var tile = tileTemplate.content.cloneNode(true);
+                            tile.querySelector('[data-ad-image-tile-format]').textContent = formatLabel;
+                            tile.querySelector('[data-ad-image-tile-label]').textContent = form.dataset.tileLabel;
+                            gallery.appendChild(tile);
+                        }
+
+                        var start = Date.now();
+                        var tick = function () {
+                            var s = Math.floor((Date.now() - start) / 1000);
+                            elapsed.textContent = formatElapsed(s);
+                            if (overlayDetail) overlayDetail.textContent = hintText + ' (' + formatElapsed(s) + ')';
+                        };
+                        tick();
+                        timer = setInterval(tick, 1000);
+                    }, 0);
+                });
+
+                // Coming back via the browser's back button restores the page from
+                // the bfcache with the loading state still visible; reset it.
+                window.addEventListener('pageshow', function (event) {
+                    if (!event.persisted) return;
+                    clearInterval(timer);
+                    if (button.disabled && window.loadingIndicator) {
+                        window.loadingIndicator.stop();
+                        if (typeof window.loadingIndicator.hideOverlay === 'function') window.loadingIndicator.hideOverlay();
+                    }
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                    toggle('[data-ad-image-spinner]', false);
+                    toggle('[data-ad-image-label]', true);
+                    toggle('[data-ad-image-busy-label]', false);
+                    toggle('[data-ad-image-hint]', true);
+                    status.classList.add('hidden');
+                    form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) {
+                        if (!field.hasAttribute('data-ad-image-unavailable')) field.disabled = false;
+                    });
+                    gallery.querySelectorAll('[data-ad-image-placeholder]').forEach(function (tile) { tile.remove(); });
+                    if (emptyText && !gallery.children.length) {
+                        emptyText.classList.remove('hidden');
+                        gallery.classList.add('hidden');
+                        gallery.classList.remove('flex');
+                    }
+                });
+            })();
+            </script>
+        <?= $sectionClose ?>
+
         <?php if (!$article->isBundle): /* Bundles haben keine Inventarnummern (Migration 111) */ ?>
         <!-- Inventurnummern -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <div id="inventurnummern" class="scroll-mt-20 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
                     <?= e(t('articles.show.inventory_numbers_title')) ?>
@@ -486,144 +917,84 @@ $sectionClose = '</div></details>';
                 <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_numbers_none')) ?></p>
             <?php else: ?>
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach ($detail->inventoryNumbers as $entry): ?>
+                    <?php foreach ($inventoryPageEntries as $entry): ?>
                         <?php $inv = $entry->inventoryNumber; ?>
-                        <?php if ($editInventoryId === $inv->id): ?>
-                            <form method="post" action="/inventurnummern/<?= e($inv->id) ?>" class="js-inventory-number-form flex flex-wrap items-end gap-3 py-3">
-                              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.inventory_number_label')) ?></label>
-                                    <p class="mt-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400"><?= e($inv->number) ?></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.acquisition_date')) ?></label>
-                                    <input type="date" name="acquisition_date" value="<?= e($inv->acquisitionDate?->format('Y-m-d')) ?>"
-                                           class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.receipt')) ?></label>
-                                    <select name="receipt_id" class="js-receipt-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                        <option value=""><?= e(t('articles.show.no_receipt')) ?></option>
-                                        <?php foreach ($receipts as $receiptEntry): ?>
-                                            <option value="<?= e($receiptEntry->receipt->id) ?>" <?= $inv->receiptId === $receiptEntry->receipt->id ? 'selected' : '' ?>><?= e($receiptLabel($receiptEntry->receipt)) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.supplier')) ?></label>
-                                    <select name="supplier_id" class="js-supplier-select mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700" <?= $inv->receiptId !== null ? 'disabled' : '' ?>>
-                                        <option value=""><?= e(t('articles.show.no_supplier')) ?></option>
-                                        <?php foreach ($suppliers as $supplier): ?>
-                                            <option value="<?= e($supplier->id) ?>" <?= $inv->supplierId === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.receipt_hint')) ?></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.purchase_price_override')) ?></label>
-                                    <input type="number" step="0.01" min="0" name="purchase_price" placeholder="<?= e($article->purchasePrice ?? '–') ?>"
-                                           value="<?= e($inv->purchasePriceOverride ?? '') ?>"
-                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <?php $articleFixedCurrentValue = \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article->id); ?>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400">Zeitwert</label>
-                                    <input type="hidden" name="current_value_section" value="1">
-                                    <input type="number" step="0.01" min="0" name="current_value"
-                                           placeholder="<?= e($articleFixedCurrentValue ?? '–') ?>"
-                                           title="<?= e($articleFixedCurrentValue !== null ? 'Leer = fester Zeitwert des Artikels' : 'Geschätzter Zeitwert für die Versicherungsliste') ?>"
-                                           value="<?= e($inv->currentValue ?? '') ?>"
-                                           class="mt-1 w-28 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.storage_location')) ?></label>
-                                    <input type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>"
-                                           value="<?= e($inv->storageLocation ?? '') ?>"
-                                           class="mt-1 w-44 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                </div>
-                                <?php if ($article->hasFirmware): ?>
-                                    <div>
-                                        <label class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.installed_firmware_version')) ?></label>
-                                        <select name="installed_firmware_version_id" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                                            <option value=""><?= e(t('articles.show.installed_firmware_version_none')) ?></option>
-                                            <?php foreach ($detail->firmwareVersions as $firmwareVersion): ?>
-                                                <option value="<?= e($firmwareVersion->id) ?>" <?= $inv->installedFirmwareVersionId === $firmwareVersion->id ? 'selected' : '' ?>><?= e($firmwareVersion->version) ?></option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
+                        <div class="-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($inv->id) ?>">
+                            <div>
+                                <a href="/inventurnummern/<?= e($inv->id) ?>" class="font-mono text-sm text-brand-700 hover:underline dark:text-brand-400"><?= e($inv->number) ?></a>
+                                <?php if ($entry->sale !== null): ?>
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600">
+                                        <?= e(t('articles.show.sold_badge', [
+                                            'date' => $entry->sale->soldAt->format('d.m.Y'),
+                                            'price' => number_format((float) $entry->sale->salePrice, 2, ',', '.'),
+                                        ])) ?>
+                                    </span>
                                 <?php endif; ?>
-                                <?php if ($networkEditForm !== null && !$networkEditForm->isEmpty()): ?>
-                                    <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkEditForm, 'formId' => 'inv-edit']) ?>
+                                <p class="text-xs text-slate-400 dark:text-slate-500">
+                                    <?= e(t('articles.show.acquired_on')) ?>: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
+                                    <?php if ($inv->receiptId !== null && isset($receiptById[$inv->receiptId])): ?>
+                                        <?php $linkedReceiptEntry = $receiptById[$inv->receiptId]; ?>
+                                        · <?= e(t('articles.show.receipt')) ?>:
+                                        <a href="/belege/<?= e($linkedReceiptEntry->receipt->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedReceiptEntry->receipt->receiptNumber ?? $linkedReceiptEntry->receipt->receiptDate->format('d.m.Y')) ?></a>
+                                        <?php if ($linkedReceiptEntry->supplier !== null): ?>
+                                            · <?= e(t('articles.show.supplier')) ?>: <?= e($linkedReceiptEntry->supplier->name) ?>
+                                        <?php endif; ?>
+                                    <?php elseif ($inv->supplierId !== null && isset($supplierById[$inv->supplierId])): ?>
+                                        · <?= e(t('articles.show.supplier')) ?>: <?= e($supplierById[$inv->supplierId]->name) ?>
+                                    <?php endif; ?>
+                                    <?php $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice); ?>
+                                    <?php if ($effectivePrice !== null): ?>
+                                        · <?= e(t('articles.show.purchase_price_short')) ?>: <?= e($effectivePrice) ?> €<?= $inv->purchasePriceOverride !== null ? ' (' . e(t('articles.show.deviating')) . ')' : '' ?>
+                                    <?php endif; ?>
+                                    <?php if ($inv->storageLocation !== null): ?>
+                                        · <?= e(t('articles.show.storage_location')) ?>: <?= e($inv->storageLocation) ?>
+                                    <?php endif; ?>
+                                    <?php if ($inv->currentValue !== null): ?>
+                                        · Zeitwert: <?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €<?= $inv->isCurrentValueAiEstimate() ? ' (KI)' : '' ?>
+                                    <?php endif; ?>
+                                    <?php if ($article->hasFirmware && $entry->installedFirmwareVersion !== null): ?>
+                                        · <?= e(t('articles.show.installed_firmware_version')) ?>: <?= e($entry->installedFirmwareVersion->version) ?>
+                                        <?php if ($entry->firmwareOutdated): ?>
+                                            <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700"><?= e(t('articles.show.firmware_update_available_badge')) ?></span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </p>
+                                <?php if ($networkOverview !== null && $networkOverview->assignmentsFor($inv->id) !== []): ?>
+                                    <?= \App\Infrastructure\Http\View::render('networks/_assignment-list', ['assignments' => $networkOverview->assignmentsFor($inv->id), 'networks' => $networkOverview->networks]) ?>
                                 <?php endif; ?>
-                                <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"><?= e(t('common.save')) ?></button>
-                                <a href="/artikel/<?= e($article->id) ?>" class="text-sm text-slate-500 hover:underline dark:text-slate-400"><?= e(t('common.cancel')) ?></a>
-                            </form>
-                        <?php else: ?>
-                            <div class="-mx-2 flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-md px-2 py-3 hover:bg-slate-50 dark:hover:bg-slate-800" data-row-link="/inventurnummern/<?= e($inv->id) ?>">
-                                <div>
-                                    <a href="/inventurnummern/<?= e($inv->id) ?>" class="font-mono text-sm text-brand-700 hover:underline dark:text-brand-400"><?= e($inv->number) ?></a>
-                                    <?php if ($entry->sale !== null): ?>
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600">
-                                            <?= e(t('articles.show.sold_badge', [
-                                                'date' => $entry->sale->soldAt->format('d.m.Y'),
-                                                'price' => number_format((float) $entry->sale->salePrice, 2, ',', '.'),
-                                            ])) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                    <p class="text-xs text-slate-400 dark:text-slate-500">
-                                        <?= e(t('articles.show.acquired_on')) ?>: <?= $inv->acquisitionDate !== null ? e($inv->acquisitionDate->format('d.m.Y')) : '–' ?>
-                                        <?php if ($inv->receiptId !== null && isset($receiptById[$inv->receiptId])): ?>
-                                            <?php $linkedReceiptEntry = $receiptById[$inv->receiptId]; ?>
-                                            · <?= e(t('articles.show.receipt')) ?>:
-                                            <a href="/belege/<?= e($linkedReceiptEntry->receipt->id) ?>" class="text-brand-700 hover:underline dark:text-brand-400"><?= e($linkedReceiptEntry->receipt->receiptNumber ?? $linkedReceiptEntry->receipt->receiptDate->format('d.m.Y')) ?></a>
-                                            <?php if ($linkedReceiptEntry->supplier !== null): ?>
-                                                · <?= e(t('articles.show.supplier')) ?>: <?= e($linkedReceiptEntry->supplier->name) ?>
-                                            <?php endif; ?>
-                                        <?php elseif ($inv->supplierId !== null && isset($supplierById[$inv->supplierId])): ?>
-                                            · <?= e(t('articles.show.supplier')) ?>: <?= e($supplierById[$inv->supplierId]->name) ?>
-                                        <?php endif; ?>
-                                        <?php $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice); ?>
-                                        <?php if ($effectivePrice !== null): ?>
-                                            · <?= e(t('articles.show.purchase_price_short')) ?>: <?= e($effectivePrice) ?> €<?= $inv->purchasePriceOverride !== null ? ' (' . e(t('articles.show.deviating')) . ')' : '' ?>
-                                        <?php endif; ?>
-                                        <?php if ($inv->storageLocation !== null): ?>
-                                            · <?= e(t('articles.show.storage_location')) ?>: <?= e($inv->storageLocation) ?>
-                                        <?php endif; ?>
-                                        <?php if ($inv->currentValue !== null): ?>
-                                            · Zeitwert: <?= e(number_format((float) $inv->currentValue, 2, ',', '.')) ?> €<?= $inv->isCurrentValueAiEstimate() ? ' (KI)' : '' ?>
-                                        <?php endif; ?>
-                                        <?php if ($article->hasFirmware && $entry->installedFirmwareVersion !== null): ?>
-                                            · <?= e(t('articles.show.installed_firmware_version')) ?>: <?= e($entry->installedFirmwareVersion->version) ?>
-                                            <?php if ($entry->firmwareOutdated): ?>
-                                                <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 ring-1 ring-inset ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700"><?= e(t('articles.show.firmware_update_available_badge')) ?></span>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-                                    </p>
-                                    <?php if ($networkOverview !== null && $networkOverview->assignmentsFor($inv->id) !== []): ?>
-                                        <?= \App\Infrastructure\Http\View::render('networks/_assignment-list', ['assignments' => $networkOverview->assignmentsFor($inv->id), 'networks' => $networkOverview->networks]) ?>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <a href="/inventurnummern/<?= e($inv->id) ?>/rma" class="inline-flex items-center gap-1 rounded-full <?= $entry->openRmaCount > 0 ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700' ?> px-2.5 py-1 text-xs font-medium hover:opacity-80">
-                                        RMA
-                                        <?php if ($entry->totalRmaCount > 0): ?>
-                                            <span class="font-mono"><?= $entry->openRmaCount > 0 ? $entry->openRmaCount . ' ' . e(t('articles.show.open_count')) : $entry->totalRmaCount ?></span>
-                                        <?php endif; ?>
-                                    </a>
-                                    <a href="/artikel/<?= e($article->id) ?>?edit_inventory=<?= e($inv->id) ?>" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
-                                    <?php if ($entry->sale === null): ?>
-                                        <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm-key="articles.inventory_number.delete" data-confirm="<?= e(t('articles.show.confirm_delete_inventory_number')) ?>" data-confirm-style="danger">
-                                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                            <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
-                                        </form>
-                                    <?php endif; ?>
-                                </div>
                             </div>
-                        <?php endif; ?>
+                            <div class="flex items-center gap-3">
+                                <a href="/inventurnummern/<?= e($inv->id) ?>/rma" class="inline-flex items-center gap-1 rounded-full <?= $entry->openRmaCount > 0 ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-700' : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700' ?> px-2.5 py-1 text-xs font-medium hover:opacity-80">
+                                    RMA
+                                    <?php if ($entry->totalRmaCount > 0): ?>
+                                        <span class="font-mono"><?= $entry->openRmaCount > 0 ? $entry->openRmaCount . ' ' . e(t('articles.show.open_count')) : $entry->totalRmaCount ?></span>
+                                    <?php endif; ?>
+                                </a>
+                                <a href="<?= e($inventoryListUrl($inventoryPage, $inv->id)) ?>" data-inventory-edit class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('common.edit')) ?></a>
+                                <?php if ($entry->sale === null): ?>
+                                    <form method="post" action="/inventurnummern/<?= e($inv->id) ?>/loeschen" data-confirm-key="articles.inventory_number.delete" data-confirm="<?= e(t('articles.show.confirm_delete_inventory_number')) ?>" data-confirm-style="danger">
+                                      <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                                        <input type="hidden" name="page" value="<?= $inventoryPage ?>">
+                                        <input type="hidden" name="pageSize" value="<?= $inventoryPageSize ?>">
+                                        <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('common.delete')) ?></button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
                 </div>
+                <?php if (count($detail->inventoryNumbers) > min(\App\Infrastructure\Http\Pagination::ALLOWED_PAGE_SIZES)): ?>
+                    <?= \App\Infrastructure\Http\View::render('partials/pagination', [
+                        'page' => $inventoryPage,
+                        'pageSize' => $inventoryPageSize,
+                        'totalCount' => count($detail->inventoryNumbers),
+                        'totalPages' => $inventoryTotalPages,
+                        'paginationBaseUrl' => '/artikel/' . $article->id,
+                        'paginationQuery' => $inventoryListQuery,
+                        'paginationFragment' => 'inventurnummern',
+                    ]) ?>
+                <?php endif; ?>
             <?php endif; ?>
 
             <?php if ($detail->nextInventoryNumberPreview === null): ?>
@@ -729,49 +1100,211 @@ $sectionClose = '</div></details>';
                     </form>
                 </dialog>
             <?php endif; ?>
+
+            <?php if ($editInventoryEntry !== null): ?>
+                <?php
+                $inv = $editInventoryEntry->inventoryNumber;
+                $editLabel = 'block text-xs font-medium text-slate-500 dark:text-slate-400';
+                $editInput = 'mt-1 w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900';
+                $articleFixedCurrentValue = \App\Infrastructure\Http\CurrentValueLookup::articleFixedValue($article->id);
+                ?>
+                <!-- Edit an inventory number: modal; opened on load (?edit_inventory=…) or loaded in place by the "Bearbeiten" link -->
+                <dialog id="dlg-inventory-edit" data-auto-open data-close-url="<?= e($inventoryListUrl($inventoryPage)) ?>" aria-labelledby="dlg-inventory-edit-title" class="modal-panel rounded-lg border border-slate-200 bg-white p-0 dark:border-slate-700 dark:bg-slate-900">
+                    <form method="post" action="/inventurnummern/<?= e($inv->id) ?>" class="js-inventory-number-form space-y-5 p-4">
+                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                        <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
+                        <input type="hidden" name="page" value="<?= $inventoryPage ?>">
+                        <input type="hidden" name="pageSize" value="<?= $inventoryPageSize ?>">
+                        <div>
+                            <h2 id="dlg-inventory-edit-title" class="text-base font-semibold tracking-tight text-slate-900 dark:text-slate-100"><?= e(t('articles.show.inventory_edit_modal_title')) ?></h2>
+                            <p class="mt-1 font-mono text-sm text-slate-600 dark:text-slate-400"><?= e($inv->number) ?></p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="inv-edit-date" class="<?= $editLabel ?>"><?= e(t('articles.show.acquisition_date')) ?></label>
+                                <input id="inv-edit-date" type="date" name="acquisition_date" value="<?= e($inv->acquisitionDate?->format('Y-m-d')) ?>" class="<?= $editInput ?>">
+                            </div>
+                            <div>
+                                <label for="inv-edit-location" class="<?= $editLabel ?>"><?= e(t('articles.show.storage_location')) ?></label>
+                                <input id="inv-edit-location" type="text" name="storage_location" maxlength="255" placeholder="<?= e(t('articles.show.storage_location_placeholder')) ?>"
+                                       value="<?= e($inv->storageLocation ?? '') ?>" class="<?= $editInput ?>">
+                            </div>
+                            <div>
+                                <label for="inv-edit-receipt" class="<?= $editLabel ?>"><?= e(t('articles.show.receipt')) ?></label>
+                                <select id="inv-edit-receipt" name="receipt_id" class="js-receipt-select <?= $editInput ?>">
+                                    <option value=""><?= e(t('articles.show.no_receipt')) ?></option>
+                                    <?php foreach ($receipts as $receiptEntry): ?>
+                                        <option value="<?= e($receiptEntry->receipt->id) ?>" <?= $inv->receiptId === $receiptEntry->receipt->id ? 'selected' : '' ?>><?= e($receiptLabel($receiptEntry->receipt)) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="inv-edit-supplier" class="<?= $editLabel ?>"><?= e(t('articles.show.supplier')) ?></label>
+                                <select id="inv-edit-supplier" name="supplier_id" class="js-supplier-select <?= $editInput ?> disabled:opacity-60" <?= $inv->receiptId !== null ? 'disabled' : '' ?>>
+                                    <option value=""><?= e(t('articles.show.no_supplier')) ?></option>
+                                    <?php foreach ($suppliers as $supplier): ?>
+                                        <option value="<?= e($supplier->id) ?>" <?= $inv->supplierId === $supplier->id ? 'selected' : '' ?>><?= e($supplier->name) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <p class="mt-1 text-[11px] text-slate-400 dark:text-slate-500"><?= e(t('articles.show.receipt_hint')) ?></p>
+                            </div>
+                            <div>
+                                <label for="inv-edit-price" class="<?= $editLabel ?>"><?= e(t('articles.show.purchase_price_override')) ?></label>
+                                <input id="inv-edit-price" type="number" step="0.01" min="0" name="purchase_price" placeholder="<?= e($article->purchasePrice ?? '–') ?>"
+                                       value="<?= e($inv->purchasePriceOverride ?? '') ?>" class="<?= $editInput ?>">
+                            </div>
+                            <div>
+                                <label for="inv-edit-current-value" class="<?= $editLabel ?>">Zeitwert</label>
+                                <input type="hidden" name="current_value_section" value="1">
+                                <input id="inv-edit-current-value" type="number" step="0.01" min="0" name="current_value"
+                                       placeholder="<?= e($articleFixedCurrentValue ?? '–') ?>"
+                                       title="<?= e($articleFixedCurrentValue !== null ? 'Leer = fester Zeitwert des Artikels' : 'Geschätzter Zeitwert für die Versicherungsliste') ?>"
+                                       value="<?= e($inv->currentValue ?? '') ?>" class="<?= $editInput ?>">
+                            </div>
+                            <?php if ($article->hasFirmware): ?>
+                                <div>
+                                    <label for="inv-edit-firmware" class="<?= $editLabel ?>"><?= e(t('articles.show.installed_firmware_version')) ?></label>
+                                    <select id="inv-edit-firmware" name="installed_firmware_version_id" class="<?= $editInput ?>">
+                                        <option value=""><?= e(t('articles.show.installed_firmware_version_none')) ?></option>
+                                        <?php foreach ($detail->firmwareVersions as $firmwareVersion): ?>
+                                            <option value="<?= e($firmwareVersion->id) ?>" <?= $inv->installedFirmwareVersionId === $firmwareVersion->id ? 'selected' : '' ?>><?= e($firmwareVersion->version) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ($networkEditForm !== null && !$networkEditForm->isEmpty()): ?>
+                            <?= \App\Infrastructure\Http\View::render('networks/_inventory-fields', ['form' => $networkEditForm, 'formId' => 'inv-edit']) ?>
+                        <?php endif; ?>
+
+                        <div class="flex justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+                            <button type="button" data-dialog-close class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.97] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><?= e(t('common.cancel')) ?></button>
+                            <button type="submit" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 active:scale-[0.97]"><?= e(t('common.save')) ?></button>
+                        </div>
+                    </form>
+                </dialog>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="space-y-4">
+        <!-- Verfügbarkeitskalender -->
+        <?php if (!$article->isBundle): /* Verfügbarkeit gilt je Bestandteil (Migration 111) */ ?>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.availability_title')) ?></h2>
+                <div class="flex items-center gap-1">
+                    <a href="/artikel/<?= e($article->id) ?>?verf_monat=<?= e($availabilityPrevMonth) ?>" aria-label="<?= e(t('articles.show.previous_month')) ?>"
+                       class="rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 010 1.06L8.06 11l4.73 4.71a.75.75 0 11-1.06 1.06l-5.25-5.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0z" clip-rule="evenodd"/></svg>
+                    </a>
+                    <a href="/artikel/<?= e($article->id) ?>?verf_monat=<?= e($availabilityNextMonth) ?>" aria-label="<?= e(t('articles.show.next_month')) ?>"
+                       class="rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L11.94 9 7.21 4.29a.75.75 0 111.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clip-rule="evenodd"/></svg>
+                    </a>
+                </div>
+            </div>
+            <p class="mb-2 text-xs text-slate-400 dark:text-slate-500">
+                <?= e($availabilityMonthLabel) ?> · <?= $availability->totalInventory ?> <?= $availability->totalInventory === 1 ? e(t('articles.show.inventory_total')) : e(t('articles.show.inventory_total_plural')) ?>
+            </p>
+
+            <!--
+                Echtes <table>-Element (wie beim Veranstaltungs-Kalender): garantiert
+                7 gleich breite Spalten unabhängig von der Container-Breite und
+                sieht dadurch sofort wie ein normaler Monatskalender aus, statt
+                wie ein CSS-Grid, das in einer schmalen Sidebar leicht "kaputt"
+                wirken kann.
+            -->
+            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+            <table class="w-full table-fixed text-center" data-no-sort>
+                <thead>
+                    <tr class="bg-slate-50 dark:bg-slate-900">
+                        <?php foreach ($availabilityWeekdayLabels as $i => $label): ?>
+                            <th class="border border-slate-200 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400 <?= $i >= 5 ? 'bg-slate-100 dark:bg-slate-800' : '' ?>"><?= e($label) ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($availabilityWeeks as $week): ?>
+                        <tr>
+                            <?php foreach ($week as $i => $day): ?>
+                                <?php
+                                $dayKey = $day->format('Y-m-d');
+                                $inCurrentMonth = $day->format('Y-m') === $availabilityMonth->format('Y-m');
+                                $isToday = $dayKey === $today;
+                                $isWeekend = $i >= 5;
+                                $status = $availability->statusForDay($dayKey);
+                                $meta = $availabilityStatusMeta[$status];
+                                ?>
+                                <td class="h-11 w-[14.28%] border border-slate-200 p-0.5 align-middle dark:border-slate-800 <?= $isWeekend ? 'bg-slate-50/60 dark:bg-slate-950/40' : 'bg-white dark:bg-slate-900' ?> <?= $inCurrentMonth ? '' : 'opacity-50' ?>">
+                                    <div class="flex flex-col items-center gap-0.5">
+                                        <span class="text-[10px] <?= $isToday ? 'font-semibold text-brand-700 dark:text-brand-400' : 'text-slate-500 dark:text-slate-400' ?>"><?= (int) $day->format('j') ?></span>
+                                        <span title="<?= e($meta['label']) ?>" class="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ring-1 ring-inset <?= $meta['classes'] ?>"><?= $meta['icon'] ?></span>
+                                    </div>
+                                </td>
+                            <?php endforeach; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            </div>
+
+            <div class="mt-3 flex flex-col gap-1 text-[11px] text-slate-500 dark:text-slate-400">
+                <?php foreach ($availabilityStatusMeta as $meta): ?>
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ring-1 ring-inset <?= $meta['classes'] ?>"><?= $meta['icon'] ?></span>
+                        <?= e($meta['label']) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
         </div>
         <?php endif; ?>
 
-        <!-- Bilder -->
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.images_title')) ?></h2>
-            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.document_image_hint')) ?></p>
-            <div class="flex flex-wrap gap-3">
-                <?php foreach ($article->images as $image): ?>
-                    <?php $isDocumentImage = $article->documentImageId === $image->id; ?>
-                    <div class="flex flex-col items-center gap-1">
-                    <div class="relative h-24 w-24 overflow-hidden rounded-md <?= $isDocumentImage ? 'ring-2 ring-brand-500' : 'ring-1 ring-slate-200 dark:ring-slate-700' ?>">
-                        <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-images" data-gallery-src="/artikel-bilder/<?= e($image->filePath) ?>" data-gallery-caption="<?= e($article->name) ?>" aria-label="<?= e(t('gallery.open')) ?>">
-                            <img src="/artikel-bilder/<?= e($image->filePath) ?>" alt="" class="h-full w-full object-cover">
-                        </button>
-                        <form method="post" action="/artikelbilder/<?= e($image->id) ?>/loeschen" data-confirm-key="articles.image.delete" data-confirm="<?= e(t('articles.show.confirm_delete_image')) ?>" data-confirm-style="danger" class="absolute right-1 top-1">
-                          <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                            <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                            <button type="submit" aria-label="<?= e(t('common.delete')) ?>" title="<?= e(t('common.delete')) ?>" class="rounded-full bg-black/60 px-1.5 py-0.5 text-xs text-white hover:bg-black/80">×</button>
-                        </form>
-                    </div>
-                    <!-- Dokumentbild (Migration 109): erscheint klein links neben dem Artikelnamen auf Angebot, AB und Rechnung -->
-                    <form method="post" action="/artikel/<?= e($article->id) ?>/dokumentbild">
-                        <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                        <input type="hidden" name="image_id" value="<?= $isDocumentImage ? '' : e($image->id) ?>">
-                        <?php if ($isDocumentImage): ?>
-                            <button type="submit" title="<?= e(t('articles.show.document_image_remove')) ?>" class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400">✓ <?= e(t('articles.show.document_image_selected')) ?></button>
-                        <?php else: ?>
-                            <button type="submit" class="text-[11px] text-slate-500 hover:underline dark:text-slate-400"><?= e(t('articles.show.document_image_select')) ?></button>
-                        <?php endif; ?>
-                    </form>
-                    </div>
-                <?php endforeach; ?>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.upcoming_rentals_title')) ?></h2>
+            <?php if ($upcomingRentals === []): ?>
+                <p class="text-slate-500 dark:text-slate-400"><?= e(t('articles.show.upcoming_rentals_none')) ?></p>
+            <?php else: ?>
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach (array_slice($upcomingRentals, 0, 6) as $entry): ?>
+                        <a href="/veranstaltungen/<?= e($entry->rental->id) ?>" class="block py-2 hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <p class="font-medium text-slate-800 dark:text-slate-200"><?= e($entry->rental->eventName) ?></p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500">
+                                <?= e($entry->rental->startDate->format('d.m.Y')) ?> – <?= e($entry->rental->endDate->format('d.m.Y')) ?>
+                                · <?= e($entry->customer->displayName()) ?> · <?= $entry->item->quantity ?>×
+                            </p>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (count($upcomingRentals) > 6): ?>
+                    <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.more', ['count' => (string) (count($upcomingRentals) - 6)])) ?></p>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
 
-                <form method="post" action="/artikel/<?= e($article->id) ?>/bilder" enctype="multipart/form-data">
-                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                    <label class="flex h-24 w-24 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-500 dark:hover:bg-slate-800">
-                        <span class="text-xl leading-none">+</span>
-                        <span class="mt-1 text-[11px]"><?= e(t('articles.show.add_image')) ?></span>
-                        <input type="file" name="image" accept="image/*" class="hidden" onchange="this.form.submit()">
-                    </label>
-                </form>
-            </div>
+        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.past_rentals_title')) ?></h2>
+            <?php if ($pastRentals === []): ?>
+                <p class="text-slate-500 dark:text-slate-400"><?= e(t('articles.show.past_rentals_none')) ?></p>
+            <?php else: ?>
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <?php foreach (array_slice($pastRentals, 0, 6) as $entry): ?>
+                        <a href="/veranstaltungen/<?= e($entry->rental->id) ?>" class="block py-2 hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <p class="font-medium text-slate-800 dark:text-slate-200"><?= e($entry->rental->eventName) ?></p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500">
+                                <?= e($entry->rental->startDate->format('d.m.Y')) ?> – <?= e($entry->rental->endDate->format('d.m.Y')) ?>
+                                · <?= e($entry->customer->displayName()) ?> · <?= $entry->item->quantity ?>×
+                            </p>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php if (count($pastRentals) > 6): ?>
+                    <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.more', ['count' => (string) (count($pastRentals) - 6)])) ?></p>
+                <?php endif; ?>
+            <?php endif; ?>
         </div>
 
         <!-- Secondary sections: collapsed by default, opened state is remembered per browser -->
@@ -1139,485 +1672,6 @@ $sectionClose = '</div></details>';
                 <?php endforeach; ?>
             </div>
         <?= $sectionClose ?>
-
-        <!-- Werbebilder (KI-generiert) -->
-        <?= $sectionOpen('ad-images', t('articles.show.ad_images_title'), count($detail->adImages)) ?>
-            <p class="mb-3 text-xs text-slate-400 dark:text-slate-500">
-                <?= t('articles.show.ad_images_hint', ['link' => '<a href="/einstellungen/ki-werbebilder" class="underline">' . e(t('articles.show.ad_images_settings_link')) . '</a>']) ?>
-            </p>
-
-            <?php if ($detail->adImages === []): ?>
-                <p data-ad-image-empty class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_none')) ?></p>
-            <?php endif; ?>
-            <div data-ad-image-gallery class="mb-4 flex-wrap gap-3 <?= $detail->adImages === [] ? 'hidden' : 'flex' ?>">
-                <?php foreach ($detail->adImages as $adImage): ?>
-                    <div class="w-32 space-y-1">
-                        <div class="relative h-32 w-32 overflow-hidden rounded-md ring-1 ring-slate-200 dark:ring-slate-700">
-                            <button type="button" class="image-gallery-trigger block h-full w-full" data-gallery="article-ad-images" data-gallery-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" data-gallery-caption="<?= e($adImage->format->label()) ?>" data-gallery-download="/artikel-werbebilder/<?= e($adImage->filePath) ?>" aria-label="<?= e(t('gallery.open')) ?>">
-                                <img src="/artikel-werbebilder/<?= e($adImage->filePath) ?>" alt="" class="h-full w-full object-cover">
-                            </button>
-                        </div>
-                        <p class="truncate text-[11px] text-slate-500 dark:text-slate-400"><?= e($adImage->format->label()) ?><?php if ($adImage->sourceAdImageId !== null): ?> · <?= e(t('articles.show.ad_images_refined_badge')) ?><?php endif; ?></p>
-                        <div class="flex flex-wrap items-center gap-x-2" data-row-actions="off">
-                            <a href="/artikel-werbebilder/<?= e($adImage->filePath) ?>" download class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_download')) ?></a>
-                            <button type="button" data-ad-image-refine
-                                    data-action="/werbebilder/<?= e($adImage->id) ?>/ueberarbeiten"
-                                    data-src="/artikel-werbebilder/<?= e($adImage->filePath) ?>"
-                                    data-format="<?= e($adImage->format->label()) ?>"
-                                    class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_refine')) ?></button>
-                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/in-galerie">
-                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                <button type="submit" title="<?= e(t('articles.show.ad_images_add_to_gallery_title')) ?>" class="text-[11px] font-medium text-brand-700 hover:underline dark:text-brand-400"><?= e(t('articles.show.ad_images_add_to_gallery')) ?></button>
-                            </form>
-                            <form method="post" action="/werbebilder/<?= e($adImage->id) ?>/loeschen" data-confirm-key="articles.ad_image.delete" data-confirm="<?= e(t('articles.show.ad_images_confirm_delete')) ?>" data-confirm-style="danger" data-confirm-ok="<?= e(t('articles.show.ad_images_delete')) ?>">
-                                <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                                <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                                <button type="submit" class="text-[11px] font-medium text-red-600 hover:underline dark:text-red-400"><?= e(t('articles.show.ad_images_delete')) ?></button>
-                            </form>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-
-            <?php
-            // Shared spinner markup: rendered inside the submit button and cloned
-            // into the placeholder tiles by the script below.
-            $adImageSpinner = '<svg class="h-4 w-4 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
-                . '<circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25"></circle>'
-                . '<path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"></path></svg>';
-            ?>
-            <form method="post" action="/artikel/<?= e($article->id) ?>/werbebilder" data-ad-image-form data-no-loading-indicator
-                  data-label-one="<?= e(t('articles.show.ad_images_generate')) ?>"
-                  data-label-many="<?= e(t('articles.show.ad_images_generate_many')) ?>"
-                  data-status-one="<?= e(t('articles.show.ad_images_generating_status_one')) ?>"
-                  data-status-many="<?= e(t('articles.show.ad_images_generating_status_many')) ?>"
-                  data-tile-label="<?= e(t('articles.show.ad_images_generating_tile')) ?>"
-                  data-overlay-one="<?= e(t('articles.show.ad_images_overlay_one')) ?>"
-                  data-overlay-many="<?= e(t('articles.show.ad_images_overlay_many')) ?>"
-                  class="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-              <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                <div>
-                    <label for="ad_image_format" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_format')) ?></label>
-                    <select id="ad_image_format" name="format" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
-                        <?php foreach (\App\Domain\Article\ArticleAdImageFormat::cases() as $format): ?>
-                            <option value="<?= e($format->value) ?>"><?= e($format->label()) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div>
-                    <label for="ad_image_count" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_count')) ?></label>
-                    <select id="ad_image_count" name="count" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900">
-                        <?php for ($n = 1; $n <= \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_COUNT; $n++): ?>
-                            <option value="<?= $n ?>"><?= $n ?></option>
-                        <?php endfor; ?>
-                    </select>
-                </div>
-                <?php if (count($article->images) > 1): ?>
-                    <div data-ad-image-source-wrapper>
-                        <label for="ad_image_source" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_source_photo')) ?></label>
-                        <select id="ad_image_source" name="source_article_image_id" class="mt-1 disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900">
-                            <option value=""><?= e(t('articles.show.ad_images_source_all', ['count' => (string) \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_REFERENCE_IMAGES])) ?></option>
-                            <?php foreach ($article->images as $image): ?>
-                                <option value="<?= e($image->id) ?>"><?= e(t('articles.show.ad_images_source_single', ['number' => (string) ($image->position + 1)])) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                <?php endif; ?>
-                <div class="min-w-[220px] flex-1">
-                    <label for="ad_image_instructions" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_additional_instructions')) ?></label>
-                    <input id="ad_image_instructions" type="text" name="additional_instructions" placeholder="<?= e(t('articles.show.ad_images_additional_instructions_placeholder')) ?>"
-                           class="mt-1 w-full disabled:opacity-60 rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700">
-                </div>
-                <div class="space-y-1 pb-1">
-                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                        <input type="checkbox" name="include_article_name" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
-                        <?= e(t('articles.show.ad_images_include_name')) ?>
-                    </label>
-                    <label class="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300" title="<?= e(t('articles.show.ad_images_include_properties_hint')) ?>">
-                        <input type="checkbox" name="include_properties" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700">
-                        <?= e(t('articles.show.ad_images_include_properties')) ?>
-                    </label>
-                    <?php $adImageHasPrice = $article->isBillable && $article->dailyRentalPrice !== null && trim($article->dailyRentalPrice) !== ''; ?>
-                    <label class="flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasPrice ? 'articles.show.ad_images_include_price_hint' : 'articles.show.ad_images_include_price_unavailable')) ?>">
-                        <input type="checkbox" name="include_price" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? '' : ' disabled data-ad-image-unavailable' ?>>
-                        <?= e(t('articles.show.ad_images_include_price')) ?>
-                    </label>
-                    <label class="ml-6 flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t('articles.show.ad_images_price_as_from_hint')) ?>">
-                        <input type="checkbox" name="price_as_from" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
-                        <?= e(t('articles.show.ad_images_price_as_from')) ?>
-                    </label>
-                    <?php $adImageHasGallery = $article->images !== []; ?>
-                    <label class="flex items-center gap-2 text-sm <?= $adImageHasGallery ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasGallery ? 'articles.show.ad_images_use_gallery_hint' : 'articles.show.ad_images_use_gallery_unavailable')) ?>">
-                        <input type="checkbox" name="use_gallery_images" value="1" data-ad-image-use-gallery class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasGallery ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
-                        <?= e(t('articles.show.ad_images_use_gallery')) ?>
-                    </label>
-                </div>
-                <div>
-                    <button type="submit" data-ad-image-submit
-                            class="inline-flex items-center gap-2 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-wait disabled:border-brand-300 disabled:bg-brand-50 disabled:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:disabled:border-brand-800 dark:disabled:bg-brand-950 dark:disabled:text-brand-300">
-                        <span data-ad-image-spinner class="hidden"><?= $adImageSpinner ?></span>
-                        <span data-ad-image-label><?= e(t('articles.show.ad_images_generate')) ?></span>
-                        <span data-ad-image-busy-label class="hidden"><?= e(t('articles.show.ad_images_generating')) ?></span>
-                    </button>
-                    <p data-ad-image-hint class="mt-1 text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
-                </div>
-                <p data-ad-image-status role="status" aria-live="polite" class="hidden w-full text-xs text-brand-700 dark:text-brand-300">
-                    <span data-ad-image-status-text></span>
-                    <span data-ad-image-elapsed class="ml-1 tabular-nums text-slate-400 dark:text-slate-500"></span>
-                </p>
-            </form>
-
-            <dialog data-ad-image-refine-dialog aria-labelledby="ad_image_refine_title" class="modal-panel w-full max-w-lg rounded-lg border border-slate-200 p-0 backdrop:bg-black/40 dark:border-slate-700 dark:bg-slate-900">
-                <form method="post" action="" data-ad-image-refine-form data-no-loading-indicator data-overlay-label="<?= e(t('articles.show.ad_images_overlay_refine')) ?>" class="space-y-3 p-4">
-                  <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
-                    <input type="hidden" name="article_id" value="<?= e($article->id) ?>">
-                    <h3 id="ad_image_refine_title" class="text-sm font-semibold text-slate-800 dark:text-slate-200"><?= e(t('articles.show.ad_images_refine_title')) ?></h3>
-                    <div class="flex gap-3">
-                        <img data-ad-image-refine-preview src="" alt="" class="h-24 w-24 shrink-0 rounded-md object-cover ring-1 ring-slate-200 dark:ring-slate-700">
-                        <p class="text-xs text-slate-500 dark:text-slate-400">
-                            <span data-ad-image-refine-format class="block font-medium text-slate-700 dark:text-slate-300"></span>
-                            <?= e(t('articles.show.ad_images_refine_hint')) ?>
-                        </p>
-                    </div>
-                    <div>
-                        <label for="ad_image_refine_instructions" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_instructions')) ?></label>
-                        <textarea id="ad_image_refine_instructions" name="instructions" rows="3" required maxlength="<?= \App\Application\Article\Command\RefineArticleAdImageHandler::MAX_INSTRUCTIONS_LENGTH ?>"
-                                  placeholder="<?= e(t('articles.show.ad_images_refine_instructions_placeholder')) ?>"
-                                  class="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"></textarea>
-                    </div>
-                    <div>
-                        <label for="ad_image_refine_count" class="block text-xs text-slate-500 dark:text-slate-400"><?= e(t('articles.show.ad_images_refine_count')) ?></label>
-                        <select id="ad_image_refine_count" name="count" class="mt-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900">
-                            <?php for ($n = 1; $n <= \App\Application\Article\Command\GenerateArticleAdImageHandler::MAX_COUNT; $n++): ?>
-                                <option value="<?= $n ?>"><?= $n ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                    <p data-ad-image-refine-hint class="text-[11px] text-slate-400"><?= e(t('articles.show.ad_images_generating_hint')) ?></p>
-                    <div class="flex justify-end gap-2">
-                        <button type="button" data-ad-image-refine-cancel
-                                class="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
-                            <?= e(t('common.cancel')) ?>
-                        </button>
-                        <button type="submit" data-ad-image-refine-submit
-                                class="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-wait disabled:opacity-70">
-                            <span data-ad-image-refine-spinner class="hidden"><?= $adImageSpinner ?></span>
-                            <span data-ad-image-refine-label><?= e(t('articles.show.ad_images_refine_submit')) ?></span>
-                            <span data-ad-image-refine-busy class="hidden"><?= e(t('articles.show.ad_images_refining')) ?></span>
-                        </button>
-                    </div>
-                </form>
-            </dialog>
-            <script>
-            (function () {
-                var dialog = document.querySelector('[data-ad-image-refine-dialog]');
-                if (!dialog) return;
-                var form = dialog.querySelector('[data-ad-image-refine-form]');
-                var submit = form.querySelector('[data-ad-image-refine-submit]');
-                var instructions = form.querySelector('[name="instructions"]');
-                var hint = form.querySelector('[data-ad-image-refine-hint]');
-
-                function setBusy(busy) {
-                    submit.disabled = busy;
-                    submit.toggleAttribute('aria-busy', busy);
-                    form.querySelector('[data-ad-image-refine-spinner]').classList.toggle('hidden', !busy);
-                    form.querySelector('[data-ad-image-refine-label]').classList.toggle('hidden', busy);
-                    form.querySelector('[data-ad-image-refine-busy]').classList.toggle('hidden', !busy);
-                }
-
-                document.querySelectorAll('[data-ad-image-refine]').forEach(function (trigger) {
-                    trigger.addEventListener('click', function () {
-                        form.action = trigger.dataset.action;
-                        dialog.querySelector('[data-ad-image-refine-preview]').src = trigger.dataset.src;
-                        dialog.querySelector('[data-ad-image-refine-format]').textContent = trigger.dataset.format;
-                        setBusy(false);
-                        dialog.showModal();
-                        instructions.focus();
-                    });
-                });
-                dialog.querySelector('[data-ad-image-refine-cancel]').addEventListener('click', function () { dialog.close(); });
-                // Keep the dialog open while the request runs (it takes a while).
-                dialog.addEventListener('cancel', function (event) { if (submit.disabled) event.preventDefault(); });
-                form.addEventListener('submit', function (event) {
-                    if (event.defaultPrevented || submit.disabled) return;
-                    var li = window.loadingIndicator;
-                    var count = parseInt(form.querySelector('[name="count"]').value, 10) || 1;
-                    if (li) li.start();
-                    if (li && typeof li.showOverlay === 'function') {
-                        li.showOverlay({ label: form.dataset.overlayLabel, detail: hint.textContent, maxMs: (150 + 60 * (count - 1)) * 1000 });
-                    }
-                    // Disable only after the browser has collected the form data.
-                    setTimeout(function () { setBusy(true); }, 0);
-                });
-                window.addEventListener('pageshow', function (event) {
-                    if (!event.persisted) return;
-                    if (submit.disabled && window.loadingIndicator) {
-                        window.loadingIndicator.stop();
-                        if (typeof window.loadingIndicator.hideOverlay === 'function') window.loadingIndicator.hideOverlay();
-                    }
-                    setBusy(false);
-                    dialog.close();
-                });
-            })();
-            </script>
-
-            <template data-ad-image-tile>
-                <div class="w-32 space-y-1" data-ad-image-placeholder>
-                    <div class="flex h-32 w-32 items-center justify-center rounded-md border border-dashed border-brand-300 bg-brand-50 text-brand-600 dark:border-brand-800 dark:bg-brand-950 dark:text-brand-400">
-                        <span class="animate-pulse motion-reduce:animate-none"><?= str_replace('h-4 w-4', 'h-7 w-7', $adImageSpinner) ?></span>
-                    </div>
-                    <p class="truncate text-[11px] text-slate-500 dark:text-slate-400" data-ad-image-tile-format></p>
-                    <p class="text-[11px] font-medium text-brand-700 dark:text-brand-400" data-ad-image-tile-label></p>
-                </div>
-            </template>
-
-            <script>
-            (function () {
-                var form = document.querySelector('[data-ad-image-form]');
-                if (!form) return;
-                var countSelect = form.querySelector('[name="count"]');
-                var formatSelect = form.querySelector('[name="format"]');
-                var button = form.querySelector('[data-ad-image-submit]');
-                var label = form.querySelector('[data-ad-image-label]');
-                var gallery = document.querySelector('[data-ad-image-gallery]');
-                var emptyText = document.querySelector('[data-ad-image-empty]');
-                var tileTemplate = document.querySelector('[data-ad-image-tile]');
-                var status = form.querySelector('[data-ad-image-status]');
-                var elapsed = form.querySelector('[data-ad-image-elapsed]');
-                var timer = null;
-
-                function count() { return parseInt(countSelect.value, 10) || 1; }
-                function fill(text, n) { return text.replace('{count}', String(n)); }
-                function toggle(selector, visible) {
-                    form.querySelector(selector).classList.toggle('hidden', !visible);
-                }
-
-                function updateLabel() {
-                    var n = count();
-                    label.textContent = n === 1 ? form.dataset.labelOne : fill(form.dataset.labelMany, n);
-                }
-                countSelect.addEventListener('change', updateLabel);
-                updateLabel();
-
-                // The photo choice only matters while gallery images are used.
-                var useGallery = form.querySelector('[data-ad-image-use-gallery]');
-                var sourceWrapper = form.querySelector('[data-ad-image-source-wrapper]');
-                function updateSource() {
-                    if (sourceWrapper) sourceWrapper.classList.toggle('hidden', !useGallery.checked);
-                }
-                if (useGallery) {
-                    useGallery.addEventListener('change', updateSource);
-                    updateSource();
-                }
-
-                var overlayDetail = null;
-                function formatElapsed(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
-
-                form.addEventListener('submit', function (event) {
-                    if (event.defaultPrevented || button.disabled) return;
-                    var n = count();
-                    var formatLabel = formatSelect.options[formatSelect.selectedIndex].text;
-
-                    // The form opts out of the global loading indicator (it would add a
-                    // second spinner to the button and hide its large spinner after 30 s);
-                    // show its top bar and large spinner here, for as long as the request
-                    // may take (server timeout: 120 s + 60 s per additional image).
-                    var li = window.loadingIndicator;
-                    if (li) li.start();
-                    if (li && typeof li.showOverlay === 'function') {
-                        var shown = li.showOverlay({
-                            label: n === 1 ? form.dataset.overlayOne : fill(form.dataset.overlayMany, n),
-                            detail: form.querySelector('[data-ad-image-hint]').textContent,
-                            maxMs: (150 + 60 * (n - 1)) * 1000,
-                        });
-                        overlayDetail = shown ? shown.querySelector('.page-loading-detail') : null;
-                    }
-
-                    // Disable only after the browser has collected the form data,
-                    // otherwise disabled fields would be missing from the request.
-                    setTimeout(function () {
-                        button.disabled = true;
-                        button.setAttribute('aria-busy', 'true');
-                        toggle('[data-ad-image-spinner]', true);
-                        toggle('[data-ad-image-label]', false);
-                        toggle('[data-ad-image-busy-label]', true);
-                        toggle('[data-ad-image-hint]', false);
-                        form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) { field.disabled = true; });
-
-                        var hintText = form.querySelector('[data-ad-image-hint]').textContent;
-                        form.querySelector('[data-ad-image-status-text]').textContent =
-                            n === 1 ? form.dataset.statusOne : fill(form.dataset.statusMany, n);
-                        status.classList.remove('hidden');
-
-                        if (emptyText) emptyText.classList.add('hidden');
-                        gallery.classList.remove('hidden');
-                        gallery.classList.add('flex');
-                        for (var i = 0; i < n; i++) {
-                            var tile = tileTemplate.content.cloneNode(true);
-                            tile.querySelector('[data-ad-image-tile-format]').textContent = formatLabel;
-                            tile.querySelector('[data-ad-image-tile-label]').textContent = form.dataset.tileLabel;
-                            gallery.appendChild(tile);
-                        }
-
-                        var start = Date.now();
-                        var tick = function () {
-                            var s = Math.floor((Date.now() - start) / 1000);
-                            elapsed.textContent = formatElapsed(s);
-                            if (overlayDetail) overlayDetail.textContent = hintText + ' (' + formatElapsed(s) + ')';
-                        };
-                        tick();
-                        timer = setInterval(tick, 1000);
-                    }, 0);
-                });
-
-                // Coming back via the browser's back button restores the page from
-                // the bfcache with the loading state still visible; reset it.
-                window.addEventListener('pageshow', function (event) {
-                    if (!event.persisted) return;
-                    clearInterval(timer);
-                    if (button.disabled && window.loadingIndicator) {
-                        window.loadingIndicator.stop();
-                        if (typeof window.loadingIndicator.hideOverlay === 'function') window.loadingIndicator.hideOverlay();
-                    }
-                    button.disabled = false;
-                    button.removeAttribute('aria-busy');
-                    toggle('[data-ad-image-spinner]', false);
-                    toggle('[data-ad-image-label]', true);
-                    toggle('[data-ad-image-busy-label]', false);
-                    toggle('[data-ad-image-hint]', true);
-                    status.classList.add('hidden');
-                    form.querySelectorAll('select, input[type="text"], input[type="checkbox"]').forEach(function (field) {
-                        if (!field.hasAttribute('data-ad-image-unavailable')) field.disabled = false;
-                    });
-                    gallery.querySelectorAll('[data-ad-image-placeholder]').forEach(function (tile) { tile.remove(); });
-                    if (emptyText && !gallery.children.length) {
-                        emptyText.classList.remove('hidden');
-                        gallery.classList.add('hidden');
-                        gallery.classList.remove('flex');
-                    }
-                });
-            })();
-            </script>
-        <?= $sectionClose ?>
-        </div>
-    </div>
-
-    <div class="space-y-4">
-        <!-- Verfügbarkeitskalender -->
-        <?php if (!$article->isBundle): /* Verfügbarkeit gilt je Bestandteil (Migration 111) */ ?>
-        <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.availability_title')) ?></h2>
-                <div class="flex items-center gap-1">
-                    <a href="/artikel/<?= e($article->id) ?>?verf_monat=<?= e($availabilityPrevMonth) ?>" aria-label="<?= e(t('articles.show.previous_month')) ?>"
-                       class="rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
-                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 010 1.06L8.06 11l4.73 4.71a.75.75 0 11-1.06 1.06l-5.25-5.25a.75.75 0 010-1.06l5.25-5.25a.75.75 0 011.06 0z" clip-rule="evenodd"/></svg>
-                    </a>
-                    <a href="/artikel/<?= e($article->id) ?>?verf_monat=<?= e($availabilityNextMonth) ?>" aria-label="<?= e(t('articles.show.next_month')) ?>"
-                       class="rounded-md border border-slate-300 p-1 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
-                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L11.94 9 7.21 4.29a.75.75 0 111.06-1.06l5.25 5.25a.75.75 0 010 1.06l-5.25 5.25a.75.75 0 01-1.06 0z" clip-rule="evenodd"/></svg>
-                    </a>
-                </div>
-            </div>
-            <p class="mb-2 text-xs text-slate-400 dark:text-slate-500">
-                <?= e($availabilityMonthLabel) ?> · <?= $availability->totalInventory ?> <?= $availability->totalInventory === 1 ? e(t('articles.show.inventory_total')) : e(t('articles.show.inventory_total_plural')) ?>
-            </p>
-
-            <!--
-                Echtes <table>-Element (wie beim Veranstaltungs-Kalender): garantiert
-                7 gleich breite Spalten unabhängig von der Container-Breite und
-                sieht dadurch sofort wie ein normaler Monatskalender aus, statt
-                wie ein CSS-Grid, das in einer schmalen Sidebar leicht "kaputt"
-                wirken kann.
-            -->
-            <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
-            <table class="w-full table-fixed text-center" data-no-sort>
-                <thead>
-                    <tr class="bg-slate-50 dark:bg-slate-900">
-                        <?php foreach ($availabilityWeekdayLabels as $i => $label): ?>
-                            <th class="border border-slate-200 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400 <?= $i >= 5 ? 'bg-slate-100 dark:bg-slate-800' : '' ?>"><?= e($label) ?></th>
-                        <?php endforeach; ?>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($availabilityWeeks as $week): ?>
-                        <tr>
-                            <?php foreach ($week as $i => $day): ?>
-                                <?php
-                                $dayKey = $day->format('Y-m-d');
-                                $inCurrentMonth = $day->format('Y-m') === $availabilityMonth->format('Y-m');
-                                $isToday = $dayKey === $today;
-                                $isWeekend = $i >= 5;
-                                $status = $availability->statusForDay($dayKey);
-                                $meta = $availabilityStatusMeta[$status];
-                                ?>
-                                <td class="h-11 w-[14.28%] border border-slate-200 p-0.5 align-middle dark:border-slate-800 <?= $isWeekend ? 'bg-slate-50/60 dark:bg-slate-950/40' : 'bg-white dark:bg-slate-900' ?> <?= $inCurrentMonth ? '' : 'opacity-50' ?>">
-                                    <div class="flex flex-col items-center gap-0.5">
-                                        <span class="text-[10px] <?= $isToday ? 'font-semibold text-brand-700 dark:text-brand-400' : 'text-slate-500 dark:text-slate-400' ?>"><?= (int) $day->format('j') ?></span>
-                                        <span title="<?= e($meta['label']) ?>" class="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ring-1 ring-inset <?= $meta['classes'] ?>"><?= $meta['icon'] ?></span>
-                                    </div>
-                                </td>
-                            <?php endforeach; ?>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            </div>
-
-            <div class="mt-3 flex flex-col gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                <?php foreach ($availabilityStatusMeta as $meta): ?>
-                    <span class="inline-flex items-center gap-1.5">
-                        <span class="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ring-1 ring-inset <?= $meta['classes'] ?>"><?= $meta['icon'] ?></span>
-                        <?= e($meta['label']) ?>
-                    </span>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.upcoming_rentals_title')) ?></h2>
-            <?php if ($upcomingRentals === []): ?>
-                <p class="text-slate-500 dark:text-slate-400"><?= e(t('articles.show.upcoming_rentals_none')) ?></p>
-            <?php else: ?>
-                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach (array_slice($upcomingRentals, 0, 6) as $entry): ?>
-                        <a href="/veranstaltungen/<?= e($entry->rental->id) ?>" class="block py-2 hover:bg-slate-50 dark:hover:bg-slate-800">
-                            <p class="font-medium text-slate-800 dark:text-slate-200"><?= e($entry->rental->eventName) ?></p>
-                            <p class="text-xs text-slate-400 dark:text-slate-500">
-                                <?= e($entry->rental->startDate->format('d.m.Y')) ?> – <?= e($entry->rental->endDate->format('d.m.Y')) ?>
-                                · <?= e($entry->customer->displayName()) ?> · <?= $entry->item->quantity ?>×
-                            </p>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-                <?php if (count($upcomingRentals) > 6): ?>
-                    <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.more', ['count' => (string) (count($upcomingRentals) - 6)])) ?></p>
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
-
-        <div class="rounded-lg border border-slate-200 bg-white p-4 text-sm dark:border-slate-800 dark:bg-slate-900">
-            <h2 class="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('articles.show.past_rentals_title')) ?></h2>
-            <?php if ($pastRentals === []): ?>
-                <p class="text-slate-500 dark:text-slate-400"><?= e(t('articles.show.past_rentals_none')) ?></p>
-            <?php else: ?>
-                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                    <?php foreach (array_slice($pastRentals, 0, 6) as $entry): ?>
-                        <a href="/veranstaltungen/<?= e($entry->rental->id) ?>" class="block py-2 hover:bg-slate-50 dark:hover:bg-slate-800">
-                            <p class="font-medium text-slate-800 dark:text-slate-200"><?= e($entry->rental->eventName) ?></p>
-                            <p class="text-xs text-slate-400 dark:text-slate-500">
-                                <?= e($entry->rental->startDate->format('d.m.Y')) ?> – <?= e($entry->rental->endDate->format('d.m.Y')) ?>
-                                · <?= e($entry->customer->displayName()) ?> · <?= $entry->item->quantity ?>×
-                            </p>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
-                <?php if (count($pastRentals) > 6): ?>
-                    <p class="mt-2 text-xs text-slate-400 dark:text-slate-500"><?= e(t('articles.show.more', ['count' => (string) (count($pastRentals) - 6)])) ?></p>
-                <?php endif; ?>
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -1633,11 +1687,13 @@ $sectionClose = '</div></details>';
     // closest('form') statt fester IDs, damit die Bearbeiten-Zeile und das
     // "Neu anlegen"-Formular unabhängig voneinander funktionieren, auch wenn
     // beide gleichzeitig auf der Seite vorhanden sind.
-    document.querySelectorAll('.js-inventory-number-form .js-receipt-select').forEach(function (receiptSelect) {
+    function initReceiptSync(root) {
+    root.querySelectorAll('.js-inventory-number-form .js-receipt-select').forEach(function (receiptSelect) {
         var form = receiptSelect.closest('form');
-        if (!form) {
+        if (!form || receiptSelect.hasAttribute('data-receipt-sync-ready')) {
             return;
         }
+        receiptSelect.setAttribute('data-receipt-sync-ready', '1');
         var supplierSelect = form.querySelector('.js-supplier-select');
         if (!supplierSelect) {
             return;
@@ -1655,6 +1711,10 @@ $sectionClose = '</div></details>';
         receiptSelect.addEventListener('change', syncSupplierField);
         syncSupplierField();
     });
+    }
+    // Also used for the edit dialog that is loaded in place (see below).
+    window.initInventoryReceiptSync = initReceiptSync;
+    initReceiptSync(document);
 })();
 </script>
 <script>
@@ -1681,6 +1741,72 @@ $sectionClose = '</div></details>';
             }
         }
     });
+
+    // Edit dialog for inventory numbers. Without JavaScript the "Bearbeiten"
+    // link reloads the page with ?edit_inventory=… and the dialog is rendered
+    // server-side (opened on load via data-auto-open). With JavaScript the same
+    // page is fetched and only its dialog is taken over, so the list keeps its
+    // scroll position.
+    var inventoryCard = document.getElementById('inventurnummern');
+    function setupEditDialog(dialog) {
+        if (window.initInventoryReceiptSync) { window.initInventoryReceiptSync(dialog); }
+        if (window.initNetworkFields) { window.initNetworkFields(dialog); }
+        dialog.addEventListener('close', function () {
+            // Drop ?edit_inventory=… so a reload does not reopen the dialog.
+            var closeUrl = dialog.getAttribute('data-close-url');
+            if (closeUrl && window.location.search.indexOf('edit_inventory=') !== -1) {
+                window.history.replaceState(null, '', closeUrl);
+            }
+        });
+    }
+    function showDialog(dialog) {
+        if (typeof dialog.showModal !== 'function') { return; }
+        dialog.showModal();
+        var first = dialog.querySelector('input:not([type=hidden]), select');
+        if (first) { first.focus(); }
+    }
+    var initialEditDialog = document.getElementById('dlg-inventory-edit');
+    if (initialEditDialog) {
+        setupEditDialog(initialEditDialog);
+        if (initialEditDialog.hasAttribute('data-auto-open')) { showDialog(initialEditDialog); }
+    }
+    if (inventoryCard) {
+        inventoryCard.addEventListener('click', function (event) {
+            var link = event.target.closest('a[data-inventory-edit]');
+            if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) { return; }
+            event.preventDefault();
+            event.stopPropagation(); // the row itself is a link to the inventory number page
+            link.setAttribute('aria-busy', 'true');
+            fetch(link.href, { credentials: 'same-origin' })
+                .then(function (res) {
+                    if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                    return res.text();
+                })
+                .then(function (html) {
+                    var loaded = new DOMParser().parseFromString(html, 'text/html').getElementById('dlg-inventory-edit');
+                    if (!loaded) { throw new Error('dialog missing'); }
+                    var dialog = document.importNode(loaded, true);
+                    var existing = document.getElementById('dlg-inventory-edit');
+                    if (existing) { existing.remove(); }
+                    inventoryCard.appendChild(dialog);
+                    setupEditDialog(dialog);
+                    showDialog(dialog);
+                })
+                .catch(function () { window.location.href = link.href; })
+                .finally(function () { link.removeAttribute('aria-busy'); });
+        }, true);
+
+        // Page size of the inventory number list (plain navigation, no AJAX list here).
+        inventoryCard.querySelectorAll('[data-page-size-select]').forEach(function (select) {
+            select.addEventListener('change', function () {
+                var params = new URLSearchParams(window.location.search);
+                params.delete('edit_inventory');
+                params.set('pageSize', select.value);
+                params.set('page', '1');
+                window.location.href = window.location.pathname + '?' + params.toString() + '#inventurnummern';
+            });
+        });
+    }
 
     // Batch creation of inventory numbers: stepper, live preview of the
     // numbers that will be assigned, submit label and network fields

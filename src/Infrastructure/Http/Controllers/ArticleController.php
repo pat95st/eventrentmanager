@@ -573,8 +573,39 @@ final class ArticleController
         $saleStockLots = $this->stockLots->findByArticle($id);
         $saleCustomers = $this->customers->findAll();
 
+        // Paginate the inventory number list (page/pageSize like every other list).
+        // An inventory number opened for editing always lands on its own page.
+        $inventoryTotal = count($detail->inventoryNumbers);
+        $inventoryPageSize = Pagination::pageSize($request, CurrentUser::get());
+        $inventoryTotalPages = max(1, (int) ceil($inventoryTotal / $inventoryPageSize));
+        $inventoryPage = min(Pagination::page($request), $inventoryTotalPages);
+        if ($editInventoryId !== null) {
+            foreach ($detail->inventoryNumbers as $index => $entry) {
+                if ($entry->inventoryNumber->id === $editInventoryId) {
+                    $inventoryPage = intdiv($index, $inventoryPageSize) + 1;
+                    break;
+                }
+            }
+        }
+        $editInventoryEntry = null;
+        foreach ($detail->inventoryNumbers as $entry) {
+            if ($entry->inventoryNumber->id === $editInventoryId) {
+                $editInventoryEntry = $entry;
+                break;
+            }
+        }
+
         echo View::page('articles/show', [
             'detail' => $detail,
+            'inventoryPageEntries' => array_slice($detail->inventoryNumbers, ($inventoryPage - 1) * $inventoryPageSize, $inventoryPageSize),
+            'inventoryPage' => $inventoryPage,
+            'inventoryPageSize' => $inventoryPageSize,
+            'inventoryTotalPages' => $inventoryTotalPages,
+            'inventoryListQuery' => array_diff_key(
+                array_map(static fn ($value) => is_scalar($value) ? (string) $value : '', $request->query),
+                ['page' => true, 'pageSize' => true, 'edit_inventory' => true],
+            ),
+            'editInventoryEntry' => $editInventoryEntry,
             'bundleComponentRows' => $detail->article->isBundle ? $this->bundleComponentRows($detail->article->id) : [],
             'containingBundles' => $this->containingBundles($detail->article->id),
             // Stromverteiler (Migration 117)
@@ -1028,7 +1059,7 @@ final class ArticleController
             Flash::success('Inventurnummer wurde aktualisiert.');
         } catch (ValidationException $e) {
             Flash::error(implode(' ', $e->errors()));
-            Response::redirect('/artikel/' . $articleId . '?edit_inventory=' . $inventoryNumberId);
+            Response::redirect($this->inventoryListUrl($articleId, $request, ['edit_inventory' => $inventoryNumberId]));
 
             return;
         } catch (NotFoundException $e) {
@@ -1037,7 +1068,27 @@ final class ArticleController
             return;
         }
 
-        Response::redirect('/artikel/' . $articleId);
+        Response::redirect($this->inventoryListUrl($articleId, $request));
+    }
+
+    /**
+     * Article page URL that returns to the inventory number list on the page
+     * the form was submitted from (hidden fields "page"/"pageSize").
+     *
+     * @param array<string, string> $extra
+     */
+    private function inventoryListUrl(string $articleId, Request $request, array $extra = []): string
+    {
+        $params = [];
+        foreach (['page', 'pageSize'] as $key) {
+            $value = $request->input($key, '') ?? '';
+            if (preg_match('/^[1-9]\d{0,5}$/', $value) === 1) {
+                $params[$key] = $value;
+            }
+        }
+        $query = http_build_query($params + $extra);
+
+        return '/artikel/' . $articleId . ($query !== '' ? '?' . $query : '') . '#inventurnummern';
     }
 
     /**
@@ -1073,7 +1124,7 @@ final class ArticleController
             Flash::error($e->getMessage());
         }
 
-        Response::redirect('/artikel/' . $articleId);
+        Response::redirect($this->inventoryListUrl($articleId, $request));
     }
 
     public function addFirmwareVersion(Request $request): void

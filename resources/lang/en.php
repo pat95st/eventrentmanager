@@ -413,6 +413,7 @@ return [
     'articles.show.inventory_batch_partial' => '{count} inventory numbers were created, then an error occurred:',
     'articles.show.inventory_add_button' => 'Add',
     'articles.show.inventory_modal_title' => 'Add inventory numbers',
+    'articles.show.inventory_edit_modal_title' => 'Edit inventory number',
     'articles.show.inventory_modal_subtitle' => 'Numbers are assigned consecutively. All details apply to every new number.',
     'articles.show.inventory_quantity' => 'Quantity',
     'articles.show.inventory_quantity_decrease' => 'One less',

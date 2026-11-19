@@ -413,6 +413,7 @@ return [
     'articles.show.inventory_batch_partial' => '{count} Inventurnummern wurden angelegt, dann ist ein Fehler aufgetreten:',
     'articles.show.inventory_add_button' => 'Anlegen',
     'articles.show.inventory_modal_title' => 'Inventurnummern anlegen',
+    'articles.show.inventory_edit_modal_title' => 'Inventurnummer bearbeiten',
     'articles.show.inventory_modal_subtitle' => 'Die Nummern werden fortlaufend vergeben. Alle Angaben gelten für jede neue Nummer.',
     'articles.show.inventory_quantity' => 'Anzahl',
     'articles.show.inventory_quantity_decrease' => 'Eine weniger',

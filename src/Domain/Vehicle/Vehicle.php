@@ -52,7 +52,7 @@ final class Vehicle
         public ?string $widthCm = null,
         public ?string $lengthCm = null,
         public ?string $grossWeightKg = null,
-        // Migration 179: passenger seats (excluding the driver), only relevant for category = Auto.
+        // Migration 180: passenger seats (excluding the driver), only relevant for category = Auto.
         public ?int $passengerSeats = null,
     ) {
     }

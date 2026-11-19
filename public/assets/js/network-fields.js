@@ -6,7 +6,14 @@
 (function () {
   'use strict';
 
-  document.querySelectorAll('.js-network-fields').forEach(function (container) {
+  function initContainer(container) {
+    // Guard: dynamically inserted forms (e.g. the inventory number edit
+    // dialog on the article page) call init again for the whole document.
+    if (container.getAttribute('data-network-fields-ready') === '1') {
+      return;
+    }
+    container.setAttribute('data-network-fields-ready', '1');
+
     var networks = {};
     try {
       networks = JSON.parse(container.getAttribute('data-networks') || '{}');
@@ -74,5 +81,12 @@
         }
       });
     });
-  });
+  }
+
+  function init(root) {
+    (root || document).querySelectorAll('.js-network-fields').forEach(initContainer);
+  }
+
+  window.initNetworkFields = init;
+  init(document);
 })();

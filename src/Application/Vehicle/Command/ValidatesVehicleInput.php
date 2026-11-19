@@ -112,7 +112,7 @@ trait ValidatesVehicleInput
             $towCapacityKg = null;
         }
 
-        // Passenger seats (migration 179): whole number 0..max, cars only.
+        // Passenger seats (migration 180): whole number 0..max, cars only.
         $seats = null;
         $passengerSeats = $passengerSeats !== null ? trim($passengerSeats) : '';
         if ($category !== VehicleCategory::Anhaenger && $passengerSeats !== '') {

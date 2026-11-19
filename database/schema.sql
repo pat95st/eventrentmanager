@@ -5098,7 +5098,18 @@ CREATE TABLE rental_route_cache (
     CONSTRAINT fk_rental_route_cache_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
--- --- 179_vehicle_passenger_seats.sql ---
+-- --- 179_tour_unbilled_legs.sql ---
+-- Legs of a tour route that are not billed (e.g. a technician without
+-- material rides along with someone else between two stops).
+--
+--  - rental_tour_stops.arrival_not_billed: 1 = the drive TO this stop,
+--    waypoint or stored destination is left out of the billable kilometres
+--    of the tour. The leg is still shown on the map and in the leg table and
+--    still counts for driving times.
+ALTER TABLE rental_tour_stops
+    ADD COLUMN arrival_not_billed TINYINT(1) NOT NULL DEFAULT 0 AFTER depart_at;
+
+-- --- 180_vehicle_passenger_seats.sql ---
 -- Passenger seats of a vehicle (excluding the driver), 0..8.
 --
 --  - vehicles.passenger_seats: only relevant for category = 'auto'; NULL =
@@ -5311,4 +5322,5 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('176_rental_series.sql', NOW()),
     ('177_rental_tours.sql', NOW()),
     ('178_tour_routing.sql', NOW()),
-    ('179_vehicle_passenger_seats.sql', NOW());
+    ('179_tour_unbilled_legs.sql', NOW()),
+    ('180_vehicle_passenger_seats.sql', NOW());

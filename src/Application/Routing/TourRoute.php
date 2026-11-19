@@ -37,7 +37,7 @@ final class TourRoute
     ) {
     }
 
-    /** Whether a leg counts for the billable kilometres (migration 179). */
+    /** Whether a leg counts for the billable kilometres (migration 180). */
     public function isLegBilled(RouteLeg $leg): bool
     {
         return !($this->points[$leg->to]->arrivalNotBilled ?? false);

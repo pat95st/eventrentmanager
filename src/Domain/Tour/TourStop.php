@@ -42,7 +42,7 @@ final class TourStop
         public ?DateTimeImmutable $arriveAt = null,
         public ?DateTimeImmutable $departAt = null,
         public ?DateTimeImmutable $createdAt = null,
-        // the drive to this point is not billed (migration 179)
+        // the drive to this point is not billed (migration 180)
         public bool $arrivalNotBilled = false,
     ) {
     }

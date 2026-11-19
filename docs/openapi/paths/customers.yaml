@@ -2,10 +2,10 @@
 /api/v1/customers:
   get:
     tags:
-    - Kunden
-    summary: Kunden auflisten
+    - Customers
+    summary: List customers
     description: |
-      Inklusive Ansprechpartnern (`contacts`).
+      Including contacts (`contacts`).
 
       **Scopes:** `customers:read`
     operationId: CustomersIndex
@@ -21,7 +21,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -46,8 +46,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Kunden
-    summary: Kunde anlegen
+    - Customers
+    summary: Create customer
     description: |
       **Scopes:** `customers:write`
     operationId: CustomersStore
@@ -63,7 +63,7 @@
             $ref: ../components/generated.yaml#/CustomerInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -84,8 +84,8 @@
 /api/v1/customers/{id}:
   get:
     tags:
-    - Kunden
-    summary: Kunde abrufen
+    - Customers
+    summary: Get customer
     description: |
       **Scopes:** `customers:read`
     operationId: CustomersShow
@@ -97,7 +97,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -117,10 +117,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Kunden
-    summary: Kunde ändern
+    - Customers
+    summary: Update customer
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `customers:write`
     operationId: CustomersUpdate
@@ -138,7 +138,7 @@
             $ref: ../components/generated.yaml#/CustomerPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -160,8 +160,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Kunden
-    summary: Kunde löschen
+    - Customers
+    summary: Delete customer
     description: |
       **Scopes:** `customers:write`
     operationId: CustomersDestroy

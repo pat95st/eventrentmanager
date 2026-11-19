@@ -2,8 +2,8 @@
 /api/v1/suppliers:
   get:
     tags:
-    - Stammdaten
-    summary: Lieferanten auflisten
+    - Master data
+    summary: List suppliers
     description: |
       **Scopes:** `master_data:read`
     operationId: SuppliersIndex
@@ -19,7 +19,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -44,8 +44,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Stammdaten
-    summary: Lieferant anlegen
+    - Master data
+    summary: Create supplier
     description: |
       **Scopes:** `master_data:write`
     operationId: SuppliersStore
@@ -61,7 +61,7 @@
             $ref: ../components/generated.yaml#/SupplierInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -82,8 +82,8 @@
 /api/v1/suppliers/{id}:
   get:
     tags:
-    - Stammdaten
-    summary: Lieferant abrufen
+    - Master data
+    summary: Get supplier
     description: |
       **Scopes:** `master_data:read`
     operationId: SuppliersShow
@@ -95,7 +95,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -115,10 +115,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Stammdaten
-    summary: Lieferant ändern
+    - Master data
+    summary: Update supplier
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `master_data:write`
     operationId: SuppliersUpdate
@@ -136,7 +136,7 @@
             $ref: ../components/generated.yaml#/SupplierPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -158,8 +158,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Stammdaten
-    summary: Lieferant löschen
+    - Master data
+    summary: Delete supplier
     description: |
       **Scopes:** `master_data:write`
     operationId: SuppliersDestroy
@@ -185,10 +185,10 @@
 /api/v1/venues:
   get:
     tags:
-    - Stammdaten
-    summary: Veranstaltungsorte auflisten
+    - Master data
+    summary: List venues
     description: |
-      Bilder, Stromanschlüsse und Bühnen werden in der Weboberfläche gepflegt.
+      Images, power connections and stages are maintained in the web interface.
 
       **Scopes:** `master_data:read`
     operationId: VenuesIndex
@@ -204,7 +204,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -229,8 +229,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Stammdaten
-    summary: Veranstaltungsort anlegen
+    - Master data
+    summary: Create venue
     description: |
       **Scopes:** `master_data:write`
     operationId: VenuesStore
@@ -246,7 +246,7 @@
             $ref: ../components/generated.yaml#/VenueInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -267,8 +267,8 @@
 /api/v1/venues/{id}:
   get:
     tags:
-    - Stammdaten
-    summary: Veranstaltungsort abrufen
+    - Master data
+    summary: Get venue
     description: |
       **Scopes:** `master_data:read`
     operationId: VenuesShow
@@ -280,7 +280,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -300,10 +300,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Stammdaten
-    summary: Veranstaltungsort ändern
+    - Master data
+    summary: Update venue
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `master_data:write`
     operationId: VenuesUpdate
@@ -321,7 +321,7 @@
             $ref: ../components/generated.yaml#/VenuePatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -343,8 +343,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Stammdaten
-    summary: Veranstaltungsort löschen
+    - Master data
+    summary: Delete venue
     description: |
       **Scopes:** `master_data:write`
     operationId: VenuesDestroy
@@ -370,8 +370,8 @@
 /api/v1/warehouses:
   get:
     tags:
-    - Stammdaten
-    summary: Lagerorte auflisten
+    - Master data
+    summary: List warehouses
     description: |
       **Scopes:** `master_data:read`
     operationId: WarehousesIndex
@@ -387,7 +387,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -412,8 +412,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Stammdaten
-    summary: Lagerort anlegen
+    - Master data
+    summary: Create warehouse
     description: |
       **Scopes:** `master_data:write`
     operationId: WarehousesStore
@@ -429,7 +429,7 @@
             $ref: ../components/generated.yaml#/WarehouseInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -450,8 +450,8 @@
 /api/v1/warehouses/{id}:
   get:
     tags:
-    - Stammdaten
-    summary: Lagerort abrufen
+    - Master data
+    summary: Get warehouse
     description: |
       **Scopes:** `master_data:read`
     operationId: WarehousesShow
@@ -463,7 +463,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -483,10 +483,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Stammdaten
-    summary: Lagerort ändern
+    - Master data
+    summary: Update warehouse
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `master_data:write`
     operationId: WarehousesUpdate
@@ -504,7 +504,7 @@
             $ref: ../components/generated.yaml#/WarehousePatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -526,8 +526,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Stammdaten
-    summary: Lagerort löschen
+    - Master data
+    summary: Delete warehouse
     description: |
       **Scopes:** `master_data:write`
     operationId: WarehousesDestroy
@@ -553,8 +553,8 @@
 /api/v1/vehicles:
   get:
     tags:
-    - Stammdaten
-    summary: Fahrzeuge auflisten
+    - Master data
+    summary: List vehicles
     description: |
       **Scopes:** `master_data:read`
     operationId: VehiclesIndex
@@ -570,7 +570,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -595,8 +595,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Stammdaten
-    summary: Fahrzeug anlegen
+    - Master data
+    summary: Create vehicle
     description: |
       **Scopes:** `master_data:write`
     operationId: VehiclesStore
@@ -612,7 +612,7 @@
             $ref: ../components/generated.yaml#/VehicleInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -633,8 +633,8 @@
 /api/v1/vehicles/{id}:
   get:
     tags:
-    - Stammdaten
-    summary: Fahrzeug abrufen
+    - Master data
+    summary: Get vehicle
     description: |
       **Scopes:** `master_data:read`
     operationId: VehiclesShow
@@ -646,7 +646,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -666,10 +666,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Stammdaten
-    summary: Fahrzeug ändern
+    - Master data
+    summary: Update vehicle
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `master_data:write`
     operationId: VehiclesUpdate
@@ -687,7 +687,7 @@
             $ref: ../components/generated.yaml#/VehiclePatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -709,8 +709,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Stammdaten
-    summary: Fahrzeug löschen
+    - Master data
+    summary: Delete vehicle
     description: |
       **Scopes:** `master_data:write`
     operationId: VehiclesDestroy

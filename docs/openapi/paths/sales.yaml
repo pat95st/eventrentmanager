@@ -2,10 +2,10 @@
 /api/v1/offers:
   get:
     tags:
-    - Angebote
-    summary: Angebote auflisten
+    - Offers
+    summary: List offers
     description: |
-      Ein Shop kann Anfragen als Angebotsentwurf anlegen.
+      A shop can create requests as offer drafts.
 
       **Scopes:** `sales:read`
     operationId: OffersIndex
@@ -30,7 +30,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -55,8 +55,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Angebote
-    summary: Angebot anlegen
+    - Offers
+    summary: Create offer
     description: |
       **Scopes:** `sales:write`
     operationId: OffersStore
@@ -72,7 +72,7 @@
             $ref: ../components/generated.yaml#/OfferInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -93,8 +93,8 @@
 /api/v1/offers/{id}:
   get:
     tags:
-    - Angebote
-    summary: Angebot abrufen
+    - Offers
+    summary: Get offer
     description: |
       **Scopes:** `sales:read`
     operationId: OffersShow
@@ -106,7 +106,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -126,10 +126,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Angebote
-    summary: Angebot ändern
+    - Offers
+    summary: Update offer
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `sales:write`
     operationId: OffersUpdate
@@ -147,7 +147,7 @@
             $ref: ../components/generated.yaml#/OfferPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -171,8 +171,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Angebote
-    summary: Angebot löschen
+    - Offers
+    summary: Delete offer
     description: |
       **Scopes:** `sales:write`
     operationId: OffersDestroy
@@ -198,8 +198,8 @@
 /api/v1/offers/{id}/mark-sent:
   post:
     tags:
-    - Angebote
-    summary: Als versendet markieren
+    - Offers
+    summary: Mark as sent
     description: |
       **Scopes:** `sales:write`
     operationId: OffersMarkSent
@@ -211,7 +211,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -236,8 +236,8 @@
 /api/v1/offers/{id}/accept:
   post:
     tags:
-    - Angebote
-    summary: Als angenommen markieren
+    - Offers
+    summary: Mark as accepted
     description: |
       **Scopes:** `sales:write`
     operationId: OffersAccept
@@ -249,7 +249,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -274,8 +274,8 @@
 /api/v1/offers/{id}/decline:
   post:
     tags:
-    - Angebote
-    summary: Als abgelehnt markieren
+    - Offers
+    summary: Mark as declined
     description: |
       **Scopes:** `sales:write`
     operationId: OffersDecline
@@ -287,7 +287,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -312,10 +312,10 @@
 /api/v1/offers/{id}/rental:
   post:
     tags:
-    - Angebote
-    summary: In Veranstaltung umwandeln
+    - Offers
+    summary: Convert into event
     description: |
-      Prüft die Verfügbarkeit wie die Oberfläche.
+      Checks availability like the web interface.
 
       **Scopes:** `sales:write`, `rentals:write`
     operationId: OffersConvertToRental
@@ -328,7 +328,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -353,8 +353,8 @@
 /api/v1/offers/{id}/order-confirmation:
   post:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung aus Angebot
+    - Offers
+    summary: Order confirmation from offer
     description: |
       **Scopes:** `sales:write`
     operationId: OffersCreateOrderConfirmation
@@ -366,7 +366,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -391,8 +391,8 @@
 /api/v1/offers/{id}/invoice:
   post:
     tags:
-    - Angebote
-    summary: Rechnung aus Angebot
+    - Offers
+    summary: Invoice from offer
     description: |
       **Scopes:** `sales:read`, `invoices:write`
     operationId: OffersCreateInvoice
@@ -405,7 +405,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -430,8 +430,8 @@
 /api/v1/offers/{id}/pdf:
   get:
     tags:
-    - Angebote
-    summary: Angebot als PDF
+    - Offers
+    summary: Offer as PDF
     description: |
       **Scopes:** `sales:read`
     operationId: OffersPdf
@@ -455,10 +455,10 @@
 /api/v1/offers/{id}/email:
   post:
     tags:
-    - Angebote
-    summary: Angebot per E-Mail versenden
+    - Offers
+    summary: Send offer by e-mail
     description: |
-      Versendet das Dokument als PDF-Anhang an `recipient_email` (der Versand wird wie in der Oberfläche archiviert).
+      Sends the document as a PDF attachment to `recipient_email` (the e-mail is archived as in the web interface).
 
       **Scopes:** `sales:read`, `email:send`
     operationId: OffersEmail
@@ -477,7 +477,7 @@
             $ref: ../components/generated.yaml#/EmailInput
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -497,8 +497,8 @@
 /api/v1/order-confirmations:
   get:
     tags:
-    - Angebote
-    summary: Auftragsbestätigungen auflisten
+    - Offers
+    summary: List order confirmations
     description: |
       **Scopes:** `sales:read`
     operationId: OrderConfirmationsIndex
@@ -518,7 +518,7 @@
     - $ref: ../components/common.yaml#/parameters/PageSize
     responses:
       '200':
-        description: Liste (seitenweise).
+        description: List (paginated).
         content:
           application/json:
             schema:
@@ -543,8 +543,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   post:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung anlegen
+    - Offers
+    summary: Create order confirmation
     description: |
       **Scopes:** `sales:write`
     operationId: OrderConfirmationsStore
@@ -560,7 +560,7 @@
             $ref: ../components/generated.yaml#/OrderConfirmationInput
     responses:
       '201':
-        description: Angelegt.
+        description: Created.
         content:
           application/json:
             schema:
@@ -581,8 +581,8 @@
 /api/v1/order-confirmations/{id}:
   get:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung abrufen
+    - Offers
+    summary: Get order confirmation
     description: |
       **Scopes:** `sales:read`
     operationId: OrderConfirmationsShow
@@ -594,7 +594,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -614,10 +614,10 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   patch:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung ändern
+    - Offers
+    summary: Update order confirmation
     description: |
-      Teilweise Änderung: nicht gesendete Felder behalten ihren Wert.
+      Partial update: fields not sent keep their value.
 
       **Scopes:** `sales:write`
     operationId: OrderConfirmationsUpdate
@@ -635,7 +635,7 @@
             $ref: ../components/generated.yaml#/OrderConfirmationPatch
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -659,8 +659,8 @@
         $ref: ../components/common.yaml#/responses/TooManyRequests
   delete:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung löschen
+    - Offers
+    summary: Delete order confirmation
     description: |
       **Scopes:** `sales:write`
     operationId: OrderConfirmationsDestroy
@@ -686,8 +686,8 @@
 /api/v1/order-confirmations/{id}/mark-sent:
   post:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung als versendet markieren
+    - Offers
+    summary: Mark order confirmation as sent
     description: |
       **Scopes:** `sales:write`
     operationId: OrderConfirmationsMarkSent
@@ -699,7 +699,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -724,8 +724,8 @@
 /api/v1/order-confirmations/{id}/confirm:
   post:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung als bestätigt markieren
+    - Offers
+    summary: Mark order confirmation as confirmed
     description: |
       **Scopes:** `sales:write`
     operationId: OrderConfirmationsConfirm
@@ -737,7 +737,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -762,8 +762,8 @@
 /api/v1/order-confirmations/{id}/cancel:
   post:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung stornieren
+    - Offers
+    summary: Cancel order confirmation
     description: |
       **Scopes:** `sales:write`
     operationId: OrderConfirmationsCancel
@@ -775,7 +775,7 @@
     - $ref: ../components/common.yaml#/parameters/Id
     responses:
       '200':
-        description: Erfolgreich.
+        description: Success.
         content:
           application/json:
             schema:
@@ -800,8 +800,8 @@
 /api/v1/order-confirmations/{id}/pdf:
   get:
     tags:
-    - Angebote
-    summary: Auftragsbestätigung als PDF
+    - Offers
+    summary: Order confirmation as PDF
     description: |
       **Scopes:** `sales:read`
     operationId: OrderConfirmationsPdf

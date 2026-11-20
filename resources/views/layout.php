@@ -278,6 +278,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
 <script src="/assets/js/pdf-viewer.js" defer></script>
 <script src="/assets/js/row-actions.js" defer></script>
 <script src="/assets/js/row-links.js" defer></script>
+<script src="/assets/js/responsive-tables.js" defer></script>
 <?php if (($currentUser ?? null) !== null): /* Hinweis vor automatischer Abmeldung (Einstellungen › Sicherheit) */ ?>
 <script>window.SESSION_TIMEOUT_SECONDS = <?= (int) \App\Infrastructure\Http\Auth\SessionTimeout::seconds() ?>;</script>
 <script src="/assets/js/session-timeout.js" defer></script>

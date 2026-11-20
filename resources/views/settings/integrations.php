@@ -356,7 +356,7 @@ use function App\Infrastructure\Http\t;
 
             <?php if ($datevExports !== []): ?>
                 <div class="mt-4 overflow-x-auto">
-                    <table class="min-w-full text-left text-xs">
+                    <table class="min-w-full text-left text-xs" data-responsive>
                         <thead class="text-slate-400 dark:text-slate-500">
                             <tr>
                                 <th class="py-1 pr-4 font-medium"><?= e(t('settings.integrations.datev.log_created')) ?></th>

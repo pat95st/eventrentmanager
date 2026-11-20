@@ -23,7 +23,7 @@ use function App\Infrastructure\Http\e;
     </div>
 <?php else: ?>
     <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table class="w-full min-w-[760px] text-left text-sm">
+        <table class="w-full min-w-[760px] text-left text-sm" data-responsive>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2.5">Bezeichnung</th>

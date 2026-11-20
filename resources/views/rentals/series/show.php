@@ -29,14 +29,14 @@ $scopes = array_map(static fn (CopyScope $s) => $s->value, CopyScope::defaults()
 </div>
 
 <div class="<?= $card ?> mb-6 overflow-x-auto">
-    <table class="w-full min-w-[640px] text-sm">
+    <table class="w-full min-w-[640px] text-sm" data-responsive>
         <thead class="text-left text-xs text-slate-500 dark:text-slate-400">
             <tr>
                 <th class="py-2 pr-2 font-medium">#</th>
-                <th class="py-2 pr-2 font-medium">Datum</th>
-                <th class="py-2 pr-2 font-medium">Veranstaltung</th>
+                <th data-priority="1" class="py-2 pr-2 font-medium">Datum</th>
+                <th data-priority="3" class="py-2 pr-2 font-medium">Veranstaltung</th>
                 <th class="py-2 pr-2 font-medium">Ort</th>
-                <th class="py-2 pr-2 font-medium">Status</th>
+                <th data-priority="2" class="py-2 pr-2 font-medium">Status</th>
                 <th class="py-2 font-medium">Hinweise</th>
             </tr>
         </thead>

@@ -121,15 +121,15 @@ $originBadge = static function (?string $origin, ?string $note = null): string {
         <p class="text-sm text-slate-500 dark:text-slate-400">Für diese Veranstaltung sind noch keine Geräte geplant oder ausgegeben und keine Fahrzeuge auf der Liste.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
+            <table class="min-w-full text-sm" data-responsive>
                 <thead>
                     <tr class="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                         <th class="py-2 pr-3 font-medium">Kategorie</th>
-                        <th class="py-2 pr-3 font-medium">Hersteller und Modell</th>
-                        <th class="py-2 pr-3 font-medium">Inventarnummer</th>
+                        <th data-priority="1" class="py-2 pr-3 font-medium">Hersteller und Modell</th>
+                        <th data-priority="3" class="py-2 pr-3 font-medium">Inventarnummer</th>
                         <th class="py-2 pr-3 font-medium">Jahr</th>
                         <th class="py-2 pr-3 text-right font-medium">Anschaffungspreis</th>
-                        <th class="py-2 pr-3 text-right font-medium">Zeitwert</th>
+                        <th data-priority="2" class="py-2 pr-3 text-right font-medium">Zeitwert</th>
                         <th class="py-2 font-medium"></th>
                     </tr>
                 </thead>

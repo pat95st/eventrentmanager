@@ -60,7 +60,7 @@ $card = 'rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-800 d
         <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">Beispiel für einen Dry-Hire-Tagesmietsatz von
             <input type="text" id="dh-example" value="100" inputmode="decimal" class="inline-block rounded border border-slate-300 px-2 py-0.5 text-xs dark:border-slate-700" style="width: 5rem"> €
             (ohne Preisrundung).</p>
-        <table class="w-full text-sm">
+        <table class="w-full text-sm" data-responsive>
             <thead class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400"><tr><th class="pb-2 text-left">Miettage</th><th class="pb-2 text-right">Faktor</th><th class="pb-2 text-right">Mietpreis</th><th class="pb-2 text-right">je Tag</th></tr></thead>
             <tbody id="dh-preview" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
         </table>

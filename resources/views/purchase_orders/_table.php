@@ -16,7 +16,7 @@ use function App\Infrastructure\Http\t;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400"><?= e(t('purchase_orders.table.empty')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[560px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[560px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 34%">
                 <col style="width: 18%">
@@ -28,8 +28,8 @@ use function App\Infrastructure\Http\t;
                 <tr>
                     <th class="break-words px-4 py-2.5"><?= e(t('purchase_orders.table.supplier')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('purchase_orders.table.items')) ?></th>
-                    <th class="break-words px-4 py-2.5"><?= e(t('purchase_orders.table.status')) ?></th>
-                    <th class="break-words px-4 py-2.5"><?= e(t('purchase_orders.table.ordered_at')) ?></th>
+                    <th data-priority="1" class="break-words px-4 py-2.5"><?= e(t('purchase_orders.table.status')) ?></th>
+                    <th data-priority="2" class="break-words px-4 py-2.5"><?= e(t('purchase_orders.table.ordered_at')) ?></th>
                     <th class="break-words px-4 py-2.5"></th>
                 </tr>
             </thead>

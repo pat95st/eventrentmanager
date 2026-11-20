@@ -41,7 +41,7 @@ use function App\Infrastructure\Http\e;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine RMA-Vorgänge gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[720px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 9%">
                 <col style="width: 9%">
@@ -56,8 +56,8 @@ use function App\Infrastructure\Http\e;
                 <tr>
                     <th class="break-words px-4 py-2.5">Status</th>
                     <th class="break-words px-4 py-2.5">Art</th>
-                    <th class="break-words px-4 py-2.5">Artikel</th>
-                    <th class="break-words px-4 py-2.5">Inventurnummer</th>
+                    <th data-priority="1" class="break-words px-4 py-2.5">Artikel</th>
+                    <th data-priority="2" class="break-words px-4 py-2.5">Inventurnummer</th>
                     <th class="break-words px-4 py-2.5">Grund</th>
                     <th class="break-words px-4 py-2.5">Abgeschickt</th>
                     <th class="break-words px-4 py-2.5">Zurückerhalten</th>

@@ -105,13 +105,13 @@ $rows = $detail->orderedRows();
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.show.no_items')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[480px] text-left text-sm">
+        <table class="w-full min-w-[480px] text-left text-sm" data-responsive>
             <thead class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <tr>
                     <th class="px-2 py-2"><?= e(t('order_confirmations.show.article_col')) ?></th>
-                    <th class="px-2 py-2"><?= e(t('order_confirmations.show.quantity_col')) ?></th>
-                    <th class="px-2 py-2"><?= e(t('order_confirmations.show.unit_price_col')) ?></th>
-                    <th class="px-2 py-2 text-right"><?= e(t('order_confirmations.show.line_total_col')) ?></th>
+                    <th data-priority="3" class="px-2 py-2"><?= e(t('order_confirmations.show.quantity_col')) ?></th>
+                    <th data-priority="2" class="px-2 py-2"><?= e(t('order_confirmations.show.unit_price_col')) ?></th>
+                    <th data-priority="1" class="px-2 py-2 text-right"><?= e(t('order_confirmations.show.line_total_col')) ?></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

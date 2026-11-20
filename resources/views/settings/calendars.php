@@ -76,13 +76,13 @@ $filterLabel = function (\App\Domain\Calendar\Calendar $calendar) use ($categori
 <div class="space-y-6">
     <!-- Kalenderliste -->
     <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table class="w-full min-w-[720px] text-left text-sm">
+        <table class="w-full min-w-[720px] text-left text-sm" data-responsive>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2.5"><?= e(t('settings.calendars.column.name')) ?></th>
                     <th class="px-4 py-2.5"><?= e(t('settings.calendars.column.filter')) ?></th>
-                    <th class="px-4 py-2.5"><?= e(t('settings.calendars.column.status')) ?></th>
-                    <th class="px-4 py-2.5 text-right"><?= e(t('settings.calendars.column.actions')) ?></th>
+                    <th data-priority="1" class="px-4 py-2.5"><?= e(t('settings.calendars.column.status')) ?></th>
+                    <th data-priority="0" class="px-4 py-2.5 text-right"><?= e(t('settings.calendars.column.actions')) ?></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

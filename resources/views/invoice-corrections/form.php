@@ -80,9 +80,9 @@ $inputClass = 'w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm foc
 
         <?php if ($isCancellation): ?>
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[560px] text-left text-sm">
+                <table class="w-full min-w-[560px] text-left text-sm" data-responsive>
                     <thead class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <tr><th class="px-2 py-2">Bezeichnung</th><th class="px-2 py-2 text-right">Menge</th><th class="px-2 py-2 text-right">Einzelpreis</th><th class="px-2 py-2 text-right">Summe</th></tr>
+                        <tr><th class="px-2 py-2">Bezeichnung</th><th data-priority="3" class="px-2 py-2 text-right">Menge</th><th data-priority="2" class="px-2 py-2 text-right">Einzelpreis</th><th data-priority="1" class="px-2 py-2 text-right">Summe</th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php $net = 0.0; foreach ($previewLines as $line): $sum = round((float) $line['quantity'] * (float) $line['unitPrice'], 2); $net += $sum; ?>

@@ -33,12 +33,12 @@ $addressLabel = static function (\App\Domain\Network\NetworkInterfaceAssignment 
     <?php endforeach; ?>
 <?php else: ?>
     <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
+        <table class="min-w-full text-sm" data-responsive>
             <thead>
                 <tr class="text-left text-xs text-slate-500 dark:text-slate-400">
                     <th class="py-1 pr-3 font-medium">Schnittstelle</th>
-                    <th class="py-1 pr-3 font-medium">Netzwerk</th>
-                    <th class="py-1 pr-3 font-medium">IP-Adresse</th>
+                    <th data-priority="2" class="py-1 pr-3 font-medium">Netzwerk</th>
+                    <th data-priority="1" class="py-1 pr-3 font-medium">IP-Adresse</th>
                     <th class="py-1 font-medium">MAC-Adresse</th>
                 </tr>
             </thead>

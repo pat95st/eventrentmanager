@@ -15,9 +15,9 @@ $table = static function (array $rows, string $empty): void {
         return;
     }
     ?>
-    <table class="w-full min-w-[640px] text-sm">
+    <table class="w-full min-w-[640px] text-sm" data-responsive>
         <thead class="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-            <tr><th class="px-4 py-2.5">Serie</th><th class="px-4 py-2.5">Rhythmus</th><th class="px-4 py-2.5">Termine</th><th class="px-4 py-2.5">Nächster Termin</th></tr>
+            <tr><th class="px-4 py-2.5">Serie</th><th class="px-4 py-2.5">Rhythmus</th><th class="px-4 py-2.5">Termine</th><th data-priority="1" class="px-4 py-2.5">Nächster Termin</th></tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <?php foreach ($rows as $row): ?>

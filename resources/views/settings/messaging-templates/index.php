@@ -22,7 +22,7 @@ use function App\Infrastructure\Http\t;
 </div>
 
 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-    <table class="w-full text-sm">
+    <table class="w-full text-sm" data-responsive>
         <thead class="bg-slate-50 text-left text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <tr>
                 <th class="px-4 py-3"><?= e(t('settings.messaging_templates.column.name')) ?></th>

@@ -21,7 +21,7 @@ foreach ($manufacturers as $manufacturer) {
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Cases gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[480px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[480px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 40%">
                 <col style="width: 20%">

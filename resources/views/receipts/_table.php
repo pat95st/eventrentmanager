@@ -16,7 +16,7 @@ use function App\Infrastructure\Http\t;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400"><?= e(t('receipts.table.empty')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[720px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[720px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 16%">
                 <col style="width: 24%">
@@ -28,11 +28,11 @@ use function App\Infrastructure\Http\t;
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="break-words px-4 py-2.5"><?= e(t('receipts.table.number')) ?></th>
-                    <th class="break-words px-4 py-2.5"><?= e(t('receipts.table.supplier')) ?></th>
-                    <th class="break-words px-4 py-2.5"><?= e(t('receipts.table.date')) ?></th>
-                    <th class="break-words px-4 py-2.5 text-right"><?= e(t('receipts.table.amount')) ?></th>
+                    <th data-priority="3" class="break-words px-4 py-2.5"><?= e(t('receipts.table.supplier')) ?></th>
+                    <th data-priority="4" class="break-words px-4 py-2.5"><?= e(t('receipts.table.date')) ?></th>
+                    <th data-priority="1" class="break-words px-4 py-2.5 text-right"><?= e(t('receipts.table.amount')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('receipts.table.category')) ?></th>
-                    <th class="break-words px-4 py-2.5"><?= e(t('receipts.table.status')) ?></th>
+                    <th data-priority="2" class="break-words px-4 py-2.5"><?= e(t('receipts.table.status')) ?></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

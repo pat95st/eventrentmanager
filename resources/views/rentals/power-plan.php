@@ -42,9 +42,9 @@ $renderChecks = static function (array $checks) use ($fmtA, $barColor): void {
         return;
     }
     ?>
-    <table class="w-full text-xs">
+    <table class="w-full text-xs" data-responsive>
         <thead class="text-left text-slate-500 dark:text-slate-400">
-            <tr><th class="py-1 pr-2 font-medium">Element</th><th class="py-1 pr-2 font-medium">Phase</th><th class="py-1 pr-2 text-right font-medium">Strom</th><th class="py-1 pr-2 text-right font-medium">Grenze</th><th class="w-32 py-1 font-medium">Auslastung</th></tr>
+            <tr><th class="py-1 pr-2 font-medium">Element</th><th data-priority="3" class="py-1 pr-2 font-medium">Phase</th><th data-priority="2" class="py-1 pr-2 text-right font-medium">Strom</th><th class="py-1 pr-2 text-right font-medium">Grenze</th><th data-priority="1" class="w-32 py-1 font-medium">Auslastung</th></tr>
         </thead>
         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         <?php foreach ($checks as $check): ?>

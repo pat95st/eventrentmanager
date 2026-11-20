@@ -150,12 +150,12 @@ $fieldError = function (string $key) use ($errors): string {
             <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.backup.automatic.runs.empty')) ?></p>
         <?php else: ?>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
+                <table class="w-full text-left text-sm" data-responsive>
                     <thead class="text-xs text-slate-500 dark:text-slate-400">
                         <tr>
                             <th class="py-2 pr-4 font-medium"><?= e(t('settings.backup.automatic.runs.started_at')) ?></th>
                             <th class="py-2 pr-4 font-medium"><?= e(t('settings.backup.automatic.runs.trigger')) ?></th>
-                            <th class="py-2 pr-4 font-medium"><?= e(t('settings.backup.automatic.runs.status')) ?></th>
+                            <th data-priority="1" class="py-2 pr-4 font-medium"><?= e(t('settings.backup.automatic.runs.status')) ?></th>
                             <th class="py-2 font-medium"><?= e(t('settings.backup.automatic.runs.details')) ?></th>
                         </tr>
                     </thead>

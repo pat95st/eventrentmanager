@@ -29,7 +29,7 @@ use function App\Infrastructure\Http\e;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Für kein Gerät ist derzeit ein Firmware-Update verfügbar.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] text-left text-sm">
+        <table class="w-full min-w-[640px] text-left text-sm" data-responsive>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2.5">Artikel</th>

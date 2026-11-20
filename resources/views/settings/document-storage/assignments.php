@@ -99,14 +99,14 @@ use function App\Infrastructure\Http\t;
         <p class="py-4 text-center text-sm text-slate-500 dark:text-slate-400"><?= e(t('settings.document_storage.log.empty')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-xs" data-responsive>
                 <thead>
                     <tr class="border-b border-slate-200 text-slate-500 dark:border-slate-800 dark:text-slate-400">
                         <th class="py-2 pr-3 font-medium"><?= e(t('settings.document_storage.log.column.date')) ?></th>
                         <th class="py-2 pr-3 font-medium"><?= e(t('settings.document_storage.log.column.document_type')) ?></th>
                         <th class="py-2 pr-3 font-medium"><?= e(t('settings.document_storage.log.column.target')) ?></th>
                         <th class="py-2 pr-3 font-medium"><?= e(t('settings.document_storage.log.column.path')) ?></th>
-                        <th class="py-2 pr-3 font-medium"><?= e(t('settings.document_storage.log.column.status')) ?></th>
+                        <th data-priority="1" class="py-2 pr-3 font-medium"><?= e(t('settings.document_storage.log.column.status')) ?></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

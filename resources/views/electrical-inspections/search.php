@@ -43,14 +43,14 @@ use function App\Infrastructure\Http\e;
             <p class="py-10 text-center text-sm text-slate-500 dark:text-slate-400">Keine Prüfungen gefunden.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm" style="min-width:720px">
+                <table class="w-full text-left text-sm" style="min-width:720px" data-responsive>
                     <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                         <tr>
                             <th class="whitespace-nowrap px-4 py-2.5">Geprüft am</th>
-                            <th class="whitespace-nowrap px-4 py-2.5">Inventurnummer</th>
-                            <th class="whitespace-nowrap px-4 py-2.5">Gerät</th>
-                            <th class="whitespace-nowrap px-4 py-2.5">Ergebnis</th>
-                            <th class="whitespace-nowrap px-4 py-2.5">Gültig bis</th>
+                            <th data-priority="2" class="whitespace-nowrap px-4 py-2.5">Inventurnummer</th>
+                            <th data-priority="3" class="whitespace-nowrap px-4 py-2.5">Gerät</th>
+                            <th data-priority="1" class="whitespace-nowrap px-4 py-2.5">Ergebnis</th>
+                            <th data-priority="4" class="whitespace-nowrap px-4 py-2.5">Gültig bis</th>
                             <th class="whitespace-nowrap px-4 py-2.5">Prüfer</th>
                         </tr>
                     </thead>

@@ -57,6 +57,7 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
         private readonly OrderConfirmationRepositoryInterface $orderConfirmations,
         private readonly InvoiceRepositoryInterface $invoices,
         private readonly InvoiceSettingsRepositoryInterface $invoiceSettings,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -147,6 +148,7 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
             vatRatePercent: '0',
             saleTotal: $saleTotal,
             freeTextTotal: $freeTextTotal,
+            travelCostTotal: $this->travelCostTotal(\App\Domain\TravelCost\TravelCostDocumentType::Offer, $offer->id),
         );
 
         return $totals->netTotal;
@@ -169,6 +171,7 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
             isSmallBusiness: true,
             vatRatePercent: '0',
             freeTextTotal: $freeTextTotal,
+            travelCostTotal: $this->travelCostTotal(\App\Domain\TravelCost\TravelCostDocumentType::OrderConfirmation, $orderConfirmation->id),
         );
 
         return $totals->netTotal;
@@ -190,9 +193,16 @@ final class GetRevenueForecastHandler implements QueryHandlerInterface
             isSmallBusiness: $invoice->isSmallBusiness ?? $invoiceSettings->isSmallBusiness,
             vatRatePercent: $invoice->vatRatePercent ?? $invoiceSettings->vatRatePercent,
             freeTextTotal: $freeTextTotal,
+            travelCostTotal: $this->travelCostTotal(\App\Domain\TravelCost\TravelCostDocumentType::Invoice, $invoice->id),
         );
 
         return $totals->netTotal;
+    }
+
+    /** Travel costs of a tour on the document (migration 182). */
+    private function travelCostTotal(\App\Domain\TravelCost\TravelCostDocumentType $type, string $documentId): float
+    {
+        return $this->travelCosts?->findFor($type, $documentId)?->total() ?? 0.0;
     }
 
     /** @param array<int, object> $lines jedes Element muss eine lineTotal()-Methode besitzen */

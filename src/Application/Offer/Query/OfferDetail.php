@@ -45,7 +45,15 @@ final class OfferDetail
         // Rechnungen — nicht gesnapshotet. null = wie bisher Kleinunternehmer.
         public readonly ?bool $isSmallBusiness = null,
         public readonly ?string $vatRatePercent = null,
+        // Travel costs of a tour (migration 182), null = none.
+        public readonly ?\App\Domain\TravelCost\TravelCostSection $travelCosts = null,
     ) {
+    }
+
+    /** Sum of the travel cost section (migration 182), added after the discount like labor time. */
+    public function travelCostTotal(): float
+    {
+        return $this->travelCosts?->total() ?? 0.0;
     }
 
     /** Zwischensumme reiner Mietpreis-Positionen (VOR Zubehörpauschale/Rabatt) — siehe totals() für die vollständige Berechnung. */
@@ -115,6 +123,7 @@ final class OfferDetail
             vatRatePercent: $this->vatRatePercent ?? '0',
             saleTotal: $this->saleTotal(),
             freeTextTotal: $this->freeTextTotal(),
+            travelCostTotal: $this->travelCostTotal(),
         );
     }
 

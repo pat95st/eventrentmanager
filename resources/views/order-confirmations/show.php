@@ -101,7 +101,7 @@ $rows = $detail->orderedRows();
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('order_confirmations.show.items_title')) ?></h2>
 
-    <?php if ($rows === []): ?>
+    <?php if ($rows === [] && $detail->travelCosts === null): ?>
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('order_confirmations.show.no_items')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
@@ -187,6 +187,7 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">−<?= number_format($totals->discountAmount, 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endif; ?>
+                <?php $travelCosts = $detail->travelCosts; require __DIR__ . '/../partials/travel_cost_rows.php'; ?>
                 <?php if ($detail->isSmallBusiness ?? true): ?>
                 <tr class="border-t border-slate-200 dark:border-slate-700">
                     <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="3"><?= e(t('order_confirmations.show.grand_total')) ?></td>
@@ -216,6 +217,15 @@ $rows = $detail->orderedRows();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+$travelCosts = $detail->travelCosts;
+$travelCostDocType = \App\Domain\TravelCost\TravelCostDocumentType::OrderConfirmation;
+$travelCostDocId = $orderConfirmation->id;
+$travelCostEditable = $orderConfirmation->isEditable();
+$travelCostTourId = $linkedRental !== null && $linkedRental->isTour ? $linkedRental->id : null;
+require __DIR__ . '/../partials/travel_cost_panel.php';
+?>
 
 <?php if ($orderConfirmation->closingText !== null && trim($orderConfirmation->closingText) !== ''): ?>
 <div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">

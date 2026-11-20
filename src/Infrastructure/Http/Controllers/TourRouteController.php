@@ -10,6 +10,8 @@ use App\Application\Routing\Command\AddPlannedVehicle;
 use App\Application\Routing\Command\RemovePlannedVehicle;
 use App\Application\Routing\Command\SaveRoutingSettings;
 use App\Application\Routing\Command\SetLegBilling;
+use App\Application\Routing\Command\SetLegKilometers;
+use App\Application\Routing\Command\SetTourTravelCosts;
 use App\Application\Routing\Command\SetRouteProfile;
 use App\Application\Routing\Query\GetTourRoute;
 use App\Domain\Exception\NotFoundException;
@@ -35,6 +37,7 @@ final class TourRouteController
         private readonly RoutingSettingsRepositoryInterface $settings,
         private readonly ?\App\Domain\Rental\RentalRepositoryInterface $rentals = null,
         private readonly ?\App\Application\Routing\RoutingClientInterface $client = null,
+        private readonly ?\App\Application\TravelCost\TourTravelCostCalculator $travelCosts = null,
     ) {
     }
 
@@ -104,6 +107,7 @@ final class TourRouteController
                 'durationS' => $l->durationS,
                 'geometry' => $l->geometry,
                 'billed' => $route->isLegBilled($l),
+                'kmOverride' => $route->legKmOverride($l),
                 // stop whose arrival this leg is; null = default destination warehouse (cannot be marked)
                 'stopId' => $route->points[$l->to]->stopId ?? null,
             ], $result->legs) : [],
@@ -113,7 +117,66 @@ final class TourRouteController
             'hints' => $route->hints,
             'timingWarnings' => $route->timingWarnings,
             'googleLinks' => $route->googleLinks,
+            'travelCosts' => $this->travelCostsJson($route),
         ]);
+    }
+
+    /** @return array<string, mixed>|null travel costs of the tour (migration 182) for the route page */
+    private function travelCostsJson(\App\Application\Routing\TourRoute $route): ?array
+    {
+        if ($this->travelCosts === null) {
+            return null;
+        }
+        $proposal = $this->travelCosts->fromRoute($route);
+
+        return [
+            'enabled' => $proposal->enabled,
+            'mode' => $proposal->mode->value,
+            'billable' => $proposal->isBillable(),
+            'vehicles' => $proposal->vehicles,
+            'costPerKm' => $proposal->costPerKm,
+            'markupPercent' => $proposal->markupPercent,
+            'ratePerKm' => $proposal->ratePerKm,
+            'trips' => array_map(static fn ($t) => ['date' => $t->date?->format('d.m.Y'), 'from' => $t->from, 'to' => $t->to, 'km' => $t->kilometers], $proposal->trips),
+            'totalKm' => $proposal->totalKilometers(),
+            'total' => round($proposal->total(), 2),
+            'routeLabel' => $proposal->routeLabel(),
+            'hints' => $proposal->hints,
+        ];
+    }
+
+    /** Kilometres of the drive to a stop entered by hand (migration 182); JSON for the route page. */
+    public function setLegKilometers(Request $request): void
+    {
+        try {
+            $rentalId = $this->commands->dispatch(new SetLegKilometers($request->param('stopId'), $request->input('km', '') ?? ''));
+        } catch (NotFoundException $e) {
+            Response::json(['error' => $e->getMessage()], 404);
+
+            return;
+        } catch (ValidationException $e) {
+            Response::json(['error' => implode(' ', $e->errors())], 422);
+
+            return;
+        }
+        if (str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
+            Response::json(['ok' => true]);
+
+            return;
+        }
+        Flash::success('Die Kilometer wurden gespeichert.');
+        Response::redirect('/veranstaltungen/' . $rentalId . '/tour/route');
+    }
+
+    /** Travel costs of the tour on/off and their presentation on documents (migration 182). */
+    public function setTravelCosts(Request $request): void
+    {
+        $rentalId = $request->param('id');
+        $this->run(
+            fn () => $this->commands->dispatch(new SetTourTravelCosts($rentalId, $request->input('enabled') === '1', $request->input('mode', 'summary') ?? 'summary')),
+            'Einstellungen zu den Fahrtkosten gespeichert.',
+        );
+        Response::redirect('/veranstaltungen/' . $rentalId . '/tour/route#fahrtkosten');
     }
 
     public function setProfile(Request $request): void

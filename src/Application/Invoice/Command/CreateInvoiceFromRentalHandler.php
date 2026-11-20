@@ -62,6 +62,8 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         // Partner instances (migration 160): events created from a partner's
         // material request get the agreed partner discount as percentage discount.
         private readonly ?\App\Domain\Federation\PartnerRentalDiscountLookupInterface $partnerDiscounts = null,
+        // Migration 182: travel costs of a tour are taken over into the invoice.
+        private readonly ?\App\Application\TravelCost\DocumentTravelCostService $travelCosts = null,
     ) {
     }
 
@@ -256,6 +258,7 @@ final class CreateInvoiceFromRentalHandler implements CommandHandlerInterface
         }
 
         $this->invoices->replaceItems($invoice->id, $items);
+        $this->travelCosts?->importForNewDocument(\App\Domain\TravelCost\TravelCostDocumentType::Invoice, $invoice->id, $rental->id);
 
         return $invoice->id;
     }

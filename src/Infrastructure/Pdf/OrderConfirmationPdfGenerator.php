@@ -136,6 +136,33 @@ final class OrderConfirmationPdfGenerator
             $y -= 14;
         }
 
+        // Travel costs of a tour (migration 182) as their own table.
+        $travelPage = function () use ($writer, $detail, $pageWidth, $pageHeight, $pdfDesignSettings, &$pageNumber): float {
+            $pageNumber++;
+            $writer->addPage();
+
+            return $this->drawHeader($writer, $detail, null, null, null, $pageWidth, $pageHeight, $pageNumber, continuation: true, pdfDesignSettings: $pdfDesignSettings) - 20;
+        };
+        $travelCostRows = $detail->travelCosts !== null
+            ? TravelCostPdfRows::build($detail->travelCosts, $this->columnLayout()['article']['width'], self::TABLE_FONT_SIZE, fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize), fn (float $amount): string => $this->formatAmount($amount))
+            : [];
+        if ($travelCostRows !== []) {
+            $y = $this->drawTableSection($writer, $y, $pageWidth, TravelCostPdfRows::TITLE, TravelCostPdfRows::LABELS, $travelCostRows, $travelPage, $pdfDesignSettings);
+            if (count($travelCostRows) > 1) {
+                $y -= 12;
+                $this->drawSummaryLine($writer, $pageWidth, $y, 'Summe Fahrtkosten:', $this->formatAmount($totals->travelCostTotal));
+                $y -= 4;
+            }
+        }
+        if ($travelCostRows !== []) {
+            if ($y - 80 < self::CONTENT_BOTTOM) {
+                $y = $travelPage();
+            }
+            $y -= 6;
+            $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, $pdfDesignSettings?->accentColorLinePdfString() ?? '0.4 0.4 0.4');
+            $y -= 16;
+        }
+
         $y -= 4;
         // Umsatzsteuer (Rechnungseinstellungen): Kleinunternehmer → eine
         // Gesamtsumme + §19-Hinweis, sonst Netto/USt/Brutto wie auf Rechnungen.
@@ -492,6 +519,40 @@ final class OrderConfirmationPdfGenerator
         }
 
         return $lines;
+    }
+
+    /**
+     * Additional table (travel costs) with heading and table header in the
+     * grid of the item table; the header repeats after a page break (same
+     * as OfferPdfGenerator::drawTableSection()).
+     *
+     * @param string[] $labels
+     * @param array<int, array{nameLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}> $rows
+     * @param callable(): float $newPage
+     */
+    private function drawTableSection(SimplePdfWriter $writer, float $y, float $pageWidth, string $title, array $labels, array $rows, callable $newPage, ?PdfDesignSettings $pdfDesignSettings): float
+    {
+        $y -= 16;
+        $firstRowHeight = ArticlePdfRow::contentHeight($rows[0], self::TABLE_LINE_HEIGHT) + self::TABLE_ROW_PADDING;
+        if ($y - 36 - $firstRowHeight < self::CONTENT_BOTTOM) {
+            $y = $newPage();
+        }
+
+        $writer->textInRole(SimplePdfWriter::ROLE_HEADING, self::MARGIN, $y, $title, 10, true);
+        $y -= 8;
+        $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
+
+        foreach ($rows as $row) {
+            $rowHeight = ArticlePdfRow::contentHeight($row, self::TABLE_LINE_HEIGHT) + self::TABLE_ROW_PADDING;
+            if ($y - $rowHeight < self::CONTENT_BOTTOM) {
+                $y = $newPage();
+                $y = $this->drawTableHeader($writer, $y, $pageWidth, $pdfDesignSettings, $labels);
+            }
+            $this->drawRow($writer, $y, $row);
+            $y -= $rowHeight;
+        }
+
+        return $y;
     }
 
     /** @return array{article: array{x: float, width: float}, quantity: array{x: float, width: float}, unitPrice: array{x: float, width: float}, lineTotal: array{x: float, width: float}} */

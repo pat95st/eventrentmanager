@@ -29,6 +29,7 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
         private readonly ?BundleComponentResolver $bundleResolver = null,
         private readonly ?InvoiceSettingsRepositoryInterface $invoiceSettings = null,
         private readonly ?\App\Application\ArticleSet\SetContentsResolver $setContents = null,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -71,6 +72,6 @@ final class GetOrderConfirmationHandler implements QueryHandlerInterface
 
         $taxSettings = $this->invoiceSettings?->get();
         $bundleComponents = $this->bundleResolver?->resolve(array_map(static fn ($entry) => $entry->article, $items)) ?? [];
-        return new OrderConfirmationDetail($orderConfirmation, $customer, $items, $freeTextItems, $sectionTexts, $contact, $paymentMethod, bundleComponents: $bundleComponents, setContents: $this->setContents?->resolve($freeTextItems) ?? [], isSmallBusiness: $taxSettings?->isSmallBusiness, vatRatePercent: $taxSettings?->vatRatePercent);
+        return new OrderConfirmationDetail($orderConfirmation, $customer, $items, $freeTextItems, $sectionTexts, $contact, $paymentMethod, bundleComponents: $bundleComponents, setContents: $this->setContents?->resolve($freeTextItems) ?? [], isSmallBusiness: $taxSettings?->isSmallBusiness, vatRatePercent: $taxSettings?->vatRatePercent, travelCosts: $this->travelCosts?->findFor(\App\Domain\TravelCost\TravelCostDocumentType::OrderConfirmation, $orderConfirmation->id));
     }
 }

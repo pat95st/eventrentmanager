@@ -35,6 +35,7 @@ final class GetOfferHandler implements QueryHandlerInterface
         private readonly ?BundleComponentResolver $bundleResolver = null,
         private readonly ?InvoiceSettingsRepositoryInterface $invoiceSettings = null,
         private readonly ?\App\Application\ArticleSet\SetContentsResolver $setContents = null,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -120,6 +121,6 @@ final class GetOfferHandler implements QueryHandlerInterface
 
         $taxSettings = $this->invoiceSettings?->get();
         $bundleComponents = $this->bundleResolver?->resolve(array_map(static fn ($entry) => $entry->article, $items)) ?? [];
-        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts, $contact, $paymentMethod, bundleComponents: $bundleComponents, setContents: $this->setContents?->resolve($freeTextItems) ?? [], isSmallBusiness: $taxSettings?->isSmallBusiness, vatRatePercent: $taxSettings?->vatRatePercent);
+        return new OfferDetail($offer, $customer, $items, $laborItems, $saleItems, $freeTextItems, $sectionTexts, $contact, $paymentMethod, bundleComponents: $bundleComponents, setContents: $this->setContents?->resolve($freeTextItems) ?? [], isSmallBusiness: $taxSettings?->isSmallBusiness, vatRatePercent: $taxSettings?->vatRatePercent, travelCosts: $this->travelCosts?->findFor(\App\Domain\TravelCost\TravelCostDocumentType::Offer, $offer->id));
     }
 }

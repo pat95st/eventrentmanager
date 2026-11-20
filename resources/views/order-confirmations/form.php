@@ -10,6 +10,7 @@
 /** @var \App\Domain\Settings\PaymentMethod[] $paymentMethods */
 /** @var string|null $selectedPaymentMethodId */
 /** @var string|null $editingId */
+/** @var float $travelCostTotal travel costs of a tour (migration 182) */
 /** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string, sort_order: int|string}> $existingItems */
 /** @var array<int, array{description: string, quantity: string, unit_price: string, sort_order: int|string}> $existingFreeTextItems */
 /** @var array<int, array{heading: string, sort_order: int|string}> $existingSectionTexts */
@@ -571,6 +572,12 @@ foreach ($articles as $article) {
                 <dt data-total-discount-label></dt>
                 <dd data-total-discount>0,00 €</dd>
             </div>
+            <?php if (($travelCostTotal ?? 0.0) > 0): ?>
+            <div class="flex items-baseline justify-between text-slate-600 dark:text-slate-400" title="Die Fahrtkosten der Tour werden auf der Detailseite bearbeitet.">
+                <dt>Fahrtkosten</dt>
+                <dd>+<?= number_format((float) $travelCostTotal, 2, ',', '.') ?> €</dd>
+            </div>
+            <?php endif; ?>
             <?php if ($isSmallBusinessPreview ?? true): ?>
             <div class="flex items-baseline justify-between border-t border-slate-200 pt-1.5 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
                 <dt><?= e(t('order_confirmations.show.grand_total')) ?></dt>
@@ -977,6 +984,7 @@ foreach ($articles as $article) {
     var totalGrandEl = document.querySelector('[data-total-grand]');
     // USt-Vorschau: Kleinunternehmer-Status/USt-Satz stammen aus den
     // Rechnungseinstellungen und gelten für alle Dokumente.
+    var TRAVEL_COST_TOTAL = <?= json_encode(round((float) ($travelCostTotal ?? 0.0), 2)) ?>; // travel costs of a tour (migration 182), edited on the detail page
     var IS_SMALL_BUSINESS = <?= json_encode($isSmallBusinessPreview ?? true) ?>;
     var VAT_RATE_PERCENT = <?= json_encode((string) ($vatRatePercentPreview ?? '0')) ?>;
     var totalNetEl = document.querySelector('[data-total-net]');
@@ -1049,7 +1057,7 @@ foreach ($articles as $article) {
 
         // freeTextTotal steckt bereits in subtotalAfterDiscount (siehe
         // accessoryBase oben) — hier NICHT nochmal addieren.
-        var grandTotal = subtotalAfterDiscount;
+        var grandTotal = subtotalAfterDiscount + TRAVEL_COST_TOTAL;
 
         totalRentalEl.textContent = formatEuro(rentalTotal);
 

@@ -85,6 +85,9 @@ final class RentalCopier
             seriesId: $series->id,
             seriesIndex: $index,
             seriesCustomized: $customized,
+            // Migration 182: occurrences bill travel costs like the original tour.
+            travelCostsEnabled: $source->travelCostsEnabled,
+            travelCostsMode: $source->travelCostsMode,
         );
         if ($locationOverride !== null) {
             // Set before copying so the power plan sees the final venue.

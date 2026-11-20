@@ -43,6 +43,8 @@ final class InvoiceDetail
         public readonly array $bundleComponents = [],
         /** @var array<string, string> Sets (Migration 113): Freitext-Positions-ID => "enthält: …" */
         public readonly array $setContents = [],
+        // Travel costs of a tour (migration 182), null = none.
+        public readonly ?\App\Domain\TravelCost\TravelCostSection $travelCosts = null,
     ) {
     }
 
@@ -120,6 +122,12 @@ final class InvoiceDetail
         return $total;
     }
 
+    /** Sum of the travel cost section (migration 182), added after the discount like labor time. */
+    public function travelCostTotal(): float
+    {
+        return $this->travelCosts?->total() ?? 0.0;
+    }
+
     /**
      * Vollständige Summenberechnung (Mietpreise -> Zubehörpauschale ->
      * Kombirabatt -> Netto/USt/Brutto), siehe App\Domain\Pricing\DocumentTotals.
@@ -152,6 +160,7 @@ final class InvoiceDetail
             shippingAmount: $this->invoice->shippingAmount !== null ? (float) $this->invoice->shippingAmount : 0.0,
             saleTotal: $this->saleItemsTotal(),
             freeTextTotal: $this->freeTextTotal(),
+            travelCostTotal: $this->travelCostTotal(),
         );
     }
 

@@ -971,7 +971,7 @@ $tourStopLocator = new \App\Application\Routing\TourStopLocator($venueRepository
 $companyLocator = new \App\Application\Routing\CompanyLocator($companySettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbCompanyCoordinatesRepository($pdo), $geocoder);
 $tourRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTourRepository($pdo);
 $routingCommandHandler = new \App\Application\Routing\Command\RoutingCommandHandler($routingSettingsRepository, $rentalRepository, $plannedVehicleRepository, $vehicleRepository, $tourRepository);
-foreach (['SaveRoutingSettings', 'SetRouteProfile', 'AddPlannedVehicle', 'RemovePlannedVehicle', 'SetLegBilling'] as $routingCommand) {
+foreach (['SaveRoutingSettings', 'SetRouteProfile', 'AddPlannedVehicle', 'RemovePlannedVehicle', 'SetLegBilling', 'SetLegKilometers', 'SetTourTravelCosts'] as $routingCommand) {
     $commandBus->register('App\\Application\\Routing\\Command\\' . $routingCommand, $routingCommandHandler);
 }
 
@@ -1008,11 +1008,15 @@ $queryBus->register(\App\Application\RentalSeries\Query\PreviewRentalCopy::class
 $queryBus->register(\App\Application\RentalSeries\Query\GetRentalSeries::class, new \App\Application\RentalSeries\Query\GetRentalSeriesHandler($rentalSeriesSupport, $rentalCopier, $materialConflictFinder, $customerRepository));
 $queryBus->register(\App\Application\RentalSeries\Query\GetRentalSeriesContext::class, new \App\Application\RentalSeries\Query\GetRentalSeriesContextHandler($rentalRepository, $rentalSeriesRepository));
 $queryBus->register(\App\Application\Tour\Query\GetTourOverview::class, new \App\Application\Tour\Query\GetTourOverviewHandler($rentalRepository, $tourRepository, $tourSync, $materialConflictFinder, $rentalTechnicianRepository, $userRepository, $articleRepository, $manufacturerRepository, $warehouseRepository));
-$queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler(new \App\Application\Routing\TourRouteService(
+$tourRouteService = new \App\Application\Routing\TourRouteService(
     $rentalRepository, $tourRepository, $venueRepository, $warehouseRepository, $plannedVehicleRepository, $vehicleRepository,
     $routingSettingsRepository, new \App\Infrastructure\Persistence\Pdo\MariadbRouteCacheRepository($pdo), $openRouteServiceClient = new \App\Infrastructure\Routing\OpenRouteServiceClient(),
     $tourStopLocator, $geocoder,
-)));
+);
+$queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler($tourRouteService));
+// Travel costs of tours on documents (migration 182).
+$tourTravelCostCalculator = new \App\Application\TravelCost\TourTravelCostCalculator($tourRepository, $plannedVehicleRepository, $vehicleRepository, $vehicleSettingsRepository, $tourRouteService);
+$travelCostSectionRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTravelCostSectionRepository($pdo);
 $commandBus->register(\App\Application\Sale\Command\SellInventoryNumber::class, new \App\Application\Sale\Command\SellInventoryNumberHandler($inventoryNumberRepository, $articleRepository, $customerRepository, $invoiceRepository, $saleRepository));
 $commandBus->register(\App\Application\Sale\Command\SellArticleFromStock::class, new \App\Application\Sale\Command\SellArticleFromStockHandler($articleRepository, $customerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository));
 $commandBus->register(\App\Application\Purchase\Command\CreatePurchaseOrder::class, new \App\Application\Purchase\Command\CreatePurchaseOrderHandler($purchaseOrderRepository, $supplierRepository, $articleRepository));
@@ -1153,8 +1157,9 @@ $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new Del
 $commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner, setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository, schedule: $rentalScheduleRules));
 $offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
+$documentTravelCostService = new \App\Application\TravelCost\DocumentTravelCostService($travelCostSectionRepository, $tourTravelCostCalculator, $offerRepository, $orderConfirmationRepository, $invoiceRepository, $rentalRepository);
 $orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
-$getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver);
+$getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver, travelCosts: $travelCostSectionRepository);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
     $getOfferHandler,
     $companySettingsRepository,
@@ -1188,6 +1193,7 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\CreateOrderConf
     $orderConfirmationRepository,
     $documentNumberSequence,
     $pdo,
+    $documentTravelCostService,
 ));
 $commandBus->register(\App\Application\OrderConfirmation\Command\UpdateOrderConfirmation::class, new \App\Application\OrderConfirmation\Command\UpdateOrderConfirmationHandler(
     $orderConfirmationRepository,
@@ -1205,7 +1211,7 @@ $commandBus->register(\App\Application\OrderConfirmation\Command\DeleteOrderConf
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationSent::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationSentHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmed::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationConfirmedHandler($orderConfirmationRepository));
 $commandBus->register(\App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelled::class, new \App\Application\OrderConfirmation\Command\MarkOrderConfirmationCancelledHandler($orderConfirmationRepository));
-$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository, $manufacturerRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver));
+$queryBus->register(\App\Application\OrderConfirmation\Query\GetOrderConfirmation::class, new \App\Application\OrderConfirmation\Query\GetOrderConfirmationHandler($orderConfirmationRepository, $customerRepository, $articleRepository, $manufacturerRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver, travelCosts: $travelCostSectionRepository));
 $queryBus->register(\App\Application\OrderConfirmation\Query\ListOrderConfirmations::class, new \App\Application\OrderConfirmation\Query\ListOrderConfirmationsHandler($orderConfirmationRepository, $customerRepository));
 
 // --- Rechnungen (Invoices) --------------------------------------------
@@ -1219,11 +1225,11 @@ $commandBus->register(\App\Application\BankImport\Command\ImportBankStatement::c
 $commandBus->register(\App\Application\BankImport\Command\ConfirmBankImport::class, new ConfirmBankImportHandler($invoiceRepository, $bankImportStaging, $accountLedgerRepository, $bankAccountRepository));
 $commandBus->register(\App\Application\BankImport\Command\CancelBankImport::class, new CancelBankImportHandler($bankImportStaging));
 $commandBus->register(\App\Application\Invoice\Command\MarkInvoiceCancelled::class, new MarkInvoiceCancelledHandler($invoiceRepository));
-$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository));
-$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository, setBookings: $rentalSetBookingRepository, articleSets: $articleSetRepository, dryHire: $dryHireRepository, partnerDiscounts: $partnerRequestRepository));
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromOffer::class, new CreateInvoiceFromOfferHandler($offerRepository, $invoiceRepository, $saleRepository, $saleStockLotRepository, $saleStockConsumptionRepository, $inventoryNumberRepository, $articleRepository, $documentTravelCostService));
+$commandBus->register(\App\Application\Invoice\Command\CreateInvoiceFromRental::class, new CreateInvoiceFromRentalHandler($rentalRepository, $rentalItemRepository, $articleRepository, $priceTierRepository, $invoiceRepository, $pricingSettingsRepository, $rentalBundleRepository, $articleBundleComponentRepository, setBookings: $rentalSetBookingRepository, articleSets: $articleSetRepository, dryHire: $dryHireRepository, partnerDiscounts: $partnerRequestRepository, travelCosts: $documentTravelCostService));
 $invoicePdfGenerator = new InvoicePdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $xRechnungGenerator = new XRechnungGenerator();
-$getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver, setContents: $setContentsResolver);
+$getInvoiceHandler = new GetInvoiceHandler($invoiceRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bankAccountRepository, $bundleComponentResolver, setContents: $setContentsResolver, travelCosts: $travelCostSectionRepository);
 // --- Online payment via PayPal / SumUp (migration 163) -------------------
 $onlinePaymentSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOnlinePaymentSettingsRepository($pdo);
 $invoicePaymentLinkRepository = new \App\Infrastructure\Persistence\Pdo\MariadbInvoicePaymentLinkRepository($pdo);
@@ -1742,7 +1748,7 @@ $queryBus->register(\App\Application\Calendar\Query\ListCalendarsForUser::class,
 $queryBus->register(\App\Application\Calendar\Query\ListRentalsForCalendar::class, new \App\Application\Calendar\Query\ListRentalsForCalendarHandler($calendarRepository, $rentalRepository, $categoryRepository));
 $queryBus->register(\App\Application\Settings\Query\GetCalDavSigningSettings::class, new \App\Application\Settings\Query\GetCalDavSigningSettingsHandler($calDavSigningSettingsRepository));
 $queryBus->register(\App\Application\AddressBook\Query\ListCardDavCredentialsForUser::class, new \App\Application\AddressBook\Query\ListCardDavCredentialsForUserHandler($cardDavCredentialRepository));
-$incomeExpenseOverviewHandler = new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository, corrections: $invoiceCorrectionRepository);
+$incomeExpenseOverviewHandler = new \App\Application\Reporting\Query\GetIncomeExpenseOverviewHandler($invoiceRepository, $receiptRepository, $invoiceSettingsRepository, corrections: $invoiceCorrectionRepository, travelCosts: $travelCostSectionRepository);
 $queryBus->register(\App\Application\Reporting\Query\GetIncomeExpenseOverview::class, $incomeExpenseOverviewHandler);
 // Dashboard-Statistiken (Chart.js)
 $queryBus->register(\App\Application\Statistics\Query\GetStatistic::class, new \App\Application\Statistics\Query\GetStatisticHandler(
@@ -1751,7 +1757,7 @@ $queryBus->register(\App\Application\Statistics\Query\GetStatistic::class, new \
     $articleRepository,
     $manufacturerRepository,
 ));
-$queryBus->register(\App\Application\Reporting\Query\GetRevenueForecast::class, new \App\Application\Reporting\Query\GetRevenueForecastHandler($offerRepository, $orderConfirmationRepository, $invoiceRepository, $invoiceSettingsRepository));
+$queryBus->register(\App\Application\Reporting\Query\GetRevenueForecast::class, new \App\Application\Reporting\Query\GetRevenueForecastHandler($offerRepository, $orderConfirmationRepository, $invoiceRepository, $invoiceSettingsRepository, $travelCostSectionRepository));
 
 $queryBus->register(\App\Application\Printing\Query\ListLabelPrinters::class, new ListLabelPrintersHandler($labelPrinterRepository));
 
@@ -1912,9 +1918,9 @@ $displayApiController = new \App\Infrastructure\Http\Controllers\DisplayApiContr
 $noticeDocumentController = new \App\Infrastructure\Http\Controllers\NoticeDocumentController($commandBus, $queryBus, $fileStorage);
 $voucherController = new VoucherController($commandBus, $queryBus, $voucherRedemptionRepository, $voucherRepository);
 $voucherSettingsController = new VoucherSettingsController($commandBus, $queryBus);
-$offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository, $rentalRepository, $customerRepository);
-$orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator, $rentalRepository, $customerRepository);
-$invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository, $userRepository, $invoicePaymentLinkProvider);
+$offerController = new OfferController($commandBus, $queryBus, $venueRepository, $offerPdfGenerator, $inventoryNumberRepository, $saleStockLotRepository, $userRepository, $rentalRepository, $customerRepository, $travelCostSectionRepository);
+$orderConfirmationController = new OrderConfirmationController($commandBus, $queryBus, $venueRepository, $orderConfirmationPdfGenerator, $rentalRepository, $customerRepository, $travelCostSectionRepository);
+$invoiceController = new InvoiceController($commandBus, $queryBus, $venueRepository, $invoicePdfGenerator, $xRechnungGenerator, $rentalRepository, $customerRepository, $userRepository, $invoicePaymentLinkProvider, $travelCostSectionRepository);
 $invoicePaymentController = new \App\Infrastructure\Http\Controllers\InvoicePaymentController($queryBus, $commandBus);
 $onlinePaymentSettingsController = new \App\Infrastructure\Http\Controllers\OnlinePaymentSettingsController($commandBus, $queryBus, $invoicePaymentUrlBuilder);
 $bankImportController = new BankImportController($commandBus, $queryBus, $invoiceRepository, $bankAccountRepository);
@@ -2458,7 +2464,7 @@ $router->post('/veranstaltungen/{id}', $auth->guard(Permission::AusgabeRuecknahm
 $router->post('/veranstaltungen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'destroy']));
 $router->post('/veranstaltungen/{id}/logistik', $auth->guard(Permission::AusgabeRuecknahme, [$rentalController, 'updateLogistics']));
 // Route planning (migration 178)
-$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository, $rentalRepository, $openRouteServiceClient);
+$tourRouteController = new \App\Infrastructure\Http\Controllers\TourRouteController($commandBus, $queryBus, $plannedVehicleRepository, $vehicleRepository, $tourRepository, $routingSettingsRepository, $rentalRepository, $openRouteServiceClient, $tourTravelCostCalculator);
 $router->post('/einstellungen/routenplanung/test', $auth->guard(Permission::Administration, [$tourRouteController, 'testSettings']));
 $router->get('/veranstaltungen/{id}/tour/route.json', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'data']));
 $router->get('/veranstaltungen/{id}/tour/route', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'show']));
@@ -2488,6 +2494,8 @@ $router->post('/tour-stops/{stopId}', $auth->guard(Permission::AusgabeRuecknahme
 $router->post('/tour-stops/{stopId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'deleteStop']));
 $router->post('/tour-stops/{stopId}/minutenprogramm', $auth->guard(Permission::AusgabeRuecknahme, [$tourController, 'createMinuteProgram']));
 $router->post('/tour-stops/{stopId}/km-abrechnung', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setLegBilling']));
+$router->post('/tour-stops/{stopId}/km', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setLegKilometers']));
+$router->post('/veranstaltungen/{id}/tour/route/fahrtkosten', $auth->guard(Permission::AusgabeRuecknahme, [$tourRouteController, 'setTravelCosts']));
 // Recurring events (migration 176)
 $rentalSeriesController = new \App\Infrastructure\Http\Controllers\RentalSeriesController($commandBus, $queryBus, $rentalRepository, $rentalSeriesRepository);
 $router->get('/serien', $auth->guard(Permission::AusgabeRuecknahme, [$rentalSeriesController, 'index']));
@@ -2688,6 +2696,17 @@ $router->get('/rechnungen', $auth->guard(Permission::AusgabeRuecknahme, [$invoic
 $router->get('/rechnungen/neu', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'create']));
 $router->post('/rechnungen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'store']));
 $router->get('/rechnungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'show']));
+// Travel costs of tours on offers, order confirmations and invoices (migration 182).
+$documentTravelCostController = new \App\Infrastructure\Http\Controllers\DocumentTravelCostController($documentTravelCostService);
+foreach (\App\Domain\TravelCost\TravelCostDocumentType::cases() as $travelCostType) {
+    $travelCostPath = '/' . $travelCostType->pathSegment() . '/{id}/fahrtkosten';
+    $router->get($travelCostPath, $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->edit($r, $travelCostType)));
+    $router->post($travelCostPath, $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->save($r, $travelCostType)));
+    $router->post($travelCostPath . '/aus-tour', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->importFromTour($r, $travelCostType)));
+    $router->post($travelCostPath . '/darstellung', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->setMode($r, $travelCostType)));
+    $router->post($travelCostPath . '/entfernen', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->remove($r, $travelCostType)));
+}
+
 $router->get('/rechnungen/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'edit']));
 $router->post('/rechnungen/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'update']));
 $router->post('/rechnungen/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$invoiceController, 'destroy']));

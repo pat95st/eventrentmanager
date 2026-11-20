@@ -3,6 +3,7 @@
 /** @var \App\Domain\Venue\Venue|null $venue */
 /** @var \App\Domain\Rental\Rental|null $linkedRental */
 /** @var \App\Domain\Customer\CustomerContact|null $selectedContact */
+/** @var string|null $convertedTourId tour the offer was converted into (migration 182) */
 
 use App\Application\Offer\Query\OfferRow;
 
@@ -149,7 +150,7 @@ $rows = $detail->orderedRows();
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300"><?= e(t('offers.show.items_title')) ?></h2>
 
-    <?php if ($rows === []): ?>
+    <?php if ($rows === [] && $detail->travelCosts === null): ?>
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('offers.show.no_items')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
@@ -301,6 +302,7 @@ $rows = $detail->orderedRows();
                         <td class="px-2 py-1 text-right text-slate-700 dark:text-slate-300">+<?= number_format($saleEntry->lineTotal(), 2, ',', '.') ?> €</td>
                     </tr>
                 <?php endforeach; ?>
+                <?php $travelCosts = $detail->travelCosts; require __DIR__ . '/../partials/travel_cost_rows.php'; ?>
                 <?php if ($detail->isSmallBusiness ?? true): ?>
                 <tr class="border-t border-slate-200 dark:border-slate-700">
                     <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-200" colspan="3"><?= e(t('offers.show.grand_total')) ?></td>
@@ -330,6 +332,15 @@ $rows = $detail->orderedRows();
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+$travelCosts = $detail->travelCosts;
+$travelCostDocType = \App\Domain\TravelCost\TravelCostDocumentType::Offer;
+$travelCostDocId = $offer->id;
+$travelCostEditable = $offer->isEditable();
+$travelCostTourId = $linkedRental !== null && $linkedRental->isTour ? $linkedRental->id : ($convertedTourId ?? null);
+require __DIR__ . '/../partials/travel_cost_panel.php';
+?>
 
 <?php if ($offer->closingText !== null && trim($offer->closingText) !== ''): ?>
 <div class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">

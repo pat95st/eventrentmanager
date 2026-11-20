@@ -12,6 +12,7 @@
 /** @var \App\Domain\Settings\BankAccount[] $bankAccounts */
 /** @var string|null $selectedBankAccountId */
 /** @var string|null $editingId */
+/** @var float $travelCostTotal travel costs of a tour (migration 182) */
 /** @var array<int, array{article_id: string, quantity: int|string, unit_price: string, line_note: string, sort_order: int|string}> $existingItems */
 /** @var \App\Domain\LaborTime\LaborTimeArticle[] $laborArticles */
 /** @var \App\Domain\User\User[] $users */
@@ -782,6 +783,12 @@ foreach ($laborArticles as $laborArticle) {
                 <dt data-total-discount-label></dt>
                 <dd data-total-discount>0,00 €</dd>
             </div>
+            <?php if (($travelCostTotal ?? 0.0) > 0): ?>
+            <div class="flex items-baseline justify-between text-slate-600 dark:text-slate-400" title="Die Fahrtkosten der Tour werden auf der Detailseite bearbeitet.">
+                <dt>Fahrtkosten</dt>
+                <dd>+<?= number_format((float) $travelCostTotal, 2, ',', '.') ?> €</dd>
+            </div>
+            <?php endif; ?>
             <div data-total-labor-row class="hidden items-baseline justify-between text-slate-600 dark:text-slate-400">
                 <dt><?= e(t('invoices.form.totals_labor')) ?></dt>
                 <dd data-total-labor>0,00 €</dd>
@@ -1389,6 +1396,7 @@ foreach ($laborArticles as $laborArticle) {
     // InvoiceController::renderForm()) und daher bereits serverseitig
     // entschieden wurde, welcher der beiden Fälle (Kleinunternehmer vs.
     // Netto+USt) im Markup gerendert ist.
+    var TRAVEL_COST_TOTAL = <?= json_encode(round((float) ($travelCostTotal ?? 0.0), 2)) ?>; // travel costs of a tour (migration 182), edited on the detail page
     var IS_SMALL_BUSINESS = <?= json_encode($isSmallBusinessPreview) ?>;
     var VAT_RATE_PERCENT = <?= json_encode($vatRatePercentPreview) ?>;
     var ACCESSORY_PERCENT = <?= json_encode($pricingSettings->accessoryFlatRatePercent ?? '0') ?>;
@@ -1546,7 +1554,7 @@ foreach ($laborArticles as $laborArticle) {
 
         // freeTextTotal steckt bereits in subtotalAfterDiscount (siehe
         // accessoryBase oben) — hier NICHT nochmal addieren.
-        var netTotal = subtotalAfterDiscount + laborTotal + saleTotal;
+        var netTotal = subtotalAfterDiscount + laborTotal + saleTotal + TRAVEL_COST_TOTAL;
         var vatAmount = IS_SMALL_BUSINESS ? 0 : round2(netTotal * parseAmount(VAT_RATE_PERCENT) / 100);
         var grossTotal = netTotal + vatAmount;
 

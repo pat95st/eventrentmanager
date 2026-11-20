@@ -36,6 +36,8 @@ final class CreateOrderConfirmationFromOfferHandler implements CommandHandlerInt
         private readonly OrderConfirmationRepositoryInterface $orderConfirmations,
         private readonly DocumentNumberSequence $numberSequence,
         private readonly PDO $pdo,
+        // Migration 182: the travel cost section of the offer is copied.
+        private readonly ?\App\Application\TravelCost\DocumentTravelCostService $travelCosts = null,
     ) {
     }
 
@@ -117,6 +119,7 @@ final class CreateOrderConfirmationFromOfferHandler implements CommandHandlerInt
             ),
             $this->offers->findFreeTextItemsByOffer($offer->id),
         ));
+        $this->travelCosts?->copy(\App\Domain\TravelCost\TravelCostDocumentType::Offer, $offer->id, \App\Domain\TravelCost\TravelCostDocumentType::OrderConfirmation, $orderConfirmation->id);
 
         return $orderConfirmation->id;
     }

@@ -44,6 +44,8 @@ final class TourStop
         public ?DateTimeImmutable $createdAt = null,
         // the drive to this point is not billed (migration 180)
         public bool $arrivalNotBilled = false,
+        // kilometres of the drive to this point entered by hand (migration 182)
+        public ?int $arrivalKmOverride = null,
     ) {
     }
 

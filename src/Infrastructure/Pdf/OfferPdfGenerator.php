@@ -176,6 +176,22 @@ final class OfferPdfGenerator
             $hasExtraTables = true;
         }
 
+        // Travel costs of a tour (migration 182) as their own table.
+        $travelCostRows = $detail->travelCosts !== null
+            ? TravelCostPdfRows::build($detail->travelCosts, $this->columnLayout()['article']['width'], self::TABLE_FONT_SIZE, fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize), fn (float $amount): string => $this->formatAmount($amount))
+            : [];
+        if ($travelCostRows !== []) {
+            $y = $this->drawTableSection($writer, $y, $pageWidth, TravelCostPdfRows::TITLE, TravelCostPdfRows::LABELS, $travelCostRows, $newPage, $pdfDesignSettings);
+            if (count($travelCostRows) > 1) {
+                $y -= 12;
+                $this->drawSummaryLine($writer, $pageWidth, $y, 'Summe Fahrtkosten:', $this->formatAmount($totals->travelCostTotal));
+                $y -= 4;
+            }
+        }
+        if ($travelCostRows !== []) {
+            $hasExtraTables = true;
+        }
+
         if ($y - 70 < self::CONTENT_BOTTOM) {
             $y = $newPage();
         }

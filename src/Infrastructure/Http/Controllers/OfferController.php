@@ -63,6 +63,7 @@ final class OfferController
         private readonly UserRepositoryInterface $users,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -164,6 +165,7 @@ final class OfferController
             'venue' => $venue,
             'linkedRental' => $linkedRental,
             'selectedContact' => $detail->contact,
+            'convertedTourId' => $this->convertedTourId($detail->offer->convertedRentalId),
         ], activeNav: 'offers', title: t('offers.page_title.detail'));
     }
 
@@ -559,6 +561,8 @@ final class OfferController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
+            // Travel costs of a tour (migration 182) are edited on their own page; the live total adds them.
+            'travelCostTotal' => $editingId !== null ? ($this->travelCosts?->findFor(\App\Domain\TravelCost\TravelCostDocumentType::Offer, $editingId)?->total() ?? 0.0) : 0.0,
             'existingItems' => $existingItems,
             'pricingSettings' => $pricingSettings,
             'laborArticles' => $laborArticles,
@@ -743,4 +747,12 @@ final class OfferController
         }
     }
 
+
+    /** Rental id of the tour an offer was converted into, for "Fahrtkosten aus Tour übernehmen" (migration 182). */
+    private function convertedTourId(?string $rentalId): ?string
+    {
+        $rental = $rentalId !== null ? $this->rentals->findById($rentalId) : null;
+
+        return $rental !== null && $rental->isTour ? $rental->id : null;
+    }
 }

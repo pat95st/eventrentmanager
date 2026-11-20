@@ -72,6 +72,8 @@ final class CreateInvoiceFromOfferHandler implements CommandHandlerInterface
         private readonly SaleStockConsumptionRepositoryInterface $stockConsumptions,
         private readonly InventoryNumberRepositoryInterface $inventoryNumbers,
         private readonly ArticleRepositoryInterface $articles,
+        // Migration 182: the travel cost section of the offer is copied.
+        private readonly ?\App\Application\TravelCost\DocumentTravelCostService $travelCosts = null,
     ) {
     }
 
@@ -193,6 +195,7 @@ final class CreateInvoiceFromOfferHandler implements CommandHandlerInterface
             $offerLaborItems
         );
         $this->invoices->replaceLaborItems($invoice->id, $invoiceLaborItems);
+        $this->travelCosts?->copy(\App\Domain\TravelCost\TravelCostDocumentType::Offer, $offer->id, \App\Domain\TravelCost\TravelCostDocumentType::Invoice, $invoice->id);
 
         return $invoice->id;
     }

@@ -177,7 +177,11 @@ storage/uploads/     Hochgeladene Artikelbilder & RMA-Dokumente (nicht in public
   zusätzlich: das Leergewicht (kg). Außerdem Kilometerkosten (€/km,
   Migration 181): ohne eigenen Wert gilt der Standard der Kategorie aus
   „Einstellungen › Fahrzeuge“ (Auto 0,30 €, Anhänger 0,15 €, beide
-  änderbar). Ein Fahrzeug lässt sich nicht löschen,
+  änderbar). Touren rechnen damit ihre Fahrtkosten ab (Migration 182):
+  abgerechnete Kilometer der Route × Summe der Kilometerkosten der geplanten
+  Fahrzeuge zzgl. Aufschlag (Standard 0 %, „Einstellungen › Fahrzeuge“), auf
+  Cent gerundet; als Sammelposten oder einzelne Fahrten in Angeboten,
+  Auftragsbestätigungen und Rechnungen. Ein Fahrzeug lässt sich nicht löschen,
   solange es noch in einer Beladungsliste oder einer Zugfahrzeug-Zuordnung
   verwendet wird.
 - **Versicherungsliste** (je Veranstaltung unter „Dokumente › Versicherungsliste“,

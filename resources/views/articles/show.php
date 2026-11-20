@@ -634,10 +634,10 @@ $sectionClose = '</div></details>';
                     </label>
                     <?php $adImageHasPrice = $article->isBillable && $article->dailyRentalPrice !== null && trim($article->dailyRentalPrice) !== ''; ?>
                     <label class="flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t($adImageHasPrice ? 'articles.show.ad_images_include_price_hint' : 'articles.show.ad_images_include_price_unavailable')) ?>">
-                        <input type="checkbox" name="include_price" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? '' : ' disabled data-ad-image-unavailable' ?>>
+                        <input type="checkbox" name="include_price" value="1" data-ad-image-include-price class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? '' : ' disabled data-ad-image-unavailable' ?>>
                         <?= e(t('articles.show.ad_images_include_price')) ?>
                     </label>
-                    <label class="ml-6 flex items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t('articles.show.ad_images_price_as_from_hint')) ?>">
+                    <label data-ad-image-price-as-from-wrapper class="ml-6 hidden items-center gap-2 text-sm <?= $adImageHasPrice ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500' ?>" title="<?= e(t('articles.show.ad_images_price_as_from_hint')) ?>">
                         <input type="checkbox" name="price_as_from" value="1" class="rounded border-slate-300 disabled:opacity-60 dark:border-slate-700"<?= $adImageHasPrice ? ' checked' : ' disabled data-ad-image-unavailable' ?>>
                         <?= e(t('articles.show.ad_images_price_as_from')) ?>
                     </label>
@@ -803,6 +803,19 @@ $sectionClose = '</div></details>';
                 if (useGallery) {
                     useGallery.addEventListener('change', updateSource);
                     updateSource();
+                }
+
+                // The "from" price option only matters when a price is included.
+                var includePrice = form.querySelector('[data-ad-image-include-price]');
+                var priceAsFromWrapper = form.querySelector('[data-ad-image-price-as-from-wrapper]');
+                function updatePriceAsFrom() {
+                    var visible = includePrice && includePrice.checked;
+                    priceAsFromWrapper.classList.toggle('hidden', !visible);
+                    priceAsFromWrapper.classList.toggle('flex', visible);
+                }
+                if (includePrice && priceAsFromWrapper) {
+                    includePrice.addEventListener('change', updatePriceAsFrom);
+                    updatePriceAsFrom();
                 }
 
                 var overlayDetail = null;

@@ -16,14 +16,14 @@ use function App\Infrastructure\Http\t;
     <div class="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400"><?= e(t('sets.none')) ?></div>
 <?php else: ?>
     <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table class="w-full text-left text-sm">
+        <table class="w-full text-left text-sm" data-responsive>
             <thead class="border-b border-slate-200 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2 font-medium"><?= e(t('sets.form.name')) ?></th>
                     <th class="px-4 py-2 font-medium"><?= e(t('sets.list.contents')) ?></th>
                     <th class="px-4 py-2 font-medium"><?= e(t('sets.list.rules')) ?></th>
                     <th class="px-4 py-2 text-right font-medium"><?= e(t('sets.list.days')) ?></th>
-                    <th class="px-4 py-2 text-right font-medium"><?= e(t('sets.list.price')) ?></th>
+                    <th data-priority="1" class="px-4 py-2 text-right font-medium"><?= e(t('sets.list.price')) ?></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

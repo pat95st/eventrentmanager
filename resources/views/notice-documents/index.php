@@ -25,7 +25,7 @@ $formatSize = static function (int $bytes): string {
     <p class="text-sm text-slate-500 dark:text-slate-400"><?= e(t('notice_documents.empty')) ?></p>
 <?php else: ?>
 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-    <table class="w-full text-sm">
+    <table class="w-full text-sm" data-responsive>
         <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <tr>
                 <th class="px-4 py-2"><?= e(t('notice_documents.col_name')) ?></th>

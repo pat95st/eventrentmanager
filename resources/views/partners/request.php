@@ -50,7 +50,7 @@ $errorText = $errors !== [] ? implode(' ', $errors) : null;
         <section class="<?= $card ?>">
             <?php if ($r->kind === PartnerRequestKind::Material): ?>
                 <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Angefragtes Material</h2>
-                <table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800">
+                <table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-slate-800" data-responsive>
                     <thead class="text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         <tr><th class="py-1.5">Artikel</th><th class="py-1.5 text-right">Menge</th><th class="py-1.5 text-right">Preis/Tag</th><?php if ($r->discountPercent !== null && $r->discountPercent > 0): ?><th class="py-1.5 text-right">abzgl. <?= e(Discount::format($r->discountPercent)) ?></th><?php endif; ?></tr>
                     </thead>

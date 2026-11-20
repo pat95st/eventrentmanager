@@ -12,7 +12,14 @@
 // numbers are more important and hidden last; columns without data-priority
 // are hidden first, from right to left. The first column is never hidden
 // because it carries the toggle. data-priority="0" keeps a column visible
-// at all times.
+// at all times. Columns without a header text whose cells contain controls
+// (buttons, forms, dropdowns: row actions) are hidden only as a last resort
+// unless they have an explicit data-priority.
+//
+// Rows whose cells do not line up with the header (group headings, "no
+// entries" rows, totals with colspan) are not collapsed; their colspans are
+// shrunk by the hidden columns they cover, so they stay aligned. Tables added to
+// the page later (AJAX pagination) are picked up automatically.
 //
 // Works together with row-links.js (the toggle is a <button>, so it does not
 // open the row link) and sortable-tables.js (open detail rows are taken out
@@ -30,7 +37,7 @@
     // all visible columns fit side by side without squeezing their text.
     // The first column (never hidden) may wrap, but keeps a minimum width
     // set in layout().
-    SELECTOR + '.rt-measuring>*>tr>*{white-space:nowrap!important}' +
+    SELECTOR + '.rt-measuring>*>tr>:not([colspan]){white-space:nowrap!important}' +
     SELECTOR + '.rt-measuring>*>tr>:first-child{white-space:normal!important}' +
     '.rt-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;width:1.25rem;height:1.25rem;margin:-0.125rem 0.5rem -0.125rem 0;' +
     'vertical-align:middle;border-radius:9999px;border:0;padding:0;cursor:pointer;color:#fff;' +
@@ -59,14 +66,41 @@
     return table.tHead && table.tHead.rows[table.tHead.rows.length - 1];
   }
 
-  function dataRows(table) {
+  // Rows whose cells line up one-to-one with the header cells.
+  function aligned(table, row) {
+    if (row.classList.contains('rt-child') || row.cells.length !== headerRow(table).cells.length) { return false; }
+    for (var i = 0; i < row.cells.length; i++) {
+      if ((row.cells[i].colSpan || 1) > 1) { return false; }
+    }
+    return true;
+  }
+
+  function sectionRows(table, sections) {
     var rows = [];
-    Array.prototype.forEach.call(table.tBodies, function (tbody) {
-      Array.prototype.forEach.call(tbody.rows, function (row) {
-        if (!row.classList.contains('rt-child') && row.cells.length > 1) { rows.push(row); }
+    sections.forEach(function (section) {
+      Array.prototype.forEach.call(section.rows, function (row) {
+        if (aligned(table, row)) { rows.push(row); }
       });
     });
     return rows;
+  }
+
+  // Body rows: they get the toggle and the detail row.
+  function dataRows(table) {
+    return sectionRows(table, Array.prototype.slice.call(table.tBodies));
+  }
+
+  // All rows whose cells are hidden together with the header cell.
+  function columnRows(table) {
+    var sections = Array.prototype.slice.call(table.tBodies);
+    if (table.tFoot) { sections.push(table.tFoot); }
+    return sectionRows(table, sections);
+  }
+
+  function holdsControls(table, index) {
+    return dataRows(table).some(function (row) {
+      return row.cells[index].querySelector('button, form, details, select, input:not([type="hidden"])') !== null;
+    });
   }
 
   // Indices of hideable columns, in the order they get hidden.
@@ -77,6 +111,7 @@
       if (index === 0) { return; }
       var raw = th.getAttribute('data-priority');
       var priority = raw === null || raw === '' ? Infinity : parseInt(raw, 10);
+      if ((raw === null || raw === '') && th.textContent.trim() === '' && holdsControls(table, index)) { priority = 0.5; }
       if (priority === 0) { return; }
       order.push({ index: index, priority: isNaN(priority) ? Infinity : priority });
     });
@@ -87,8 +122,8 @@
   function setColumnHidden(table, index, hidden) {
     var head = headerRow(table);
     if (head.cells[index]) { head.cells[index].classList.toggle('rt-hidden', hidden); }
-    dataRows(table).forEach(function (row) {
-      if (row.cells[index]) { row.cells[index].classList.toggle('rt-hidden', hidden); }
+    columnRows(table).forEach(function (row) {
+      row.cells[index].classList.toggle('rt-hidden', hidden);
     });
   }
 
@@ -98,6 +133,31 @@
       if (th.classList.contains('rt-hidden')) { result.push(index); }
     });
     return result;
+  }
+
+  // Non-aligned rows: reduce each cell's colspan to the visible columns it
+  // covers; a cell covering only hidden columns is hidden itself.
+  function fixSpans(table) {
+    var hidden = hiddenColumns(table);
+    var sections = Array.prototype.slice.call(table.tBodies);
+    if (table.tFoot) { sections.push(table.tFoot); }
+    sections.forEach(function (section) {
+      Array.prototype.forEach.call(section.rows, function (row) {
+        if (row.classList.contains('rt-child') || aligned(table, row)) { return; }
+        var position = 0;
+        Array.prototype.forEach.call(row.cells, function (cell) {
+          if (!cell.hasAttribute('data-rt-span')) { cell.setAttribute('data-rt-span', String(cell.colSpan || 1)); }
+          var span = parseInt(cell.getAttribute('data-rt-span'), 10);
+          var visible = 0;
+          for (var c = position; c < position + span; c++) {
+            if (hidden.indexOf(c) === -1) { visible++; }
+          }
+          position += span;
+          cell.colSpan = Math.max(visible, 1);
+          cell.classList.toggle('rt-hidden', visible === 0);
+        });
+      });
+    });
   }
 
   function visibleColumnCount(table) {
@@ -178,13 +238,16 @@
 
   function layout(table) {
     var container = table.parentElement;
-    var available = container.clientWidth;
-    if (available === 0) { return; } // not rendered (e.g. inside a closed <details>)
+    var styles = window.getComputedStyle(container);
+    var available = container.clientWidth - (parseFloat(styles.paddingLeft) || 0) - (parseFloat(styles.paddingRight) || 0);
+    if (available <= 0) { return; } // not rendered (e.g. inside a closed <details>)
     if (table.__rtWidth === available) { return; }
     table.__rtWidth = available;
 
     var order = hideOrder(table);
     order.forEach(function (index) { setColumnHidden(table, index, false); });
+    fixSpans(table);
+    if (dataRows(table).length === 0) { updateToggles(table); return; }
     table.classList.add('rt-measuring');
     // First column: its unwrapped width, but at most 45 % of the space.
     var first = headerRow(table).cells[0];
@@ -211,11 +274,16 @@
     }
     table.classList.remove('rt-measuring');
     first.style.minWidth = '';
+    fixSpans(table);
     updateToggles(table);
   }
 
   function init(table) {
-    if (table.__rtInit || !headerRow(table)) { return; }
+    if (table.__rtInit || !headerRow(table) || !table.parentElement) { return; }
+    var head = headerRow(table);
+    for (var i = 0; i < head.cells.length; i++) {
+      if ((head.cells[i].colSpan || 1) > 1) { return; } // grouped headers are not supported
+    }
     table.__rtInit = true;
     table.classList.add('rt-ready');
     layout(table);
@@ -227,7 +295,9 @@
   }
 
   function initAll(root) {
-    Array.prototype.forEach.call((root || document).querySelectorAll(SELECTOR), init);
+    root = root || document;
+    if (root.matches && root.matches(SELECTOR)) { init(root); }
+    if (root.querySelectorAll) { Array.prototype.forEach.call(root.querySelectorAll(SELECTOR), init); }
   }
 
   document.addEventListener('click', function (event) {
@@ -254,12 +324,25 @@
     }, 0);
   }, true);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initAll(); });
-  } else {
+  function start() {
     initAll();
+    if (window.MutationObserver) {
+      new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          Array.prototype.forEach.call(mutation.addedNodes, function (node) {
+            if (node.nodeType === 1 && node.tagName !== 'TR') { initAll(node); }
+          });
+        });
+      }).observe(document.body, { childList: true, subtree: true });
+    }
   }
 
-  // Tables loaded later (AJAX) can be initialised with ResponsiveTables.init(container).
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+
+  // Manual hook, e.g. after rows were replaced inside an existing table.
   window.ResponsiveTables = { init: initAll };
 })();

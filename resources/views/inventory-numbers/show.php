@@ -167,7 +167,7 @@ $effectivePrice = $inv->effectivePurchasePrice($article->purchasePrice);
                     </div>
                 </dl>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="w-full text-sm" data-responsive>
                         <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:text-slate-400">
                             <tr>
                                 <th class="py-2 pr-4 text-left">Jahr</th>

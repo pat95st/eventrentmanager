@@ -99,9 +99,9 @@ $gross = $correction->grossTotal();
 <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     <h2 class="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Positionen <span class="font-normal text-slate-500">(netto)</span></h2>
     <div class="overflow-x-auto">
-        <table class="w-full min-w-[560px] text-left text-sm">
+        <table class="w-full min-w-[560px] text-left text-sm" data-responsive>
             <thead class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                <tr><th class="px-2 py-2">Bezeichnung</th><th class="px-2 py-2 text-right">Menge</th><th class="px-2 py-2 text-right">Einzelpreis</th><th class="px-2 py-2 text-right">Summe</th></tr>
+                <tr><th class="px-2 py-2">Bezeichnung</th><th data-priority="3" class="px-2 py-2 text-right">Menge</th><th data-priority="2" class="px-2 py-2 text-right">Einzelpreis</th><th data-priority="1" class="px-2 py-2 text-right">Summe</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                 <?php foreach ($correction->lines as $line): ?>

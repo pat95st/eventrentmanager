@@ -277,9 +277,9 @@ $val = static fn (string $field, string $current): string => $settingsErrors && 
             <p class="text-sm text-slate-400 dark:text-slate-500">Noch keine schreibenden Zugriffe.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-xs">
+                <table class="min-w-full text-left text-xs" data-responsive>
                     <thead class="text-slate-500 dark:text-slate-400">
-                        <tr><th class="py-1 pr-3 font-medium">Zeit</th><th class="py-1 pr-3 font-medium">Token</th><th class="py-1 pr-3 font-medium">Anfrage</th><th class="py-1 pr-3 font-medium">Status</th><th class="py-1 font-medium">IP</th></tr>
+                        <tr><th class="py-1 pr-3 font-medium">Zeit</th><th class="py-1 pr-3 font-medium">Token</th><th data-priority="2" class="py-1 pr-3 font-medium">Anfrage</th><th data-priority="1" class="py-1 pr-3 font-medium">Status</th><th class="py-1 font-medium">IP</th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 text-slate-700 dark:divide-slate-800 dark:text-slate-300">
                         <?php foreach ($requestLog as $entry): ?>

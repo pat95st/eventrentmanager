@@ -439,7 +439,7 @@ $sectionClose = '</div></details>';
                     <?php if ($mc->channels !== []): ?>
                         <h3 class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">DSP-Kanäle</h3>
                         <div class="mt-1 overflow-x-auto">
-                            <table class="min-w-full text-sm">
+                            <table class="min-w-full text-sm" data-responsive>
                                 <thead><tr class="text-left text-xs text-slate-500 dark:text-slate-400"><th class="py-1 pr-4 font-medium">Herstellerbezeichnung</th><th class="py-1 pr-4 font-medium">Kanalart</th><th class="py-1 pr-4 font-medium">Anzahl</th><th class="py-1 font-medium">Ausführung</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     <?php foreach ($mc->channels as $channel): ?>
@@ -452,7 +452,7 @@ $sectionClose = '</div></details>';
                     <?php if ($mc->cards !== []): ?>
                         <h3 class="mt-4 text-xs font-semibold text-slate-700 dark:text-slate-300">Mögliche Erweiterungskarten</h3>
                         <div class="mt-1 overflow-x-auto">
-                            <table class="min-w-full text-sm">
+                            <table class="min-w-full text-sm" data-responsive>
                                 <thead><tr class="text-left text-xs text-slate-500 dark:text-slate-400"><th class="py-1 pr-4 font-medium">Karte</th><th class="py-1 pr-4 font-medium">Protokoll</th><th class="py-1 pr-4 font-medium">Kanäle</th><th class="py-1 font-medium">Bemerkung</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                                     <?php foreach ($mc->cards as $card): ?>
@@ -1518,7 +1518,7 @@ $sectionClose = '</div></details>';
                 <p class="mb-4 text-sm text-slate-500 dark:text-slate-400"><?= e(t('articles.show.sale_stock_none')) ?></p>
             <?php else: ?>
                 <div class="mb-4 overflow-x-auto">
-                    <table class="w-full min-w-[500px] text-left text-sm">
+                    <table class="w-full min-w-[500px] text-left text-sm" data-responsive>
                         <thead class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             <tr>
                                 <th class="px-2 py-2"><?= e(t('articles.show.sale_stock_lot_received_at')) ?></th>

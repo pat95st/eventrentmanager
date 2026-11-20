@@ -160,9 +160,9 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             <p class="mb-3 text-sm text-slate-500 dark:text-slate-400">Noch nichts geplant.</p>
         <?php else: ?>
             <div class="mb-4 overflow-x-auto">
-                <table class="w-full text-left text-sm" style="min-width: 560px">
+                <table class="w-full text-left text-sm" style="min-width: 560px" data-responsive>
                     <thead class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <tr><th class="py-2 pr-3">(Nächster) Zeitpunkt</th><th class="py-2 pr-3">Einspieler</th><th class="py-2 pr-3">Geplant von</th><th class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
+                        <tr><th class="py-2 pr-3">(Nächster) Zeitpunkt</th><th data-priority="1" class="py-2 pr-3">Einspieler</th><th data-priority="3" class="py-2 pr-3">Geplant von</th><th data-priority="2" class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($schedules as $s): ?>
@@ -414,9 +414,9 @@ $defaultPlayAt = max($now->modify('+15 minutes'), $rental->startDate->setTime((i
             <p class="text-sm text-slate-500 dark:text-slate-400">Noch nichts abgespielt.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm" style="min-width: 560px">
+                <table class="w-full text-left text-sm" style="min-width: 560px" data-responsive>
                     <thead class="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                        <tr><th class="py-2 pr-3">Zeit</th><th class="py-2 pr-3">Art</th><th class="py-2 pr-3">Inhalt</th><th class="py-2 pr-3">Von</th><th class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
+                        <tr><th class="py-2 pr-3">Zeit</th><th class="py-2 pr-3">Art</th><th data-priority="1" class="py-2 pr-3">Inhalt</th><th class="py-2 pr-3">Von</th><th data-priority="2" class="py-2 pr-3">Status</th><th class="py-2"></th></tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <?php foreach ($recent as $r): ?>

@@ -18,7 +18,7 @@ use function App\Infrastructure\Http\e;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Lieferanten gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[640px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 24%">
                 <col style="width: 12%">
@@ -32,8 +32,8 @@ use function App\Infrastructure\Http\e;
                     <th class="break-words px-4 py-2.5">Name</th>
                     <th class="break-words px-4 py-2.5">Art</th>
                     <th class="break-words px-4 py-2.5">Adresse</th>
-                    <th class="break-words px-4 py-2.5">Telefon</th>
-                    <th class="break-words px-4 py-2.5">E-Mail</th>
+                    <th data-priority="1" class="break-words px-4 py-2.5">Telefon</th>
+                    <th data-priority="2" class="break-words px-4 py-2.5">E-Mail</th>
                     <th class="break-words px-4 py-2.5"></th>
                 </tr>
             </thead>

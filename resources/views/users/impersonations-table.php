@@ -15,7 +15,7 @@ use function App\Infrastructure\Http\e;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Impersonationen protokolliert.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[640px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 24%">
                 <col style="width: 24%">
@@ -26,8 +26,8 @@ use function App\Infrastructure\Http\e;
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="break-words px-4 py-2.5">Administrator</th>
-                    <th class="break-words px-4 py-2.5">Zielbenutzer</th>
-                    <th class="break-words px-4 py-2.5">Start</th>
+                    <th data-priority="2" class="break-words px-4 py-2.5">Zielbenutzer</th>
+                    <th data-priority="1" class="break-words px-4 py-2.5">Start</th>
                     <th class="break-words px-4 py-2.5">Ende</th>
                     <th class="break-words px-4 py-2.5">Status</th>
                 </tr>

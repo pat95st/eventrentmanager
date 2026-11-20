@@ -27,16 +27,16 @@ $money = static fn (float $v): string => number_format($v, 2, ',', '.') . ' €'
     </div>
 <?php else: ?>
     <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <table class="w-full min-w-[640px] text-left text-sm">
+        <table class="w-full min-w-[640px] text-left text-sm" data-responsive>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2.5">Nummer</th>
                     <th class="px-4 py-2.5">Art</th>
                     <th class="px-4 py-2.5">Rechnung</th>
-                    <th class="px-4 py-2.5">Kunde</th>
-                    <th class="px-4 py-2.5">Datum</th>
-                    <th class="px-4 py-2.5 text-right">Betrag brutto</th>
-                    <th class="px-4 py-2.5">Status</th>
+                    <th data-priority="3" class="px-4 py-2.5">Kunde</th>
+                    <th data-priority="4" class="px-4 py-2.5">Datum</th>
+                    <th data-priority="2" class="px-4 py-2.5 text-right">Betrag brutto</th>
+                    <th data-priority="1" class="px-4 py-2.5">Status</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

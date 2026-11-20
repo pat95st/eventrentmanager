@@ -138,7 +138,7 @@ $hostRange = static function (int $version) use ($network): ?string {
             <p class="text-sm text-slate-500 dark:text-slate-400">In diesem Netzwerk sind noch keine Adressen vergeben.</p>
         <?php else: ?>
             <div class="overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table class="min-w-full text-sm" data-responsive>
                     <thead>
                         <tr class="text-left text-xs text-slate-500 dark:text-slate-400">
                             <?php if ($v4): ?><th class="py-1 pr-3 font-medium">IPv4</th><?php endif; ?>

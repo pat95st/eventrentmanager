@@ -18,7 +18,7 @@ use function App\Infrastructure\Http\t;
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400"><?= e(t('warehouses.table.empty')) ?></p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full min-w-[560px] table-fixed text-left text-sm">
+        <table class="w-full min-w-[560px] table-fixed text-left text-sm" data-responsive>
             <colgroup>
                 <col style="width: 28%">
                 <col style="width: 36%">
@@ -28,7 +28,7 @@ use function App\Infrastructure\Http\t;
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="break-words px-4 py-2.5"><?= e(t('warehouses.table.name')) ?></th>
-                    <th class="break-words px-4 py-2.5"><?= e(t('warehouses.table.address')) ?></th>
+                    <th data-priority="1" class="break-words px-4 py-2.5"><?= e(t('warehouses.table.address')) ?></th>
                     <th class="break-words px-4 py-2.5"><?= e(t('warehouses.table.map')) ?></th>
                     <th class="break-words px-4 py-2.5"></th>
                 </tr>

@@ -36,7 +36,7 @@ if (!function_exists('formatVehicleDimension')) {
         <p class="py-12 text-center text-sm text-slate-500 dark:text-slate-400">Keine Fahrzeuge gefunden.</p>
     <?php else: ?>
         <div class="overflow-x-auto">
-        <table class="w-full table-fixed text-left text-sm" style="min-width: 1000px">
+        <table class="w-full table-fixed text-left text-sm" style="min-width: 1000px" data-responsive>
             <colgroup>
                 <col style="width: 16%">
                 <col style="width: 11%">
@@ -51,8 +51,8 @@ if (!function_exists('formatVehicleDimension')) {
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="break-words px-4 py-2.5">Bezeichnung</th>
-                    <th class="break-words px-4 py-2.5">Kategorie</th>
-                    <th class="break-words px-4 py-2.5">Kennzeichen</th>
+                    <th data-priority="2" class="break-words px-4 py-2.5">Kategorie</th>
+                    <th data-priority="1" class="break-words px-4 py-2.5">Kennzeichen</th>
                     <th class="break-words px-4 py-2.5">Zuladung</th>
                     <th class="break-words px-4 py-2.5">Ladefläche</th>
                     <th class="break-words px-4 py-2.5">Beifahrer&shy;plätze</th>

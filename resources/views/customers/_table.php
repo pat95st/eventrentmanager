@@ -22,15 +22,15 @@ $canCreateDocuments = \App\Infrastructure\Http\Auth\CurrentUser::get()?->has(\Ap
         <div class="overflow-x-auto">
         <!-- Wie die Artikelliste: automatische Spaltenbreiten, Mindestbreite und
              waagerechtes Scrollen auf kleinen Bildschirmen (Wrapper overflow-x-auto). -->
-        <table class="w-full text-left text-sm" style="min-width:860px">
+        <table class="w-full text-left text-sm" style="min-width:860px" data-responsive>
             <thead class="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                 <tr>
                     <th class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.number')) ?></th>
-                    <th class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.type')) ?></th>
-                    <th class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.name')) ?></th>
-                    <th class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.address')) ?></th>
-                    <th class="whitespace-nowrap px-4 py-2.5"><?= e(t('common.phone')) ?></th>
-                    <th class="whitespace-nowrap px-4 py-2.5"><?= e(t('common.email')) ?></th>
+                    <th data-priority="5" class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.type')) ?></th>
+                    <th data-priority="1" class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.name')) ?></th>
+                    <th data-priority="4" class="whitespace-nowrap px-4 py-2.5"><?= e(t('customers.table.address')) ?></th>
+                    <th data-priority="2" class="whitespace-nowrap px-4 py-2.5"><?= e(t('common.phone')) ?></th>
+                    <th data-priority="3" class="whitespace-nowrap px-4 py-2.5"><?= e(t('common.email')) ?></th>
                     <th class="whitespace-nowrap px-4 py-2.5"></th>
                 </tr>
             </thead>

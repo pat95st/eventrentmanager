@@ -33,7 +33,7 @@ $changeable = array_filter($preview->targets, static fn ($t) => !$t['started']);
             <?php elseif ($target['changes'] === []): ?>
                 <p class="mt-2 text-sm text-slate-500">Keine Änderungen.</p>
             <?php else: ?>
-                <table class="mt-2 w-full text-sm">
+                <table class="mt-2 w-full text-sm" data-responsive>
                     <thead class="text-left text-xs text-slate-500 dark:text-slate-400">
                         <tr><th class="py-1 pr-2 font-medium">Bereich</th><th class="py-1 pr-2 font-medium">Vorher</th><th class="py-1 font-medium">Nachher</th></tr>
                     </thead>

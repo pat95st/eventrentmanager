@@ -108,14 +108,14 @@ $modeLabels = [AccountPeriod::MONTH => 'Monat', AccountPeriod::YEAR => 'Jahr', A
 
 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
     <div class="overflow-x-auto" style="position:relative">
-        <table class="w-full text-sm" style="min-width:40rem">
+        <table class="w-full text-sm" style="min-width:40rem" data-responsive>
             <thead class="bg-slate-50 dark:bg-slate-800 text-left text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <tr>
                     <th class="px-4 py-2">Datum</th>
-                    <th class="px-4 py-2">Buchung</th>
-                    <th class="px-4 py-2">Art</th>
-                    <th class="px-4 py-2 text-right">Betrag</th>
-                    <th class="px-4 py-2 text-right">Saldo</th>
+                    <th data-priority="2" class="px-4 py-2">Buchung</th>
+                    <th data-priority="4" class="px-4 py-2">Art</th>
+                    <th data-priority="1" class="px-4 py-2 text-right">Betrag</th>
+                    <th data-priority="3" class="px-4 py-2 text-right">Saldo</th>
                     <th class="px-4 py-2" aria-label="Aktionen"></th>
                 </tr>
             </thead>

@@ -82,7 +82,15 @@ final class DashboardController
                 } elseif ($tile->widget === DashboardWidget::UpcomingRentals) {
                     $schedule = $this->warehouseSchedule();
                 } elseif ($tile->widget !== null) {
-                    $sections[$key] = $this->buildSection($tile->widget);
+                    // A failing widget (e.g. a pending migration) must not make the
+                    // start page - and with it the login redirect - unusable.
+                    try {
+                        $sections[$key] = $this->buildSection($tile->widget);
+                    } catch (\Throwable $e) {
+                        error_log('Dashboard-Widget ' . $tile->widget->value . ': ' . $e->getMessage());
+
+                        continue;
+                    }
                 }
                 $zones[$zone][] = $tile;
             }

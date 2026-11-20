@@ -28,7 +28,7 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
                 :id, :category, :name, :license_plate, :payload_kg,
                 :load_area_length_cm, :load_area_width_cm, :load_area_height_cm, :load_area_open_top,
                 :tow_hitch_available, :tow_capacity_kg, :empty_weight_kg,
-                :acquisition_year, :purchase_price, :current_value, :height_cm, :width_cm, :length_cm, :gross_weight_kg, :passenger_seats, :notes, :created_at, :updated_at
+                :acquisition_year, :purchase_price, :current_value, :height_cm, :width_cm, :length_cm, :gross_weight_kg, :passenger_seats, :cost_per_km, :notes, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 category = :category2, name = :name2, license_plate = :license_plate2,

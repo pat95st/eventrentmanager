@@ -15,6 +15,7 @@ use App\Domain\Routing\RouteProfile;
 use App\Domain\Routing\RoutingSettingsRepositoryInterface;
 use App\Domain\Tour\TourRepositoryInterface;
 use App\Domain\Tour\TourStopKind;
+use App\Domain\TravelCost\TravelCostMode;
 use App\Domain\Vehicle\VehicleRepositoryInterface;
 use App\Shared\Uuid;
 use DateTimeImmutable;
@@ -39,6 +40,8 @@ final class RoutingCommandHandler implements CommandHandlerInterface
             $command instanceof AddPlannedVehicle => $this->addVehicle($command),
             $command instanceof RemovePlannedVehicle => $this->removeVehicle($command),
             $command instanceof SetLegBilling => $this->setLegBilling($command),
+            $command instanceof SetLegKilometers => $this->setLegKilometers($command),
+            $command instanceof SetTourTravelCosts => $this->setTravelCosts($command),
             default => throw new \InvalidArgumentException('Unsupported command ' . $command::class),
         };
     }
@@ -124,5 +127,39 @@ final class RoutingCommandHandler implements CommandHandlerInterface
         $this->tours->saveStop($stop);
 
         return $stop->rentalId;
+    }
+
+    /** Returns the rental id of the stop. */
+    private function setLegKilometers(SetLegKilometers $command): string
+    {
+        $stop = $this->tours?->findStop($command->stopId) ?? throw new NotFoundException('Der Tourstop wurde nicht gefunden.');
+        if ($stop->kind === TourStopKind::Start) {
+            throw new ValidationException(['stop' => 'Zum Start der Tour gibt es keine Anfahrt.']);
+        }
+        $value = trim(str_replace(['km', ' '], '', $command->kilometers));
+        if ($value === '') {
+            $stop->arrivalKmOverride = null;
+        } else {
+            $km = filter_var(str_replace(',', '.', $value), FILTER_VALIDATE_FLOAT);
+            if ($km === false || $km < 0 || $km > 100000) {
+                throw new ValidationException(['kilometers' => 'Bitte die Kilometer als Zahl zwischen 0 und 100.000 angeben.']);
+            }
+            $stop->arrivalKmOverride = (int) round($km);
+        }
+        $this->tours->saveStop($stop);
+
+        return $stop->rentalId;
+    }
+
+    private function setTravelCosts(SetTourTravelCosts $command): null
+    {
+        $rental = $this->rentals->findById($command->rentalId) ?? throw new NotFoundException('Die Veranstaltung wurde nicht gefunden.');
+        $mode = TravelCostMode::tryFrom($command->mode) ?? throw new ValidationException(['mode' => 'Bitte eine Darstellung der Fahrtkosten auswählen.']);
+        $rental->travelCostsEnabled = $command->enabled;
+        $rental->travelCostsMode = $mode->value;
+        $rental->updatedAt = new DateTimeImmutable();
+        $this->rentals->save($rental);
+
+        return null;
     }
 }

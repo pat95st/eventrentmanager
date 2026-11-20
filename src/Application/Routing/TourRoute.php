@@ -43,14 +43,28 @@ final class TourRoute
         return !($this->points[$leg->to]->arrivalNotBilled ?? false);
     }
 
-    /** Kilometres to bill in metres: total distance without the legs marked as not billed. */
+    /** Kilometres entered by hand for a leg (migration 182), null = calculated distance. */
+    public function legKmOverride(RouteLeg $leg): ?int
+    {
+        return $this->points[$leg->to]->arrivalKmOverride ?? null;
+    }
+
+    /** Distance of a leg for billing in metres: the kilometres entered by hand, else the calculated distance. */
+    public function legBillingDistanceM(RouteLeg $leg): float
+    {
+        $override = $this->legKmOverride($leg);
+
+        return $override !== null ? $override * 1000.0 : $leg->distanceM;
+    }
+
+    /** Kilometres to bill in metres: total distance without the legs marked as not billed (kilometres entered by hand win). */
     public function billableDistanceM(): ?float
     {
         if ($this->result === null) {
             return null;
         }
 
-        return array_sum(array_map(fn (RouteLeg $l) => $this->isLegBilled($l) ? $l->distanceM : 0.0, $this->result->legs));
+        return array_sum(array_map(fn (RouteLeg $l) => $this->isLegBilled($l) ? $this->legBillingDistanceM($l) : 0.0, $this->result->legs));
     }
 
     /** @return string[] */

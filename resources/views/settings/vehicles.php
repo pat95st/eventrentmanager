@@ -1,6 +1,7 @@
 <?php
 /**
- * Fleet settings: default cost per km of cars and trailers (migration 181).
+ * Fleet settings: default cost per km of cars and trailers (migration 181)
+ * and the markup on travel costs of tours (migration 182).
  *
  * @var \App\Domain\Vehicle\VehicleSettings $settings
  * @var array<string, string> $errors
@@ -42,6 +43,20 @@ $border = static fn (string $key): string => isset($errors[$key]) ? 'border-red-
                    value="<?= e($val('default_cost_per_km_trailer', $settings->defaultCostPerKmTrailer)) ?>"
                    class="<?= $input ?> <?= $border('defaultCostPerKmTrailer') ?>">
             <?php if (isset($errors['defaultCostPerKmTrailer'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['defaultCostPerKmTrailer']) ?></p><?php endif; ?>
+        </div>
+    </div>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Fahrtkosten bei Touren</h2>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            Touren rechnen die gefahrenen Kilometer mit den Kilometerkosten ihrer geplanten Fahrzeuge ab.
+            Der Aufschlag wird auf diesen Satz aufgeschlagen und ist im Dokument nicht gesondert ausgewiesen.
+        </p>
+        <div class="mt-3">
+            <label for="travel_cost_markup_percent" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Aufschlag (%)</label>
+            <input type="text" id="travel_cost_markup_percent" name="travel_cost_markup_percent" inputmode="decimal"
+                   value="<?= e($val('travel_cost_markup_percent', $settings->travelCostMarkupPercent)) ?>"
+                   class="<?= $input ?> <?= $border('travelCostMarkupPercent') ?>">
+            <?php if (isset($errors['travelCostMarkupPercent'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['travelCostMarkupPercent']) ?></p><?php endif; ?>
         </div>
     </div>
     <div class="flex border-t border-slate-100 pt-4 dark:border-slate-800">

@@ -16,6 +16,9 @@ namespace App\Infrastructure\Http\Api;
  *  - sale_items:      article_id, source ("inventory_number" | "stock"), inventory_number_id, quantity, unit_price, line_note
  *  - free_text_items: description, quantity, unit_price, sort_order, set_id, set_upgrade_id
  *  - section_texts:   heading, sort_order
+ *
+ * Responses additionally contain travel_cost_items (migration 182, read
+ * only): the travel costs of a tour, edited in the web interface.
  */
 final class DocumentPositions
 {
@@ -104,6 +107,21 @@ final class DocumentPositions
         $result = [];
         foreach (self::rows($detail) as $key => $rows) {
             $result[Normalizer::snake($key)] = $rows;
+        }
+        if (property_exists($detail, 'travelCosts')) {
+            $section = $detail->travelCosts;
+            $result['travel_cost_items'] = $section instanceof \App\Domain\TravelCost\TravelCostSection
+                ? array_values(array_map(static fn (\App\Domain\TravelCost\TravelCostLine $line): array => [
+                    'type' => 'travel_cost',
+                    'mode' => $section->mode->value,
+                    'trip_date' => $line->tripDate?->format('Y-m-d'),
+                    'description' => $line->description,
+                    'detail' => $line->detail,
+                    'kilometers' => $line->kilometers,
+                    'rate_per_km' => $line->ratePerKm,
+                    'line_total' => number_format($line->lineTotal(), 2, '.', ''),
+                ], $section->lines))
+                : [];
         }
 
         return $result;

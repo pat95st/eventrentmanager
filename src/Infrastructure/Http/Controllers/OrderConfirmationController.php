@@ -51,6 +51,7 @@ final class OrderConfirmationController
         private readonly OrderConfirmationPdfGenerator $pdfGenerator,
         private readonly RentalRepositoryInterface $rentals,
         private readonly CustomerRepositoryInterface $customers,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -412,6 +413,8 @@ final class OrderConfirmationController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
+            // Travel costs of a tour (migration 182) are edited on their own page; the live total adds them.
+            'travelCostTotal' => $editingId !== null ? ($this->travelCosts?->findFor(\App\Domain\TravelCost\TravelCostDocumentType::OrderConfirmation, $editingId)?->total() ?? 0.0) : 0.0,
             'existingItems' => $existingItems,
             'existingFreeTextItems' => $existingFreeTextItems,
             'existingSectionTexts' => $existingSectionTexts,

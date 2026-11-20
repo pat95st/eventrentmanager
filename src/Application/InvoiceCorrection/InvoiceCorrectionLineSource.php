@@ -85,6 +85,11 @@ final class InvoiceCorrectionLineSource
             $name = $laborEntry->laborTimeArticle->name . ($laborEntry->user !== null ? ' – ' . $laborEntry->user->displayName() : '');
             $add($lines, $name, (float) $laborEntry->item->hours, (float) $laborEntry->item->unitRatePerHour);
         }
+        // Travel costs of a tour (migration 182): one line per line of the section.
+        foreach ($detail->travelCosts->lines ?? [] as $travelLine) {
+            $name = 'Fahrtkosten: ' . ($travelLine->tripDate !== null ? $travelLine->tripDate->format('d.m.Y') . ' ' : '') . $travelLine->description . ' (km)';
+            $add($lines, $name, (float) $travelLine->kilometers, (float) $travelLine->ratePerKm);
+        }
         if ($totals->shippingAmount >= 0.005) {
             $add($lines, 'Versandkosten', 1, $totals->shippingAmount);
         }

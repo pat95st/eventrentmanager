@@ -32,6 +32,7 @@ final class VehicleSettingsController
         $command = new SaveVehicleSettings(
             $request->input('default_cost_per_km_auto', '') ?? '',
             $request->input('default_cost_per_km_trailer', '') ?? '',
+            $request->input('travel_cost_markup_percent', '') ?? '',
         );
 
         try {
@@ -41,6 +42,7 @@ final class VehicleSettingsController
             $this->render($e->errors(), [
                 'default_cost_per_km_auto' => $command->defaultCostPerKmAuto,
                 'default_cost_per_km_trailer' => $command->defaultCostPerKmTrailer,
+                'travel_cost_markup_percent' => (string) $command->travelCostMarkupPercent,
             ]);
 
             return;

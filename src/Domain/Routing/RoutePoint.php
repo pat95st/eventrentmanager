@@ -14,6 +14,7 @@ final class RoutePoint
         public readonly string $kind, // start | stop | waypoint | end
         public readonly ?string $stopId = null,
         public readonly bool $arrivalNotBilled = false, // the leg ending here is not billed
+        public readonly ?int $arrivalKmOverride = null, // kilometres of the leg ending here entered by hand
     ) {
     }
 

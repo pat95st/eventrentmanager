@@ -63,6 +63,7 @@ final class InvoiceController
         private readonly CustomerRepositoryInterface $customers,
         private readonly UserRepositoryInterface $users,
         private readonly ?\App\Application\OnlinePayment\InvoicePaymentLinkProvider $paymentLinks = null,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -548,6 +549,8 @@ final class InvoiceController
             'errors' => $errors,
             'old' => $old,
             'editingId' => $editingId,
+            // Travel costs of a tour (migration 182) are edited on their own page; the live total adds them.
+            'travelCostTotal' => $editingId !== null ? ($this->travelCosts?->findFor(\App\Domain\TravelCost\TravelCostDocumentType::Invoice, $editingId)?->total() ?? 0.0) : 0.0,
             'existingItems' => $existingItems,
             'pricingSettings' => $pricingSettings,
             'laborArticles' => $laborArticles,

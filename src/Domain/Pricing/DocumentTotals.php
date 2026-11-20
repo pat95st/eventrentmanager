@@ -42,6 +42,10 @@ namespace App\Domain\Pricing;
  *      netTotal            = subtotalAfterDiscount + laborTimeTotal + saleTotal + shippingAmount.
  *      (freeTextTotal steckt bereits in subtotalAfterDiscount, siehe Schritt 1b/2 —
  *      NICHT nochmal addieren.)
+ *   5a. travelCostTotal   = travel costs of a tour (migration 182, see
+ *      App\Domain\TravelCost\TravelCostSection) — like labor time a fixed
+ *      amount after the discount, not part of accessoryBase.
+ *      netTotal additionally contains travelCostTotal.
  *   6. taxAmount/grossTotal = wie bisher aus netTotal (Kleinunternehmer: keine Steuer).
  *
  * Bei Angeboten gibt es (anders als bei Rechnungen) KEIN eigenes
@@ -68,6 +72,7 @@ final class DocumentTotals
         public readonly float $netTotal,
         public readonly float $taxAmount,
         public readonly float $grossTotal,
+        public readonly float $travelCostTotal = 0.0,
     ) {
     }
 
@@ -90,6 +95,8 @@ final class DocumentTotals
         // Summe aller Freitext-Posten (siehe Klassendoc Punkt 4b) — wie
         // saleTotal eine optionale, standardmäßig leere Zusatzsumme.
         float $freeTextTotal = 0.0,
+        // Travel costs of a tour (migration 182): fixed amount after the discount like labor time.
+        float $travelCostTotal = 0.0,
     ): self {
         // Nutzerwunsch (Zubehörpauschale auch auf Freitext-Positionen):
         // Freitext-Posten bilden zusammen mit den Mietpreis-Positionen die
@@ -117,7 +124,7 @@ final class DocumentTotals
 
         // freeTextTotal steckt bereits in subtotalAfterDiscount (siehe
         // accessoryBase oben) — hier NICHT nochmal addieren.
-        $netTotal = $subtotalAfterDiscount + $laborTimeTotal + $saleTotal + $shippingAmount;
+        $netTotal = $subtotalAfterDiscount + $laborTimeTotal + $saleTotal + $shippingAmount + $travelCostTotal;
 
         $taxAmount = $isSmallBusiness ? 0.0 : round($netTotal * ((float) $vatRatePercent) / 100, 2);
         $grossTotal = $netTotal + $taxAmount;
@@ -135,6 +142,7 @@ final class DocumentTotals
             netTotal: $netTotal,
             taxAmount: $taxAmount,
             grossTotal: $grossTotal,
+            travelCostTotal: $travelCostTotal,
         );
     }
 }

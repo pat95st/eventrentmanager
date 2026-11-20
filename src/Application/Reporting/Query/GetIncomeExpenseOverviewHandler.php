@@ -45,6 +45,7 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
         private readonly ReceiptRepositoryInterface $receipts,
         private readonly InvoiceSettingsRepositoryInterface $invoiceSettings,
         private readonly ?\App\Domain\InvoiceCorrection\InvoiceCorrectionRepositoryInterface $corrections = null,
+        private readonly ?\App\Domain\TravelCost\TravelCostSectionRepositoryInterface $travelCosts = null,
     ) {
     }
 
@@ -139,6 +140,7 @@ final class GetIncomeExpenseOverviewHandler implements QueryHandlerInterface
             isSmallBusiness: $invoice->isSmallBusiness ?? $invoiceSettings->isSmallBusiness,
             vatRatePercent: $invoice->vatRatePercent ?? $invoiceSettings->vatRatePercent,
             freeTextTotal: $freeTextTotal,
+            travelCostTotal: $this->travelCosts?->findFor(\App\Domain\TravelCost\TravelCostDocumentType::Invoice, $invoice->id)?->total() ?? 0.0,
         );
 
         return $totals->grossTotal;

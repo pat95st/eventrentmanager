@@ -195,12 +195,25 @@ final class InvoicePdfGenerator
             $y = $this->drawTableSection($writer, $y, $pageWidth, 'Arbeitszeit', ['Leistung', 'Menge', 'Einzelpreis', 'Summe'], $laborRows, $newPage, $pdfDesignSettings);
         }
 
+        // Travel costs of a tour (migration 182) as their own table after labor time.
+        $travelCostRows = $detail->travelCosts !== null
+            ? TravelCostPdfRows::build($detail->travelCosts, $this->columnLayout()['article']['width'], self::TABLE_FONT_SIZE, fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize), fn (float $amount): string => $this->formatAmount($amount))
+            : [];
+        if ($travelCostRows !== []) {
+            $y = $this->drawTableSection($writer, $y, $pageWidth, TravelCostPdfRows::TITLE, TravelCostPdfRows::LABELS, $travelCostRows, $newPage, $pdfDesignSettings);
+            if (count($travelCostRows) > 1) {
+                $y -= 12;
+                $this->drawSummaryLine($writer, $pageWidth, $y, 'Summe Fahrtkosten:', $this->formatAmount($totals->travelCostTotal));
+                $y -= 4;
+            }
+        }
+
         // Reservierter Platz für den restlichen Summenblock (Versandkosten,
         // Netto/USt/Brutto bzw. Kleinunternehmer-Hinweis).
         if ($y - 80 < self::MARGIN + 90) {
             $y = $newPage();
         }
-        if ($laborRows !== []) {
+        if ($laborRows !== [] || $travelCostRows !== []) {
             $y -= 6;
             $writer->line(self::MARGIN, $y, $pageWidth - self::MARGIN, $y, 1.0, $pdfDesignSettings?->accentColorLinePdfString() ?? '0.4 0.4 0.4');
             $y -= 20;

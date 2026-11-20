@@ -354,6 +354,37 @@ schemas:
         enum:
         - hour
         - day
+  TravelCostItemRow:
+    type: object
+    description: Travel costs of a tour (read only; taken over and edited in the web interface, "Fahrtkosten").
+    properties:
+      type:
+        type: string
+        enum:
+        - travel_cost
+      mode:
+        type: string
+        description: '`summary` (one line with all kilometres) or `itemized` (one line per trip).'
+        enum:
+        - summary
+        - itemized
+      trip_date:
+        type: string
+        format: date
+        nullable: true
+      description:
+        type: string
+      detail:
+        type: string
+        nullable: true
+        description: Second line, e.g. the route of the tour.
+      kilometers:
+        type: string
+      rate_per_km:
+        type: string
+        description: Price per km in EUR.
+      line_total:
+        type: string
   SaleItemRow:
     type: object
     description: Sale item (offers only).
@@ -657,6 +688,11 @@ schemas:
           type: array
           items:
             $ref: '#/schemas/SectionTextRow'
+        travel_cost_items:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/schemas/TravelCostItemRow'
   OrderConfirmationResource:
     allOf:
     - $ref: generated.yaml#/OrderConfirmation
@@ -690,6 +726,11 @@ schemas:
           type: array
           items:
             $ref: '#/schemas/SectionTextRow'
+        travel_cost_items:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/schemas/TravelCostItemRow'
   InvoiceResource:
     allOf:
     - $ref: generated.yaml#/Invoice
@@ -727,6 +768,11 @@ schemas:
           type: array
           items:
             $ref: '#/schemas/SectionTextRow'
+        travel_cost_items:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/schemas/TravelCostItemRow'
   InvoiceCorrectionResource:
     allOf:
     - $ref: generated.yaml#/InvoiceCorrection

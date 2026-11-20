@@ -663,6 +663,8 @@ Rental:
     - "series_customized"
     - "is_tour"
     - "route_profile"
+    - "travel_costs_enabled"
+    - "travel_costs_mode"
   properties:
     id:
       type: "string"
@@ -726,6 +728,10 @@ Rental:
     is_tour:
       type: "boolean"
     route_profile:
+      type: "string"
+    travel_costs_enabled:
+      type: "boolean"
+    travel_costs_mode:
       type: "string"
 RentalItem:
   type: "object"
@@ -1325,6 +1331,7 @@ DocumentTotals:
     - "net_total"
     - "tax_amount"
     - "gross_total"
+    - "travel_cost_total"
   properties:
     rental_net_total:
       type: "number"
@@ -1349,6 +1356,8 @@ DocumentTotals:
     tax_amount:
       type: "number"
     gross_total:
+      type: "number"
+    travel_cost_total:
       type: "number"
 Receipt:
   type: "object"

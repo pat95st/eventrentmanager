@@ -3,7 +3,8 @@
  * Route of a tour (migration 178). The page appears at once; the route
  * itself (geocoding, OpenRouteService) is loaded from route.json in the
  * background while spinners are shown: route points, map, legs, timing
- * warnings and Google Maps links.
+ * warnings and Google Maps links, and the travel costs of the tour
+ * (migration 182).
  *
  * @var \App\Domain\Rental\Rental $rental
  * @var \App\Domain\Routing\RouteProfile $profile
@@ -108,6 +109,27 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
     </div>
 </div>
 
+<div id="fahrtkosten" class="<?= $card ?> mb-6 space-y-3">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300">Fahrtkosten</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+                Abgerechnete Kilometer × Kilometerkosten der geplanten Fahrzeuge (Aufschlag unter <a href="/einstellungen/fahrzeuge" class="underline">Einstellungen › Fahrzeuge</a>).
+                Rechnungen aus der Veranstaltung übernehmen die Fahrtkosten automatisch, in Angeboten und Auftragsbestätigungen per „Fahrtkosten aus Tour übernehmen“.
+            </p>
+        </div>
+        <form method="post" action="/veranstaltungen/<?= e($rental->id) ?>/tour/route/fahrtkosten" class="flex flex-wrap items-center gap-3 text-sm">
+            <?= $csrf ?>
+            <label class="flex items-center gap-2"><input type="checkbox" name="enabled" value="1"<?= $rental->travelCostsEnabled ? ' checked' : '' ?>> Fahrtkosten abrechnen</label>
+            <?php foreach (\App\Domain\TravelCost\TravelCostMode::cases() as $mode): ?>
+                <label class="flex items-center gap-1"><input type="radio" name="mode" value="<?= e($mode->value) ?>"<?= $rental->travelCostsMode === $mode->value ? ' checked' : '' ?>> <?= e($mode->label()) ?></label>
+            <?php endforeach; ?>
+            <button type="submit" class="<?= $secondaryButton ?>">Speichern</button>
+        </form>
+    </div>
+    <div data-travel-costs><p class="flex items-center gap-2 text-sm text-slate-500"><?= $spinner ?> wird geladen …</p></div>
+</div>
+
 <script src="/assets/vendor/leaflet/leaflet.js"></script>
 <script>
 (() => {
@@ -152,14 +174,18 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
             return;
         }
         const billable = data.billableDistanceM ?? data.totalDistanceM;
-        $('[data-route-legs]').innerHTML = '<table class="w-full text-sm"><thead class="text-left text-xs text-slate-500"><tr><th class="py-1 pr-2 font-medium">Von</th><th class="py-1 pr-2 font-medium">Nach</th><th class="py-1 pr-2 text-right font-medium">Strecke</th><th class="py-1 pr-2 text-right font-medium">Fahrzeit</th><th class="py-1 text-center font-medium" title="Strecke in die abzurechnenden Kilometer einrechnen">Abrechnen</th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800">'
-            + data.legs.map((l, i) => '<tr' + (l.billed ? '' : ' class="text-slate-400 dark:text-slate-500"') + '><td class="py-1 pr-2">' + esc(l.from) + '</td><td class="py-1 pr-2">' + esc(l.to) + '</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums' + (l.billed ? '' : ' line-through') + '">' + km(l.distanceM) + (data.straightLine ? ' <span class="text-xs text-slate-400">(Luftlinie)</span>' : '') + '</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + time(l.durationS) + '</td>'
+        $('[data-route-legs]').innerHTML = '<table class="w-full text-sm"><thead class="text-left text-xs text-slate-500"><tr><th class="py-1 pr-2 font-medium">Von</th><th class="py-1 pr-2 font-medium">Nach</th><th class="py-1 pr-2 text-right font-medium">Strecke</th><th class="py-1 pr-2 text-right font-medium" title="Tatsächlich gefahrene Kilometer eintragen, wenn sie von der berechneten Strecke abweichen (z. B. bei Luftlinie oder Umwegen)">km manuell</th><th class="py-1 pr-2 text-right font-medium">Fahrzeit</th><th class="py-1 text-center font-medium" title="Strecke in die abzurechnenden Kilometer einrechnen">Abrechnen</th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800">'
+            + data.legs.map((l, i) => '<tr' + (l.billed ? '' : ' class="text-slate-400 dark:text-slate-500"') + '><td class="py-1 pr-2">' + esc(l.from) + '</td><td class="py-1 pr-2">' + esc(l.to) + '</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums' + (l.billed ? '' : ' line-through') + '">' + km(l.distanceM) + (data.straightLine ? ' <span class="text-xs text-slate-400">(Luftlinie)</span>' : '') + '</td>'
+                + '<td class="py-1 pr-2 text-right">' + (l.stopId
+                    ? '<input type="text" inputmode="numeric" data-leg-km="' + i + '" value="' + (l.kmOverride ?? '') + '" placeholder="' + Math.round(l.distanceM / 1000) + '" class="w-20 rounded border border-slate-300 px-1.5 py-0.5 text-right text-sm tabular-nums dark:border-slate-700 dark:bg-slate-900" aria-label="' + esc('Kilometer ' + l.from + ' → ' + l.to) + '">'
+                    : '<span class="text-xs text-slate-400" title="Für die Fahrt zum Rückgabelager ein eigenes Ziel festlegen, um die Kilometer zu ändern.">–</span>') + '</td>'
+                + '<td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + time(l.durationS) + '</td>'
                 + '<td class="py-1 text-center">' + (l.stopId
                     ? '<input type="checkbox" data-leg-billing="' + i + '"' + (l.billed ? ' checked' : '') + ' aria-label="' + esc('Fahrt ' + l.from + ' → ' + l.to + ' abrechnen') + '">'
                     : '<input type="checkbox" checked disabled title="Die Fahrt zum Rückgabelager wird immer abgerechnet. Für eine Ausnahme ein eigenes Ziel festlegen.">') + '</td></tr>').join('')
-            + '</tbody><tfoot class="border-t border-slate-200 text-sm font-medium dark:border-slate-700"><tr><td class="py-1 pr-2" colspan="2">Gesamt</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(data.totalDistanceM) + '</td><td colspan="2"></td></tr>'
-            + '<tr><td class="py-1 pr-2" colspan="2">Abzurechnen</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(billable) + '</td><td colspan="2"></td></tr></tfoot></table>'
-            + '<p class="mt-2 text-xs text-slate-500">Fährt z. B. ein Techniker ohne Material zwischen zwei Stops anderweitig mit, den Haken bei dieser Fahrt entfernen – sie zählt dann nicht zu den abzurechnenden Kilometern, bleibt aber für Fahrzeiten und Karte erhalten.</p>';
+            + '</tbody><tfoot class="border-t border-slate-200 text-sm font-medium dark:border-slate-700"><tr><td class="py-1 pr-2" colspan="2">Gesamt</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(data.totalDistanceM) + '</td><td colspan="3"></td></tr>'
+            + '<tr><td class="py-1 pr-2" colspan="2">Abzurechnen</td><td class="whitespace-nowrap py-1 pr-2 text-right tabular-nums">' + km(billable) + '</td><td colspan="3"></td></tr></tfoot></table>'
+            + '<p class="mt-2 text-xs text-slate-500">Fährt z. B. ein Techniker ohne Material zwischen zwei Stops anderweitig mit, den Haken bei dieser Fahrt entfernen – sie zählt dann nicht zu den abzurechnenden Kilometern, bleibt aber für Fahrzeiten und Karte erhalten. Weichen die gefahrenen Kilometer ab, sie unter „km manuell“ eintragen (leer = berechnete Strecke).</p>';
         $('[data-route-legs]').querySelectorAll('[data-leg-billing]').forEach((box) => box.addEventListener('change', () => {
             const leg = data.legs[Number(box.dataset.legBilling)];
             box.disabled = true;
@@ -174,9 +200,7 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
                 .then((json) => {
                     leg.billed = json.billed;
                     legLines[Number(box.dataset.legBilling)]?.setStyle({ color: legColor(leg) });
-                    data.billableDistanceM = data.legs.reduce((sum, l) => sum + (l.billed ? l.distanceM : 0), 0);
-                    summarize(data);
-                    renderLegs(data);
+                    reload();
                 })
                 .catch((err) => {
                     box.checked = !box.checked;
@@ -184,7 +208,54 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
                     alert('Die Änderung konnte nicht gespeichert werden: ' + err.message);
                 });
         }));
+        $('[data-route-legs]').querySelectorAll('[data-leg-km]').forEach((input) => input.addEventListener('change', () => {
+            const leg = data.legs[Number(input.dataset.legKm)];
+            input.disabled = true;
+            fetch('/tour-stops/' + encodeURIComponent(leg.stopId) + '/km', {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'X-CSRF-Token': window.CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                body: new URLSearchParams({ km: input.value.trim() }),
+            })
+                .then((r) => r.json().then((json) => { if (!r.ok) throw new Error(json.error || 'HTTP ' + r.status); return json; }))
+                .then(() => reload())
+                .catch((err) => {
+                    input.disabled = false;
+                    input.value = leg.kmOverride ?? '';
+                    alert('Die Kilometer konnten nicht gespeichert werden: ' + err.message);
+                });
+        }));
     };
+
+    const euro = (v) => Number(v).toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+    const euroRate = (v) => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €/km';
+
+    // Travel costs of the tour (migration 182): trips, vehicles, price per km and total.
+    const renderTravelCosts = (tc) => {
+        const box = $('[data-travel-costs]');
+        if (!tc) { box.innerHTML = ''; return; }
+        if (!tc.enabled) {
+            box.innerHTML = '<p class="text-sm text-slate-500">Für diese Tour werden keine Fahrtkosten abgerechnet.</p>';
+            return;
+        }
+        const hints = tc.hints.length ? '<ul class="space-y-1 text-xs text-amber-700 dark:text-amber-400">' + tc.hints.map((h) => '<li>⚠ ' + esc(h) + '</li>').join('') + '</ul>' : '';
+        const vehicles = tc.vehicles.length
+            ? '<p class="text-sm">' + tc.vehicles.map((v) => esc(v.name) + ' ' + euroRate(v.costPerKm) + (v.isDefault ? ' <span class="text-xs text-slate-400">(Standard)</span>' : '')).join(' + ')
+                + (Number(tc.markupPercent) !== 0 ? ' + ' + Number(tc.markupPercent).toLocaleString('de-DE') + ' % Aufschlag' : '')
+                + ' = <strong>' + euroRate(tc.ratePerKm) + '</strong></p>'
+            : '';
+        const trips = tc.trips.length
+            ? '<table class="w-full text-sm"><thead class="text-left text-xs text-slate-500"><tr><th class="py-1 pr-2 font-medium">Datum</th><th class="py-1 pr-2 font-medium">Fahrt</th><th class="py-1 pr-2 text-right font-medium">km</th><th class="py-1 text-right font-medium">Betrag</th></tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800">'
+                + tc.trips.map((t) => '<tr><td class="whitespace-nowrap py-1 pr-2">' + esc(t.date ?? '–') + '</td><td class="py-1 pr-2">' + esc(t.from) + ' → ' + esc(t.to) + '</td><td class="py-1 pr-2 text-right tabular-nums">' + t.km.toLocaleString('de-DE') + '</td><td class="py-1 text-right tabular-nums">' + (tc.vehicles.length ? euro(Math.round(t.km * Number(tc.ratePerKm) * 100) / 100) : '–') + '</td></tr>').join('')
+                + '</tbody><tfoot class="border-t border-slate-200 font-medium dark:border-slate-700"><tr><td class="py-1 pr-2" colspan="2">Summe Fahrtkosten</td><td class="py-1 pr-2 text-right tabular-nums">' + tc.totalKm.toLocaleString('de-DE') + '</td><td class="py-1 text-right tabular-nums">' + (tc.vehicles.length ? euro(tc.total) : '–') + '</td></tr></tfoot></table>'
+            : '';
+        box.innerHTML = hints + vehicles + trips;
+    };
+
+    const reload = () => fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then((data) => { summarize(data); renderLegs(data); renderTravelCosts(data.travelCosts); })
+        .catch((err) => alert('Die Route konnte nicht neu geladen werden: ' + err.message));
 
     const render = (data) => {
         // Summary and Google Maps links
@@ -213,8 +284,9 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
                 + '</span></li>';
         }).join('');
 
-        // Legs
+        // Legs and travel costs
         renderLegs(data);
+        renderTravelCosts(data.travelCosts);
 
         // Map
         if (!map) return;
@@ -244,6 +316,7 @@ $spinner = '<span class="loading-spinner" aria-hidden="true"></span>';
         .catch((err) => {
             $('[data-route-entries]').innerHTML = '<li class="text-sm text-red-600">Die Route konnte nicht geladen werden (' + esc(err.message) + ').</li>';
             $('[data-route-legs]').innerHTML = '';
+            $('[data-travel-costs]').innerHTML = '';
         })
         .finally(() => { $('[data-route-loading]').remove(); });
 })();

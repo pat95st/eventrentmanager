@@ -23,7 +23,7 @@ final class MariadbTourRepository implements TourRepositoryInterface
     private const STOP_COLUMNS = [
         'id', 'rental_id', 'kind', 'venue_id', 'location_text', 'setup_at', 'event_start_at', 'event_end_at', 'teardown_end_at',
         'contact_name', 'contact_phone', 'note', 'after_stop_id', 'purpose', 'address_type', 'warehouse_id', 'saved_address_id',
-        'label', 'street', 'postal_code', 'city', 'country', 'latitude', 'longitude', 'arrive_at', 'depart_at', 'arrival_not_billed',
+        'label', 'street', 'postal_code', 'city', 'country', 'latitude', 'longitude', 'arrive_at', 'depart_at', 'arrival_not_billed', 'arrival_km_override',
     ];
 
     public function __construct(private readonly PDO $pdo)
@@ -62,6 +62,7 @@ final class MariadbTourRepository implements TourRepositoryInterface
             'latitude' => $stop->latitude, 'longitude' => $stop->longitude,
             'arrive_at' => $dt($stop->arriveAt), 'depart_at' => $dt($stop->departAt),
             'arrival_not_billed' => $stop->arrivalNotBilled ? 1 : 0,
+            'arrival_km_override' => $stop->arrivalKmOverride,
         ];
         $updates = implode(', ', array_map(static fn (string $c) => "{$c} = VALUES({$c})", array_slice(self::STOP_COLUMNS, 2)));
         $sql = 'INSERT INTO rental_tour_stops (' . implode(', ', self::STOP_COLUMNS) . ') VALUES (:' . implode(', :', self::STOP_COLUMNS) . ')'
@@ -243,6 +244,7 @@ final class MariadbTourRepository implements TourRepositoryInterface
             departAt: $dt($r['depart_at']),
             createdAt: $dt($r['created_at']),
             arrivalNotBilled: (bool) ($r['arrival_not_billed'] ?? false),
+            arrivalKmOverride: isset($r['arrival_km_override']) ? (int) $r['arrival_km_override'] : null,
         );
     }
 

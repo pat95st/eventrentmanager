@@ -35,6 +35,19 @@ final class SaveVehicleSettingsHandler implements CommandHandlerInterface
             $errors,
         );
 
+        $markup = null;
+        if ($command->travelCostMarkupPercent !== null) {
+            $markup = $this->parseOptionalAmount(
+                trim(str_replace('%', '', $command->travelCostMarkupPercent)) === '' ? '0' : str_replace('%', '', $command->travelCostMarkupPercent),
+                'travelCostMarkupPercent',
+                'Bitte den Aufschlag als Prozentwert zwischen 0 und 999 angeben (z. B. 10).',
+                $errors,
+            );
+            if ($markup !== null && (float) $markup > 999.99) {
+                $errors['travelCostMarkupPercent'] = 'Bitte den Aufschlag als Prozentwert zwischen 0 und 999 angeben (z. B. 10).';
+            }
+        }
+
         if ($errors !== [] || $auto === null || $trailer === null) {
             throw new ValidationException($errors);
         }
@@ -42,6 +55,9 @@ final class SaveVehicleSettingsHandler implements CommandHandlerInterface
         $settings = $this->settings->get();
         $settings->defaultCostPerKmAuto = $auto;
         $settings->defaultCostPerKmTrailer = $trailer;
+        if ($markup !== null) {
+            $settings->travelCostMarkupPercent = $markup;
+        }
         $this->settings->save($settings);
 
         return null;

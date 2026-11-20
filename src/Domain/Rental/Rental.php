@@ -60,6 +60,10 @@ final class Rental
         public bool $isTour = false,
         // Migration 178: 'car', 'hgv' or 'hgv_vehicles' (see App\Domain\Routing\RouteProfile).
         public string $routeProfile = 'car',
+        // Migration 182: travel costs of a tour are billed (default) and how
+        // they appear on documents: 'summary' or 'itemized' (see App\Domain\TravelCost\TravelCostMode).
+        public bool $travelCostsEnabled = true,
+        public string $travelCostsMode = 'summary',
     ) {
     }
 

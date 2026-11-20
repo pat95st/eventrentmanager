@@ -195,7 +195,7 @@ final class XRechnungGenerator
         // TaxInclusiveAmount, AllowanceTotalAmount, ChargeTotalAmount,
         // PayableAmount.
         $monetaryTotal = $this->appendEl($dom, $root, $cac, 'cac:LegalMonetaryTotal');
-        $this->append($dom, $monetaryTotal, $cbc, 'cbc:LineExtensionAmount', $this->money($totals->rentalNetTotal + $totals->laborTimeTotal), ['currencyID' => 'EUR']); // BT-106 (Summe ALLER Zeilen — Mietpositionen + Arbeitszeit —, VOR Zubehörpauschale/Kombirabatt)
+        $this->append($dom, $monetaryTotal, $cbc, 'cbc:LineExtensionAmount', $this->money($totals->rentalNetTotal + $totals->laborTimeTotal + $totals->travelCostTotal), ['currencyID' => 'EUR']); // BT-106 (Summe ALLER Zeilen — Mietpositionen + Arbeitszeit + Fahrtkosten —, VOR Zubehörpauschale/Kombirabatt)
         $this->append($dom, $monetaryTotal, $cbc, 'cbc:TaxExclusiveAmount', $this->money($netTotal), ['currencyID' => 'EUR']); // BT-109
         $this->append($dom, $monetaryTotal, $cbc, 'cbc:TaxInclusiveAmount', $this->money($grossTotal), ['currencyID' => 'EUR']); // BT-112
         if ($totals->discountAmount > 0.0) {
@@ -248,6 +248,31 @@ final class XRechnungGenerator
 
             $price = $this->appendEl($dom, $line, $cac, 'cac:Price');
             $this->append($dom, $price, $cbc, 'cbc:PriceAmount', $this->money((float) $entry->item->unitRatePerHour), ['currencyID' => 'EUR']); // BT-146
+
+            $lineIndex++;
+        }
+
+        // Travel costs of a tour (migration 182): one line per line of the
+        // section, quantity in kilometres (KMT, UN/CEFACT Rec. 20).
+        foreach ($detail->travelCosts->lines ?? [] as $travelLine) {
+            $line = $this->appendEl($dom, $root, $cac, 'cac:InvoiceLine');
+            $this->append($dom, $line, $cbc, 'cbc:ID', (string) $lineIndex); // BT-126
+            $this->append($dom, $line, $cbc, 'cbc:InvoicedQuantity', $travelLine->kilometers, ['unitCode' => 'KMT']); // BT-129
+            $this->append($dom, $line, $cbc, 'cbc:LineExtensionAmount', $this->money($travelLine->lineTotal()), ['currencyID' => 'EUR']); // BT-131
+
+            $item = $this->appendEl($dom, $line, $cac, 'cac:Item');
+            if ($travelLine->detail !== null && $travelLine->detail !== '') {
+                $this->append($dom, $item, $cbc, 'cbc:Description', $travelLine->detail); // BT-154
+            }
+            $this->append($dom, $item, $cbc, 'cbc:Name', 'Fahrtkosten: ' . ($travelLine->tripDate !== null ? $travelLine->tripDate->format('d.m.Y') . ' ' : '') . $travelLine->description); // BT-153
+            $classifiedTaxCategory = $this->appendEl($dom, $item, $cac, 'cac:ClassifiedTaxCategory');
+            $this->append($dom, $classifiedTaxCategory, $cbc, 'cbc:ID', $taxCategoryId);
+            $this->append($dom, $classifiedTaxCategory, $cbc, 'cbc:Percent', $taxPercent);
+            $lineTaxScheme = $this->appendEl($dom, $classifiedTaxCategory, $cac, 'cac:TaxScheme');
+            $this->append($dom, $lineTaxScheme, $cbc, 'cbc:ID', 'VAT');
+
+            $price = $this->appendEl($dom, $line, $cac, 'cac:Price');
+            $this->append($dom, $price, $cbc, 'cbc:PriceAmount', $this->money((float) $travelLine->ratePerKm), ['currencyID' => 'EUR']); // BT-146
 
             $lineIndex++;
         }

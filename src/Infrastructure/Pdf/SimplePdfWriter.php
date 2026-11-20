@@ -661,6 +661,9 @@ final class SimplePdfWriter
     /** Text in WinAnsiEncoding (cp1252), wie er im PDF steht. */
     private function toWinAnsi(string $text): string
     {
+        // Arrows (e.g. "Hamburg → Kassel" in travel costs) are not part of
+        // cp1252 and would print as "?": show them as "–".
+        $text = str_replace(['→', '⇒'], '–', $text);
         $converted = @mb_convert_encoding($text, 'Windows-1252', 'UTF-8');
 
         return str_replace(["\r", "\n"], ['', ' '], $converted === false ? $text : $converted);

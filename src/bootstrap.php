@@ -915,9 +915,10 @@ $commandBus->register(\App\Application\Supplier\Command\CreateSupplier::class, n
 $commandBus->register(\App\Application\Supplier\Command\UpdateSupplier::class, new UpdateSupplierHandler($supplierRepository));
 $commandBus->register(\App\Application\Supplier\Command\DeleteSupplier::class, new DeleteSupplierHandler($supplierRepository));
 
-$commandBus->register(\App\Application\Vehicle\Command\CreateVehicle::class, new \App\Application\Vehicle\Command\CreateVehicleHandler($vehicleRepository));
-$commandBus->register(\App\Application\Vehicle\Command\UpdateVehicle::class, new \App\Application\Vehicle\Command\UpdateVehicleHandler($vehicleRepository));
+$commandBus->register(\App\Application\Vehicle\Command\CreateVehicle::class, new \App\Application\Vehicle\Command\CreateVehicleHandler($vehicleRepository, $userRepository));
+$commandBus->register(\App\Application\Vehicle\Command\UpdateVehicle::class, new \App\Application\Vehicle\Command\UpdateVehicleHandler($vehicleRepository, $userRepository));
 $commandBus->register(\App\Application\Vehicle\Command\DeleteVehicle::class, new \App\Application\Vehicle\Command\DeleteVehicleHandler($vehicleRepository));
+$commandBus->register(\App\Application\Vehicle\Command\SaveVehicleLogbookSettings::class, new \App\Application\Vehicle\Command\SaveVehicleLogbookSettingsHandler($vehicleRepository));
 $commandBus->register(\App\Application\Vehicle\Command\SaveVehicleSettings::class, new \App\Application\Vehicle\Command\SaveVehicleSettingsHandler($vehicleSettingsRepository));
 $commandBus->register(\App\Application\Vehicle\Command\AssignRentalVehicleLoad::class, new \App\Application\Vehicle\Command\AssignRentalVehicleLoadHandler($rentalIssuedItemRepository, $vehicleRepository, $rentalVehicleLoadRepository));
 $commandBus->register(\App\Application\Vehicle\Command\RemoveRentalVehicleLoad::class, new \App\Application\Vehicle\Command\RemoveRentalVehicleLoadHandler($rentalIssuedItemRepository, $rentalVehicleLoadRepository));
@@ -1813,7 +1814,7 @@ $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
 $salesController = new \App\Infrastructure\Http\Controllers\SalesController($queryBus);
-$vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus, $vehicleSettingsRepository);
+$vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus, $vehicleSettingsRepository, $userRepository);
 $vehicleSettingsController = new \App\Infrastructure\Http\Controllers\VehicleSettingsController($commandBus, $vehicleSettingsRepository);
 $venueController = new VenueController($commandBus, $queryBus, $fileStorage);
 $warehouseController = new WarehouseController($commandBus, $queryBus);
@@ -2388,12 +2389,14 @@ $router->post('/bestellungen/{id}/storniert', $auth->guard(Permission::Artikelve
 $router->post('/bestellungen/{id}/wareneingang', $auth->guard(Permission::Artikelverwaltung, [$purchaseOrderController, 'receiveItem']));
 $router->get('/verkaeufe', $auth->guard(Permission::Artikelverwaltung, [$salesController, 'index']));
 
-$router->get('/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'index']));
+$router->get('/fahrzeuge', $auth->guard([Permission::AusgabeRuecknahme, Permission::FahrtenbuchVerwalten], [$vehicleController, 'index']));
 $router->get('/fahrzeuge/neu', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'create']));
 $router->post('/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'store']));
 $router->get('/fahrzeuge/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'edit']));
 $router->post('/fahrzeuge/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'update']));
 $router->post('/fahrzeuge/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'destroy']));
+$router->get('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'logbook']));
+$router->post('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'saveLogbook']));
 
 // Gutscheine: Verwaltung (Anlegen/Bearbeiten/Löschen) ist Administration
 // vorbehalten (finanziell sensibel), die Einlösung einem Gutscheins bei

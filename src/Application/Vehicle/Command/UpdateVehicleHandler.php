@@ -8,6 +8,7 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Vehicle\VehicleRepositoryInterface;
 use DateTimeImmutable;
 
@@ -15,8 +16,10 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
 {
     use ValidatesVehicleInput;
 
-    public function __construct(private readonly VehicleRepositoryInterface $vehicles)
-    {
+    public function __construct(
+        private readonly VehicleRepositoryInterface $vehicles,
+        private readonly ?UserRepositoryInterface $users = null,
+    ) {
     }
 
     public function handle(CommandInterface $command): mixed
@@ -51,6 +54,7 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
             $command->passengerSeats,
             $command->costPerKm,
         );
+        $ownerUserId = $this->validatePrivateOwner($command->isPrivate, $command->ownerUserId, $vehicle->ownerUserId, $this->users, $errors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -77,6 +81,8 @@ final class UpdateVehicleHandler implements CommandHandlerInterface
         $vehicle->grossWeightKg = $data['grossWeightKg'];
         $vehicle->passengerSeats = $data['passengerSeats'];
         $vehicle->costPerKm = $data['costPerKm'];
+        $vehicle->isPrivate = $command->isPrivate;
+        $vehicle->ownerUserId = $ownerUserId;
         $vehicle->updatedAt = new DateTimeImmutable();
 
         $this->vehicles->save($vehicle);

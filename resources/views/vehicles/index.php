@@ -14,9 +14,11 @@ use function App\Infrastructure\Http\e;
 
 <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
     <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-100">Fahrzeuge</h1>
+    <?php if ($canEditVehicles ?? true): ?>
     <a href="/fahrzeuge/neu" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
         + Neues Fahrzeug
     </a>
+    <?php endif; ?>
 </div>
 
 <form method="get" action="/fahrzeuge" id="vehicles-filter-form" class="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">

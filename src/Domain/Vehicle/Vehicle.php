@@ -27,6 +27,9 @@ final class Vehicle
     /** Maximum number of passenger seats (excluding the driver) of a car. */
     public const MAX_PASSENGER_SEATS = 8;
 
+    /** Upper limit of odometer readings and tolerances in km. */
+    public const MAX_ODOMETER_KM = 9999999;
+
     public function __construct(
         public readonly string $id,
         public VehicleCategory $category,
@@ -57,7 +60,26 @@ final class Vehicle
         // Migration 181: individual cost per km in EUR; null = default of the
         // category from VehicleSettings.
         public ?string $costPerKm = null,
+        // Migration 183: private vehicle of a user (ownerUserId is required
+        // while isPrivate, see ValidatesVehicleInput).
+        public bool $isPrivate = false,
+        public ?string $ownerUserId = null,
+        // Migration 183: logbook settings, maintained by "Fahrtenbuch verwalten"
+        // (SaveVehicleLogbookSettingsHandler), not by the vehicle form.
+        public bool $logbookQrEnabled = false,
+        public bool $logbookAnonymousAllowed = false,
+        public bool $logbookAnonymousPrivateAllowed = false,
+        public bool $logbookAnonymousRequiresApproval = false,
+        public bool $logbookOdometerCheck = false,
+        public int $logbookOdometerToleranceKm = 0,
+        public ?int $logbookOdometerInitialKm = null,
     ) {
+    }
+
+    /** Is $userId the owner of this private vehicle? */
+    public function isOwnedBy(?string $userId): bool
+    {
+        return $this->isPrivate && $userId !== null && $this->ownerUserId === $userId;
     }
 
     /** Cost per km that applies to this vehicle: its own value or the default of its category. */

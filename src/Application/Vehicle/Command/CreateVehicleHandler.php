@@ -8,6 +8,7 @@ use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
 use App\Domain\Exception\ValidationException;
 use App\Domain\Vehicle\Vehicle;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Vehicle\VehicleRepositoryInterface;
 use App\Shared\Uuid;
 use DateTimeImmutable;
@@ -16,8 +17,10 @@ final class CreateVehicleHandler implements CommandHandlerInterface
 {
     use ValidatesVehicleInput;
 
-    public function __construct(private readonly VehicleRepositoryInterface $vehicles)
-    {
+    public function __construct(
+        private readonly VehicleRepositoryInterface $vehicles,
+        private readonly ?UserRepositoryInterface $users = null,
+    ) {
     }
 
     public function handle(CommandInterface $command): string
@@ -47,6 +50,7 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             $command->passengerSeats,
             $command->costPerKm,
         );
+        $ownerUserId = $this->validatePrivateOwner($command->isPrivate, $command->ownerUserId, null, $this->users, $errors);
 
         if ($errors !== []) {
             throw new ValidationException($errors);
@@ -78,6 +82,8 @@ final class CreateVehicleHandler implements CommandHandlerInterface
             grossWeightKg: $data['grossWeightKg'],
             passengerSeats: $data['passengerSeats'],
             costPerKm: $data['costPerKm'],
+            isPrivate: $command->isPrivate,
+            ownerUserId: $ownerUserId,
         );
 
         $this->vehicles->save($vehicle);

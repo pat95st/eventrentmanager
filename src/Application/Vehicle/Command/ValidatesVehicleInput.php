@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Vehicle\Command;
 
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Vehicle\Vehicle;
 use App\Domain\Vehicle\VehicleCategory;
 
@@ -174,6 +175,37 @@ trait ValidatesVehicleInput
             'passengerSeats' => $category === VehicleCategory::Auto ? $seats : null,
             'costPerKm' => $costPerKm,
         ]];
+    }
+
+    /**
+     * Private vehicle (migration 183): the owner is required while the flag
+     * is set and must be an existing user; a newly chosen owner must be
+     * active (an inactive owner that is already assigned may stay). Without
+     * the flag the owner is dropped.
+     *
+     * @param array<string, string> $errors
+     */
+    private function validatePrivateOwner(bool $isPrivate, ?string $ownerUserId, ?string $currentOwnerUserId, ?UserRepositoryInterface $users, array &$errors): ?string
+    {
+        $ownerUserId = $ownerUserId !== null ? trim($ownerUserId) : null;
+        if (!$isPrivate) {
+            return null;
+        }
+        if ($ownerUserId === null || $ownerUserId === '') {
+            $errors['ownerUserId'] = 'Bitte den Benutzer angeben, dem das Privatfahrzeug gehört.';
+
+            return null;
+        }
+        if ($users !== null) {
+            $owner = $users->findById($ownerUserId);
+            if ($owner === null || (!$owner->isActive && $ownerUserId !== $currentOwnerUserId)) {
+                $errors['ownerUserId'] = 'Bitte einen aktiven Benutzer als Eigentümer wählen.';
+
+                return null;
+            }
+        }
+
+        return $ownerUserId;
     }
 
     /** @param array<string, string> $errors */

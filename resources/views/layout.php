@@ -131,6 +131,7 @@ $activeLocale = Locale::get();
 $canArticles = $currentUser?->has(Permission::Artikelverwaltung) ?? false;
 $canCustomers = $currentUser?->has(Permission::Kundenverwaltung) ?? false;
 $canRentals = $currentUser?->has(Permission::AusgabeRuecknahme) ?? false;
+$canVehicles = $canRentals || ($currentUser?->has(Permission::FahrtenbuchVerwalten) ?? false);
 $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
 // Eigener Menüpunkt "Elektroprüfung" für Benutzer mit diesem Recht, aber ohne
 // Artikelverwaltung (sonst steht er im Menü "Artikel").
@@ -576,7 +577,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         </div>
         <?php endif; ?>
 
-        <?php if ($canRentals): ?>
+        <?php if ($canVehicles): ?>
         <a
           data-tour="nav-vehicles"
           href="/fahrzeuge"
@@ -872,7 +873,7 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
       </div>
       <?php endif; ?>
 
-      <?php if ($canRentals): ?>
+      <?php if ($canVehicles): ?>
       <a
         href="/fahrzeuge"
         class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'vehicles' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"

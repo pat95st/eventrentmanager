@@ -48,6 +48,11 @@ final class SaveVehicleSettingsHandler implements CommandHandlerInterface
             }
         }
 
+        $note = $command->travelCostEstimateNote !== null ? trim($command->travelCostEstimateNote) : null;
+        if ($note !== null && mb_strlen($note) > 1000) {
+            $errors['travelCostEstimateNote'] = 'Der Hinweistext darf höchstens 1000 Zeichen lang sein.';
+        }
+
         if ($errors !== [] || $auto === null || $trailer === null) {
             throw new ValidationException($errors);
         }
@@ -57,6 +62,9 @@ final class SaveVehicleSettingsHandler implements CommandHandlerInterface
         $settings->defaultCostPerKmTrailer = $trailer;
         if ($markup !== null) {
             $settings->travelCostMarkupPercent = $markup;
+        }
+        if ($note !== null) {
+            $settings->travelCostEstimateNote = $note !== '' ? $note : null;
         }
         if ($command->eventTravelCostsDefault !== null) {
             $settings->eventTravelCostsDefault = $command->eventTravelCostsDefault;

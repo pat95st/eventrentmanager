@@ -245,6 +245,7 @@ final class PlannedTripService
             markupPercent: $rate['settings']?->travelCostMarkupPercent ?? '0.00',
             ratePerKm: $rate['ratePerKm'],
             hints: $hints,
+            basis: \App\Domain\TravelCost\TravelCostBasis::Planned,
         );
     }
 

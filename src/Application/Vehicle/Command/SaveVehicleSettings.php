@@ -17,6 +17,8 @@ final class SaveVehicleSettings implements CommandInterface
         public readonly ?string $travelCostMarkupPercent = null,
         // Migration 186: null keeps the current value.
         public readonly ?bool $eventTravelCostsDefault = null,
+        // Migration 187: null keeps the current value, '' removes the note.
+        public readonly ?string $travelCostEstimateNote = null,
     ) {
     }
 }

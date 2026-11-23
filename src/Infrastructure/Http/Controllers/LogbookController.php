@@ -70,6 +70,8 @@ final class LogbookController
         private readonly LogbookDistanceService $distances,
         private readonly ?RentalTechnicianRepositoryInterface $rentalTechnicians = null,
         private readonly ?LogbookThrottle $throttle = null,
+        private readonly ?\App\Infrastructure\Pdf\LogbookPdfGenerator $pdf = null,
+        private readonly ?\App\Domain\Settings\CompanySettingsRepositoryInterface $company = null,
     ) {
     }
 
@@ -78,6 +80,21 @@ final class LogbookController
         $user = $this->user();
         $manager = LogbookAccess::canManage($user);
         [$filter, $query] = $this->filterFromRequest($request, $user, $manager);
+
+        if ($request->query('export') === 'pdf' && $this->pdf !== null) {
+            $entries = $this->entries->search($filter);
+            $names = $this->entryNames($entries);
+            $vehicleNames = $this->vehicleNames();
+            $subtitle = $filter->vehicleId !== null ? ($vehicleNames[$filter->vehicleId] ?? 'Fahrzeug') : 'Alle Fahrzeuge';
+            if ($filter->driverUserId !== null || !$manager) {
+                $driver = $this->users->findById($filter->driverUserId ?? $user->id);
+                $subtitle .= ' · Fahrer: ' . ($driver?->displayName() ?? '');
+            }
+            $pdf = $this->pdf->generate($entries, $names['drivers'], $names['rentals'], $vehicleNames, $subtitle, $filter->from, $filter->to, (string) ($this->company?->get()->name ?? ''));
+            Response::inlinePdf($pdf, 'Fahrtenbuch-' . date('Y-m-d') . '.pdf');
+
+            return;
+        }
 
         if ($request->query('export') === 'csv') {
             $csv = $this->csv($this->entries->search($filter));

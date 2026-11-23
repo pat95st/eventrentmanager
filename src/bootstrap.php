@@ -1182,7 +1182,7 @@ $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new Del
 $commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner, setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository, schedule: $rentalScheduleRules, vehicleSettings: $vehicleSettingsRepository));
 $offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
-$documentTravelCostService = new \App\Application\TravelCost\DocumentTravelCostService($travelCostSectionRepository, $tourTravelCostCalculator, $offerRepository, $orderConfirmationRepository, $invoiceRepository, $rentalRepository);
+$documentTravelCostService = new \App\Application\TravelCost\DocumentTravelCostService($travelCostSectionRepository, $tourTravelCostCalculator, $offerRepository, $orderConfirmationRepository, $invoiceRepository, $rentalRepository, $plannedTripService, new \App\Application\TravelCost\ActualTravelCostCalculator($logbookEntryRepository, $vehicleRepository, $vehicleSettingsRepository), $vehicleSettingsRepository);
 $orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver, travelCosts: $travelCostSectionRepository);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
@@ -2432,7 +2432,7 @@ $router->post('/veranstaltungen/{id}/fahrten/{tripId}', $auth->guard(Permission:
 $router->post('/veranstaltungen/{id}/fahrten/{tripId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'destroy']));
 
 // Driver's logbook (migration 184)
-$logbookController = new \App\Infrastructure\Http\Controllers\LogbookController($commandBus, $logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $logbookLocationResolver, $logbookDistanceService, $rentalTechnicianRepository, $logbookThrottle);
+$logbookController = new \App\Infrastructure\Http\Controllers\LogbookController($commandBus, $logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $logbookLocationResolver, $logbookDistanceService, $rentalTechnicianRepository, $logbookThrottle, new \App\Infrastructure\Pdf\LogbookPdfGenerator(), $companySettingsRepository);
 $logbookAccess = [Permission::Fahrer, Permission::FahrtenbuchVerwalten];
 $router->get('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'index']));
 $router->get('/fahrtenbuch/neu', $auth->guard($logbookAccess, [$logbookController, 'create']));
@@ -2771,6 +2771,9 @@ foreach (\App\Domain\TravelCost\TravelCostDocumentType::cases() as $travelCostTy
     $travelCostPath = '/' . $travelCostType->pathSegment() . '/{id}/fahrtkosten';
     $router->get($travelCostPath, $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->edit($r, $travelCostType)));
     $router->post($travelCostPath, $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->save($r, $travelCostType)));
+    $router->get($travelCostPath . '/auswahl', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->choices($r, $travelCostType)));
+    $router->post($travelCostPath . '/uebernehmen', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->import($r, $travelCostType)));
+    $router->post($travelCostPath . '/hinweis', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->estimateNote($r, $travelCostType)));
     $router->post($travelCostPath . '/aus-tour', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->importFromTour($r, $travelCostType)));
     $router->post($travelCostPath . '/darstellung', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->setMode($r, $travelCostType)));
     $router->post($travelCostPath . '/entfernen', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->remove($r, $travelCostType)));

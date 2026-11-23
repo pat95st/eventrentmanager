@@ -86,7 +86,7 @@ final class ConfirmCatalog
         'offers.delete' => ['Dokumente & Buchhaltung', 'Angebot löschen', false],
         'offers.create_invoice' => ['Dokumente & Buchhaltung', 'Rechnung aus Angebot erstellen', false],
         'offers.convert' => ['Dokumente & Buchhaltung', 'Angebot in Veranstaltung umwandeln', false],
-        'documents.travel_costs.import' => ['Dokumente & Buchhaltung', 'Fahrtkosten aus Tour übernehmen', false],
+        'documents.travel_costs.import' => ['Dokumente & Buchhaltung', 'Fahrtkosten übernehmen (geplante oder gefahrene Kilometer)', false],
         'documents.travel_costs.mode' => ['Dokumente & Buchhaltung', 'Darstellung der Fahrtkosten umschalten (Zeilen neu aufbauen)', false],
         'documents.travel_costs.remove' => ['Dokumente & Buchhaltung', 'Fahrtkosten aus einem Dokument entfernen', false],
         'order_confirmations.delete' => ['Dokumente & Buchhaltung', 'Auftragsbestätigung löschen', false],

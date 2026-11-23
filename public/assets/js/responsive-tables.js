@@ -33,6 +33,12 @@
   style.textContent =
     SELECTOR + '.rt-ready{min-width:0!important}' +
     SELECTOR + ' .rt-hidden{display:none!important}' +
+    // table-layout:fixed (Tailwind table-fixed) never lets the table grow
+    // beyond its container, so overflow could not be detected and columns
+    // were squeezed letter by letter instead of being hidden. Measure with
+    // automatic layout, and keep it while columns are hidden so the
+    // remaining ones share the width according to their content.
+    SELECTOR + '.rt-measuring,' + SELECTOR + '.rt-collapsed{table-layout:auto!important}' +
     // While measuring, cells must not wrap: a column only stays visible if
     // all visible columns fit side by side without squeezing their text.
     // The first column (never hidden) may wrap, but keeps a minimum width
@@ -52,7 +58,7 @@
     '.rt-toggle{position:relative}.rt-toggle::after{content:"";position:absolute;inset:-0.625rem}' +
     'tr.rt-open>td,tr.rt-open>th{border-bottom-width:0}' +
     'tr.rt-child>td{padding:0 1rem 0.875rem 2.75rem!important}' +
-    '.rt-details{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:0.375rem 1rem;margin:0;font-size:0.875rem}' +
+    '.rt-details{display:grid;grid-template-columns:fit-content(40%) minmax(0,1fr);gap:0.375rem 1rem;margin:0;font-size:0.875rem}' +
     '.rt-details dt{font-size:0.75rem;font-weight:500;text-transform:uppercase;letter-spacing:.025em;color:#64748b;padding-top:0.125rem}' +
     '.rt-details dd{margin:0;min-width:0;overflow-wrap:anywhere;color:#334155}' +
     '.rt-details dd.rt-full{grid-column:1/-1}' +
@@ -119,8 +125,21 @@
     return order.map(function (entry) { return entry.index; });
   }
 
+  // <col> element of a column (taking span into account), if any.
+  function columnElement(table, index) {
+    var position = 0;
+    var cols = table.querySelectorAll(':scope>colgroup>col');
+    for (var i = 0; i < cols.length; i++) {
+      position += cols[i].span || 1;
+      if (index < position) { return cols[i]; }
+    }
+    return null;
+  }
+
   function setColumnHidden(table, index, hidden) {
     var head = headerRow(table);
+    var col = columnElement(table, index);
+    if (col && (col.span || 1) === 1) { col.classList.toggle('rt-hidden', hidden); }
     if (head.cells[index]) { head.cells[index].classList.toggle('rt-hidden', hidden); }
     columnRows(table).forEach(function (row) {
       row.cells[index].classList.toggle('rt-hidden', hidden);
@@ -246,8 +265,11 @@
 
     var order = hideOrder(table);
     order.forEach(function (index) { setColumnHidden(table, index, false); });
+    table.classList.remove('rt-collapsed');
     fixSpans(table);
-    if (dataRows(table).length === 0) { updateToggles(table); return; }
+    // Fixed-layout tables are laid out for their declared min-width (e.g.
+    // min-w-[640px]); as long as that fits, keep the designed layout.
+    if (dataRows(table).length === 0 || table.__rtFixedMin > 0 && available >= table.__rtFixedMin) { updateToggles(table); return; }
     table.classList.add('rt-measuring');
     // First column: its unwrapped width, but at most 45 % of the space.
     var first = headerRow(table).cells[0];
@@ -273,6 +295,7 @@
       }
     }
     table.classList.remove('rt-measuring');
+    table.classList.toggle('rt-collapsed', i > 0);
     first.style.minWidth = '';
     fixSpans(table);
     updateToggles(table);
@@ -285,6 +308,8 @@
       if ((head.cells[i].colSpan || 1) > 1) { return; } // grouped headers are not supported
     }
     table.__rtInit = true;
+    var computed = window.getComputedStyle(table);
+    table.__rtFixedMin = computed.tableLayout === 'fixed' ? parseFloat(computed.minWidth) || 0 : 0;
     table.classList.add('rt-ready');
     layout(table);
     if (window.ResizeObserver) {

@@ -33,6 +33,7 @@ final class ConfirmCatalog
         'rentals.series.detach' => ['Veranstaltungen', 'Termin aus der Serie lösen', false],
         'rentals.series.change_rule' => ['Veranstaltungen', 'Rhythmus einer Serie ändern', false],
         'rentals.series.end' => ['Veranstaltungen', 'Serie beenden', true],
+        'rentals.planned_trips.restore' => ['Veranstaltungen', 'Hin- und Rückfahrt einer Veranstaltung neu anlegen', false],
         'rentals.tour.make' => ['Veranstaltungen', 'Veranstaltung als Tour planen', false],
         'rentals.tour.revert' => ['Veranstaltungen', 'Tour-Planung entfernen', false],
         'rentals.tour.stop.delete' => ['Veranstaltungen', 'Tourstop oder Zwischenstopp einer Tour löschen', false],

@@ -64,6 +64,8 @@ final class Rental
         // they appear on documents: 'summary' or 'itemized' (see App\Domain\TravelCost\TravelCostMode).
         public bool $travelCostsEnabled = true,
         public string $travelCostsMode = 'summary',
+        // Migration 186: the default planned trips (events that are not tours) were created once.
+        public bool $plannedTripsInitialized = false,
     ) {
     }
 

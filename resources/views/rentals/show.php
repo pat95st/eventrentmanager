@@ -75,6 +75,16 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
         </p>
     <?php endif; ?>
 
+    <?php if (($travelSummary ?? null) !== null): ?>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            🚗 Fahrten:
+            <?php if ($travelSummary['planned'] !== null): ?>geplant <?= e(number_format($travelSummary['planned'], 0, ',', '.')) ?> km<?= $travelSummary['plannedMissing'] > 0 ? ' <span class="text-amber-700 dark:text-amber-400">(bei ' . $travelSummary['plannedMissing'] . ' ' . ($travelSummary['plannedMissing'] === 1 ? 'Fahrt' : 'Fahrten') . ' fehlen km)</span>' : '' ?> ·<?php endif; ?>
+            gefahren <?= e(number_format($travelSummary['driven'], 0, ',', '.')) ?> km<?= $travelSummary['trips'] > 0 ? ' (' . $travelSummary['trips'] . ' im Fahrtenbuch)' : '' ?>
+            · Fahrtkosten <?= $travelSummary['enabled'] ? 'werden abgerechnet' : 'werden nicht abgerechnet' ?>
+            · <a href="/veranstaltungen/<?= e($rental->id) ?><?= $rental->isTour ? '/tour/route#fahrtkosten' : '/fahrten' ?>" class="text-brand-700 underline dark:text-brand-400"><?= $rental->isTour ? 'Route &amp; Fahrtkosten' : 'Fahrten &amp; Fahrtkosten' ?></a>
+        </p>
+    <?php endif; ?>
+
     <div class="mt-4 flex flex-wrap items-center gap-2">
         <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('rentals.show.checklist_link', ['issued' => (string) $totalIssued, 'planned' => (string) $totalPlanned])) ?>

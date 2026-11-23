@@ -59,6 +59,17 @@ $border = static fn (string $key): string => isset($errors[$key]) ? 'border-red-
             <?php if (isset($errors['travelCostMarkupPercent'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['travelCostMarkupPercent']) ?></p><?php endif; ?>
         </div>
     </div>
+    <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Fahrtkosten bei Veranstaltungen</h2>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            Veranstaltungen ohne Tour haben geplante Fahrten (Hin- und Rückfahrt, Seite „Fahrten &amp; Fahrtkosten“ der Veranstaltung).
+            Ob ihre Fahrtkosten abgerechnet werden, lässt sich je Veranstaltung einstellen; hier steht der Wert für neue Veranstaltungen. Touren rechnen immer standardmäßig ab.
+        </p>
+        <label class="mt-3 inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" name="event_travel_costs_default" value="1" <?= $settings->eventTravelCostsDefault ? 'checked' : '' ?>>
+            Neue Veranstaltungen: Fahrtkosten abrechnen
+        </label>
+    </div>
     <div class="flex border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>
     </div>

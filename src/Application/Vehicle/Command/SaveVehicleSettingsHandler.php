@@ -58,6 +58,9 @@ final class SaveVehicleSettingsHandler implements CommandHandlerInterface
         if ($markup !== null) {
             $settings->travelCostMarkupPercent = $markup;
         }
+        if ($command->eventTravelCostsDefault !== null) {
+            $settings->eventTravelCostsDefault = $command->eventTravelCostsDefault;
+        }
         $this->settings->save($settings);
 
         return null;

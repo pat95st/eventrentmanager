@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\TravelCost;
 
+use App\Domain\TravelCost\TravelCostBasis;
 use App\Domain\TravelCost\TravelCostDocumentType;
 use App\Domain\TravelCost\TravelCostMode;
 use App\Domain\TravelCost\TravelCostSection;
@@ -29,13 +30,16 @@ final class TourTravelCostProposal
         public readonly string $ratePerKm,      // billed price per km (cost + markup, whole cents)
         public readonly array $hints,
         public readonly bool $straightLine = false,
+        // Migration 187: tour route, planned trips of an event or logbook trips; fingerprint of the logbook trips.
+        public readonly TravelCostBasis $basis = TravelCostBasis::Tour,
+        public readonly ?string $sourceHash = null,
     ) {
     }
 
     /** Whether the tour has travel costs that can be put on a document. */
     public function isBillable(): bool
     {
-        return $this->enabled && $this->trips !== [] && $this->vehicles !== [];
+        return $this->enabled && $this->trips !== [] && ($this->vehicles !== [] || $this->basis === TravelCostBasis::Actual);
     }
 
     public function totalKilometers(): int
@@ -45,7 +49,7 @@ final class TourTravelCostProposal
 
     public function total(): float
     {
-        return array_sum(array_map(fn (TravelCostTrip $t) => round($t->kilometers * (float) $this->ratePerKm, 2), $this->trips));
+        return array_sum(array_map(fn (TravelCostTrip $t) => round($t->kilometers * (float) ($t->ratePerKm ?? $this->ratePerKm), 2), $this->trips));
     }
 
     public function vehiclesLabel(): ?string
@@ -73,7 +77,7 @@ final class TourTravelCostProposal
     /** Travel cost section for a document, with the lines in the mode of the tour. */
     public function toSection(TravelCostDocumentType $type, string $documentId): TravelCostSection
     {
-        $section = new TravelCostSection(Uuid::v4(), $type, $documentId, $this->mode, $this->vehiclesLabel(), $this->routeLabel(), $this->ratePerKm, $this->trips, [], $this->rentalId);
+        $section = new TravelCostSection(Uuid::v4(), $type, $documentId, $this->mode, $this->vehiclesLabel(), $this->routeLabel(), $this->ratePerKm, $this->trips, [], $this->rentalId, $this->basis, $this->sourceHash);
         $section->rebuildLines();
 
         return $section;

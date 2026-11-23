@@ -72,7 +72,7 @@ $navSteps = [
     ['nav-inspections', 'inspections', $canInspections],
     ['nav-documents', 'documents', $canDocuments],
     ['nav-rentals', 'rentals', $canRentals],
-    ['nav-vehicles', 'vehicles', $canRentals],
+    ['nav-vehicles', 'vehicles', $canRentals || \App\Domain\Logbook\LogbookAccess::canCapture($currentUser ?? null) || (($currentUser ?? null)?->has(\App\Domain\User\Permission::FahrtenbuchVerwalten) ?? false)],
     ['nav-vouchers', 'vouchers', $isAdmin],
 ];
 foreach ($navSteps as [$tourKey, $textKey, $allowed]) {

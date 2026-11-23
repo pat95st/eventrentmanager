@@ -564,6 +564,15 @@ Vehicle:
     - "gross_weight_kg"
     - "passenger_seats"
     - "cost_per_km"
+    - "is_private"
+    - "owner_user_id"
+    - "logbook_qr_enabled"
+    - "logbook_anonymous_allowed"
+    - "logbook_anonymous_private_allowed"
+    - "logbook_anonymous_requires_approval"
+    - "logbook_odometer_check"
+    - "logbook_odometer_tolerance_km"
+    - "logbook_odometer_initial_km"
   properties:
     id:
       type: "string"
@@ -635,6 +644,26 @@ Vehicle:
       nullable: true
     cost_per_km:
       type: "string"
+      nullable: true
+    is_private:
+      type: "boolean"
+    owner_user_id:
+      type: "string"
+      nullable: true
+    logbook_qr_enabled:
+      type: "boolean"
+    logbook_anonymous_allowed:
+      type: "boolean"
+    logbook_anonymous_private_allowed:
+      type: "boolean"
+    logbook_anonymous_requires_approval:
+      type: "boolean"
+    logbook_odometer_check:
+      type: "boolean"
+    logbook_odometer_tolerance_km:
+      type: "integer"
+    logbook_odometer_initial_km:
+      type: "integer"
       nullable: true
 Rental:
   type: "object"
@@ -2584,6 +2613,12 @@ VehicleInput:
     cost_per_km:
       type: "string"
       nullable: true
+    is_private:
+      type: "boolean"
+      default: false
+    owner_user_id:
+      type: "string"
+      nullable: true
 VehiclePatch:
   type: "object"
   description: "Update vehicle"
@@ -2648,6 +2683,12 @@ VehiclePatch:
       type: "string"
       nullable: true
     cost_per_km:
+      type: "string"
+      nullable: true
+    is_private:
+      type: "boolean"
+      default: false
+    owner_user_id:
       type: "string"
       nullable: true
 RentalInput:

@@ -915,9 +915,10 @@ $commandBus->register(\App\Application\Supplier\Command\CreateSupplier::class, n
 $commandBus->register(\App\Application\Supplier\Command\UpdateSupplier::class, new UpdateSupplierHandler($supplierRepository));
 $commandBus->register(\App\Application\Supplier\Command\DeleteSupplier::class, new DeleteSupplierHandler($supplierRepository));
 
-$commandBus->register(\App\Application\Vehicle\Command\CreateVehicle::class, new \App\Application\Vehicle\Command\CreateVehicleHandler($vehicleRepository));
-$commandBus->register(\App\Application\Vehicle\Command\UpdateVehicle::class, new \App\Application\Vehicle\Command\UpdateVehicleHandler($vehicleRepository));
-$commandBus->register(\App\Application\Vehicle\Command\DeleteVehicle::class, new \App\Application\Vehicle\Command\DeleteVehicleHandler($vehicleRepository));
+$commandBus->register(\App\Application\Vehicle\Command\CreateVehicle::class, new \App\Application\Vehicle\Command\CreateVehicleHandler($vehicleRepository, $userRepository));
+$commandBus->register(\App\Application\Vehicle\Command\UpdateVehicle::class, new \App\Application\Vehicle\Command\UpdateVehicleHandler($vehicleRepository, $userRepository));
+$commandBus->register(\App\Application\Vehicle\Command\DeleteVehicle::class, new \App\Application\Vehicle\Command\DeleteVehicleHandler($vehicleRepository, $logbookEntryRepository = new \App\Infrastructure\Persistence\Pdo\MariadbLogbookEntryRepository($pdo)));
+$commandBus->register(\App\Application\Vehicle\Command\SaveVehicleLogbookSettings::class, new \App\Application\Vehicle\Command\SaveVehicleLogbookSettingsHandler($vehicleRepository));
 $commandBus->register(\App\Application\Vehicle\Command\SaveVehicleSettings::class, new \App\Application\Vehicle\Command\SaveVehicleSettingsHandler($vehicleSettingsRepository));
 $commandBus->register(\App\Application\Vehicle\Command\AssignRentalVehicleLoad::class, new \App\Application\Vehicle\Command\AssignRentalVehicleLoadHandler($rentalIssuedItemRepository, $vehicleRepository, $rentalVehicleLoadRepository));
 $commandBus->register(\App\Application\Vehicle\Command\RemoveRentalVehicleLoad::class, new \App\Application\Vehicle\Command\RemoveRentalVehicleLoadHandler($rentalIssuedItemRepository, $rentalVehicleLoadRepository));
@@ -931,7 +932,7 @@ $commandBus->register(\App\Application\Voucher\Command\RedeemVoucherForRental::c
 $commandBus->register(\App\Application\Voucher\Command\RemoveVoucherRedemption::class, new \App\Application\Voucher\Command\RemoveVoucherRedemptionHandler($voucherRedemptionRepository));
 $commandBus->register(\App\Application\Settings\Command\UpdateVoucherSettings::class, new \App\Application\Settings\Command\UpdateVoucherSettingsHandler($voucherSettingsRepository));
 
-$commandBus->register(\App\Application\Rental\Command\CreateRental::class, new CreateRentalHandler($rentalRepository, $customerRepository, $venueRepository, $rentalScheduleRules));
+$commandBus->register(\App\Application\Rental\Command\CreateRental::class, new CreateRentalHandler($rentalRepository, $customerRepository, $venueRepository, $rentalScheduleRules, $vehicleSettingsRepository));
 $commandBus->register(\App\Application\Rental\Command\UpdateRental::class, new UpdateRentalHandler($rentalRepository, $customerRepository, $venueRepository, $rentalScheduleRules));
 
 $commandBus->register(\App\Application\Venue\Command\CreateVenue::class, new CreateVenueHandler($venueRepository, $geocoder));
@@ -1014,6 +1015,30 @@ $tourRouteService = new \App\Application\Routing\TourRouteService(
     $tourStopLocator, $geocoder,
 );
 $queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler($tourRouteService));
+// Driver's logbook (migrations 183/184).
+$logbookSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbLogbookSettingsRepository($pdo);
+$logbookLocationResolver = new \App\Application\Logbook\LogbookLocationResolver($warehouseRepository, $venueRepository, $rentalRepository, $tourRepository, $companyLocator, $geocoder, $tourStopLocator);
+$logbookDistanceService = new \App\Application\Logbook\LogbookDistanceService($routingSettingsRepository, $openRouteServiceClient);
+$logbookExternalEvents = new \App\Application\Logbook\LogbookExternalEvents($rentalRepository, $plannedVehicleRepository, $rentalVehicleLoadRepository);
+$logbookThrottle = new \App\Application\Logbook\LogbookThrottle(new \App\Infrastructure\Persistence\Pdo\MariadbLogbookThrottleRepository($pdo));
+$commandBus->register(\App\Application\Logbook\Command\SaveLogbookEntry::class, new \App\Application\Logbook\Command\SaveLogbookEntryHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $tourRepository, $logbookLocationResolver, $logbookExternalEvents));
+$logbookReviewHandler = new \App\Application\Logbook\Command\LogbookReviewHandler($logbookEntryRepository, $userRepository, $vehicleRepository);
+$commandBus->register(\App\Application\Logbook\Command\ReportOdometerGap::class, $logbookReviewHandler);
+$commandBus->register(\App\Application\Logbook\Command\ReviewLogbookEntry::class, $logbookReviewHandler);
+$commandBus->register(\App\Application\Logbook\Command\RegenerateVehicleQrToken::class, new \App\Application\Logbook\Command\RegenerateVehicleQrTokenHandler($vehicleRepository));
+$logbookLifecycleHandler = new \App\Application\Logbook\Command\LogbookEntryLifecycleHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository);
+$commandBus->register(\App\Application\Logbook\Command\DeleteLogbookEntry::class, $logbookLifecycleHandler);
+$commandBus->register(\App\Application\Logbook\Command\RestoreLogbookEntry::class, $logbookLifecycleHandler);
+$commandBus->register(\App\Application\Logbook\Command\SaveLogbookSettings::class, new \App\Application\Logbook\Command\SaveLogbookSettingsHandler($logbookSettingsRepository));
+// Planned trips of events that are not tours (migration 186).
+$plannedTripService = new \App\Application\PlannedTrip\PlannedTripService(
+    new \App\Infrastructure\Persistence\Pdo\MariadbPlannedTripRepository($pdo), $rentalRepository, $logbookLocationResolver, $logbookDistanceService,
+    new \App\Application\TravelCost\TravelCostRate($plannedVehicleRepository, $vehicleRepository, $vehicleSettingsRepository),
+);
+$plannedTripCommandHandler = new \App\Application\PlannedTrip\Command\PlannedTripCommandHandler($plannedTripService);
+foreach (['SavePlannedTrip', 'DeletePlannedTrip', 'RestoreDefaultPlannedTrips', 'RecalculatePlannedTrips'] as $plannedTripCommand) {
+    $commandBus->register('App\\Application\\PlannedTrip\\Command\\' . $plannedTripCommand, $plannedTripCommandHandler);
+}
 // Travel costs of tours on documents (migration 182).
 $tourTravelCostCalculator = new \App\Application\TravelCost\TourTravelCostCalculator($tourRepository, $plannedVehicleRepository, $vehicleRepository, $vehicleSettingsRepository, $tourRouteService);
 $travelCostSectionRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTravelCostSectionRepository($pdo);
@@ -1154,10 +1179,10 @@ $commandBus->register(\App\Application\Offer\Command\MarkOfferSent::class, new M
 $commandBus->register(\App\Application\Offer\Command\MarkOfferAccepted::class, new MarkOfferAcceptedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\MarkOfferDeclined::class, new MarkOfferDeclinedHandler($offerRepository));
 $commandBus->register(\App\Application\Offer\Command\DeleteOffer::class, new DeleteOfferHandler($offerRepository));
-$commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner, setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository, schedule: $rentalScheduleRules));
+$commandBus->register(\App\Application\Offer\Command\ConvertOfferToRental::class, new ConvertOfferToRentalHandler($offerRepository, $rentalRepository, $rentalItemRepository, $inventoryNumberRepository, $articleRepository, $rentalBundlePlanner, setPlanner: $rentalSetPlanner, articleSets: $articleSetRepository, schedule: $rentalScheduleRules, vehicleSettings: $vehicleSettingsRepository));
 $offerPdfGenerator = new OfferPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $orderConfirmationRepository = new \App\Infrastructure\Persistence\Pdo\MariadbOrderConfirmationRepository($pdo);
-$documentTravelCostService = new \App\Application\TravelCost\DocumentTravelCostService($travelCostSectionRepository, $tourTravelCostCalculator, $offerRepository, $orderConfirmationRepository, $invoiceRepository, $rentalRepository);
+$documentTravelCostService = new \App\Application\TravelCost\DocumentTravelCostService($travelCostSectionRepository, $tourTravelCostCalculator, $offerRepository, $orderConfirmationRepository, $invoiceRepository, $rentalRepository, $plannedTripService, new \App\Application\TravelCost\ActualTravelCostCalculator($logbookEntryRepository, $vehicleRepository, $vehicleSettingsRepository), $vehicleSettingsRepository);
 $orderConfirmationPdfGenerator = new OrderConfirmationPdfGenerator($fileStorage, $richTextPdfRenderer, $documentFooter, $pdfAmountFormatter, introTexts: $documentIntroTextRenderer);
 $getOfferHandler = new GetOfferHandler($offerRepository, $customerRepository, $articleRepository, $laborTimeArticleRepository, $inventoryNumberRepository, $manufacturerRepository, $userRepository, $customerContactRepository, $paymentMethodRepository, $bundleComponentResolver, $invoiceSettingsRepository, setContents: $setContentsResolver, travelCosts: $travelCostSectionRepository);
 $commandBus->register(\App\Application\Offer\Command\EmailOfferPdf::class, new EmailOfferPdfHandler(
@@ -1813,7 +1838,7 @@ $caseController = new CaseController($commandBus, $queryBus, $fileStorage, new \
 $supplierController = new SupplierController($commandBus, $queryBus);
 $purchaseOrderController = new \App\Infrastructure\Http\Controllers\PurchaseOrderController($commandBus, $queryBus, $supplierRepository);
 $salesController = new \App\Infrastructure\Http\Controllers\SalesController($queryBus);
-$vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus, $vehicleSettingsRepository);
+$vehicleController = new \App\Infrastructure\Http\Controllers\VehicleController($commandBus, $queryBus, $vehicleSettingsRepository, $userRepository);
 $vehicleSettingsController = new \App\Infrastructure\Http\Controllers\VehicleSettingsController($commandBus, $vehicleSettingsRepository);
 $venueController = new VenueController($commandBus, $queryBus, $fileStorage);
 $warehouseController = new WarehouseController($commandBus, $queryBus);
@@ -1901,7 +1926,7 @@ $queryBus->register(\App\Application\Search\Query\GlobalSearch::class, new \App\
 ));
 $backupSettingsController = new \App\Infrastructure\Http\Controllers\BackupSettingsController($commandBus, $backupTempDirectory, $queryBus);
 
-$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository);
+$rentalController = new RentalController($commandBus, $queryBus, $inventoryNumberRepository, $rentalIssuedItemRepository, $venueRepository, $warehouseRepository, $packingListPdfGenerator, $rentalCustomerChecklistTokenRepository, $rentalCustomerChecklistUrlBuilder, $voucherRedemptionRepository, $legalSettingsRepository, $rentalRepository, $rentalBundleRepository, $bundleComponentResolver, $rentalBundlePlanner, setBookings: $rentalSetBookingRepository, racks: $rackRepository, powerDistributors: $powerDistributorRepository, venuePowerConnections: $venuePowerConnectionRepository, schedule: $rentalScheduleRules, rentalTechnicians: $rentalTechnicianRepository, plannedTrips: $plannedTripService, logbookEntries: $logbookEntryRepository);
 $minuteProgramController = new \App\Infrastructure\Http\Controllers\MinuteProgramController($commandBus, $queryBus, $minuteProgramShareLinkRepository, audioFiles: $rentalAudioFileRepository, trades: $minuteProgramTradeResolver);
 $eventAudioController = new \App\Infrastructure\Http\Controllers\EventAudioController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $fileStorage, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $audioPairingCodeRepository);
 $eventAudioLiveController = new \App\Infrastructure\Http\Controllers\EventAudioLiveController($commandBus, $rentalRepository, $rentalAudioFileRepository, $rentalAudioSettingsRepository, $audioPlayerRepository, $audioSettingsRepository, $organizerLoginRepository, $playbackRequestRepository, $rentalTechnicianRepository, $minuteProgramRepository, $scheduledPlaybackRepository, $scheduledPlaybackDispatcher, $fileStorage, new \App\Infrastructure\Integration\Translation\ConfiguredTranslator($audioSettingsRepository, $aiAdImageSettingsRepository), $eventMessageRepository);
@@ -2001,7 +2026,7 @@ $apiControllers = [
     'suppliers' => $simpleApiResource('Lieferant', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Supplier\Query\ListSuppliers())), static fn (string $id) => $supplierRepository->findById($id), \App\Application\Supplier\Command\CreateSupplier::class, \App\Application\Supplier\Command\UpdateSupplier::class, \App\Application\Supplier\Command\DeleteSupplier::class),
     'venues' => $simpleApiResource('Veranstaltungsort', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Venue\Query\ListVenues(null, 1, 1_000_000))), static fn (string $id) => $venueRepository->findById($id), \App\Application\Venue\Command\CreateVenue::class, \App\Application\Venue\Command\UpdateVenue::class, \App\Application\Venue\Command\DeleteVenue::class),
     'warehouses' => $simpleApiResource('Lagerort', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Warehouse\Query\ListWarehouses())), static fn (string $id) => $warehouseRepository->findById($id), \App\Application\Warehouse\Command\CreateWarehouse::class, \App\Application\Warehouse\Command\UpdateWarehouse::class, \App\Application\Warehouse\Command\DeleteWarehouse::class),
-    'vehicles' => $simpleApiResource('Fahrzeug', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Vehicle\Query\ListVehicles())), static fn (string $id) => $vehicleRepository->findById($id), \App\Application\Vehicle\Command\CreateVehicle::class, \App\Application\Vehicle\Command\UpdateVehicle::class, \App\Application\Vehicle\Command\DeleteVehicle::class),
+    'vehicles' => $simpleApiResource('Fahrzeug', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Vehicle\Query\ListVehicles())), static fn (string $id) => $vehicleRepository->findById($id), \App\Application\Vehicle\Command\CreateVehicle::class, \App\Application\Vehicle\Command\UpdateVehicle::class, \App\Application\Vehicle\Command\DeleteVehicle::class, ['logbookQrToken']),
     'rentals' => new \App\Infrastructure\Http\Controllers\Api\RentalApiController($queryBus, $commandBus, $packingListPdfGenerator),
     'offers' => new \App\Infrastructure\Http\Controllers\Api\OfferApiController($queryBus, $commandBus, $apiDocumentRenderer),
     'order-confirmations' => new \App\Infrastructure\Http\Controllers\Api\OrderConfirmationApiController($queryBus, $commandBus, $apiDocumentRenderer),
@@ -2388,12 +2413,56 @@ $router->post('/bestellungen/{id}/storniert', $auth->guard(Permission::Artikelve
 $router->post('/bestellungen/{id}/wareneingang', $auth->guard(Permission::Artikelverwaltung, [$purchaseOrderController, 'receiveItem']));
 $router->get('/verkaeufe', $auth->guard(Permission::Artikelverwaltung, [$salesController, 'index']));
 
-$router->get('/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'index']));
+$router->get('/fahrzeuge', $auth->guard([Permission::AusgabeRuecknahme, Permission::FahrtenbuchVerwalten], [$vehicleController, 'index']));
 $router->get('/fahrzeuge/neu', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'create']));
 $router->post('/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'store']));
 $router->get('/fahrzeuge/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'edit']));
 $router->post('/fahrzeuge/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'update']));
 $router->post('/fahrzeuge/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'destroy']));
+// Planned trips and travel costs of events (migration 186)
+$plannedTripController = new \App\Infrastructure\Http\Controllers\PlannedTripController($commandBus, $rentalRepository, $plannedTripService, $logbookLocationResolver, $plannedVehicleRepository, $vehicleRepository, $logbookEntryRepository);
+$router->get('/veranstaltungen/{id}/fahrten', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'show']));
+$router->post('/veranstaltungen/{id}/fahrten', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'store']));
+$router->post('/veranstaltungen/{id}/fahrten/standard', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'restoreDefaults']));
+$router->post('/veranstaltungen/{id}/fahrten/neu-berechnen', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'recalculate']));
+$router->post('/veranstaltungen/{id}/fahrten/fahrtkosten', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'travelCosts']));
+$router->post('/veranstaltungen/{id}/fahrten/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'addVehicle']));
+$router->post('/veranstaltungen/{id}/fahrten/fahrzeuge/{plannedId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'removeVehicle']));
+$router->post('/veranstaltungen/{id}/fahrten/{tripId}', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'update']));
+$router->post('/veranstaltungen/{id}/fahrten/{tripId}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$plannedTripController, 'destroy']));
+
+// Driver's logbook (migration 184)
+$logbookController = new \App\Infrastructure\Http\Controllers\LogbookController($commandBus, $logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $logbookLocationResolver, $logbookDistanceService, $rentalTechnicianRepository, $logbookThrottle, new \App\Infrastructure\Pdf\LogbookPdfGenerator(), $companySettingsRepository);
+$logbookAccess = [Permission::Fahrer, Permission::FahrtenbuchVerwalten];
+$router->get('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'index']));
+$router->get('/fahrtenbuch/neu', $auth->guard($logbookAccess, [$logbookController, 'create']));
+$router->post('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'store']));
+$router->get('/fahrtenbuch/veranstaltungen', $auth->guard($logbookAccess, [$logbookController, 'events']));
+$router->get('/fahrtenbuch/veranstaltungen/{id}/orte', $auth->guard($logbookAccess, [$logbookController, 'rentalOptions']));
+$router->get('/fahrtenbuch/strecke', $auth->guard($logbookAccess, [$logbookController, 'distance']));
+$router->get('/fahrtenbuch/{id}/bearbeiten', $auth->guard($logbookAccess, [$logbookController, 'edit']));
+$router->post('/fahrtenbuch/{id}', $auth->guard($logbookAccess, [$logbookController, 'update']));
+$router->post('/fahrtenbuch/{id}/loeschen', $auth->guard($logbookAccess, [$logbookController, 'destroy']));
+$router->post('/fahrtenbuch/{id}/freigeben', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'approve']));
+$router->post('/fahrtenbuch/{id}/ablehnen', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'reject']));
+$router->get('/fahrtenbuch/fahrzeug/{id}/kilometerstand', $auth->guard($logbookAccess, [$logbookController, 'odometerForm']));
+$router->post('/fahrtenbuch/fahrzeug/{id}/kilometerstand', $auth->guard($logbookAccess, [$logbookController, 'odometerCheck']));
+$router->post('/fahrtenbuch/fahrzeug/{id}/luecke', $auth->guard($logbookAccess, [$logbookController, 'reportGap']));
+$router->post('/fahrtenbuch/{id}/wiederherstellen', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'restore']));
+$router->get('/einstellungen/fahrtenbuch', $auth->guard(Permission::Administration, [$logbookController, 'settingsForm']));
+$router->post('/einstellungen/fahrtenbuch', $auth->guard(Permission::Administration, [$logbookController, 'saveSettings']));
+// QR capture of the logbook (migration 185): /fahrt/* is public (login is checked inside).
+$logbookQrController = new \App\Infrastructure\Http\Controllers\LogbookQrController($commandBus, $vehicleRepository, $userRepository, $rentalRepository, $logbookEntryRepository, $logbookLocationResolver, $logbookExternalEvents, $logbookThrottle, $localInstance);
+$router->get('/fahrt/{token}', [$logbookQrController, 'show']);
+$router->post('/fahrt/{token}/kilometerstand', [$logbookQrController, 'odometer']);
+$router->get('/fahrt/{token}/erfassen', [$logbookQrController, 'form']);
+$router->post('/fahrt/{token}/erfassen', [$logbookQrController, 'store']);
+$router->get('/fahrt/{token}/veranstaltungen', [$logbookQrController, 'events']);
+$router->get('/fahrt/{token}/veranstaltungen/{rentalId}/orte', [$logbookQrController, 'rentalOptions']);
+$router->get('/fahrzeuge/{id}/fahrtenbuch/qr', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookQrController, 'printPage']));
+$router->post('/fahrzeuge/{id}/fahrtenbuch/qr-neu', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookQrController, 'regenerate']));
+$router->get('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'logbook']));
+$router->post('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'saveLogbook']));
 
 // Gutscheine: Verwaltung (Anlegen/Bearbeiten/Löschen) ist Administration
 // vorbehalten (finanziell sensibel), die Einlösung einem Gutscheins bei
@@ -2702,6 +2771,9 @@ foreach (\App\Domain\TravelCost\TravelCostDocumentType::cases() as $travelCostTy
     $travelCostPath = '/' . $travelCostType->pathSegment() . '/{id}/fahrtkosten';
     $router->get($travelCostPath, $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->edit($r, $travelCostType)));
     $router->post($travelCostPath, $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->save($r, $travelCostType)));
+    $router->get($travelCostPath . '/auswahl', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->choices($r, $travelCostType)));
+    $router->post($travelCostPath . '/uebernehmen', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->import($r, $travelCostType)));
+    $router->post($travelCostPath . '/hinweis', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->estimateNote($r, $travelCostType)));
     $router->post($travelCostPath . '/aus-tour', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->importFromTour($r, $travelCostType)));
     $router->post($travelCostPath . '/darstellung', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->setMode($r, $travelCostType)));
     $router->post($travelCostPath . '/entfernen', $auth->guard(Permission::AusgabeRuecknahme, static fn (\App\Infrastructure\Http\Request $r) => $documentTravelCostController->remove($r, $travelCostType)));

@@ -24,6 +24,38 @@ final class TravelCostPdfRows
      */
     public static function build(TravelCostSection $section, float $columnWidth, float $fontSize, callable $wrap, callable $amount): array
     {
+        return self::rows($section, $columnWidth, $fontSize, $wrap, $amount);
+    }
+
+    /**
+     * Note below planned travel costs (migration 187), copied into the
+     * section when it was taken over. Offers and order confirmations only.
+     */
+    public static function estimateNote(TravelCostSection $section): ?string
+    {
+        $note = trim((string) $section->estimateNote);
+
+        return $note !== '' && $section->basis->isPlanned() ? $note : null;
+    }
+
+    /**
+     * Row with the note (no amounts) to append after the travel cost rows.
+     *
+     * @param callable(string, float, float): string[] $wrap
+     * @return array{nameLines: string[], shortTextLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}
+     */
+    public static function noteRow(string $note, float $columnWidth, callable $wrap): array
+    {
+        return ['nameLines' => [], 'shortTextLines' => $wrap($note, $columnWidth, ArticlePdfRow::SHORT_TEXT_FONT_SIZE), 'quantity' => '', 'unitPrice' => '', 'lineTotal' => '', 'isSection' => false];
+    }
+
+    /**
+     * @param callable(string, float, float): string[] $wrap
+     * @param callable(float): string $amount
+     * @return array<int, array{nameLines: string[], shortTextLines: string[], quantity: string, unitPrice: string, lineTotal: string, isSection: bool}>
+     */
+    private static function rows(TravelCostSection $section, float $columnWidth, float $fontSize, callable $wrap, callable $amount): array
+    {
         $rows = [];
         foreach ($section->lines as $line) {
             $km = (float) $line->kilometers;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\User;
 
 /**
- * Die vier Rechte, die einem Benutzer beliebig kombiniert zugewiesen werden
+ * Die Rechte, die einem Benutzer beliebig kombiniert zugewiesen werden
  * können (Mehrfachauswahl, siehe User::$permissions). "Administration"
  * schließt fachlich alle übrigen Rechte ein — das wird NICHT zusätzlich in
  * der Datenbank gespeichert, sondern zentral in User::has() geprüft, damit
@@ -30,6 +30,11 @@ enum Permission: string
     // angefragt oder eingeplant ist (ohne Abrechnungsdaten), kann dort
     // Ausgabe/Rückgabe machen und RMA-Vorgänge anlegen.
     case Techniker = 'techniker';
+    // Driver's logbook (migration 183): "Fahrer" records own trips,
+    // "Fahrtenbuch verwalten" sees and edits all trips and configures the
+    // logbook settings of the vehicles.
+    case Fahrer = 'fahrer';
+    case FahrtenbuchVerwalten = 'fahrtenbuch_verwalten';
 
     public function label(): string
     {
@@ -41,12 +46,14 @@ enum Permission: string
             self::Minutenprogramme => 'Minutenprogramme',
             self::Elektropruefung => 'Elektroprüfung',
             self::Techniker => 'Techniker',
+            self::Fahrer => 'Fahrer',
+            self::FahrtenbuchVerwalten => 'Fahrtenbuch verwalten',
         };
     }
 
     /** @return Permission[] Alle Rechte in fester Anzeigereihenfolge. */
     public static function all(): array
     {
-        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme, self::Elektropruefung, self::Techniker];
+        return [self::Administration, self::Artikelverwaltung, self::Kundenverwaltung, self::AusgabeRuecknahme, self::Minutenprogramme, self::Elektropruefung, self::Techniker, self::Fahrer, self::FahrtenbuchVerwalten];
     }
 }

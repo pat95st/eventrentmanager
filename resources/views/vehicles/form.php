@@ -4,6 +4,7 @@
 /** @var array<string, mixed> $old */
 /** @var string|null $editingId */
 /** @var \App\Domain\Vehicle\VehicleSettings $vehicleSettings */
+/** @var array<string, string> $ownerOptions user id => name (migration 183) */
 
 use App\Domain\Vehicle\Vehicle;
 use App\Domain\Vehicle\VehicleCategory;
@@ -13,6 +14,9 @@ $val = fn (string $field, ?string $fallback = null) => array_key_exists($field, 
 $selectedCategory = $val('category', $vehicle?->category->value) ?: VehicleCategory::Auto->value;
 $towHitchChecked = array_key_exists('tow_hitch_available', $old) ? (bool) $old['tow_hitch_available'] : ($vehicle?->towHitchAvailable ?? false);
 $amount = static fn (?string $v): ?string => $v === null ? null : number_format((float) $v, 2, ',', '.');
+$ownerOptions ??= [];
+$isPrivateChecked = array_key_exists('is_private', $old) ? (bool) $old['is_private'] : ($vehicle?->isPrivate ?? false);
+$selectedOwner = (string) $val('owner_user_id', $vehicle?->ownerUserId);
 $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) $old['load_area_open_top'] : ($vehicle?->loadAreaOpenTop ?? false);
 ?>
 
@@ -224,6 +228,29 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
         </div>
     </div>
 
+    <div class="space-y-3 rounded-md border border-slate-200 p-3 dark:border-slate-700">
+        <div>
+            <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Privatfahrzeug</h3>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Fahrzeug, das einem Benutzer gehört (z. B. das eigene Auto eines Technikers). Im Fahrtenbuch dürfen nur der Eigentümer und Fahrtenbuch-Verwalter damit Fahrten erfassen.</p>
+        </div>
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" id="is_private" name="is_private" value="1" data-private-checkbox
+                   <?= $isPrivateChecked ? 'checked' : '' ?>>
+            Privatfahrzeug
+        </label>
+        <div data-owner-field class="max-w-sm">
+            <label for="owner_user_id" class="block text-[11px] text-slate-500 dark:text-slate-400">Eigentümer *</label>
+            <select id="owner_user_id" name="owner_user_id"
+                    class="mt-1 w-full rounded-md border <?= isset($errors['ownerUserId']) ? 'border-red-400 dark:border-red-600' : 'border-slate-300 dark:border-slate-700' ?> px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                <option value="">– bitte wählen –</option>
+                <?php foreach ($ownerOptions as $userId => $userName): ?>
+                    <option value="<?= e($userId) ?>" <?= $selectedOwner === $userId ? 'selected' : '' ?>><?= e($userName) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <?php if (isset($errors['ownerUserId'])): ?><p class="mt-1 text-xs text-red-600 dark:text-red-400"><?= e($errors['ownerUserId']) ?></p><?php endif; ?>
+        </div>
+    </div>
+
     <div>
         <label for="notes" class="block text-xs font-medium text-slate-600 dark:text-slate-400">Notizen</label>
         <textarea id="notes" name="notes" rows="2"
@@ -261,6 +288,9 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
         var loadAreaHeightField = form.querySelector('[data-load-area-height-field]');
         // Placeholder of the cost per km shows the default of the selected category.
         var costPerKmField = form.querySelector('[data-cost-per-km-field]');
+        // Owner of a private vehicle (migration 183) only with the flag set.
+        var privateCheckbox = form.querySelector('[data-private-checkbox]');
+        var ownerField = form.querySelector('[data-owner-field]');
 
         function update() {
             var selected = form.querySelector('[data-category-radio]:checked');
@@ -276,6 +306,10 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
 
             if (towCapacityField) {
                 towCapacityField.classList.toggle('hidden', !(towHitchCheckbox && towHitchCheckbox.checked));
+            }
+
+            if (ownerField && privateCheckbox) {
+                ownerField.classList.toggle('hidden', !privateCheckbox.checked);
             }
 
             if (loadAreaHeightField && loadAreaOpenTopCheckbox) {
@@ -295,6 +329,9 @@ $loadAreaOpenTopChecked = array_key_exists('load_area_open_top', $old) ? (bool) 
         }
         if (loadAreaOpenTopCheckbox) {
             loadAreaOpenTopCheckbox.addEventListener('change', update);
+        }
+        if (privateCheckbox) {
+            privateCheckbox.addEventListener('change', update);
         }
 
         update();

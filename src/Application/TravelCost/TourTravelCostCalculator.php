@@ -55,23 +55,9 @@ final class TourTravelCostCalculator
         }
         $trips = $this->trips($route, $rental, $stops);
 
-        $settings = $this->vehicleSettings->get();
-        $vehicles = [];
-        $cost = 0.0;
-        $seen = [];
-        foreach ($this->plannedVehicles->findByRental($rental->id) as $planned) {
-            if (isset($seen[$planned->vehicleId])) {
-                continue;
-            }
-            $seen[$planned->vehicleId] = true;
-            $vehicle = $this->vehicles->findById($planned->vehicleId);
-            if ($vehicle === null) {
-                continue;
-            }
-            $vehicleCost = $vehicle->effectiveCostPerKm($settings);
-            $cost += (float) $vehicleCost;
-            $vehicles[] = ['name' => $vehicle->name, 'costPerKm' => $vehicleCost, 'isDefault' => $vehicle->usesDefaultCostPerKm()];
-        }
+        $rate = (new TravelCostRate($this->plannedVehicles, $this->vehicles, $this->vehicleSettings))->forRental($rental->id);
+        $settings = $rate['settings'];
+        $vehicles = $rate['vehicles'];
 
         if ($vehicles === []) {
             $hints[] = 'Keine Fahrzeuge geplant – Fahrtkosten können nicht berechnet werden.';
@@ -92,9 +78,9 @@ final class TourTravelCostCalculator
             mode: TravelCostMode::tryFrom($rental->travelCostsMode) ?? TravelCostMode::Summary,
             trips: $trips,
             vehicles: $vehicles,
-            costPerKm: number_format($cost, 2, '.', ''),
+            costPerKm: $rate['costPerKm'],
             markupPercent: $settings->travelCostMarkupPercent,
-            ratePerKm: $settings->billedRatePerKm($cost),
+            ratePerKm: $rate['ratePerKm'],
             hints: $hints,
             straightLine: $straightLine,
         );

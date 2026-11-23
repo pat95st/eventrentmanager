@@ -99,7 +99,34 @@ final class RentalController
         private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
         // Techniker (Migration 134): Zugriff nur auf zugeordnete Veranstaltungen.
         private readonly ?\App\Domain\Technician\RentalTechnicianRepositoryInterface $rentalTechnicians = null,
+        // Planned trips and driver's logbook (migrations 184/186): kilometres planned vs. driven.
+        private readonly ?\App\Application\PlannedTrip\PlannedTripService $plannedTrips = null,
+        private readonly ?\App\Domain\Logbook\LogbookEntryRepositoryInterface $logbookEntries = null,
     ) {
+    }
+
+    /**
+     * Kilometres planned (planned trips; null for tours, whose plan is the
+     * route) and driven (billable logbook trips) of an event.
+     *
+     * @return array{planned: ?int, plannedMissing: int, driven: int, trips: int, enabled: bool}|null
+     */
+    private function travelSummary(\App\Domain\Rental\Rental $rental): ?array
+    {
+        if ($this->plannedTrips === null || $this->logbookEntries === null) {
+            return null;
+        }
+        $entries = $this->logbookEntries->search(new \App\Domain\Logbook\LogbookFilter(rentalId: $rental->id));
+
+        $planned = $rental->isTour ? [] : $this->plannedTrips->forRental($rental);
+
+        return [
+            'planned' => $rental->isTour ? null : array_sum(array_map(static fn (\App\Domain\PlannedTrip\PlannedTrip $t) => (int) $t->kilometers(), $planned)),
+            'plannedMissing' => count(array_filter($planned, static fn (\App\Domain\PlannedTrip\PlannedTrip $t) => $t->kilometers() === null)),
+            'driven' => array_sum(array_map(static fn (\App\Domain\Logbook\LogbookEntry $e) => $e->isBillable() ? $e->distanceKm : 0, $entries)),
+            'trips' => count($entries),
+            'enabled' => $rental->travelCostsEnabled,
+        ];
     }
 
     /**
@@ -440,6 +467,7 @@ final class RentalController
 
         echo View::page('rentals/show', [
             'detail' => $detail,
+            'travelSummary' => \App\Domain\Technician\TechnicianAccess::isRestricted(CurrentUser::get()) ? null : $this->travelSummary($detail->rental),
             'seriesContext' => $detail->rental->seriesId !== null ? $this->queries->ask(new \App\Application\RentalSeries\Query\GetRentalSeriesContext($id)) : null,
             'bookedBundles' => $bookedBundles,
             'bookedSets' => $this->bookedSets($id, $articleDisplayNames ?? []),

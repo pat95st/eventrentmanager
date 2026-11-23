@@ -15,6 +15,7 @@ final class VehicleSettings
 {
     public const DEFAULT_COST_PER_KM_AUTO = '0.30';
     public const DEFAULT_COST_PER_KM_TRAILER = '0.15';
+    public const DEFAULT_ESTIMATE_NOTE = 'Die Fahrtkosten basieren auf den geplanten Kilometern. Abgerechnet werden die tatsächlich gefahrenen Kilometer; der Betrag kann daher abweichen.';
 
     public function __construct(
         public string $defaultCostPerKmAuto = self::DEFAULT_COST_PER_KM_AUTO,
@@ -22,6 +23,10 @@ final class VehicleSettings
         // Migration 182: markup in percent on the cost per km when travel
         // costs of a tour are billed (e.g. "10.00"); "0.00" = billed at cost.
         public string $travelCostMarkupPercent = '0.00',
+        // Migration 186: "Fahrtkosten abrechnen" for new events that are not tours.
+        public bool $eventTravelCostsDefault = false,
+        // Migration 187: note below planned travel costs on offers and order confirmations (null/empty = none).
+        public ?string $travelCostEstimateNote = self::DEFAULT_ESTIMATE_NOTE,
     ) {
     }
 

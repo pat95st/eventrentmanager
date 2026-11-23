@@ -30,5 +30,8 @@ interface VehicleRepositoryInterface
     /** Ist dieses Fahrzeug einer Zugfahrzeug-Zuordnung zugeordnet (rental_vehicle_tows, als Zugfahrzeug oder Anhänger)? */
     public function isUsedByVehicleTows(string $id): bool;
 
+    /** Vehicle of a logbook QR code (migration 185). */
+    public function findByLogbookQrToken(string $token): ?Vehicle;
+
     public function delete(string $id): void;
 }

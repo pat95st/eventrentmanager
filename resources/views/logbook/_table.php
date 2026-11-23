@@ -84,6 +84,12 @@ $badge = static fn (string $text, string $tone): string => '<span class="mr-1 in
                             <td class="px-4 py-3 text-right font-medium text-slate-900 dark:text-slate-100"><?= e(number_format($entry->distanceKm, 0, ',', '.')) ?></td>
                             <td class="break-words px-4 py-3 text-right">
                                 <?php if ($entry->status !== LogbookStatus::Approved): ?><span class="block"><?= $badge($entry->status->label(), $entry->status === LogbookStatus::Pending ? 'amber' : 'red') ?></span><?php endif; ?>
+                                <?php if ($manager && $entry->status === LogbookStatus::Pending && !$entry->isDeleted()): ?>
+                                    <span class="mb-1 flex justify-end gap-2">
+                                        <form method="post" action="/fahrtenbuch/<?= e($entry->id) ?>/freigeben"><input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>"><input type="hidden" name="back" value="<?= e('/fahrtenbuch?' . http_build_query($paginationQuery)) ?>"><button type="submit" class="text-xs font-medium text-green-700 hover:underline dark:text-green-400">Freigeben</button></form>
+                                        <form method="post" action="/fahrtenbuch/<?= e($entry->id) ?>/ablehnen"><input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>"><input type="hidden" name="back" value="<?= e('/fahrtenbuch?' . http_build_query($paginationQuery)) ?>"><button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Ablehnen</button></form>
+                                    </span>
+                                <?php endif; ?>
                                 <?php if ($manager && $entry->notBilled): ?><span class="block"><?= $badge('nicht abrechnen', 'slate') ?></span><?php endif; ?>
                                 <?php if ($entry->odometerCheckBypassed): ?><span class="block"><?= $badge('ohne Prüfung', 'amber') ?></span><?php endif; ?>
                                 <?php if ($entry->isDeleted()): ?>

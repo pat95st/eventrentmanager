@@ -49,6 +49,16 @@ final class InMemoryLogbookEntryRepository implements LogbookEntryRepositoryInte
         return count(array_filter($this->entries, static fn (LogbookEntry $e) => $e->vehicleId === $vehicleId || $e->trailerId === $vehicleId));
     }
 
+    public function lastOdometerReading(string $vehicleId): ?int
+    {
+        $readings = array_map(
+            static fn (LogbookEntry $e) => $e->odometerEnd,
+            array_filter($this->entries, static fn (LogbookEntry $e) => $e->vehicleId === $vehicleId && !$e->isDeleted() && $e->odometerEnd !== null),
+        );
+
+        return $readings === [] ? null : max($readings);
+    }
+
     public function addChange(LogbookEntryChange $change): void
     {
         $this->changes[] = $change;

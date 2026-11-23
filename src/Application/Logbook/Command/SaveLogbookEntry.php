@@ -14,7 +14,8 @@ final class SaveLogbookEntry implements CommandInterface
 {
     public function __construct(
         public readonly ?string $entryId,
-        public readonly string $actorUserId,
+        // Logged-in user; null for external drivers (externalVehicleId set).
+        public readonly ?string $actorUserId,
         public readonly string $tripDate,
         public readonly ?string $departTime = null,
         public readonly ?string $arriveTime = null,
@@ -44,6 +45,10 @@ final class SaveLogbookEntry implements CommandInterface
         public readonly ?string $odometerEnd = null,
         // Only logbook managers; null keeps the current value.
         public readonly ?bool $notBilled = null,
+        // Migration 185: external driver via the QR code of this vehicle (actorUserId null).
+        public readonly ?string $externalVehicleId = null,
+        // Migration 185: logbook managers may skip the odometer check (logged).
+        public readonly bool $bypassOdometerCheck = false,
     ) {
     }
 }

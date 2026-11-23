@@ -6,11 +6,14 @@ namespace App\Infrastructure\Http\Controllers;
 
 use App\Application\Command\CommandBus;
 use App\Application\Logbook\Command\DeleteLogbookEntry;
+use App\Application\Logbook\Command\ReportOdometerGap;
+use App\Application\Logbook\Command\ReviewLogbookEntry;
 use App\Application\Logbook\Command\RestoreLogbookEntry;
 use App\Application\Logbook\Command\SaveLogbookEntry;
 use App\Application\Logbook\Command\SaveLogbookSettings;
 use App\Application\Logbook\LogbookDistanceService;
 use App\Application\Logbook\LogbookLocationResolver;
+use App\Application\Logbook\LogbookThrottle;
 use App\Domain\Exception\ForbiddenException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
@@ -19,6 +22,7 @@ use App\Domain\Logbook\LogbookCategory;
 use App\Domain\Logbook\LogbookEntry;
 use App\Domain\Logbook\LogbookEntryRepositoryInterface;
 use App\Domain\Logbook\LogbookFilter;
+use App\Domain\Logbook\LogbookOdometerChain;
 use App\Domain\Logbook\LogbookSettingsRepositoryInterface;
 use App\Domain\Logbook\LogbookStatus;
 use App\Domain\Rental\Rental;
@@ -32,6 +36,7 @@ use App\Domain\Vehicle\VehicleCategory;
 use App\Domain\Vehicle\VehicleRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
 use App\Infrastructure\Http\Flash;
+use App\Infrastructure\Http\LogbookOdometerSession;
 use App\Infrastructure\Http\Pagination;
 use App\Infrastructure\Http\Request;
 use App\Infrastructure\Http\Response;
@@ -64,6 +69,7 @@ final class LogbookController
         private readonly LogbookLocationResolver $locations,
         private readonly LogbookDistanceService $distances,
         private readonly ?RentalTechnicianRepositoryInterface $rentalTechnicians = null,
+        private readonly ?LogbookThrottle $throttle = null,
     ) {
     }
 
@@ -88,6 +94,7 @@ final class LogbookController
         $viewData = [
             'entries' => $entries,
             'totals' => $this->entries->totals($filter),
+            'pendingCount' => $manager ? $this->entries->count(new LogbookFilter(status: LogbookStatus::Pending)) : 0,
             'query' => $query,
             'manager' => $manager,
             'settings' => $this->settings->get(),
@@ -123,6 +130,13 @@ final class LogbookController
             'vehicle_id' => (string) $request->query('fahrzeug', ''),
             'rental_id' => $rental?->id ?? '',
         ];
+        // Reading confirmed on the odometer check page (migration 185).
+        if ($form['vehicle_id'] !== '') {
+            $confirmed = LogbookOdometerSession::confirmed($form['vehicle_id']);
+            if ($confirmed !== null) {
+                $form['odometer_start'] = (string) $confirmed;
+            }
+        }
         if ($rental !== null) {
             $form['return_to_rental'] = $rental->id;
             $template = $request->query('vorlage');
@@ -143,6 +157,7 @@ final class LogbookController
         $user = $this->user();
         try {
             $this->commands->dispatch($this->commandFromRequest($request, null, $user));
+            LogbookOdometerSession::forget((string) $request->input('vehicle_id'));
             Flash::success('Die Fahrt wurde gespeichert.');
             $rentalId = $request->input('return_to_rental');
             Response::redirect($rentalId !== null && $rentalId !== '' ? '/veranstaltungen/' . rawurlencode($rentalId) : '/fahrtenbuch');
@@ -203,6 +218,135 @@ final class LogbookController
             Flash::error($e->getMessage());
         }
         Response::redirect('/fahrtenbuch?geloescht=1');
+    }
+
+    public function approve(Request $request): void
+    {
+        $this->review($request, true);
+    }
+
+    public function reject(Request $request): void
+    {
+        $this->review($request, false);
+    }
+
+    private function review(Request $request, bool $approve): void
+    {
+        try {
+            $this->commands->dispatch(new ReviewLogbookEntry($request->param('id'), $this->user()->id, $approve));
+            Flash::success($approve ? 'Die Fahrt wurde freigegeben.' : 'Die Fahrt wurde abgelehnt; sie zählt nicht für die Abrechnung.');
+        } catch (ForbiddenException|NotFoundException $e) {
+            Flash::error($e->getMessage());
+        }
+        $back = (string) $request->input('back');
+        Response::redirect(str_starts_with($back, '/fahrtenbuch') ? $back : '/fahrtenbuch');
+    }
+
+    /** Odometer check page of a vehicle for logged-in drivers (migration 185). */
+    public function odometerForm(Request $request): void
+    {
+        $vehicle = $this->checkedVehicle($request->param('id'));
+        if ($vehicle !== null) {
+            $this->renderOdometer($vehicle, null, null);
+        }
+    }
+
+    public function odometerCheck(Request $request): void
+    {
+        $vehicle = $this->checkedVehicle($request->param('id'));
+        if ($vehicle === null) {
+            return;
+        }
+        $client = 'user:' . $this->user()->id;
+        $locked = $this->throttle?->odometerLockedUntil($vehicle->id, $client);
+        if ($locked !== null) {
+            $this->renderOdometer($vehicle, null, null, $locked);
+
+            return;
+        }
+        $reading = self::parseReading($request->input('odometer'));
+        if ($reading === null) {
+            $this->renderOdometer($vehicle, 'Bitte den aktuellen Kilometerstand als ganze Zahl angeben.', null);
+
+            return;
+        }
+        $chain = new LogbookOdometerChain($this->entries);
+        if ($chain->matches($vehicle, $reading)) {
+            $this->throttle?->resetOdometer($vehicle->id, $client);
+            LogbookOdometerSession::remember($vehicle->id, $reading);
+            Response::redirect('/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+
+            return;
+        }
+        $locked = $this->throttle?->registerOdometerFailure($vehicle->id, $client);
+        $this->renderOdometer(
+            $vehicle,
+            'Der Kilometerstand passt nicht zum zuletzt erfassten Stand.',
+            $chain->isGap($vehicle, $reading) ? ['expected' => (int) $chain->expected($vehicle), 'reading' => $reading] : null,
+            $locked,
+        );
+    }
+
+    public function reportGap(Request $request): void
+    {
+        $vehicle = $this->checkedVehicle($request->param('id'));
+        if ($vehicle === null) {
+            return;
+        }
+        $reading = self::parseReading($request->input('odometer'));
+        try {
+            $this->commands->dispatch(new ReportOdometerGap($vehicle->id, $this->user()->id, (int) $reading));
+        } catch (ValidationException|ForbiddenException $e) {
+            $this->renderOdometer($vehicle, $e instanceof ValidationException ? implode(' ', $e->errors()) : $e->getMessage(), null);
+
+            return;
+        }
+        $this->throttle?->resetOdometer($vehicle->id, 'user:' . $this->user()->id);
+        LogbookOdometerSession::remember($vehicle->id, (int) $reading);
+        Flash::success('Die Lücke wurde gemeldet; ein Fahrtenbuch-Verwalter klärt sie. Du kannst jetzt deine Fahrt erfassen.');
+        Response::redirect('/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+    }
+
+    private function checkedVehicle(string $id): ?Vehicle
+    {
+        $vehicle = $this->vehicles->findById($id);
+        if ($vehicle === null || !LogbookAccess::canUseVehicle($this->user(), $vehicle)) {
+            Response::notFound('Das Fahrzeug wurde nicht gefunden.');
+
+            return null;
+        }
+        if (!$vehicle->logbookOdometerCheck) {
+            Response::redirect('/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+
+            return null;
+        }
+
+        return $vehicle;
+    }
+
+    /** @param array{expected: int, reading: int}|null $gap */
+    private function renderOdometer(Vehicle $vehicle, ?string $error, ?array $gap, ?DateTimeImmutable $lockedUntil = null): void
+    {
+        echo View::render('logbook/odometer', [
+            'vehicle' => $vehicle,
+            'action' => '/fahrtenbuch/fahrzeug/' . $vehicle->id . '/kilometerstand',
+            'gapAction' => '/fahrtenbuch/fahrzeug/' . $vehicle->id . '/luecke',
+            'error' => $error,
+            'gap' => $gap,
+            'lockedUntil' => $lockedUntil,
+            'who' => $this->user()->displayName(),
+            'backUrl' => '/fahrtenbuch',
+        ]);
+    }
+
+    public static function parseReading(?string $value): ?int
+    {
+        $value = trim(str_replace(['.', ' '], '', (string) $value));
+        if (preg_match('/^\d{1,7}$/', $value) !== 1) {
+            return null;
+        }
+
+        return (int) $value;
     }
 
     /** JSON: events around a date for the capture page. */
@@ -294,6 +438,7 @@ final class LogbookController
             'history' => $entry !== null ? $this->entries->findChanges($entry->id) : [],
             'editableUntil' => $entry !== null && !$manager ? $entry->createdAt->modify('+' . $settings->editWindowDays . ' days') : null,
             'driverLabel' => $entry !== null ? $this->driverLabel($entry) : $user->displayName(),
+            'external' => false,
         ]);
     }
 
@@ -358,6 +503,7 @@ final class LogbookController
             odometerStart: $request->input('odometer_start'),
             odometerEnd: $request->input('odometer_end'),
             notBilled: LogbookAccess::canManage($user) ? $request->input('not_billed') !== null : null,
+            bypassOdometerCheck: LogbookAccess::canManage($user) && $request->input('bypass_odometer_check') !== null,
         );
     }
 

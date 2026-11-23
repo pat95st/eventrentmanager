@@ -76,6 +76,7 @@ final class ConfirmCatalog
         'venues.stage.delete' => ['Stammdaten', 'Bühne löschen', false],
         'suppliers.delete' => ['Stammdaten', 'Lieferant löschen', false],
         'vehicles.delete' => ['Stammdaten', 'Fahrzeug löschen', false],
+        'vehicles.logbook.qr_regenerate' => ['Stammdaten', 'QR-Code eines Fahrzeugs neu erzeugen', true],
         // Dokumente & Buchhaltung
         'invoices.send' => ['Dokumente & Buchhaltung', 'Rechnung versenden', true],
         'invoices.cancel' => ['Dokumente & Buchhaltung', 'Rechnung stornieren', true],

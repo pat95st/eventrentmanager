@@ -11,6 +11,13 @@ use App\Application\Logbook\Command\SaveLogbookEntry;
 use App\Application\Logbook\Command\SaveLogbookEntryHandler;
 use App\Application\Logbook\Command\SaveLogbookSettings;
 use App\Application\Logbook\Command\SaveLogbookSettingsHandler;
+use App\Application\Logbook\Command\LogbookReviewHandler;
+use App\Application\Logbook\Command\ReportOdometerGap;
+use App\Application\Logbook\Command\ReviewLogbookEntry;
+use App\Application\Logbook\LogbookExternalEvents;
+use App\Domain\Logbook\LogbookStatus;
+use App\Domain\Routing\PlannedVehicle;
+use App\Domain\Routing\PlannedVehicleRepositoryInterface;
 use App\Application\Logbook\LogbookLocationResolver;
 use App\Domain\Exception\ForbiddenException;
 use App\Domain\Exception\ValidationException;
@@ -45,6 +52,7 @@ final class SaveLogbookEntryTest extends Unit
     /** @var array<string, Vehicle> */
     private array $vehicles = [];
     private SaveLogbookEntryHandler $handler;
+    private LogbookReviewHandler $review;
 
     protected function _before(): void
     {
@@ -66,6 +74,11 @@ final class SaveLogbookEntryTest extends Unit
         $checked->logbookOdometerCheck = true;
         $checked->logbookOdometerInitialKm = 1000;
         $this->vehicles['checked'] = $checked;
+        $qr = $this->vehicle('qr', VehicleCategory::Auto);
+        $qr->logbookQrEnabled = true;
+        $qr->logbookAnonymousAllowed = true;
+        $qr->logbookQrToken = 'token';
+        $this->vehicles['qr'] = $qr;
 
         $vehicles = $this->createMock(VehicleRepositoryInterface::class);
         $vehicles->method('findById')->willReturnCallback(fn (string $id) => $this->vehicles[$id] ?? null);
@@ -81,7 +94,13 @@ final class SaveLogbookEntryTest extends Unit
         $tours = $this->createMock(TourRepositoryInterface::class);
         $resolver = new LogbookLocationResolver($warehouses, $this->createMock(VenueRepositoryInterface::class), $rentals, $tours);
 
-        $this->handler = new SaveLogbookEntryHandler($this->entries, $this->settings, $this->users, $vehicles, $rentals, $tours, $resolver);
+        $rentals->save(new Rental('rental-2', 'customer-1', new DateTimeImmutable('-1 day'), new DateTimeImmutable('+1 day'), 'Firmenfeier', 'Halle', null, 3, $now, $now));
+        $planned = $this->createMock(PlannedVehicleRepositoryInterface::class);
+        $planned->method('findByRental')->willReturnCallback(static fn (string $id) => $id === 'rental-1' ? [new PlannedVehicle('p1', 'rental-1', 'qr')] : []);
+        $externalEvents = new LogbookExternalEvents($rentals, $planned);
+
+        $this->handler = new SaveLogbookEntryHandler($this->entries, $this->settings, $this->users, $vehicles, $rentals, $tours, $resolver, $externalEvents);
+        $this->review = new LogbookReviewHandler($this->entries, $this->users, $vehicles);
     }
 
     public function testDriverRecordsEventTrip(): void
@@ -260,6 +279,117 @@ final class SaveLogbookEntryTest extends Unit
 
         $this->expectException(ValidationException::class);
         $handler->handle(new SaveLogbookSettings('400'));
+    }
+
+    public function testExternalDriverRecordsTripWithQrVehicle(): void
+    {
+        $id = $this->save($this->external([]));
+
+        $entry = $this->entries->findById($id);
+        $this->assertSame('qr', $entry?->vehicleId);
+        $this->assertTrue($entry?->isExternal);
+        $this->assertNull($entry?->driverUserId);
+        $this->assertNull($entry?->createdByUserId);
+        $this->assertSame('Erika Extern', $entry?->driverName);
+        $this->assertSame(LogbookStatus::Approved, $entry?->status);
+        $this->assertSame('Erika Extern (extern)', $this->entries->changes[0]->actorName);
+    }
+
+    public function testExternalRules(): void
+    {
+        $this->assertErrors(['driverName'], $this->external(['driverName' => '']));
+        // Only events the vehicle is planned for.
+        $this->assertErrors(['rentalId'], $this->external(['rentalId' => 'rental-2', 'to' => 'event_venue:rental-2']));
+        // No private trips unless the vehicle allows them, no saved addresses or venues.
+        $this->assertErrors(['category'], $this->external(['category' => 'private']));
+        $this->assertErrors(['to'], $this->external(['to' => 'saved_address:x']));
+
+        $this->vehicles['qr']->logbookAnonymousPrivateAllowed = true;
+        $this->assertNotSame('', $this->save($this->external(['category' => 'private', 'from' => null, 'to' => null])));
+    }
+
+    public function testExternalTripsArePendingWithApproval(): void
+    {
+        $this->vehicles['qr']->logbookAnonymousRequiresApproval = true;
+        $id = $this->save($this->external([]));
+        $this->assertSame(LogbookStatus::Pending, $this->entries->findById($id)?->status);
+        $this->assertFalse($this->entries->findById($id)?->isBillable());
+
+        try {
+            $this->review->handle(new ReviewLogbookEntry($id, 'driver', true));
+            $this->fail('ForbiddenException expected');
+        } catch (ForbiddenException) {
+        }
+        $this->review->handle(new ReviewLogbookEntry($id, 'manager', true));
+        $this->assertSame(LogbookStatus::Approved, $this->entries->findById($id)?->status);
+        $this->assertTrue($this->entries->findById($id)?->isBillable());
+        $this->review->handle(new ReviewLogbookEntry($id, 'manager', false));
+        $this->assertSame(LogbookStatus::Rejected, $this->entries->findById($id)?->status);
+    }
+
+    public function testExternalCaptureNeedsVehicleSwitch(): void
+    {
+        $this->vehicles['qr']->logbookAnonymousAllowed = false;
+        $this->expectException(ForbiddenException::class);
+        $this->save($this->external([]));
+    }
+
+    public function testOdometerChainForNewTrips(): void
+    {
+        // Initial reading 1000, tolerance 0.
+        $this->assertErrors(['odometerStart'], ['vehicleId' => 'checked', 'odometerStart' => '1005', 'odometerEnd' => '1050']);
+        $this->save(['vehicleId' => 'checked', 'odometerStart' => '1000', 'odometerEnd' => '1050']);
+        // The next trip starts at the last reading.
+        $this->assertErrors(['odometerStart'], ['vehicleId' => 'checked', 'odometerStart' => '1000', 'odometerEnd' => '1080']);
+        $this->vehicles['checked']->logbookOdometerToleranceKm = 3;
+        $this->assertNotSame('', $this->save(['vehicleId' => 'checked', 'odometerStart' => '1052', 'odometerEnd' => '1080']));
+    }
+
+    public function testManagersMayBypassTheOdometerCheck(): void
+    {
+        $this->assertErrors(['odometerStart'], ['vehicleId' => 'checked', 'odometerStart' => '2000', 'odometerEnd' => '2050', 'bypassOdometerCheck' => true]);
+
+        $id = $this->save(['actorUserId' => 'manager', 'vehicleId' => 'checked', 'odometerStart' => '2000', 'odometerEnd' => '2050', 'bypassOdometerCheck' => true]);
+        $this->assertTrue($this->entries->findById($id)?->odometerCheckBypassed);
+    }
+
+    public function testGapReportClosesTheChain(): void
+    {
+        $gapId = $this->review->handle(new ReportOdometerGap('checked', 'driver', 1300));
+
+        $gap = $this->entries->findById($gapId);
+        $this->assertSame(LogbookCategory::Unclear, $gap?->category);
+        $this->assertSame(LogbookStatus::Pending, $gap?->status);
+        $this->assertSame(1000, $gap?->odometerStart);
+        $this->assertSame(1300, $gap?->odometerEnd);
+        $this->assertSame(300, $gap?->distanceKm);
+        $this->assertNotSame('', $this->save(['vehicleId' => 'checked', 'odometerStart' => '1300', 'odometerEnd' => '1340']));
+
+        // No gap below the last reading, and only for drivers who may use the vehicle.
+        $this->expectException(ValidationException::class);
+        $this->review->handle(new ReportOdometerGap('checked', 'driver', 1200));
+    }
+
+    public function testGapReportOnlyForAllowedDrivers(): void
+    {
+        $this->vehicles['checked']->isPrivate = true;
+        $this->vehicles['checked']->ownerUserId = 'other';
+        $this->expectException(ForbiddenException::class);
+        $this->review->handle(new ReportOdometerGap('checked', 'driver', 1300));
+    }
+
+    /**
+     * @param array<string, mixed> $overrides
+     * @return array<string, mixed>
+     */
+    private function external(array $overrides): array
+    {
+        return array_merge([
+            'actorUserId' => null,
+            'externalVehicleId' => 'qr',
+            'vehicleId' => null,
+            'driverName' => 'Erika Extern',
+        ], $overrides);
     }
 
     /** @param array<string, mixed> $overrides */

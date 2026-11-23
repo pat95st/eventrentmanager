@@ -400,6 +400,11 @@ final class RentalInsuranceListTest extends Unit
             {
                 return false;
             }
+            public function findByLogbookQrToken(string $token): ?Vehicle
+            {
+                return null;
+            }
+
             public function isUsedByVehicleTows(string $id): bool
             {
                 return false;

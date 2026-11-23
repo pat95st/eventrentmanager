@@ -17,6 +17,13 @@
  * @var \App\Domain\Logbook\LogbookEntryChange[] $history
  * @var \DateTimeImmutable|null $editableUntil
  * @var string $driverLabel
+ * @var bool $external capture by an external driver via QR code (migration 185)
+ * Only for external drivers:
+ * @var \App\Domain\Vehicle\Vehicle|null $fixedVehicle
+ * @var string|null $action
+ * @var string|null $apiBase prefix of the JSON helpers (events, event locations)
+ * @var LogbookCategory[]|null $allowedCategories
+ * @var int|null $verifiedOdometer reading confirmed on the odometer check page
  */
 
 use App\Domain\Logbook\LogbookCategory;
@@ -31,17 +38,31 @@ $err = static fn (string $key): string => isset($errors[$key]) ? '<span class="e
 $cls = static fn (string ...$keys): string => array_intersect_key($errors, array_flip($keys)) !== [] ? 'field err' : 'field';
 $logo = CompanyBranding::darkLogoUrl() ?? CompanyBranding::logoUrl();
 $category = $v('category') !== '' ? $v('category') : LogbookCategory::Event->value;
-$categories = LogbookCategory::selectable();
+$external ??= false;
+$fixedVehicle ??= null;
+$verifiedOdometer ??= null;
+$apiBase ??= '/fahrtenbuch';
+$categories = $allowedCategories ?? LogbookCategory::selectable();
 if ($entry?->category === LogbookCategory::Unclear) {
     $categories[] = LogbookCategory::Unclear;
 }
+if (!in_array($category, array_map(static fn (LogbookCategory $c) => $c->value, $categories), true)) {
+    $category = $categories[0]->value;
+}
+$odometerVehicle = $fixedVehicle;
+foreach ($vehicles as $candidate) {
+    if ($candidate->id === $v('vehicle_id')) {
+        $odometerVehicle = $candidate;
+    }
+}
+$verifiedOdometer ??= ($odometerVehicle !== null && $v('odometer_start') !== '' && \App\Infrastructure\Http\LogbookOdometerSession::confirmed($odometerVehicle->id) === (int) $v('odometer_start')) ? (int) $v('odometer_start') : null;
 $isTour = false;
 foreach ($events as $event) {
     if ($event['id'] === $v('rental_id')) {
         $isTour = $event['isTour'];
     }
 }
-$action = $entry !== null ? '/fahrtenbuch/' . $entry->id : '/fahrtenbuch';
+$action ??= $entry !== null ? '/fahrtenbuch/' . $entry->id : '/fahrtenbuch';
 $pageTitle = ($entry !== null ? 'Fahrt bearbeiten' : 'Fahrt erfassen') . ' – Fahrtenbuch';
 
 /** Options of a start/destination select. */
@@ -71,9 +92,13 @@ require __DIR__ . '/_mobile-head.php';
         <?php if ($logo !== null): ?><img src="<?= e($logo) ?>" alt=""><?php endif; ?>
         <div class="title">
             <h1><?= $entry !== null ? 'Fahrt bearbeiten' : 'Fahrt erfassen' ?></h1>
-            <p>Fahrtenbuch<?= $entry !== null ? ' · erfasst am ' . e($entry->createdAt->format('d.m.Y H:i')) : '' ?></p>
+            <p><?= $fixedVehicle !== null ? e($fixedVehicle->displayName()) : 'Fahrtenbuch' ?><?= $entry !== null ? ' · erfasst am ' . e($entry->createdAt->format('d.m.Y H:i')) : '' ?></p>
         </div>
-        <div class="who"><?= e($user->displayName()) ?><br><a href="/fahrtenbuch">Zum Fahrtenbuch</a></div>
+        <?php if ($external): ?>
+            <div class="who">ohne Anmeldung</div>
+        <?php else: ?>
+            <div class="who"><?= e($user->displayName()) ?><br><a href="/fahrtenbuch">Zum Fahrtenbuch</a></div>
+        <?php endif; ?>
     </div>
 </header>
 
@@ -87,6 +112,9 @@ require __DIR__ . '/_mobile-head.php';
 
     <form method="post" action="<?= e($action) ?>" id="trip-form" novalidate>
         <input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>">
+        <?php if ($external): ?>
+            <div style="position:absolute;left:-10000px" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <?php endif; ?>
         <?php if ($v('return_to_rental') !== ''): ?><input type="hidden" name="return_to_rental" value="<?= e($v('return_to_rental')) ?>"><?php endif; ?>
 
         <section class="card">
@@ -102,7 +130,16 @@ require __DIR__ . '/_mobile-head.php';
                     <input type="time" name="arrive_time" value="<?= e($v('arrive_time')) ?>"><?= $err('arriveTime') ?>
                 </label>
             </div>
-            <?php if ($manager): ?>
+            <?php if ($external): ?>
+                <div class="grid2">
+                    <label class="<?= $cls('driverName') ?>">Dein Name *
+                        <input type="text" name="driver_name" value="<?= e($v('driver_name')) ?>" maxlength="150" autocomplete="name" required><?= $err('driverName') ?>
+                    </label>
+                    <label class="field">Telefon
+                        <input type="tel" name="driver_phone" value="<?= e($v('driver_phone')) ?>" maxlength="50" autocomplete="tel">
+                    </label>
+                </div>
+            <?php elseif ($manager): ?>
                 <label class="<?= $cls('driverUserId') ?>">Fahrer
                     <select name="driver_user_id" data-driver-select>
                         <?php foreach ($drivers as $driverId => $driverName): ?>
@@ -126,6 +163,9 @@ require __DIR__ . '/_mobile-head.php';
 
         <section class="card">
             <h2>Fahrzeug</h2>
+            <?php if ($fixedVehicle !== null): ?>
+                <p class="result" data-fixed-vehicle data-odometer="<?= $fixedVehicle->logbookOdometerCheck ? '1' : '0' ?>"><b><?= e($fixedVehicle->displayName()) ?></b></p>
+            <?php else: ?>
             <label class="<?= $cls('vehicleId') ?>">Fahrzeug *
                 <select name="vehicle_id" data-vehicle-select>
                     <option value="">– bitte wählen –</option>
@@ -140,6 +180,7 @@ require __DIR__ . '/_mobile-head.php';
             <label class="<?= $cls('otherVehicleLabel') ?>" data-other-vehicle>Welches Fahrzeug? *
                 <input type="text" name="other_vehicle_label" value="<?= e($v('other_vehicle_label')) ?>" maxlength="150" placeholder="z. B. Privat-PKW, M-XY 123"><?= $err('otherVehicleLabel') ?>
             </label>
+            <?php endif; ?>
             <?php if ($trailers !== []): ?>
                 <label class="<?= $cls('trailerId') ?>">Anhänger
                     <select name="trailer_id">
@@ -170,7 +211,7 @@ require __DIR__ . '/_mobile-head.php';
                         <?php endforeach; ?>
                     </select><?= $err('rentalId') ?>
                 </label>
-                <p class="hint">Angeboten werden Veranstaltungen ±3 Tage um das Datum der Fahrt.</p>
+                <p class="hint"><?= $external ? 'Angeboten werden Veranstaltungen, für die dieses Fahrzeug eingeplant ist (±1 Tag).' : 'Angeboten werden Veranstaltungen ±3 Tage um das Datum der Fahrt.' ?></p>
                 <label class="<?= $cls('tourStopId') ?>" data-tour-stop <?= $isTour ? '' : 'hidden' ?>>Tourstop
                     <select name="tour_stop_id" data-tour-stop-select>
                         <option value="">ganze Tour</option>
@@ -200,7 +241,7 @@ require __DIR__ . '/_mobile-head.php';
                 <label class="field">Adresse oder Ort
                     <input type="text" name="from_text" value="<?= e($v('from_text')) ?>" maxlength="255" placeholder="Straße Nr., PLZ Ort">
                 </label>
-                <label class="toggle"><input type="checkbox" name="save_from_address" value="1" <?= $on('save_from_address') ? 'checked' : '' ?>><span class="sw"></span>Als gespeicherte Adresse ablegen</label>
+                <?php if (!$external): ?><label class="toggle"><input type="checkbox" name="save_from_address" value="1" <?= $on('save_from_address') ? 'checked' : '' ?>><span class="sw"></span>Als gespeicherte Adresse ablegen</label><?php endif; ?>
             </div>
             <div class="swap"><button type="button" data-swap title="Start und Ziel tauschen" aria-label="Start und Ziel tauschen">⇅</button></div>
             <label class="<?= $cls('to') ?>">Ziel
@@ -210,7 +251,7 @@ require __DIR__ . '/_mobile-head.php';
                 <label class="field">Adresse oder Ort
                     <input type="text" name="to_text" value="<?= e($v('to_text')) ?>" maxlength="255" placeholder="Straße Nr., PLZ Ort">
                 </label>
-                <label class="toggle"><input type="checkbox" name="save_to_address" value="1" <?= $on('save_to_address') ? 'checked' : '' ?>><span class="sw"></span>Als gespeicherte Adresse ablegen</label>
+                <?php if (!$external): ?><label class="toggle"><input type="checkbox" name="save_to_address" value="1" <?= $on('save_to_address') ? 'checked' : '' ?>><span class="sw"></span>Als gespeicherte Adresse ablegen</label><?php endif; ?>
             </div>
             <label class="toggle"><input type="checkbox" name="round_trip" value="1" <?= $on('round_trip') ? 'checked' : '' ?> data-round-trip><span class="sw"></span>Hin- und Rückfahrt (Start → Ziel → Start)</label>
         </section>
@@ -219,17 +260,25 @@ require __DIR__ . '/_mobile-head.php';
             <h2>Kilometer</h2>
             <div class="grid2">
                 <label class="<?= $cls('odometerStart') ?>"><span data-odometer-label>Km-Stand Abfahrt</span>
-                    <input type="text" name="odometer_start" value="<?= e($v('odometer_start')) ?>" inputmode="numeric" autocomplete="off" data-odometer="start"><?= $err('odometerStart') ?>
+                    <input type="text" name="odometer_start" value="<?= e($v('odometer_start')) ?>" inputmode="numeric" autocomplete="off" data-odometer="start" <?= $verifiedOdometer !== null ? 'readonly' : '' ?>><?= $err('odometerStart') ?>
                 </label>
                 <label class="<?= $cls('odometerEnd') ?>"><span data-odometer-label>Km-Stand Ankunft</span>
                     <input type="text" name="odometer_end" value="<?= e($v('odometer_end')) ?>" inputmode="numeric" autocomplete="off" data-odometer="end"><?= $err('odometerEnd') ?>
                 </label>
             </div>
+            <?php if ($verifiedOdometer !== null): ?>
+                <p class="hint">✓ Kilometerstand bei Abfahrt geprüft.</p>
+            <?php elseif (!$external && $odometerVehicle !== null && $odometerVehicle->logbookOdometerCheck && $entry === null): ?>
+                <p class="hint">Für dieses Fahrzeug wird der Kilometerstand geprüft. <a href="/fahrtenbuch/fahrzeug/<?= e($odometerVehicle->id) ?>/kilometerstand">Kilometerstand-Abfrage öffnen</a> (dort lässt sich auch eine Lücke melden).</p>
+            <?php endif; ?>
+            <?php if ($manager && !$external && $entry === null): ?>
+                <label class="toggle" data-bypass><input type="checkbox" name="bypass_odometer_check" value="1" <?= $on('bypass_odometer_check') ? 'checked' : '' ?>><span class="sw"></span>Kilometerstand-Prüfung umgehen (wird vermerkt)</label>
+            <?php endif; ?>
             <div class="inline" data-distance-row>
                 <label class="<?= $cls('distanceKm') ?>"><span data-distance-label><?= $on('round_trip') ? 'Kilometer (einfache Strecke)' : 'Gefahrene Kilometer' ?></span>
                     <input type="text" name="distance_km" value="<?= e($v('distance_km')) ?>" inputmode="numeric" autocomplete="off" data-distance><?= $err('distanceKm') ?>
                 </label>
-                <button type="button" class="btn" data-suggest>Vorschlagen</button>
+                <?php if (!$external): ?><button type="button" class="btn" data-suggest>Vorschlagen</button><?php endif; ?>
             </div>
             <p class="hint" data-suggest-hint></p>
             <div class="result" data-total hidden></div>
@@ -242,6 +291,19 @@ require __DIR__ . '/_mobile-head.php';
             <div class="wrap"><button type="submit" class="btn primary big">Fahrt speichern</button></div>
         </div>
     </form>
+
+    <?php if ($entry !== null && $manager && $entry->status !== \App\Domain\Logbook\LogbookStatus::Approved): ?>
+        <section class="card">
+            <h2>Freigabe</h2>
+            <p class="hint">Status: <?= e($entry->status->label()) ?>. Nicht freigegebene Fahrten zählen nicht für die Abrechnung.</p>
+            <div class="row">
+                <form method="post" action="/fahrtenbuch/<?= e($entry->id) ?>/freigeben" style="flex:1"><input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>"><button type="submit" class="btn primary big">Freigeben</button></form>
+                <?php if ($entry->status === \App\Domain\Logbook\LogbookStatus::Pending): ?>
+                    <form method="post" action="/fahrtenbuch/<?= e($entry->id) ?>/ablehnen" style="flex:1"><input type="hidden" name="csrf_token" value="<?= e(Csrf::token()) ?>"><button type="submit" class="btn big">Ablehnen</button></form>
+                <?php endif; ?>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <?php if ($entry !== null): ?>
         <section class="card">
@@ -306,6 +368,7 @@ require __DIR__ . '/_mobile-head.php';
     var $ = function (sel) { return form.querySelector(sel); };
     var $$ = function (sel) { return Array.prototype.slice.call(form.querySelectorAll(sel)); };
     var templates = <?= json_encode($rentalLocations !== null ? ['outbound' => $rentalLocations['outbound'], 'return' => $rentalLocations['return']] : null, JSON_THROW_ON_ERROR | JSON_HEX_TAG) ?>;
+    var API_BASE = <?= json_encode($apiBase, JSON_THROW_ON_ERROR) ?>;
     var distanceTouched = <?= $v('distance_km') !== '' ? 'true' : 'false' ?>;
 
     function category() {
@@ -324,9 +387,15 @@ require __DIR__ . '/_mobile-head.php';
             $('[data-custom="' + which + '"]').hidden = select.value !== 'custom:';
         });
         var vehicle = $('[data-vehicle-select]');
-        $('[data-other-vehicle]').hidden = vehicle.value !== 'other';
-        var option = vehicle.options[vehicle.selectedIndex];
-        var odometerRequired = option && option.getAttribute('data-odometer') === '1';
+        var fixed = $('[data-fixed-vehicle]');
+        var odometerRequired = fixed ? fixed.getAttribute('data-odometer') === '1' : false;
+        if (vehicle) {
+            $('[data-other-vehicle]').hidden = vehicle.value !== 'other';
+            var option = vehicle.options[vehicle.selectedIndex];
+            odometerRequired = option && option.getAttribute('data-odometer') === '1';
+        }
+        var bypass = $('[data-bypass]');
+        if (bypass) { bypass.hidden = !odometerRequired; }
         $$('[data-odometer-label]').forEach(function (label, i) {
             label.textContent = (i === 0 ? 'Km-Stand Abfahrt' : 'Km-Stand Ankunft') + (odometerRequired ? ' *' : '');
         });
@@ -397,7 +466,7 @@ require __DIR__ . '/_mobile-head.php';
             fillLocationGroups([]);
             return;
         }
-        fetch('/fahrtenbuch/veranstaltungen/' + encodeURIComponent(id) + '/orte', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch(API_BASE + '/veranstaltungen/' + encodeURIComponent(id) + '/orte', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data) { return; }
@@ -420,7 +489,7 @@ require __DIR__ . '/_mobile-head.php';
         var select = $('[data-rental-select]');
         var current = select.value;
         if (!date) { return; }
-        fetch('/fahrtenbuch/veranstaltungen?datum=' + encodeURIComponent(date) + '&veranstaltung=' + encodeURIComponent(current), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch(API_BASE + '/veranstaltungen?datum=' + encodeURIComponent(date) + '&veranstaltung=' + encodeURIComponent(current), { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (data) {
                 if (!data) { return; }
@@ -444,6 +513,7 @@ require __DIR__ . '/_mobile-head.php';
             return;
         }
         if (auto && distanceTouched) { return; }
+        if (!$('[data-suggest]')) { return; }
         var params = new URLSearchParams({
             von: from, von_text: form.elements.from_text.value,
             nach: to, nach_text: form.elements.to_text.value,
@@ -480,7 +550,7 @@ require __DIR__ . '/_mobile-head.php';
     $('[data-distance]').addEventListener('input', function () { distanceTouched = this.value !== ''; total(); });
     $('[data-rental-select]').addEventListener('change', loadRental);
     $('[data-trip-date]').addEventListener('change', loadEvents);
-    $('[data-suggest]').addEventListener('click', function () { suggest(false); });
+    if ($('[data-suggest]')) { $('[data-suggest]').addEventListener('click', function () { suggest(false); }); }
     $('[data-swap]').addEventListener('click', function () {
         var from = $('[data-location="from"]');
         var to = $('[data-location="to"]');

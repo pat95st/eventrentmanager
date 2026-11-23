@@ -1019,7 +1019,13 @@ $queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App
 $logbookSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbLogbookSettingsRepository($pdo);
 $logbookLocationResolver = new \App\Application\Logbook\LogbookLocationResolver($warehouseRepository, $venueRepository, $rentalRepository, $tourRepository, $companyLocator, $geocoder, $tourStopLocator);
 $logbookDistanceService = new \App\Application\Logbook\LogbookDistanceService($routingSettingsRepository, $openRouteServiceClient);
-$commandBus->register(\App\Application\Logbook\Command\SaveLogbookEntry::class, new \App\Application\Logbook\Command\SaveLogbookEntryHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $tourRepository, $logbookLocationResolver));
+$logbookExternalEvents = new \App\Application\Logbook\LogbookExternalEvents($rentalRepository, $plannedVehicleRepository, $rentalVehicleLoadRepository);
+$logbookThrottle = new \App\Application\Logbook\LogbookThrottle(new \App\Infrastructure\Persistence\Pdo\MariadbLogbookThrottleRepository($pdo));
+$commandBus->register(\App\Application\Logbook\Command\SaveLogbookEntry::class, new \App\Application\Logbook\Command\SaveLogbookEntryHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $tourRepository, $logbookLocationResolver, $logbookExternalEvents));
+$logbookReviewHandler = new \App\Application\Logbook\Command\LogbookReviewHandler($logbookEntryRepository, $userRepository, $vehicleRepository);
+$commandBus->register(\App\Application\Logbook\Command\ReportOdometerGap::class, $logbookReviewHandler);
+$commandBus->register(\App\Application\Logbook\Command\ReviewLogbookEntry::class, $logbookReviewHandler);
+$commandBus->register(\App\Application\Logbook\Command\RegenerateVehicleQrToken::class, new \App\Application\Logbook\Command\RegenerateVehicleQrTokenHandler($vehicleRepository));
 $logbookLifecycleHandler = new \App\Application\Logbook\Command\LogbookEntryLifecycleHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository);
 $commandBus->register(\App\Application\Logbook\Command\DeleteLogbookEntry::class, $logbookLifecycleHandler);
 $commandBus->register(\App\Application\Logbook\Command\RestoreLogbookEntry::class, $logbookLifecycleHandler);
@@ -2011,7 +2017,7 @@ $apiControllers = [
     'suppliers' => $simpleApiResource('Lieferant', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Supplier\Query\ListSuppliers())), static fn (string $id) => $supplierRepository->findById($id), \App\Application\Supplier\Command\CreateSupplier::class, \App\Application\Supplier\Command\UpdateSupplier::class, \App\Application\Supplier\Command\DeleteSupplier::class),
     'venues' => $simpleApiResource('Veranstaltungsort', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Venue\Query\ListVenues(null, 1, 1_000_000))), static fn (string $id) => $venueRepository->findById($id), \App\Application\Venue\Command\CreateVenue::class, \App\Application\Venue\Command\UpdateVenue::class, \App\Application\Venue\Command\DeleteVenue::class),
     'warehouses' => $simpleApiResource('Lagerort', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Warehouse\Query\ListWarehouses())), static fn (string $id) => $warehouseRepository->findById($id), \App\Application\Warehouse\Command\CreateWarehouse::class, \App\Application\Warehouse\Command\UpdateWarehouse::class, \App\Application\Warehouse\Command\DeleteWarehouse::class),
-    'vehicles' => $simpleApiResource('Fahrzeug', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Vehicle\Query\ListVehicles())), static fn (string $id) => $vehicleRepository->findById($id), \App\Application\Vehicle\Command\CreateVehicle::class, \App\Application\Vehicle\Command\UpdateVehicle::class, \App\Application\Vehicle\Command\DeleteVehicle::class),
+    'vehicles' => $simpleApiResource('Fahrzeug', static fn () => \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController::items($queryBus->ask(new \App\Application\Vehicle\Query\ListVehicles())), static fn (string $id) => $vehicleRepository->findById($id), \App\Application\Vehicle\Command\CreateVehicle::class, \App\Application\Vehicle\Command\UpdateVehicle::class, \App\Application\Vehicle\Command\DeleteVehicle::class, ['logbookQrToken']),
     'rentals' => new \App\Infrastructure\Http\Controllers\Api\RentalApiController($queryBus, $commandBus, $packingListPdfGenerator),
     'offers' => new \App\Infrastructure\Http\Controllers\Api\OfferApiController($queryBus, $commandBus, $apiDocumentRenderer),
     'order-confirmations' => new \App\Infrastructure\Http\Controllers\Api\OrderConfirmationApiController($queryBus, $commandBus, $apiDocumentRenderer),
@@ -2405,7 +2411,7 @@ $router->get('/fahrzeuge/{id}/bearbeiten', $auth->guard(Permission::AusgabeRueck
 $router->post('/fahrzeuge/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'update']));
 $router->post('/fahrzeuge/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'destroy']));
 // Driver's logbook (migration 184)
-$logbookController = new \App\Infrastructure\Http\Controllers\LogbookController($commandBus, $logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $logbookLocationResolver, $logbookDistanceService, $rentalTechnicianRepository);
+$logbookController = new \App\Infrastructure\Http\Controllers\LogbookController($commandBus, $logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $logbookLocationResolver, $logbookDistanceService, $rentalTechnicianRepository, $logbookThrottle);
 $logbookAccess = [Permission::Fahrer, Permission::FahrtenbuchVerwalten];
 $router->get('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'index']));
 $router->get('/fahrtenbuch/neu', $auth->guard($logbookAccess, [$logbookController, 'create']));
@@ -2416,9 +2422,24 @@ $router->get('/fahrtenbuch/strecke', $auth->guard($logbookAccess, [$logbookContr
 $router->get('/fahrtenbuch/{id}/bearbeiten', $auth->guard($logbookAccess, [$logbookController, 'edit']));
 $router->post('/fahrtenbuch/{id}', $auth->guard($logbookAccess, [$logbookController, 'update']));
 $router->post('/fahrtenbuch/{id}/loeschen', $auth->guard($logbookAccess, [$logbookController, 'destroy']));
+$router->post('/fahrtenbuch/{id}/freigeben', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'approve']));
+$router->post('/fahrtenbuch/{id}/ablehnen', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'reject']));
+$router->get('/fahrtenbuch/fahrzeug/{id}/kilometerstand', $auth->guard($logbookAccess, [$logbookController, 'odometerForm']));
+$router->post('/fahrtenbuch/fahrzeug/{id}/kilometerstand', $auth->guard($logbookAccess, [$logbookController, 'odometerCheck']));
+$router->post('/fahrtenbuch/fahrzeug/{id}/luecke', $auth->guard($logbookAccess, [$logbookController, 'reportGap']));
 $router->post('/fahrtenbuch/{id}/wiederherstellen', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'restore']));
 $router->get('/einstellungen/fahrtenbuch', $auth->guard(Permission::Administration, [$logbookController, 'settingsForm']));
 $router->post('/einstellungen/fahrtenbuch', $auth->guard(Permission::Administration, [$logbookController, 'saveSettings']));
+// QR capture of the logbook (migration 185): /fahrt/* is public (login is checked inside).
+$logbookQrController = new \App\Infrastructure\Http\Controllers\LogbookQrController($commandBus, $vehicleRepository, $userRepository, $rentalRepository, $logbookEntryRepository, $logbookLocationResolver, $logbookExternalEvents, $logbookThrottle, $localInstance);
+$router->get('/fahrt/{token}', [$logbookQrController, 'show']);
+$router->post('/fahrt/{token}/kilometerstand', [$logbookQrController, 'odometer']);
+$router->get('/fahrt/{token}/erfassen', [$logbookQrController, 'form']);
+$router->post('/fahrt/{token}/erfassen', [$logbookQrController, 'store']);
+$router->get('/fahrt/{token}/veranstaltungen', [$logbookQrController, 'events']);
+$router->get('/fahrt/{token}/veranstaltungen/{rentalId}/orte', [$logbookQrController, 'rentalOptions']);
+$router->get('/fahrzeuge/{id}/fahrtenbuch/qr', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookQrController, 'printPage']));
+$router->post('/fahrzeuge/{id}/fahrtenbuch/qr-neu', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookQrController, 'regenerate']));
 $router->get('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'logbook']));
 $router->post('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'saveLogbook']));
 

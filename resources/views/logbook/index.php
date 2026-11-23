@@ -31,6 +31,13 @@ $km = static fn (int $value): string => number_format($value, 0, ',', '.') . ' k
     </div>
 </div>
 
+<?php if (($pendingCount ?? 0) > 0): ?>
+    <a href="/fahrtenbuch?status=pending" class="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+        <span><strong><?= (int) $pendingCount ?> <?= $pendingCount === 1 ? 'Fahrt' : 'Fahrten' ?> zu klären</strong> – ungeprüfte Fahrten externer Fahrer und gemeldete Lücken im Kilometerstand.</span>
+        <span aria-hidden="true">→</span>
+    </a>
+<?php endif; ?>
+
 <form method="get" action="/fahrtenbuch" id="logbook-filter-form" class="mb-4 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-3 lg:grid-cols-6 dark:border-slate-800 dark:bg-slate-900">
     <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Von
         <input type="date" name="von" value="<?= e($q('von')) ?>" class="<?= $input ?>">

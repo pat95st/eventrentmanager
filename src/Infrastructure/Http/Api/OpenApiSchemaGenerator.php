@@ -43,7 +43,7 @@ final class OpenApiSchemaGenerator
             'Supplier' => [\App\Domain\Supplier\Supplier::class, [], 'Supplier'],
             'Venue' => [\App\Domain\Venue\Venue::class, [], 'Venue'],
             'Warehouse' => [\App\Domain\Warehouse\Warehouse::class, [], 'Warehouse'],
-            'Vehicle' => [\App\Domain\Vehicle\Vehicle::class, [], 'Vehicle'],
+            'Vehicle' => [\App\Domain\Vehicle\Vehicle::class, ['logbookQrToken'], 'Vehicle'],
             'Rental' => [\App\Domain\Rental\Rental::class, ['termsSignatureFile'], 'Event (rental)'],
             'RentalItem' => [\App\Domain\Rental\RentalItem::class, [], 'Scheduled item of an event'],
             'RentalIssuedItem' => [\App\Domain\Rental\RentalIssuedItem::class, [], 'Issued unit'],

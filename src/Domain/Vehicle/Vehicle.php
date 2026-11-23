@@ -73,7 +73,15 @@ final class Vehicle
         public bool $logbookOdometerCheck = false,
         public int $logbookOdometerToleranceKm = 0,
         public ?int $logbookOdometerInitialKm = null,
+        // Migration 185: token of the QR code (URL /fahrt/<token>), null = none yet.
+        public ?string $logbookQrToken = null,
     ) {
+    }
+
+    /** Readable label for lists and the capture pages: "Name (plate)". */
+    public function displayName(): string
+    {
+        return $this->name . ($this->licensePlate !== null ? ' (' . $this->licensePlate . ')' : '');
     }
 
     /** Is $userId the owner of this private vehicle? */

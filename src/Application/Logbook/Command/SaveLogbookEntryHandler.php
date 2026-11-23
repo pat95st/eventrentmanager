@@ -6,6 +6,7 @@ namespace App\Application\Logbook\Command;
 
 use App\Application\Command\CommandHandlerInterface;
 use App\Application\Command\CommandInterface;
+use App\Application\Logbook\LogbookExternalEvents;
 use App\Application\Logbook\LogbookLocationResolver;
 use App\Domain\Exception\ForbiddenException;
 use App\Domain\Exception\NotFoundException;
@@ -15,6 +16,8 @@ use App\Domain\Logbook\LogbookCategory;
 use App\Domain\Logbook\LogbookEntry;
 use App\Domain\Logbook\LogbookEntryChange;
 use App\Domain\Logbook\LogbookEntryRepositoryInterface;
+use App\Domain\Logbook\LogbookLocationType;
+use App\Domain\Logbook\LogbookOdometerChain;
 use App\Domain\Logbook\LogbookSettingsRepositoryInterface;
 use App\Domain\Logbook\LogbookStatus;
 use App\Domain\Rental\RentalRepositoryInterface;
@@ -44,10 +47,19 @@ use DateTimeImmutable;
  *   check requires both readings.
  * - "Nicht abrechnen" is only changed by logbook managers.
  * - Every creation and change is written to the audit trail.
+ * - External drivers (QR code, migration 185) record trips with the QR
+ *   vehicle only, need their name, may only choose events the vehicle is
+ *   planned for, the warehouses, company, event locations or a free
+ *   address, and private trips only if the vehicle allows them. Their trips
+ *   are pending if the vehicle requires approval.
+ * - New trips of a vehicle with odometer check must start at the last
+ *   recorded reading (within the tolerance); logbook managers may skip the
+ *   check, which is marked on the trip.
  */
 final class SaveLogbookEntryHandler implements CommandHandlerInterface
 {
     public const MAX_DISTANCE_KM = 20000;
+    public const ODOMETER_MISMATCH = 'Der Kilometerstand bei Abfahrt passt nicht zum zuletzt erfassten Kilometerstand dieses Fahrzeugs.';
 
     public function __construct(
         private readonly LogbookEntryRepositoryInterface $entries,
@@ -57,6 +69,7 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         private readonly RentalRepositoryInterface $rentals,
         private readonly TourRepositoryInterface $tours,
         private readonly LogbookLocationResolver $locations,
+        private readonly ?LogbookExternalEvents $externalEvents = null,
     ) {
     }
 
@@ -64,9 +77,17 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
     {
         assert($command instanceof SaveLogbookEntry);
 
-        $actor = $this->users->findById($command->actorUserId);
-        if ($actor === null || !$actor->isActive || !LogbookAccess::canCapture($actor)) {
-            throw new ForbiddenException('Du darfst keine Fahrten erfassen.');
+        $external = $command->externalVehicleId !== null;
+        $actor = null;
+        if ($external) {
+            if ($command->entryId !== null) {
+                throw new ForbiddenException('Externe Fahrer können Fahrten nicht ändern.');
+            }
+        } else {
+            $actor = $command->actorUserId !== null ? $this->users->findById($command->actorUserId) : null;
+            if ($actor === null || !$actor->isActive || !LogbookAccess::canCapture($actor)) {
+                throw new ForbiddenException('Du darfst keine Fahrten erfassen.');
+            }
         }
         $manager = LogbookAccess::canManage($actor);
 
@@ -87,13 +108,28 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         $departTime = $this->parseTime($command->departTime, 'departTime', $errors);
         $arriveTime = $this->parseTime($command->arriveTime, 'arriveTime', $errors);
 
-        [$driverUserId, $driverName, $driverPhone, $isExternal] = $this->driver($command, $actor, $manager, $existing, $errors);
-
-        [$vehicle, $otherVehicleLabel] = $this->vehicle($command, $actor, $existing, $errors);
+        if ($external) {
+            $driverName = $this->text($command->driverName, 150);
+            if ($driverName === null) {
+                $errors['driverName'] = 'Bitte deinen Namen angeben.';
+            }
+            [$driverUserId, $driverPhone, $isExternal] = [null, $this->text($command->driverPhone, 50), true];
+            $vehicle = $this->vehicles->findById((string) $command->externalVehicleId);
+            if ($vehicle === null || !$vehicle->logbookQrEnabled || !$vehicle->logbookAnonymousAllowed || $vehicle->category !== VehicleCategory::Auto) {
+                throw new ForbiddenException('Für dieses Fahrzeug können keine Fahrten ohne Anmeldung erfasst werden.');
+            }
+            $otherVehicleLabel = null;
+        } else {
+            [$driverUserId, $driverName, $driverPhone, $isExternal] = $this->driver($command, $actor, $manager, $existing, $errors);
+            [$vehicle, $otherVehicleLabel] = $this->vehicle($command, $actor, $existing, $errors);
+        }
         $trailer = $this->trailer($command->trailerId, $actor, $existing, $errors);
 
         $category = LogbookCategory::tryFrom($command->category);
         $allowed = LogbookCategory::selectable();
+        if ($external && !$vehicle->logbookAnonymousPrivateAllowed) {
+            $allowed = [LogbookCategory::Event, LogbookCategory::Business];
+        }
         if ($existing?->category === LogbookCategory::Unclear) {
             $allowed[] = LogbookCategory::Unclear;
         }
@@ -105,6 +141,9 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         $tourStopId = null;
         if ($category === LogbookCategory::Event) {
             $rental = $command->rentalId !== null && $command->rentalId !== '' ? $this->rentals->findById($command->rentalId) : null;
+            if ($rental !== null && $external && ($tripDate === null || $this->externalEvents === null || !$this->externalEvents->allows($vehicle->id, $tripDate, $rental->id))) {
+                $rental = null;
+            }
             if ($rental === null) {
                 $errors['rentalId'] = 'Bitte die Veranstaltung wählen.';
             } else {
@@ -126,13 +165,20 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         }
 
         $from = $to = null;
+        $externalTypes = [LogbookLocationType::Warehouse->value, LogbookLocationType::EventVenue->value, LogbookLocationType::TourStop->value, LogbookLocationType::Company->value, LogbookLocationType::Custom->value];
+        foreach (['from' => $command->from, 'to' => $command->to] as $field => $choice) {
+            if ($external && $choice !== null && $choice !== '' && !in_array(explode(':', $choice, 2)[0], $externalTypes, true)) {
+                $errors[$field] = 'Bitte einen gültigen Ort wählen.';
+            }
+        }
+        $saveAddresses = !$external && !$this->hasErrorsBeyondLocations($errors);
         try {
-            $from = $this->locations->resolve($command->from, $command->fromText, $rentalId, 'from', $command->saveFromAddress && !$this->hasErrorsBeyondLocations($errors));
+            $from = $this->locations->resolve($command->from, $command->fromText, $rentalId, 'from', $command->saveFromAddress && $saveAddresses);
         } catch (ValidationException $e) {
             $errors += $e->errors();
         }
         try {
-            $to = $this->locations->resolve($command->to, $command->toText, $rentalId, 'to', $command->saveToAddress && !$this->hasErrorsBeyondLocations($errors));
+            $to = $this->locations->resolve($command->to, $command->toText, $rentalId, 'to', $command->saveToAddress && $saveAddresses);
         } catch (ValidationException $e) {
             $errors += $e->errors();
         }
@@ -157,6 +203,16 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         }
         if (($odometerStart === null) !== ($odometerEnd === null) && !isset($errors['odometerStart'], $errors['odometerEnd'])) {
             $errors[$odometerStart === null ? 'odometerStart' : 'odometerEnd'] = 'Bitte beide Kilometerstände angeben oder beide leer lassen.';
+        }
+        $bypassed = $existing?->odometerCheckBypassed ?? false;
+        if ($vehicle?->logbookOdometerCheck && $existing === null && $odometerStart !== null && !isset($errors['odometerStart'])) {
+            if (!(new LogbookOdometerChain($this->entries))->matches($vehicle, $odometerStart)) {
+                if ($manager && $command->bypassOdometerCheck) {
+                    $bypassed = true;
+                } else {
+                    $errors['odometerStart'] = self::ODOMETER_MISMATCH;
+                }
+            }
         }
         $distance = null;
         if ($odometerStart !== null && $odometerEnd !== null) {
@@ -211,7 +267,7 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
             notBilled: false,
             status: LogbookStatus::Approved,
             odometerCheckBypassed: false,
-            createdByUserId: $actor->id,
+            createdByUserId: $actor?->id,
             createdAt: $now,
             updatedAt: $now,
         );
@@ -239,6 +295,10 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         if ($manager && $command->notBilled !== null) {
             $entry->notBilled = $command->notBilled;
         }
+        $entry->odometerCheckBypassed = $bypassed;
+        if ($existing === null && $external && $vehicle->logbookAnonymousRequiresApproval) {
+            $entry->status = LogbookStatus::Pending;
+        }
         $entry->updatedAt = $now;
 
         $changes = $before === null ? LogbookEntryChange::diff([], $entry->auditValues()) : LogbookEntryChange::diff($before, $entry->auditValues());
@@ -250,8 +310,8 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
         $this->entries->addChange(new LogbookEntryChange(
             Uuid::v4(),
             $entry->id,
-            $actor->id,
-            $actor->displayName(),
+            $actor?->id,
+            $actor?->displayName() ?? ($driverName . ' (extern)'),
             $existing === null ? LogbookEntryChange::CREATED : LogbookEntryChange::UPDATED,
             $changes,
             $now,
@@ -264,7 +324,7 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
      * @param array<string, string> $errors
      * @return array{0: ?string, 1: ?string, 2: ?string, 3: bool}
      */
-    private function driver(SaveLogbookEntry $command, User $actor, bool $manager, ?LogbookEntry $existing, array &$errors): array
+    private function driver(SaveLogbookEntry $command, ?User $actor, bool $manager, ?LogbookEntry $existing, array &$errors): array
     {
         if (!$manager) {
             // Drivers keep the driver of an existing trip and record new trips for themselves.
@@ -272,12 +332,12 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
                 return [$existing->driverUserId, $existing->driverName, $existing->driverPhone, $existing->isExternal];
             }
 
-            return [$actor->id, null, null, false];
+            return [$actor?->id, null, null, false];
         }
 
         $choice = trim((string) $command->driverUserId);
-        if ($choice === '' ) {
-            return [$actor->id, null, null, false];
+        if ($choice === '') {
+            return [$actor?->id, null, null, false];
         }
         if ($choice === 'external') {
             $name = $this->text($command->driverName, 150);
@@ -301,7 +361,7 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
      * @param array<string, string> $errors
      * @return array{0: ?Vehicle, 1: ?string}
      */
-    private function vehicle(SaveLogbookEntry $command, User $actor, ?LogbookEntry $existing, array &$errors): array
+    private function vehicle(SaveLogbookEntry $command, ?User $actor, ?LogbookEntry $existing, array &$errors): array
     {
         $choice = trim((string) $command->vehicleId);
         if ($choice === 'other') {
@@ -333,7 +393,7 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
     }
 
     /** @param array<string, string> $errors */
-    private function trailer(?string $trailerId, User $actor, ?LogbookEntry $existing, array &$errors): ?Vehicle
+    private function trailer(?string $trailerId, ?User $actor, ?LogbookEntry $existing, array &$errors): ?Vehicle
     {
         $trailerId = trim((string) $trailerId);
         if ($trailerId === '') {
@@ -345,7 +405,8 @@ final class SaveLogbookEntryHandler implements CommandHandlerInterface
 
             return null;
         }
-        if ($trailer->id !== $existing?->trailerId && !LogbookAccess::canUseVehicle($actor, $trailer)) {
+        $allowed = $actor === null ? !$trailer->isPrivate : LogbookAccess::canUseVehicle($actor, $trailer);
+        if ($trailer->id !== $existing?->trailerId && !$allowed) {
             $errors['trailerId'] = 'Mit diesem privaten Anhänger darfst du keine Fahrten erfassen.';
 
             return null;

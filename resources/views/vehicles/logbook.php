@@ -74,6 +74,9 @@ $toggle = static function (string $name, bool $isChecked, string $label, string 
         </div>
     </section>
 
+    <?php if ($vehicle->logbookQrToken !== null): ?>
+        <p class="text-xs text-slate-500 dark:text-slate-400">Ein QR-Code wurde erzeugt (siehe unten). Wird die QR-Erfassung ausgeschaltet, funktioniert der gedruckte Code nicht mehr, bis sie wieder eingeschaltet wird.</p>
+    <?php endif; ?>
     <div class="form-actions flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button type="submit" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Speichern</button>
         <a href="/fahrzeuge" class="text-sm text-slate-500 hover:underline dark:text-slate-400">Abbrechen</a>
@@ -97,3 +100,20 @@ $toggle = static function (string $name, bool $isChecked, string $label, string 
         });
     })();
 </script>
+
+<?php if ($vehicle->logbookQrToken !== null): ?>
+<section class="mt-6 rounded-lg border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+    <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">QR-Code</h2>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <?= $vehicle->logbookQrEnabled ? 'Aktiv.' : 'Zurzeit ausgeschaltet.' ?>
+        Den QR-Code ins Fahrzeug kleben; beim Scannen öffnet sich die Erfassung für dieses Fahrzeug.
+    </p>
+    <div class="mt-4 flex flex-wrap gap-3">
+        <a href="/fahrzeuge/<?= e($vehicle->id) ?>/fahrtenbuch/qr" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">QR-Code drucken / herunterladen</a>
+        <form method="post" action="/fahrzeuge/<?= e($vehicle->id) ?>/fahrtenbuch/qr-neu" data-confirm-key="vehicles.logbook.qr_regenerate" data-confirm="Neuen QR-Code erzeugen? Bereits gedruckte QR-Codes dieses Fahrzeugs funktionieren danach nicht mehr." data-confirm-style="danger">
+            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+            <button type="submit" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Neuen QR-Code erzeugen</button>
+        </form>
+    </div>
+</section>
+<?php endif; ?>

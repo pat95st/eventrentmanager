@@ -48,6 +48,10 @@ final class SaveVehicleLogbookSettingsHandler implements CommandHandlerInterface
         }
 
         $vehicle->logbookQrEnabled = $command->qrEnabled;
+        // Migration 185: the QR code gets its token when QR capture is switched on the first time.
+        if ($command->qrEnabled && $vehicle->logbookQrToken === null) {
+            $vehicle->logbookQrToken = \App\Application\Logbook\Command\RegenerateVehicleQrTokenHandler::newToken();
+        }
         $vehicle->logbookAnonymousAllowed = $command->anonymousAllowed;
         $vehicle->logbookAnonymousPrivateAllowed = $command->anonymousPrivateAllowed;
         $vehicle->logbookAnonymousRequiresApproval = $command->anonymousRequiresApproval;

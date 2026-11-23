@@ -95,6 +95,15 @@ final class MariadbLogbookEntryRepository implements LogbookEntryRepositoryInter
         return (int) $stmt->fetchColumn();
     }
 
+    public function lastOdometerReading(string $vehicleId): ?int
+    {
+        $stmt = $this->pdo->prepare('SELECT MAX(odometer_end) FROM logbook_entries WHERE vehicle_id = :id AND deleted_at IS NULL');
+        $stmt->execute(['id' => $vehicleId]);
+        $value = $stmt->fetchColumn();
+
+        return $value !== null && $value !== false ? (int) $value : null;
+    }
+
     public function addChange(LogbookEntryChange $change): void
     {
         $this->pdo->prepare(

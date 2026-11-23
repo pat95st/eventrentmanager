@@ -132,6 +132,20 @@ final class VehicleLogbookSettingsTest extends Unit
         $this->assertFalse($vehicle->logbookOdometerCheck);
     }
 
+    public function testVehicleWithLogbookTripsCannotBeDeleted(): void
+    {
+        $vehicle = $this->vehicle();
+        $repository = $this->createMock(VehicleRepositoryInterface::class);
+        $repository->method('findById')->willReturn($vehicle);
+        $repository->expects($this->never())->method('delete');
+        $logbook = new \Tests\Support\Fakes\InMemoryLogbookEntryRepository();
+        $now = new DateTimeImmutable();
+        $logbook->save(new \App\Domain\Logbook\LogbookEntry('e1', $now, null, null, 'u1', null, null, false, $vehicle->id, null, null, \App\Domain\Logbook\LogbookCategory::Private, null, null, null, null, null, false, 10, null, null, false, \App\Domain\Logbook\LogbookStatus::Approved, false, 'u1', $now, $now));
+
+        $this->expectException(\App\Domain\Exception\ConflictException::class);
+        (new \App\Application\Vehicle\Command\DeleteVehicleHandler($repository, $logbook))->handle(new \App\Application\Vehicle\Command\DeleteVehicle($vehicle->id));
+    }
+
     /** @param User[] $users */
     private function create(bool $isPrivate, ?string $ownerUserId, array $users): Vehicle
     {

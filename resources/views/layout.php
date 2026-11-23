@@ -131,6 +131,7 @@ $activeLocale = Locale::get();
 $canArticles = $currentUser?->has(Permission::Artikelverwaltung) ?? false;
 $canCustomers = $currentUser?->has(Permission::Kundenverwaltung) ?? false;
 $canRentals = $currentUser?->has(Permission::AusgabeRuecknahme) ?? false;
+$canLogbook = \App\Domain\Logbook\LogbookAccess::canCapture($currentUser);
 $canVehicles = $canRentals || ($currentUser?->has(Permission::FahrtenbuchVerwalten) ?? false);
 $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
 // Eigener Menüpunkt "Elektroprüfung" für Benutzer mit diesem Recht, aber ohne
@@ -577,6 +578,13 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         </div>
         <?php endif; ?>
 
+        <?php if ($canLogbook): ?>
+        <a
+          href="/fahrtenbuch"
+          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'logbook' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+        ><?= e(t('nav.logbook')) ?></a>
+        <?php endif; ?>
+
         <?php if ($canVehicles): ?>
         <a
           data-tour="nav-vehicles"
@@ -871,6 +879,13 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
           <?php endforeach; ?>
         </div>
       </div>
+      <?php endif; ?>
+
+      <?php if ($canLogbook): ?>
+      <a
+        href="/fahrtenbuch"
+        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'logbook' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+      ><?= e(t('nav.logbook')) ?></a>
       <?php endif; ?>
 
       <?php if ($canVehicles): ?>

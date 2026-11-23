@@ -79,6 +79,7 @@ return [
     'nav.procurement' => 'Procurement',
     'nav.purchase_orders' => 'Purchase orders',
     'nav.sales' => 'Sales',
+    'nav.logbook' => 'Logbook',
     'nav.vehicles' => 'Vehicles',
     'nav.vouchers' => 'Vouchers',
     'nav.documents' => 'Documents',

@@ -79,6 +79,7 @@ return [
     'nav.procurement' => 'Einkauf',
     'nav.purchase_orders' => 'Bestellungen',
     'nav.sales' => 'Verkäufe',
+    'nav.logbook' => 'Fahrtenbuch',
     'nav.vehicles' => 'Fahrzeuge',
     'nav.vouchers' => 'Gutscheine',
     'nav.documents' => 'Dokumente',

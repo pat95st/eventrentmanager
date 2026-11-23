@@ -917,7 +917,7 @@ $commandBus->register(\App\Application\Supplier\Command\DeleteSupplier::class, n
 
 $commandBus->register(\App\Application\Vehicle\Command\CreateVehicle::class, new \App\Application\Vehicle\Command\CreateVehicleHandler($vehicleRepository, $userRepository));
 $commandBus->register(\App\Application\Vehicle\Command\UpdateVehicle::class, new \App\Application\Vehicle\Command\UpdateVehicleHandler($vehicleRepository, $userRepository));
-$commandBus->register(\App\Application\Vehicle\Command\DeleteVehicle::class, new \App\Application\Vehicle\Command\DeleteVehicleHandler($vehicleRepository));
+$commandBus->register(\App\Application\Vehicle\Command\DeleteVehicle::class, new \App\Application\Vehicle\Command\DeleteVehicleHandler($vehicleRepository, $logbookEntryRepository = new \App\Infrastructure\Persistence\Pdo\MariadbLogbookEntryRepository($pdo)));
 $commandBus->register(\App\Application\Vehicle\Command\SaveVehicleLogbookSettings::class, new \App\Application\Vehicle\Command\SaveVehicleLogbookSettingsHandler($vehicleRepository));
 $commandBus->register(\App\Application\Vehicle\Command\SaveVehicleSettings::class, new \App\Application\Vehicle\Command\SaveVehicleSettingsHandler($vehicleSettingsRepository));
 $commandBus->register(\App\Application\Vehicle\Command\AssignRentalVehicleLoad::class, new \App\Application\Vehicle\Command\AssignRentalVehicleLoadHandler($rentalIssuedItemRepository, $vehicleRepository, $rentalVehicleLoadRepository));
@@ -1015,6 +1015,15 @@ $tourRouteService = new \App\Application\Routing\TourRouteService(
     $tourStopLocator, $geocoder,
 );
 $queryBus->register(\App\Application\Routing\Query\GetTourRoute::class, new \App\Application\Routing\Query\GetTourRouteHandler($tourRouteService));
+// Driver's logbook (migrations 183/184).
+$logbookSettingsRepository = new \App\Infrastructure\Persistence\Pdo\MariadbLogbookSettingsRepository($pdo);
+$logbookLocationResolver = new \App\Application\Logbook\LogbookLocationResolver($warehouseRepository, $venueRepository, $rentalRepository, $tourRepository, $companyLocator, $geocoder, $tourStopLocator);
+$logbookDistanceService = new \App\Application\Logbook\LogbookDistanceService($routingSettingsRepository, $openRouteServiceClient);
+$commandBus->register(\App\Application\Logbook\Command\SaveLogbookEntry::class, new \App\Application\Logbook\Command\SaveLogbookEntryHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $tourRepository, $logbookLocationResolver));
+$logbookLifecycleHandler = new \App\Application\Logbook\Command\LogbookEntryLifecycleHandler($logbookEntryRepository, $logbookSettingsRepository, $userRepository);
+$commandBus->register(\App\Application\Logbook\Command\DeleteLogbookEntry::class, $logbookLifecycleHandler);
+$commandBus->register(\App\Application\Logbook\Command\RestoreLogbookEntry::class, $logbookLifecycleHandler);
+$commandBus->register(\App\Application\Logbook\Command\SaveLogbookSettings::class, new \App\Application\Logbook\Command\SaveLogbookSettingsHandler($logbookSettingsRepository));
 // Travel costs of tours on documents (migration 182).
 $tourTravelCostCalculator = new \App\Application\TravelCost\TourTravelCostCalculator($tourRepository, $plannedVehicleRepository, $vehicleRepository, $vehicleSettingsRepository, $tourRouteService);
 $travelCostSectionRepository = new \App\Infrastructure\Persistence\Pdo\MariadbTravelCostSectionRepository($pdo);
@@ -2395,6 +2404,21 @@ $router->post('/fahrzeuge', $auth->guard(Permission::AusgabeRuecknahme, [$vehicl
 $router->get('/fahrzeuge/{id}/bearbeiten', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'edit']));
 $router->post('/fahrzeuge/{id}', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'update']));
 $router->post('/fahrzeuge/{id}/loeschen', $auth->guard(Permission::AusgabeRuecknahme, [$vehicleController, 'destroy']));
+// Driver's logbook (migration 184)
+$logbookController = new \App\Infrastructure\Http\Controllers\LogbookController($commandBus, $logbookEntryRepository, $logbookSettingsRepository, $userRepository, $vehicleRepository, $rentalRepository, $logbookLocationResolver, $logbookDistanceService, $rentalTechnicianRepository);
+$logbookAccess = [Permission::Fahrer, Permission::FahrtenbuchVerwalten];
+$router->get('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'index']));
+$router->get('/fahrtenbuch/neu', $auth->guard($logbookAccess, [$logbookController, 'create']));
+$router->post('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'store']));
+$router->get('/fahrtenbuch/veranstaltungen', $auth->guard($logbookAccess, [$logbookController, 'events']));
+$router->get('/fahrtenbuch/veranstaltungen/{id}/orte', $auth->guard($logbookAccess, [$logbookController, 'rentalOptions']));
+$router->get('/fahrtenbuch/strecke', $auth->guard($logbookAccess, [$logbookController, 'distance']));
+$router->get('/fahrtenbuch/{id}/bearbeiten', $auth->guard($logbookAccess, [$logbookController, 'edit']));
+$router->post('/fahrtenbuch/{id}', $auth->guard($logbookAccess, [$logbookController, 'update']));
+$router->post('/fahrtenbuch/{id}/loeschen', $auth->guard($logbookAccess, [$logbookController, 'destroy']));
+$router->post('/fahrtenbuch/{id}/wiederherstellen', $auth->guard(Permission::FahrtenbuchVerwalten, [$logbookController, 'restore']));
+$router->get('/einstellungen/fahrtenbuch', $auth->guard(Permission::Administration, [$logbookController, 'settingsForm']));
+$router->post('/einstellungen/fahrtenbuch', $auth->guard(Permission::Administration, [$logbookController, 'saveSettings']));
 $router->get('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'logbook']));
 $router->post('/fahrzeuge/{id}/fahrtenbuch', $auth->guard(Permission::FahrtenbuchVerwalten, [$vehicleController, 'saveLogbook']));
 

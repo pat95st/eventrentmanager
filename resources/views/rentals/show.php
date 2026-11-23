@@ -130,6 +130,22 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
             <?= e(t('common.edit')) ?>
         </a>
 
+        <?php if (\App\Domain\Logbook\LogbookAccess::canCapture(\App\Infrastructure\Http\Auth\CurrentUser::get())): ?>
+        <details class="relative">
+            <summary class="<?= $secondaryButtonClass ?>">
+                🚗 Fahrt erfassen
+                <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+            </summary>
+            <div data-dropdown-menu role="menu" class="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                <a href="/fahrtenbuch/neu?veranstaltung=<?= e($rental->id) ?>&amp;vorlage=hin" class="<?= $menuItemClass ?>">Hinfahrt (Lager → Veranstaltung)</a>
+                <a href="/fahrtenbuch/neu?veranstaltung=<?= e($rental->id) ?>&amp;vorlage=rueck" class="<?= $menuItemClass ?>">Rückfahrt (Veranstaltung → Lager)</a>
+                <a href="/fahrtenbuch/neu?veranstaltung=<?= e($rental->id) ?>" class="<?= $menuItemClass ?>">Andere Fahrt …</a>
+                <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+                <a href="/fahrtenbuch?veranstaltung=<?= e($rental->id) ?>" class="<?= $menuItemClass ?>">Fahrten dieser Veranstaltung</a>
+            </div>
+        </details>
+        <?php endif; ?>
+
         <details class="relative">
             <summary class="<?= $secondaryButtonClass ?> px-2.5" title="<?= e(t('rentals.show.more_actions')) ?>">
                 <svg class="h-5 w-5 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M3 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM8.5 10a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM15.5 8.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>

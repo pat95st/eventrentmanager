@@ -679,9 +679,14 @@ if ($step === 4 && is_array($state['db']) && IntegrationSetupSteps::isStep((stri
         $error ??= 'Die aktuellen Einstellungen konnten nicht geladen werden: ' . $e->getMessage();
     }
     if ($formValues !== []) {
-        $integrationValues = array_merge($integrationValues, array_intersect_key($formValues, $integrationValues));
-        if ($integrationStep === IntegrationSetupSteps::DATEV) {
-            $integrationValues['datev_enabled'] = isset($formValues['datev_enabled']);
+        foreach ($integrationValues as $key => $current) {
+            if (str_starts_with($key, 'has_')) {
+                continue;
+            }
+            // Checkboxes are missing from the POST data when unchecked.
+            $integrationValues[$key] = is_bool($current)
+                ? isset($formValues[$key])
+                : (string) ($formValues[$key] ?? $current);
         }
     }
     if ($integrationStep === IntegrationSetupSteps::BASE_URL && $integrationValues['base_url'] === '') {

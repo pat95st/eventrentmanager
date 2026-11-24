@@ -8,6 +8,11 @@ use App\Domain\Datev\DatevChartOfAccounts;
 use App\Domain\Datev\DatevSettings;
 use App\Domain\Datev\DatevSettingsRepositoryInterface;
 use App\Domain\Exception\ValidationException;
+use App\Domain\OnlinePayment\OnlinePaymentSettings;
+use App\Domain\Routing\RoutingSettings;
+use App\Domain\Routing\RoutingSettingsRepositoryInterface;
+use App\Domain\Settings\AiAdImageSettings;
+use App\Domain\Settings\AiAdImageSettingsRepositoryInterface;
 use App\Domain\Settings\GoogleBusinessSettings;
 use App\Domain\Settings\GoogleBusinessSettingsRepositoryInterface;
 use App\Domain\Settings\GoogleMerchantSettings;
@@ -18,6 +23,7 @@ use App\Domain\Settings\WhatsappBusinessSettings;
 use App\Domain\Settings\WhatsappBusinessSettingsRepositoryInterface;
 use App\Infrastructure\Installer\IntegrationSetupSteps;
 use Codeception\Test\Unit;
+use Tests\Support\Fakes\InMemoryOnlinePaymentSettingsRepository;
 
 final class IntegrationSetupStepsTest extends Unit
 {
@@ -26,6 +32,9 @@ final class IntegrationSetupStepsTest extends Unit
     private GoogleBusinessSettingsRepositoryInterface $business;
     private WhatsappBusinessSettingsRepositoryInterface $whatsapp;
     private DatevSettingsRepositoryInterface $datev;
+    private InMemoryOnlinePaymentSettingsRepository $payments;
+    private AiAdImageSettingsRepositoryInterface $ai;
+    private RoutingSettingsRepositoryInterface $routing;
     private IntegrationSetupSteps $steps;
 
     protected function _before(): void
@@ -121,13 +130,61 @@ final class IntegrationSetupStepsTest extends Unit
             }
         };
 
-        $this->steps = new IntegrationSetupSteps($this->base, $this->merchant, $this->business, $this->whatsapp, $this->datev);
+        $this->payments = new InMemoryOnlinePaymentSettingsRepository();
+        $this->ai = new class () implements AiAdImageSettingsRepositoryInterface {
+            public AiAdImageSettings $settings;
+
+            public function __construct()
+            {
+                $this->settings = new AiAdImageSettings();
+            }
+
+            public function get(): AiAdImageSettings
+            {
+                return clone $this->settings;
+            }
+
+            public function save(AiAdImageSettings $settings): void
+            {
+                $this->settings = clone $settings;
+            }
+        };
+        $this->routing = new class () implements RoutingSettingsRepositoryInterface {
+            public RoutingSettings $settings;
+
+            public function __construct()
+            {
+                $this->settings = new RoutingSettings();
+            }
+
+            public function get(): RoutingSettings
+            {
+                return clone $this->settings;
+            }
+
+            public function save(RoutingSettings $settings): void
+            {
+                $this->settings = clone $settings;
+            }
+        };
+
+        $this->steps = new IntegrationSetupSteps(
+            $this->base,
+            $this->merchant,
+            $this->business,
+            $this->whatsapp,
+            $this->datev,
+            $this->payments,
+            $this->ai,
+            $this->routing,
+        );
     }
 
     public function testStepsAreOrderedAndEndAfterDatev(): void
     {
         $this->assertSame(IntegrationSetupSteps::BASE_URL, IntegrationSetupSteps::STEPS[0]);
-        $this->assertSame(IntegrationSetupSteps::GOOGLE_MERCHANT, IntegrationSetupSteps::next(IntegrationSetupSteps::BASE_URL));
+        $this->assertSame(IntegrationSetupSteps::ONLINE_PAYMENTS, IntegrationSetupSteps::next(IntegrationSetupSteps::BASE_URL));
+        $this->assertSame(IntegrationSetupSteps::DATEV, IntegrationSetupSteps::STEPS[count(IntegrationSetupSteps::STEPS) - 1]);
         $this->assertNull(IntegrationSetupSteps::next(IntegrationSetupSteps::DATEV));
         $this->assertNull(IntegrationSetupSteps::next('unknown'));
         $this->assertFalse(IntegrationSetupSteps::isStep('unknown'));
@@ -227,5 +284,68 @@ final class IntegrationSetupStepsTest extends Unit
         $this->steps->save(IntegrationSetupSteps::DATEV, ['datev_chart_of_accounts' => '03']);
 
         $this->assertFalse($this->datev->get()->enabled);
+    }
+
+    public function testSavesOnlinePaymentsAndKeepsStoredSecrets(): void
+    {
+        $this->payments->save(new OnlinePaymentSettings(paypalClientSecret: 'stored-secret', sumupApiKey: 'stored-key'));
+
+        $values = $this->steps->currentValues(IntegrationSetupSteps::ONLINE_PAYMENTS);
+        $this->assertSame('', $values['paypal_client_secret']);
+        $this->assertTrue($values['has_paypal_client_secret']);
+
+        $this->steps->save(IntegrationSetupSteps::ONLINE_PAYMENTS, [
+            'paypal_enabled' => '1',
+            'paypal_client_id' => 'client',
+            'paypal_client_secret' => '',
+            'sumup_enabled' => '1',
+            'sumup_api_key' => '',
+            'sumup_merchant_code' => 'M123',
+            'currency' => 'eur',
+        ]);
+
+        $settings = $this->payments->get();
+        $this->assertTrue($settings->paypalEnabled);
+        $this->assertFalse($settings->paypalSandbox);
+        $this->assertSame('client', $settings->paypalClientId);
+        $this->assertSame('stored-secret', $settings->paypalClientSecret);
+        $this->assertSame('stored-key', $settings->sumupApiKey);
+        $this->assertSame('M123', $settings->sumupMerchantCode);
+        $this->assertTrue($settings->isPayPalUsable());
+        $this->assertTrue($settings->isSumUpUsable());
+    }
+
+    public function testEnablingPayPalWithoutCredentialsFails(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->steps->save(IntegrationSetupSteps::ONLINE_PAYMENTS, ['paypal_enabled' => '1', 'currency' => 'EUR']);
+    }
+
+    public function testSavesOpenAiKeyAndKeepsItWhenLeftEmpty(): void
+    {
+        // Empty prefill: the default image model keeps following AiAdImageSettings::DEFAULT_IMAGE_MODEL.
+        $this->assertSame('', $this->steps->currentValues(IntegrationSetupSteps::AI)['image_model']);
+
+        $this->steps->save(IntegrationSetupSteps::AI, ['openai_api_key' => 'sk-test', 'image_model' => '']);
+        $this->assertSame('sk-test', $this->ai->get()->openaiApiKey);
+        $this->assertNull($this->ai->get()->imageModel);
+
+        $this->steps->save(IntegrationSetupSteps::AI, ['openai_api_key' => '', 'image_model' => 'gpt-image-1-mini']);
+        $this->assertSame('sk-test', $this->ai->get()->openaiApiKey);
+        $this->assertSame('gpt-image-1-mini', $this->ai->get()->imageModel);
+        $this->assertTrue($this->steps->currentValues(IntegrationSetupSteps::AI)['has_openai_api_key']);
+    }
+
+    public function testSavesRoutingSettingsAndValidatesBuffer(): void
+    {
+        $this->steps->save(IntegrationSetupSteps::ROUTING, ['api_key' => 'ors-key', 'buffer_minutes' => '45']);
+        $this->assertSame('ors-key', $this->routing->get()->apiKey);
+        $this->assertSame(45, $this->routing->get()->bufferMinutes);
+
+        $this->steps->save(IntegrationSetupSteps::ROUTING, ['api_key' => '', 'buffer_minutes' => '20']);
+        $this->assertSame('ors-key', $this->routing->get()->apiKey);
+
+        $this->expectException(ValidationException::class);
+        $this->steps->save(IntegrationSetupSteps::ROUTING, ['api_key' => '', 'buffer_minutes' => '9999']);
     }
 }

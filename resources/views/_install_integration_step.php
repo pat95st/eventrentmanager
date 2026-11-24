@@ -12,6 +12,8 @@
 use App\Infrastructure\Installer\IntegrationSetupSteps;
 
 $v = static fn (string $key): string => is_string($integrationValues[$key] ?? null) ? $integrationValues[$key] : '';
+$checked = static fn (string $key): string => ($integrationValues[$key] ?? false) === true ? 'checked' : '';
+$storedHint = static fn (string $key): string => ($integrationValues[$key] ?? false) === true ? 'Bereits hinterlegt – leer lassen, um ihn beizubehalten' : '';
 $position = (int) array_search($integrationStep, IntegrationSetupSteps::STEPS, true) + 1;
 $total = count(IntegrationSetupSteps::STEPS);
 $isLast = IntegrationSetupSteps::next($integrationStep) === null;
@@ -34,6 +36,60 @@ $isLast = IntegrationSetupSteps::next($integrationStep) === null;
         <label>Basis-URL
             <input type="text" name="base_url" value="<?= h($v('base_url')) ?>" placeholder="https://verleih.example.de">
         </label>
+
+    <?php elseif ($integrationStep === IntegrationSetupSteps::ONLINE_PAYMENTS): ?>
+        <p>Kunden können Rechnungen über einen Zahlungslink online bezahlen. Zahlungseingänge werden automatisch verbucht.</p>
+        <label class="install-checkbox">
+            <input type="checkbox" name="paypal_enabled" value="1" <?= $checked('paypal_enabled') ?>>
+            PayPal aktivieren
+        </label>
+        <label class="install-checkbox">
+            <input type="checkbox" name="paypal_sandbox" value="1" <?= $checked('paypal_sandbox') ?>>
+            PayPal-Sandbox (Testmodus) verwenden
+        </label>
+        <label>PayPal Client-ID
+            <input type="text" name="paypal_client_id" value="<?= h($v('paypal_client_id')) ?>" autocomplete="off">
+        </label>
+        <label>PayPal Secret
+            <input type="password" name="paypal_client_secret" value="" autocomplete="new-password" placeholder="<?= $storedHint('has_paypal_client_secret') ?>">
+        </label>
+        <label class="install-checkbox">
+            <input type="checkbox" name="sumup_enabled" value="1" <?= $checked('sumup_enabled') ?>>
+            SumUp aktivieren
+        </label>
+        <label>SumUp-API-Schlüssel
+            <input type="password" name="sumup_api_key" value="" autocomplete="new-password" placeholder="<?= $storedHint('has_sumup_api_key') ?>">
+        </label>
+        <label>SumUp-Händlercode
+            <input type="text" name="sumup_merchant_code" value="<?= h($v('sumup_merchant_code')) ?>">
+        </label>
+        <label>Währung (ISO-Code)
+            <input type="text" name="currency" value="<?= h($v('currency')) ?>" maxlength="3" placeholder="EUR">
+        </label>
+        <p class="install-hint">Zahlungslinks verwenden die Basis-URL aus dem vorherigen Schritt.</p>
+
+    <?php elseif ($integrationStep === IntegrationSetupSteps::AI): ?>
+        <p>Mit einem OpenAI-API-Schlüssel stehen KI-Werbebilder für Artikel, die KI-Schätzung von Zeitwerten für
+           Versicherungslisten und (je nach Einstellung) die Live-Übersetzung zur Verfügung.</p>
+        <label>OpenAI-API-Schlüssel
+            <input type="password" name="openai_api_key" value="" autocomplete="new-password" placeholder="<?= $storedHint('has_openai_api_key') ?: 'sk-…' ?>">
+        </label>
+        <label>Bildmodell
+            <input type="text" name="image_model" value="<?= h($v('image_model')) ?>" placeholder="<?= h(\App\Domain\Settings\AiAdImageSettings::DEFAULT_IMAGE_MODEL) ?>">
+        </label>
+        <p class="install-hint">Leer lassen für das Standardmodell (<?= h(\App\Domain\Settings\AiAdImageSettings::DEFAULT_IMAGE_MODEL) ?>).</p>
+
+    <?php elseif ($integrationStep === IntegrationSetupSteps::ROUTING): ?>
+        <p>Berechnet Routen, Fahrzeiten und Kilometer für Touren und Fahrten über OpenRouteService. Ohne Schlüssel werden
+           Strecken nur als Luftlinie angezeigt.</p>
+        <label>OpenRouteService-API-Schlüssel
+            <input type="password" name="api_key" value="" autocomplete="new-password" placeholder="<?= $storedHint('has_api_key') ?>">
+        </label>
+        <label>Puffer zwischen Abbau + Fahrzeit und nächstem Aufbau (Minuten)
+            <input type="number" name="buffer_minutes" min="0" max="600" value="<?= h($v('buffer_minutes')) ?>">
+        </label>
+        <p class="install-hint">Den kostenlosen Schlüssel gibt es nach einer Registrierung bei openrouteservice.org.
+           Die Verbindung lässt sich nach der Anmeldung unter <code>Einstellungen&nbsp;&rarr;&nbsp;Routenplanung</code> testen.</p>
 
     <?php elseif ($integrationStep === IntegrationSetupSteps::GOOGLE_MERCHANT): ?>
         <p>Veröffentlicht Mietartikel als Produkte im Google Merchant Center (Google Shopping).</p>
@@ -81,7 +137,7 @@ $isLast = IntegrationSetupSteps::next($integrationStep) === null;
         <p>Erzeugt Buchungsstapel im DATEV-Format für den Steuerberater. Kontenzuordnung, Belegoptionen und automatischer
            Versand lassen sich später unter <code>Einstellungen&nbsp;&rarr;&nbsp;Integrationen</code> verfeinern.</p>
         <label class="install-checkbox">
-            <input type="checkbox" name="datev_enabled" value="1" <?= ($integrationValues['datev_enabled'] ?? false) === true ? 'checked' : '' ?>>
+            <input type="checkbox" name="datev_enabled" value="1" <?= $checked('datev_enabled') ?>>
             DATEV-Export aktivieren
         </label>
         <label>Beraternummer

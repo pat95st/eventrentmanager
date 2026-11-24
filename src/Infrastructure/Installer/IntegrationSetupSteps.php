@@ -6,6 +6,12 @@ namespace App\Infrastructure\Installer;
 
 use App\Application\Datev\Command\UpdateDatevSettings;
 use App\Application\Datev\Command\UpdateDatevSettingsHandler;
+use App\Application\OnlinePayment\Command\UpdateOnlinePaymentSettings;
+use App\Application\OnlinePayment\Command\UpdateOnlinePaymentSettingsHandler;
+use App\Application\Routing\Command\SaveRoutingSettings;
+use App\Application\Routing\Command\SaveRoutingSettingsHandler;
+use App\Application\Settings\Command\UpdateAiAdImageSettings;
+use App\Application\Settings\Command\UpdateAiAdImageSettingsHandler;
 use App\Application\Settings\Command\UpdateGoogleBusinessClientCredentials;
 use App\Application\Settings\Command\UpdateGoogleBusinessClientCredentialsHandler;
 use App\Application\Settings\Command\UpdateGoogleMerchantSettings;
@@ -16,20 +22,28 @@ use App\Application\Settings\Command\UpdateWhatsappBusinessSettings;
 use App\Application\Settings\Command\UpdateWhatsappBusinessSettingsHandler;
 use App\Domain\Datev\DatevSettingsRepositoryInterface;
 use App\Domain\Exception\ValidationException;
+use App\Domain\OnlinePayment\OnlinePaymentSettingsRepositoryInterface;
+use App\Domain\Routing\RoutingSettingsRepositoryInterface;
+use App\Domain\Settings\AiAdImageSettingsRepositoryInterface;
 use App\Domain\Settings\GoogleBusinessSettingsRepositoryInterface;
 use App\Domain\Settings\GoogleMerchantSettingsRepositoryInterface;
 use App\Domain\Settings\IntegrationBaseSettingsRepositoryInterface;
 use App\Domain\Settings\WhatsappBusinessSettingsRepositoryInterface;
+use App\Infrastructure\Persistence\Pdo\MariadbAiAdImageSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbDatevSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbGoogleBusinessSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbGoogleMerchantSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbIntegrationBaseSettingsRepository;
+use App\Infrastructure\Persistence\Pdo\MariadbOnlinePaymentSettingsRepository;
+use App\Infrastructure\Persistence\Pdo\MariadbRoutingSettingsRepository;
 use App\Infrastructure\Persistence\Pdo\MariadbWhatsappBusinessSettingsRepository;
 use PDO;
 
 /**
  * Optional setup steps of the web installer (public/install.php) for every
- * section of "Einstellungen → Integrationen". Each step can be saved or
+ * section of "Einstellungen → Integrationen" plus online payments, the
+ * OpenAI key (AI images, value estimates, translation) and route planning.
+ * Each step can be saved or
  * skipped; saving goes through the same command handlers as the settings
  * page, so validation and persistence behave identically.
  *
@@ -40,6 +54,9 @@ use PDO;
 final class IntegrationSetupSteps
 {
     public const BASE_URL = 'base_url';
+    public const ONLINE_PAYMENTS = 'online_payments';
+    public const AI = 'ai';
+    public const ROUTING = 'routing';
     public const GOOGLE_MERCHANT = 'google_merchant';
     public const GOOGLE_BUSINESS = 'google_business';
     public const WHATSAPP = 'whatsapp';
@@ -48,6 +65,9 @@ final class IntegrationSetupSteps
     /** Order in which the installer presents the steps. */
     public const STEPS = [
         self::BASE_URL,
+        self::ONLINE_PAYMENTS,
+        self::AI,
+        self::ROUTING,
         self::GOOGLE_MERCHANT,
         self::GOOGLE_BUSINESS,
         self::WHATSAPP,
@@ -56,6 +76,9 @@ final class IntegrationSetupSteps
 
     private const TITLES = [
         self::BASE_URL => 'Basis-URL',
+        self::ONLINE_PAYMENTS => 'Online-Zahlungen (PayPal, SumUp)',
+        self::AI => 'KI-Funktionen (OpenAI)',
+        self::ROUTING => 'Routenplanung (OpenRouteService)',
         self::GOOGLE_MERCHANT => 'Google Merchant Center',
         self::GOOGLE_BUSINESS => 'Google Unternehmensprofil',
         self::WHATSAPP => 'WhatsApp Business',
@@ -68,6 +91,9 @@ final class IntegrationSetupSteps
         private readonly GoogleBusinessSettingsRepositoryInterface $googleBusinessSettings,
         private readonly WhatsappBusinessSettingsRepositoryInterface $whatsappSettings,
         private readonly DatevSettingsRepositoryInterface $datevSettings,
+        private readonly OnlinePaymentSettingsRepositoryInterface $onlinePaymentSettings,
+        private readonly AiAdImageSettingsRepositoryInterface $aiSettings,
+        private readonly RoutingSettingsRepositoryInterface $routingSettings,
     ) {
     }
 
@@ -79,6 +105,9 @@ final class IntegrationSetupSteps
             new MariadbGoogleBusinessSettingsRepository($pdo),
             new MariadbWhatsappBusinessSettingsRepository($pdo),
             new MariadbDatevSettingsRepository($pdo),
+            new MariadbOnlinePaymentSettingsRepository($pdo),
+            new MariadbAiAdImageSettingsRepository($pdo),
+            new MariadbRoutingSettingsRepository($pdo),
         );
     }
 
@@ -115,6 +144,41 @@ final class IntegrationSetupSteps
         switch ($step) {
             case self::BASE_URL:
                 return ['base_url' => $this->baseSettings->get()->baseUrl ?? ''];
+
+            case self::ONLINE_PAYMENTS:
+                $payments = $this->onlinePaymentSettings->get();
+
+                return [
+                    'paypal_enabled' => $payments->paypalEnabled,
+                    'paypal_sandbox' => $payments->paypalSandbox,
+                    'paypal_client_id' => $payments->paypalClientId ?? '',
+                    // Stored secrets are never echoed back into the form.
+                    'paypal_client_secret' => '',
+                    'has_paypal_client_secret' => $payments->paypalClientSecret !== null,
+                    'sumup_enabled' => $payments->sumupEnabled,
+                    'sumup_api_key' => '',
+                    'has_sumup_api_key' => $payments->sumupApiKey !== null,
+                    'sumup_merchant_code' => $payments->sumupMerchantCode ?? '',
+                    'currency' => $payments->currency,
+                ];
+
+            case self::AI:
+                $ai = $this->aiSettings->get();
+
+                return [
+                    'openai_api_key' => '',
+                    'has_openai_api_key' => $ai->isConfigured(),
+                    'image_model' => $ai->imageModel ?? '',
+                ];
+
+            case self::ROUTING:
+                $routing = $this->routingSettings->get();
+
+                return [
+                    'api_key' => '',
+                    'has_api_key' => $routing->hasApiKey(),
+                    'buffer_minutes' => (string) $routing->bufferMinutes,
+                ];
 
             case self::GOOGLE_MERCHANT:
                 $merchant = $this->googleMerchantSettings->get();
@@ -178,6 +242,37 @@ final class IntegrationSetupSteps
             case self::BASE_URL:
                 (new UpdateIntegrationBaseSettingsHandler($this->baseSettings))
                     ->handle(new UpdateIntegrationBaseSettings($value('base_url')));
+
+                return;
+
+            case self::ONLINE_PAYMENTS:
+                // Empty secret fields keep the stored values (handled by the command handler).
+                (new UpdateOnlinePaymentSettingsHandler($this->onlinePaymentSettings))->handle(new UpdateOnlinePaymentSettings(
+                    paypalEnabled: $value('paypal_enabled') === '1',
+                    paypalSandbox: $value('paypal_sandbox') === '1',
+                    paypalClientId: $value('paypal_client_id'),
+                    paypalClientSecret: $value('paypal_client_secret'),
+                    sumupEnabled: $value('sumup_enabled') === '1',
+                    sumupApiKey: $value('sumup_api_key'),
+                    sumupMerchantCode: $value('sumup_merchant_code'),
+                    currency: $value('currency') ?? 'EUR',
+                ));
+
+                return;
+
+            case self::AI:
+                // An empty key keeps the stored one (handled by the command handler).
+                (new UpdateAiAdImageSettingsHandler($this->aiSettings))->handle(
+                    new UpdateAiAdImageSettings($value('openai_api_key'), $value('image_model'))
+                );
+
+                return;
+
+            case self::ROUTING:
+                // An empty key keeps the stored one (handled by the command handler).
+                (new SaveRoutingSettingsHandler($this->routingSettings))->handle(
+                    new SaveRoutingSettings($value('api_key') ?? '', $value('buffer_minutes') ?? '30')
+                );
 
                 return;
 

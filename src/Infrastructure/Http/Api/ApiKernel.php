@@ -49,6 +49,8 @@ final class ApiKernel
     /**
      * @param Closure(ApiSettings): ?RateLimiterInterface $rateLimiterFactory returns null when rate limiting is off
      * @param (Closure(): DateTimeImmutable)|null $clock
+     * @param (Closure(ApiToken, DateTimeImmutable): ?ApiToken)|null $tokenGuard checks/narrows a token after lookup
+     *        (OAuth tokens: expiry, owner still active, owner's current permissions); null = reject
      */
     public function __construct(
         private readonly ApiSettingsRepositoryInterface $settings,
@@ -56,6 +58,7 @@ final class ApiKernel
         private readonly ApiRequestLogRepositoryInterface $requestLog,
         private readonly Closure $rateLimiterFactory,
         private readonly ?Closure $clock = null,
+        private readonly ?Closure $tokenGuard = null,
     ) {
     }
 
@@ -88,29 +91,103 @@ final class ApiKernel
             return ApiResponse::error(404, 'Nicht gefunden.');
         }
 
-        $rawToken = self::bearerToken($server);
-        if ($rawToken === null) {
-            return ApiResponse::error(401, 'Es wurde kein gültiger "Authorization: Bearer <token>"-Header mitgeschickt.')
-                ->withHeaders(['WWW-Authenticate' => 'Bearer']);
+        $token = $this->authenticate($server);
+        if ($token instanceof ApiResponse) {
+            return $token;
         }
-        $token = $this->tokens->findByTokenHash(hash('sha256', $rawToken));
-        if ($token === null || !$token->enabled) {
-            return ApiResponse::error(401, 'Ungültiges oder deaktiviertes Token.')->withHeaders(['WWW-Authenticate' => 'Bearer error="invalid_token"']);
+        if ($token->isOAuth()) {
+            // Issued for the resource /mcp (RFC 8707), not for the REST API.
+            return ApiResponse::error(401, 'Über OAuth ausgestellte Tokens gelten nur für den MCP-Server (/mcp).')
+                ->withHeaders(['WWW-Authenticate' => 'Bearer error="invalid_token"']);
         }
-
-        $ip = is_string($server['REMOTE_ADDR'] ?? null) ? $server['REMOTE_ADDR'] : '';
-        if (!IpAllowlist::matches($ip, $token->ipAllowlist)) {
-            return ApiResponse::error(403, 'Der Zugriff von dieser IP-Adresse ist für dieses Token nicht erlaubt.');
-        }
+        $ip = self::clientIp($server);
 
         $isWrite = in_array($request->method, self::WRITE_METHODS, true);
         $response = $this->authorizeAndRun($request, $scopes, $handler, $token, $settings, $now, $isWrite, $rawBody);
 
         if ($isWrite) {
-            $this->log($token, $request, $response->status, $ip !== '' ? $ip : null, $now);
+            $this->log($token, $request->method, $request->path, $response->status, $ip !== '' ? $ip : null, $now);
         }
 
         return $response;
+    }
+
+    /**
+     * Steps 2 and 3 of the request pipeline, shared with the MCP server:
+     * bearer token present, known and enabled (401), client IP allowed (403).
+     *
+     * @param array<string, mixed> $server $_SERVER-like array
+     * @param string $wwwAuthenticate base value of the WWW-Authenticate header on 401
+     */
+    public function authenticate(array $server, string $wwwAuthenticate = 'Bearer'): ApiToken|ApiResponse
+    {
+        $rawToken = self::bearerToken($server);
+        if ($rawToken === null) {
+            return ApiResponse::error(401, 'Es wurde kein gültiger "Authorization: Bearer <token>"-Header mitgeschickt.')
+                ->withHeaders(['WWW-Authenticate' => $wwwAuthenticate]);
+        }
+        $token = $this->tokens->findByTokenHash(hash('sha256', $rawToken));
+        if ($token !== null && $this->tokenGuard !== null) {
+            $token = ($this->tokenGuard)($token, $this->now());
+        }
+        if ($token === null || !$token->enabled) {
+            return ApiResponse::error(401, 'Ungültiges oder deaktiviertes Token.')
+                ->withHeaders(['WWW-Authenticate' => $wwwAuthenticate . ($wwwAuthenticate === 'Bearer' ? ' ' : ', ') . 'error="invalid_token"']);
+        }
+
+        if (!IpAllowlist::matches(self::clientIp($server), $token->ipAllowlist)) {
+            return ApiResponse::error(403, 'Der Zugriff von dieser IP-Adresse ist für dieses Token nicht erlaubt.');
+        }
+
+        return $token;
+    }
+
+    /**
+     * Rate limit per token and minute (step 5), shared with the MCP server.
+     * Returns the X-RateLimit-* headers to add to the response, or the 429
+     * response when the limit is exhausted.
+     *
+     * @return array<string, string>|ApiResponse
+     */
+    public function rateLimit(ApiToken $token, ApiSettings $settings, DateTimeImmutable $now): array|ApiResponse
+    {
+        return $this->rateLimitKey($token->id, $token->rateLimitPerMinute ?? $settings->rateLimitPerMinute, $settings, $now);
+    }
+
+    /**
+     * Rate limit for an arbitrary key (max. 36 characters, e.g. a hash of the
+     * client IP for the OAuth endpoints) in the same counter as the tokens.
+     *
+     * @return array<string, string>|ApiResponse
+     */
+    public function rateLimitKey(string $key, int $limit, ApiSettings $settings, DateTimeImmutable $now): array|ApiResponse
+    {
+        if ($limit <= 0) {
+            return [];
+        }
+        $limiter = ($this->rateLimiterFactory)($settings);
+        if ($limiter === null) {
+            return [];
+        }
+        try {
+            $result = $limiter->hit($key, $limit, $now);
+            if (!$result->allowed()) {
+                return ApiResponse::error(429, 'Zu viele Anfragen. Bitte nach Ablauf der Minute erneut versuchen.')
+                    ->withHeaders($result->headers() + ['Retry-After' => (string) $result->retryAfterSeconds($now)]);
+            }
+
+            return $result->headers();
+        } catch (RateLimiterUnavailable $e) {
+            // Even the fallback failed (database trouble): do not block the API for that.
+            error_log('API rate limiter unavailable: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    public function touchLastUsed(ApiToken $token, DateTimeImmutable $now): void
+    {
+        $this->tokens->touchLastUsed($token->id, $now);
     }
 
     /** @param list<ApiScope> $scopes */
@@ -125,26 +202,12 @@ final class ApiKernel
                 ->withHeaders(['WWW-Authenticate' => 'Bearer error="insufficient_scope", scope="' . implode(' ', array_map(static fn (ApiScope $s) => $s->value, $missing)) . '"']);
         }
 
-        $limit = $token->rateLimitPerMinute ?? $settings->rateLimitPerMinute;
-        $rateHeaders = [];
-        if ($limit > 0) {
-            $limiter = ($this->rateLimiterFactory)($settings);
-            if ($limiter !== null) {
-                try {
-                    $result = $limiter->hit($token->id, $limit, $now);
-                    $rateHeaders = $result->headers();
-                    if (!$result->allowed()) {
-                        return ApiResponse::error(429, 'Zu viele Anfragen. Bitte nach Ablauf der Minute erneut versuchen.')
-                            ->withHeaders($rateHeaders + ['Retry-After' => (string) $result->retryAfterSeconds($now)]);
-                    }
-                } catch (RateLimiterUnavailable $e) {
-                    // Even the fallback failed (database trouble): do not block the API for that.
-                    error_log('API rate limiter unavailable: ' . $e->getMessage());
-                }
-            }
+        $rateHeaders = $this->rateLimit($token, $settings, $now);
+        if ($rateHeaders instanceof ApiResponse) {
+            return $rateHeaders;
         }
 
-        $this->tokens->touchLastUsed($token->id, $now);
+        $this->touchLastUsed($token, $now);
 
         try {
             $apiRequest = new ApiRequest(
@@ -198,16 +261,23 @@ final class ApiKernel
         return $data;
     }
 
-    private function log(ApiToken $token, Request $request, int $status, ?string $ip, DateTimeImmutable $now): void
+    /** Adds an entry to api_request_log (90 days); also used by the MCP server. */
+    public function log(ApiToken $token, string $method, string $path, int $status, ?string $ip, DateTimeImmutable $now): void
     {
         try {
-            $this->requestLog->add(new ApiRequestLogEntry($token->id, $token->name, $request->method, $request->path, $status, $ip, $now));
+            $this->requestLog->add(new ApiRequestLogEntry($token->id, $token->name, $method, mb_substr($path, 0, 500), $status, $ip, $now));
             if (random_int(1, self::PURGE_LOG_ONE_IN) === 1) {
                 $this->requestLog->purgeOlderThan($now->modify('-' . ApiRequestLogRepositoryInterface::RETENTION_DAYS . ' days'));
             }
         } catch (Throwable $e) {
             error_log('API request log failed: ' . $e->getMessage());
         }
+    }
+
+    /** @param array<string, mixed> $server */
+    public static function clientIp(array $server): string
+    {
+        return is_string($server['REMOTE_ADDR'] ?? null) ? $server['REMOTE_ADDR'] : '';
     }
 
     /** @param array<string, mixed> $server */

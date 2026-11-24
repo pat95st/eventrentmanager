@@ -10,6 +10,7 @@ use App\Application\Api\Command\SetApiTokenEnabled;
 use App\Application\Api\Command\UpdateApiToken;
 use App\Application\Api\Query\ListApiTokens;
 use App\Application\Command\CommandBus;
+use App\Application\OAuth\OAuthService;
 use App\Application\Query\QueryBus;
 use App\Application\Settings\Command\UpdateApiSettings;
 use App\Application\Settings\Query\GetApiSettings;
@@ -38,6 +39,7 @@ final class ApiSettingsController
         private readonly QueryBus $queries,
         private readonly ApiRequestLogRepositoryInterface $requestLog,
         private readonly ApiSettingsRepositoryInterface $settings,
+        private readonly ?OAuthService $oauth = null,
     ) {
     }
 
@@ -63,6 +65,8 @@ final class ApiSettingsController
                 redisDatabase: $request->input('redis_database'),
                 redisKeyPrefix: $request->input('redis_key_prefix'),
                 redisTimeoutMs: $request->input('redis_timeout_ms'),
+                mcpEnabled: $request->input('mcp_enabled') === '1',
+                mcpReadOnly: $request->input('mcp_read_only') === '1',
             ));
         } catch (ValidationException $e) {
             $this->render($e->errors(), null, null);
@@ -97,6 +101,7 @@ final class ApiSettingsController
                 scopes: $request->inputArray('scopes'),
                 readOnly: $request->input('read_only') === '1',
                 rateLimitPerMinute: $request->input('rate_limit_per_minute'),
+                mcpAllowed: $request->input('mcp_allowed') === '1',
             ));
         } catch (ValidationException $e) {
             $this->render($e->errors(), null, null);
@@ -121,6 +126,7 @@ final class ApiSettingsController
                 scopes: $request->inputArray('scopes'),
                 readOnly: $request->input('read_only') === '1',
                 rateLimitPerMinute: $request->input('rate_limit_per_minute'),
+                mcpAllowed: $request->input('mcp_allowed') === '1',
             ));
             Flash::success('Token wurde aktualisiert.');
             Response::redirect('/einstellungen/api');
@@ -181,6 +187,7 @@ final class ApiSettingsController
             'errors' => $errors,
             'newRawToken' => $newRawToken,
             'editTokenId' => $editTokenId !== '' ? $editTokenId : null,
+            'connections' => $this->oauth?->connections(null) ?? [],
         ], activeNav: 'settings-api', title: 'API');
     }
 }

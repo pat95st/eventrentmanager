@@ -43,6 +43,12 @@ final class ApiResponse
         return new self(204);
     }
 
+    /** 202 without body, e.g. for JSON-RPC notifications (MCP server). */
+    public static function accepted(): self
+    {
+        return new self(202);
+    }
+
     /** @param array<string, string> $errors field => message (validation) */
     public static function error(int $status, string $message, array $errors = []): self
     {

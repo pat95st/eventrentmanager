@@ -1,0 +1,328 @@
+# MCP server (Model Context Protocol) for AI assistants, see docs/mcp.md. Paths are referenced from ../openapi.yaml.
+/mcp:
+  post:
+    tags:
+    - MCP server
+    operationId: mcpMessage
+    security:
+    - apiToken: []
+    summary: Send a JSON-RPC message
+    description: |
+      Endpoint of the MCP server ("Streamable HTTP" transport, protocol versions `2025-06-18`, `2025-03-26`
+      and `2024-11-05`). Every request carries exactly one JSON-RPC 2.0 message; requests are answered with one
+      JSON response (no SSE stream, no `Mcp-Session-Id`), notifications and client responses with `202`.
+
+      Supported methods: `initialize`, `ping`, `tools/list`, `tools/call`. The tools are described in
+      `docs/mcp.md`; `tools/list` returns only the tools the token may use (its scopes; no write tools while
+      the token or the global MCP setting is read only). Tool errors (invalid input, not found, business rule
+      violated, missing permission) are returned as a result with `"isError": true`, protocol errors as a
+      JSON-RPC `error`.
+
+      Access: switched on under *Einstellungen › API* („MCP-Server ist aktiviert“, requires the REST API) and a
+      token with „Für MCP zulassen“ (Settings › API). The token's IP filter and request limit apply; every
+      `tools/call` is logged (method `MCP`) with tool, arguments and number of results.
+    parameters:
+    - name: MCP-Protocol-Version
+      in: header
+      required: false
+      description: Negotiated protocol version; unsupported values are rejected with `400`.
+      schema:
+        type: string
+        enum:
+        - '2025-06-18'
+        - '2025-03-26'
+        - '2024-11-05'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/common.yaml#/schemas/JsonRpcMessage
+          examples:
+            listTools:
+              summary: List tools
+              value:
+                jsonrpc: '2.0'
+                id: 1
+                method: tools/list
+            callTool:
+              summary: Call a tool
+              value:
+                jsonrpc: '2.0'
+                id: 2
+                method: tools/call
+                params:
+                  name: check_availability
+                  arguments:
+                    article_ids:
+                    - 6f1c2a90-0000-4000-8000-000000000001
+                    from: '2026-12-05'
+                    to: '2026-12-06'
+    responses:
+      '200':
+        description: JSON-RPC response (`result` or `error`).
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/JsonRpcResponse
+      '202':
+        description: Notification or client response accepted (no body).
+      '400':
+        description: Body is not valid JSON (JSON-RPC parse error) or unsupported `MCP-Protocol-Version`.
+      '401':
+        description: Token missing, unknown or disabled.
+      '403':
+        description: Token not released for MCP, or IP address not allowed.
+      '404':
+        description: REST API or MCP server switched off.
+      '429':
+        description: Request limit of the token exceeded (shared with the REST API).
+  get:
+    tags:
+    - MCP server
+    operationId: mcpStream
+    security: []
+    summary: Event stream (not offered)
+    description: The server offers no SSE stream and answers `GET` (and `DELETE`) with `405`.
+    responses:
+      '405':
+        description: Only `POST` is supported.
+/.well-known/oauth-protected-resource:
+  get:
+    tags:
+    - MCP server
+    operationId: oauthProtectedResource
+    security: []
+    summary: Protected resource metadata
+    description: OAuth 2.0 protected resource metadata (RFC 9728) of `/mcp`. Also served at `/.well-known/oauth-protected-resource/mcp`.
+    responses:
+      '200':
+        description: Metadata (`resource`, `authorization_servers`, `scopes_supported`, `bearer_methods_supported`).
+      '404':
+        description: REST API or MCP server switched off.
+/.well-known/oauth-protected-resource/mcp:
+  get:
+    tags:
+    - MCP server
+    operationId: oauthProtectedResourceMcp
+    security: []
+    summary: Protected resource metadata (path variant)
+    description: Same as `/.well-known/oauth-protected-resource`.
+    responses:
+      '200':
+        description: Metadata.
+      '404':
+        description: REST API or MCP server switched off.
+/.well-known/oauth-authorization-server:
+  get:
+    tags:
+    - MCP server
+    operationId: oauthAuthorizationServer
+    security: []
+    summary: Authorization server metadata
+    description: OAuth 2.0 authorization server metadata (RFC 8414) with the endpoints below; PKCE `S256` only.
+    responses:
+      '200':
+        description: Metadata (`issuer`, `authorization_endpoint`, `token_endpoint`, `registration_endpoint`, `revocation_endpoint`, …).
+      '404':
+        description: REST API or MCP server switched off.
+/oauth/register:
+  post:
+    tags:
+    - MCP server
+    operationId: oauthRegister
+    security: []
+    summary: Register a client
+    description: |
+      Dynamic client registration (RFC 7591), open to everyone (every access still needs the consent of a
+      user). Redirect URIs must use `https`, or `http` with `localhost`, `127.0.0.1` or `[::1]` (any port is
+      accepted later). Limited to 10 requests per minute and IP address.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+            - redirect_uris
+            properties:
+              client_name:
+                type: string
+              redirect_uris:
+                type: array
+                items:
+                  type: string
+                  format: uri
+              token_endpoint_auth_method:
+                type: string
+                enum:
+                - none
+                - client_secret_post
+                - client_secret_basic
+              grant_types:
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - authorization_code
+                  - refresh_token
+              response_types:
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - code
+    responses:
+      '201':
+        description: Client information (`client_id`, `client_secret` for confidential clients, …).
+      '400':
+        description: '`invalid_redirect_uri` or `invalid_client_metadata`.'
+      '429':
+        description: Too many registrations from this IP address.
+/oauth/authorize:
+  get:
+    tags:
+    - MCP server
+    operationId: oauthAuthorize
+    security: []
+    summary: Authorization (browser)
+    description: |
+      Starts the authorization code flow in the browser: after the normal login (incl. two-factor
+      authentication) the user sees a consent page with the client name, the redirect host and the scopes
+      they may grant. Afterwards the browser is sent back to `redirect_uri` with `code`, `state` and `iss`, or
+      with `error` (`access_denied`, `invalid_request`, `invalid_scope`, `invalid_target`, …). Errors about the
+      client or the redirect URI are shown to the user instead.
+    parameters:
+    - name: response_type
+      in: query
+      required: true
+      schema:
+        type: string
+        enum:
+        - code
+    - name: client_id
+      in: query
+      required: true
+      schema:
+        type: string
+    - name: redirect_uri
+      in: query
+      required: false
+      description: Required when the client registered more than one.
+      schema:
+        type: string
+    - name: code_challenge
+      in: query
+      required: true
+      schema:
+        type: string
+    - name: code_challenge_method
+      in: query
+      required: true
+      schema:
+        type: string
+        enum:
+        - S256
+    - name: state
+      in: query
+      required: false
+      schema:
+        type: string
+    - name: scope
+      in: query
+      required: false
+      description: Space-separated scopes; without it every scope the user may grant is offered.
+      schema:
+        type: string
+    - name: resource
+      in: query
+      required: false
+      description: Resource indicator (RFC 8707); must be the URL of `/mcp`.
+      schema:
+        type: string
+    responses:
+      '303':
+        description: Redirect to the login page or back to the client.
+      '200':
+        description: Consent page (HTML).
+      '400':
+        description: Unknown client or unregistered redirect URI (HTML error page).
+/oauth/token:
+  post:
+    tags:
+    - MCP server
+    operationId: oauthToken
+    security: []
+    summary: Token endpoint
+    description: |
+      `authorization_code` (with `code_verifier`) and `refresh_token` grants. Access tokens are valid for
+      3600 seconds and only for `/mcp`; refresh tokens rotate on every use and expire after 90 days. Reusing
+      an old refresh token revokes the connection. Confidential clients authenticate with
+      `client_secret_post` or HTTP Basic. Limited to 60 requests per minute and IP address.
+    requestBody:
+      required: true
+      content:
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            required:
+            - grant_type
+            properties:
+              grant_type:
+                type: string
+                enum:
+                - authorization_code
+                - refresh_token
+              code:
+                type: string
+              redirect_uri:
+                type: string
+              code_verifier:
+                type: string
+              refresh_token:
+                type: string
+              client_id:
+                type: string
+              client_secret:
+                type: string
+              scope:
+                type: string
+              resource:
+                type: string
+    responses:
+      '200':
+        description: '`access_token`, `token_type` (`Bearer`), `expires_in`, `refresh_token`, `scope`.'
+      '400':
+        description: '`invalid_grant`, `unsupported_grant_type`, `invalid_target`.'
+      '401':
+        description: '`invalid_client`.'
+      '429':
+        description: Too many requests from this IP address.
+/oauth/revoke:
+  post:
+    tags:
+    - MCP server
+    operationId: oauthRevoke
+    security: []
+    summary: Revoke a token
+    description: Token revocation (RFC 7009). Revoking a refresh token ends the connection; unknown tokens are ignored.
+    requestBody:
+      required: true
+      content:
+        application/x-www-form-urlencoded:
+          schema:
+            type: object
+            required:
+            - token
+            properties:
+              token:
+                type: string
+              token_type_hint:
+                type: string
+    responses:
+      '200':
+        description: Revoked (or unknown).
+      '404':
+        description: REST API or MCP server switched off.
+      '429':
+        description: Too many requests from this IP address.

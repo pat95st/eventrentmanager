@@ -6,6 +6,7 @@
  * @var array<string, string> $errors
  * @var string|null $newRawToken
  * @var string|null $editTokenId
+ * @var \App\Application\OAuth\OAuthConnection[] $connections
  */
 
 use App\Domain\Api\ApiScope;
@@ -25,6 +26,7 @@ $postedScopes = isset($_POST['scopes']) && is_array($_POST['scopes']) ? array_ma
 $tokenFields = static function (?\App\Domain\Api\ApiToken $token, bool $showErrors) use ($inputClass, $errorLine, $postedScopes, $errors): void {
     $selected = $showErrors && $postedScopes !== null ? $postedScopes : ($token !== null ? $token->scopeValues() : []);
     $readOnly = $showErrors && $errors !== [] ? (($_POST['read_only'] ?? '') === '1') : ($token?->readOnly ?? false);
+    $mcpAllowed = $showErrors && $errors !== [] ? (($_POST['mcp_allowed'] ?? '') === '1') : ($token?->mcpAllowed ?? false);
     $formId = 'token-' . ($token?->id ?? 'new');
     ?>
     <div>
@@ -58,6 +60,10 @@ $tokenFields = static function (?\App\Domain\Api\ApiToken $token, bool $showErro
             <input type="checkbox" name="read_only" value="1" <?= $readOnly ? 'checked' : '' ?> class="mt-0.5 rounded border-slate-300">
             <span><span class="font-medium">Nur lesen</span><br><span class="text-xs text-slate-500 dark:text-slate-400">Lehnt jede schreibende Anfrage ab — unabhängig von den gewählten Scopes.</span></span>
         </label>
+        <label class="inline-flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <input type="checkbox" name="mcp_allowed" value="1" <?= $mcpAllowed ? 'checked' : '' ?> class="mt-0.5 rounded border-slate-300">
+            <span><span class="font-medium">Für MCP zulassen</span><br><span class="text-xs text-slate-500 dark:text-slate-400">Das Token darf zusätzlich den MCP-Server <code>/mcp</code> nutzen (KI-Assistenten wie Claude). Es gelten dieselben Scopes.</span></span>
+        </label>
         <div>
             <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Anfragen pro Minute (leer = Standard, 0 = unbegrenzt)</label>
             <input type="text" inputmode="numeric" name="rate_limit_per_minute" value="<?= e($showErrors && $errors !== [] ? (string) ($_POST['rate_limit_per_minute'] ?? '') : ($token?->rateLimitPerMinute !== null ? (string) $token->rateLimitPerMinute : '')) ?>" class="<?= $inputClass('rateLimitPerMinute', $showErrors) ?>">
@@ -66,7 +72,7 @@ $tokenFields = static function (?\App\Domain\Api\ApiToken $token, bool $showErro
     </div>
     <?php
 };
-$settingsErrors = $editTokenId === null && $newRawToken === null && array_intersect_key($errors, array_flip(['rateLimitPerMinute', 'rateLimitBackend', 'redisConnection', 'redisHost', 'redisPort', 'redisSocketPath', 'redisDatabase', 'redisKeyPrefix', 'redisTimeoutMs'])) !== [] && !isset($_POST['name']);
+$settingsErrors = $editTokenId === null && $newRawToken === null && array_intersect_key($errors, array_flip(['mcpEnabled', 'rateLimitPerMinute', 'rateLimitBackend', 'redisConnection', 'redisHost', 'redisPort', 'redisSocketPath', 'redisDatabase', 'redisKeyPrefix', 'redisTimeoutMs'])) !== [] && !isset($_POST['name']);
 $val = static fn (string $field, string $current): string => $settingsErrors && isset($_POST[$field]) ? (string) $_POST[$field] : $current;
 ?>
 
@@ -94,6 +100,24 @@ $val = static fn (string $field, string $current): string => $settingsErrors && 
                 <input type="checkbox" name="enabled" value="1" <?= $apiSettings->enabled ? 'checked' : '' ?> class="rounded border-slate-300">
                 API ist aktiviert
             </label>
+        </div>
+
+        <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
+            <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">MCP-Server (KI-Assistenten)</h2>
+            <p class="mb-2 text-xs text-slate-500 dark:text-slate-400">Stellt unter <code><?= e(\App\Infrastructure\Http\Origin::current()) ?>/mcp</code> einen Server für das Model Context Protocol bereit, über den KI-Assistenten wie Claude Kunden, Artikel, Veranstaltungen, Angebote und Rechnungen abfragen und bearbeiten können. Anmeldung entweder mit einem Token mit „Für MCP zulassen“ (z. B. Claude Code) oder – für claude.ai und Claude Desktop – per OAuth mit dem normalen Login des Benutzers (siehe „Verbundene KI-Assistenten“ unten); Ratenbegrenzung und Protokoll der REST-API gelten mit. Rechnungen festschreiben, E-Mails versenden und Löschen sind über MCP nie möglich.</p>
+            <?php $mcpEnabled = $settingsErrors ? (($_POST['mcp_enabled'] ?? '') === '1') : $apiSettings->mcpEnabled; ?>
+            <?php $mcpReadOnly = $settingsErrors ? (($_POST['mcp_read_only'] ?? '') === '1') : $apiSettings->mcpReadOnly; ?>
+            <div class="flex flex-col gap-2">
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" name="mcp_enabled" value="1" <?= $mcpEnabled ? 'checked' : '' ?> class="rounded border-slate-300">
+                    MCP-Server ist aktiviert
+                </label>
+                <?= $errorLine('mcpEnabled', $settingsErrors) ?>
+                <label class="inline-flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300">
+                    <input type="checkbox" name="mcp_read_only" value="1" <?= $mcpReadOnly ? 'checked' : '' ?> class="mt-0.5 rounded border-slate-300">
+                    <span>MCP nur lesen<br><span class="text-xs text-slate-500 dark:text-slate-400">Bietet über MCP nur lesende Werkzeuge an — unabhängig von den Scopes der Tokens.</span></span>
+                </label>
+            </div>
         </div>
 
         <div class="border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -218,6 +242,9 @@ $val = static fn (string $field, string $current): string => $settingsErrors && 
                                     <?php if ($token->readOnly): ?>
                                         <span class="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 ring-1 ring-inset ring-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:ring-sky-700">Nur lesen</span>
                                     <?php endif; ?>
+                                    <?php if ($token->mcpAllowed): ?>
+                                        <span class="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:ring-violet-700">MCP</span>
+                                    <?php endif; ?>
                                 </div>
                                 <p class="mt-1 flex flex-wrap gap-1">
                                     <?php foreach ($token->scopes as $scope): ?>
@@ -269,10 +296,39 @@ $val = static fn (string $field, string $current): string => $settingsErrors && 
         </div>
     </div>
 
+    <!-- Über OAuth verbundene KI-Assistenten (claude.ai, Claude Desktop, …) -->
+    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Verbundene KI-Assistenten</h2>
+        <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">Assistenten wie claude.ai oder Claude Desktop verbinden sich über OAuth mit dem MCP-Server: Ein Benutzer meldet sich mit seinem normalen Login an und gibt Berechtigungen frei, die er selbst hat (nicht möglich für Benutzer, die nur das Recht „Techniker“ haben). Zugriffs-Tokens gelten eine Stunde und werden automatisch erneuert; nach 90 Tagen ohne Nutzung endet die Verbindung. Wird ein Benutzer deaktiviert oder werden ihm Rechte entzogen, gilt das sofort. Jeder Benutzer sieht und trennt seine eigenen Verbindungen unter Profil › KI-Assistenten.</p>
+        <?php if ($connections === []): ?>
+            <p class="text-sm text-slate-400 dark:text-slate-500">Noch keine Verbindungen.</p>
+        <?php else: ?>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                <?php foreach ($connections as $connection): ?>
+                    <div class="flex flex-wrap items-center justify-between gap-3 py-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($connection->clientName) ?> <span class="text-xs font-normal text-slate-400"><?= e($connection->redirectHost) ?></span> · <?= e($connection->userName) ?></p>
+                            <p class="mt-1 flex flex-wrap gap-1">
+                                <?php foreach ($connection->grant->scopes as $scope): ?>
+                                    <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] <?= $scope->isRead() ? 'text-slate-500 dark:text-slate-400' : 'text-amber-700 dark:text-amber-400' ?> dark:bg-slate-800"><?= e($scope->value) ?></span>
+                                <?php endforeach; ?>
+                            </p>
+                            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">Verbunden am <?= e($connection->grant->createdAt->format('d.m.Y H:i')) ?> · Zuletzt genutzt: <?= $connection->lastUsedAt !== null ? e($connection->lastUsedAt->format('d.m.Y H:i')) : 'noch nie' ?></p>
+                        </div>
+                        <form method="post" action="/einstellungen/api/verbindungen/<?= e($connection->grant->id) ?>/trennen" data-confirm-key="settings.api.connection.disconnect" data-confirm="Verbindung wirklich trennen? Der Assistent muss danach neu verbunden werden." data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Trennen</button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
     <!-- Protokoll schreibender Zugriffe -->
     <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Protokoll schreibender Zugriffe</h2>
-        <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">Die letzten <?= count($requestLog) ?> Anfragen mit POST, PATCH, PUT oder DELETE. Einträge werden nach <?= \App\Domain\Api\ApiRequestLogRepositoryInterface::RETENTION_DAYS ?> Tagen automatisch gelöscht.</p>
+        <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Protokoll schreibender Zugriffe und MCP-Aufrufe</h2>
+        <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">Die letzten <?= count($requestLog) ?> Anfragen mit POST, PATCH, PUT oder DELETE sowie alle Werkzeug-Aufrufe über MCP (Methode „MCP“, mit Werkzeug, Parametern und Trefferanzahl, ohne Antwortinhalt). Einträge werden nach <?= \App\Domain\Api\ApiRequestLogRepositoryInterface::RETENTION_DAYS ?> Tagen automatisch gelöscht.</p>
         <?php if ($requestLog === []): ?>
             <p class="text-sm text-slate-400 dark:text-slate-500">Noch keine schreibenden Zugriffe.</p>
         <?php else: ?>

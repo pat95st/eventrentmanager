@@ -145,6 +145,49 @@ responses:
           type: string
           format: binary
 schemas:
+  JsonRpcMessage:
+    type: object
+    required:
+    - jsonrpc
+    properties:
+      jsonrpc:
+        type: string
+        enum:
+        - '2.0'
+      id:
+        oneOf:
+        - type: string
+        - type: integer
+        description: Missing for notifications.
+      method:
+        type: string
+        enum:
+        - initialize
+        - ping
+        - tools/list
+        - tools/call
+        - notifications/initialized
+      params:
+        type: object
+  JsonRpcResponse:
+    type: object
+    properties:
+      jsonrpc:
+        type: string
+      id:
+        oneOf:
+        - type: string
+        - type: integer
+      result:
+        type: object
+        description: For `tools/call`, `content` (text with the JSON result), `structuredContent` and `isError`.
+      error:
+        type: object
+        properties:
+          code:
+            type: integer
+          message:
+            type: string
   Error:
     type: object
     required:

@@ -44,14 +44,15 @@ final class MariadbApiTokenRepository implements ApiTokenRepositoryInterface
     public function save(ApiToken $token): void
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO api_tokens (id, name, token_hash, token_last_four, ip_allowlist, enabled, scopes, read_only, rate_limit_per_minute, last_used_at, created_at)
-             VALUES (:id, :name, :token_hash, :token_last_four, :ip_allowlist, :enabled, :scopes, :read_only, :rate_limit_per_minute, :last_used_at, :created_at)
+            'INSERT INTO api_tokens (id, name, token_hash, token_last_four, ip_allowlist, enabled, scopes, read_only, mcp_allowed, user_id, oauth_grant_id, expires_at, rate_limit_per_minute, last_used_at, created_at)
+             VALUES (:id, :name, :token_hash, :token_last_four, :ip_allowlist, :enabled, :scopes, :read_only, :mcp_allowed, :user_id, :oauth_grant_id, :expires_at, :rate_limit_per_minute, :last_used_at, :created_at)
              ON DUPLICATE KEY UPDATE
                 name = VALUES(name),
                 ip_allowlist = VALUES(ip_allowlist),
                 enabled = VALUES(enabled),
                 scopes = VALUES(scopes),
                 read_only = VALUES(read_only),
+                mcp_allowed = VALUES(mcp_allowed),
                 rate_limit_per_minute = VALUES(rate_limit_per_minute),
                 last_used_at = VALUES(last_used_at)'
         );
@@ -65,6 +66,10 @@ final class MariadbApiTokenRepository implements ApiTokenRepositoryInterface
             'enabled' => $token->enabled ? 1 : 0,
             'scopes' => json_encode($token->scopeValues(), JSON_THROW_ON_ERROR),
             'read_only' => $token->readOnly ? 1 : 0,
+            'mcp_allowed' => $token->mcpAllowed ? 1 : 0,
+            'user_id' => $token->userId,
+            'oauth_grant_id' => $token->oauthGrantId,
+            'expires_at' => $token->expiresAt?->format('Y-m-d H:i:s'),
             'rate_limit_per_minute' => $token->rateLimitPerMinute,
             'last_used_at' => $token->lastUsedAt?->format('Y-m-d H:i:s'),
             'created_at' => $token->createdAt->format('Y-m-d H:i:s'),
@@ -83,6 +88,12 @@ final class MariadbApiTokenRepository implements ApiTokenRepositoryInterface
         $stmt->execute(['id' => $id, 'last_used_at' => $at->format('Y-m-d H:i:s')]);
     }
 
+    public function deleteByOAuthGrant(string $grantId): void
+    {
+        $stmt = $this->pdo->prepare('DELETE FROM api_tokens WHERE oauth_grant_id = :grant_id');
+        $stmt->execute(['grant_id' => $grantId]);
+    }
+
     /** @param array<string, mixed> $row */
     private function hydrate(array $row): ApiToken
     {
@@ -98,6 +109,10 @@ final class MariadbApiTokenRepository implements ApiTokenRepositoryInterface
             scopes: ApiScope::parseList(is_string($row['scopes'] ?? null) ? (array) (json_decode($row['scopes'], true) ?? []) : []),
             readOnly: (bool) ($row['read_only'] ?? false),
             rateLimitPerMinute: isset($row['rate_limit_per_minute']) ? (int) $row['rate_limit_per_minute'] : null,
+            mcpAllowed: (bool) ($row['mcp_allowed'] ?? false),
+            userId: $row['user_id'] ?? null,
+            oauthGrantId: $row['oauth_grant_id'] ?? null,
+            expiresAt: isset($row['expires_at']) ? new DateTimeImmutable($row['expires_at']) : null,
         );
     }
 }

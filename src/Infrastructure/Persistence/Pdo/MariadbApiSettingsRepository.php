@@ -39,6 +39,8 @@ final class MariadbApiSettingsRepository implements ApiSettingsRepositoryInterfa
             redisTimeoutSeconds: ((int) ($row['redis_timeout_ms'] ?? 1000)) / 1000,
             redisLastError: $row['redis_last_error'] ?? null,
             redisLastErrorAt: isset($row['redis_last_error_at']) ? new DateTimeImmutable($row['redis_last_error_at']) : null,
+            mcpEnabled: (bool) ($row['mcp_enabled'] ?? false),
+            mcpReadOnly: (bool) ($row['mcp_read_only'] ?? false),
         );
     }
 
@@ -47,6 +49,8 @@ final class MariadbApiSettingsRepository implements ApiSettingsRepositoryInterfa
         $stmt = $this->pdo->prepare(
             'UPDATE api_settings SET
                 enabled = :enabled,
+                mcp_enabled = :mcp_enabled,
+                mcp_read_only = :mcp_read_only,
                 rate_limit_per_minute = :rate_limit_per_minute,
                 rate_limit_backend = :rate_limit_backend,
                 redis_connection = :redis_connection,
@@ -62,6 +66,8 @@ final class MariadbApiSettingsRepository implements ApiSettingsRepositoryInterfa
         );
         $stmt->execute([
             'enabled' => $settings->enabled ? 1 : 0,
+            'mcp_enabled' => $settings->mcpEnabled ? 1 : 0,
+            'mcp_read_only' => $settings->mcpReadOnly ? 1 : 0,
             'rate_limit_per_minute' => $settings->rateLimitPerMinute,
             'rate_limit_backend' => $settings->rateLimitBackend,
             'redis_connection' => $settings->redisConnection,

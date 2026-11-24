@@ -19,6 +19,7 @@ final class ListApiTokensHandler implements QueryHandlerInterface
     {
         assert($query instanceof ListApiTokens);
 
-        return $this->repository->findAll();
+        // Tokens issued via OAuth rotate hourly and are shown per connection instead.
+        return array_values(array_filter($this->repository->findAll(), static fn ($token) => !$token->isOAuth()));
     }
 }

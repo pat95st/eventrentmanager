@@ -51,4 +51,9 @@ final class InMemoryApiTokenRepository implements ApiTokenRepositoryInterface
             $this->tokens[$id]->lastUsedAt = $at;
         }
     }
+
+    public function deleteByOAuthGrant(string $grantId): void
+    {
+        $this->tokens = array_filter($this->tokens, static fn (ApiToken $t) => $t->oauthGrantId !== $grantId);
+    }
 }

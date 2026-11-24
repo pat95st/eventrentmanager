@@ -27,6 +27,9 @@ final class UpdateApiSettings implements CommandInterface
         public readonly ?string $redisDatabase = null,
         public readonly ?string $redisKeyPrefix = null,
         public readonly ?string $redisTimeoutMs = null,
+        // MCP server /mcp: master switch (requires $enabled) and global read-only switch.
+        public readonly bool $mcpEnabled = false,
+        public readonly bool $mcpReadOnly = false,
     ) {
     }
 }

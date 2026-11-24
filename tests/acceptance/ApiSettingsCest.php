@@ -69,4 +69,24 @@ final class ApiSettingsCest
         // The password is never sent back to the form; an empty field keeps it.
         $I->dontSee('geheim');
     }
+
+    public function switchesMcpOnAndReleasesATokenForIt(AcceptanceTester $I): void
+    {
+        $I->amOnPage('/einstellungen/api');
+        $I->see('MCP-Server (KI-Assistenten)');
+        $I->submitForm('form[action="/einstellungen/api"]', ['enabled' => '1', 'mcp_enabled' => '1', 'mcp_read_only' => '1']);
+        $I->see('API-Einstellungen wurden gespeichert.');
+        $I->seeInDatabase('api_settings', ['enabled' => 1, 'mcp_enabled' => 1, 'mcp_read_only' => 1]);
+
+        $I->submitForm('form[action="/einstellungen/api/tokens"]', ['name' => 'Claude', 'scopes' => ['customers:read'], 'mcp_allowed' => '1']);
+        $I->seeInDatabase('api_tokens', ['name' => 'Claude', 'mcp_allowed' => 1]);
+    }
+
+    public function mcpRequiresTheApi(AcceptanceTester $I): void
+    {
+        $I->amOnPage('/einstellungen/api');
+        $I->submitForm('form[action="/einstellungen/api"]', ['mcp_enabled' => '1']);
+        $I->see('bitte dafür auch die API aktivieren');
+        $I->seeInDatabase('api_settings', ['mcp_enabled' => 0]);
+    }
 }

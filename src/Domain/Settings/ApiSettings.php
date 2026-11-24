@@ -12,6 +12,9 @@ use DateTimeImmutable;
  * database or in Redis; if Redis is configured but unreachable, the API
  * falls back to the database counter and records the error here so the
  * settings page can show it.
+ *
+ * The MCP server (/mcp) shares tokens, rate limiting and the request log
+ * with the REST API and has its own master and read-only switches.
  */
 final class ApiSettings
 {
@@ -38,7 +41,19 @@ final class ApiSettings
         public float $redisTimeoutSeconds = 1.0,
         public ?string $redisLastError = null,
         public ?DateTimeImmutable $redisLastErrorAt = null,
+        // MCP server at /mcp (migration 188). Requires $enabled; while off,
+        // /mcp answers 404 like the REST API does when it is switched off.
+        public bool $mcpEnabled = false,
+        // Global read-only switch for MCP: no write tool is offered to any
+        // token, whatever its scopes (on top of the token's own read-only flag).
+        public bool $mcpReadOnly = false,
     ) {
+    }
+
+    /** MCP is reachable only while both the REST API and MCP are switched on. */
+    public function mcpAvailable(): bool
+    {
+        return $this->enabled && $this->mcpEnabled;
     }
 
     public function usesRedis(): bool

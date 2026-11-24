@@ -126,6 +126,7 @@ final class ConfirmCatalog
         'profile.trusted_devices.revoke' => ['Eigenes Profil', 'Vertraute Geräte widerrufen', true],
         'profile.carddav.delete' => ['Eigenes Profil', 'CardDAV-Zugang löschen', false],
         'profile.passkey.remove' => ['Eigenes Profil', 'Passkey entfernen', true],
+        'profile.ai.disconnect' => ['Eigenes Profil', 'KI-Assistent trennen', true],
         'profile.push.remove' => ['Eigenes Profil', 'Push-Gerät entfernen', false],
         // Einstellungen
         'settings.event_audio.player.token' => ['Einstellungen', 'Audio-Gerät: Token neu erzeugen', false],
@@ -159,6 +160,7 @@ final class ConfirmCatalog
         'settings.digital_protocols.delete' => ['Einstellungen', 'Digitales Protokoll löschen', false],
         'settings.pdf_fonts.delete' => ['Einstellungen', 'PDF-Schrift löschen', false],
         'settings.api.token.delete' => ['Einstellungen', 'API-Token löschen', true],
+        'settings.api.connection.disconnect' => ['Einstellungen', 'Verbundenen KI-Assistenten trennen', true],
         'settings.document_storage.assignment.delete' => ['Einstellungen', 'Speicherziel-Zuordnung löschen', false],
         'settings.document_storage.target.delete' => ['Einstellungen', 'Speicherziel löschen', false],
         'settings.document_storage.target.disconnect' => ['Einstellungen', 'Speicherziel trennen', false],

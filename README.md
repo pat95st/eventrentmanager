@@ -884,6 +884,27 @@ integration interfaces are in `docs/abspielgeraet-api.md`, `docs/display-api.md`
 - `ApiDocumentationTest` fails if a route is not documented or
   `generated.yaml` is stale.
 
+### MCP server for AI assistants
+
+Under *Einstellungen › API* the MCP server `/mcp` (Model Context Protocol) can
+be switched on in addition to the REST API, optionally as „MCP nur lesen“
+(read only). AI assistants such as Claude then use about 30 task-oriented
+tools (customers, articles and availability, events, offers, invoices,
+receipts, reports, inventory) with an API token that has „Für MCP zulassen“;
+scopes, IP filter, request limit and log of the token apply. Finalizing
+invoices, sending e-mails and deleting are never offered. Clients such as
+claude.ai and Claude Desktop connect via OAuth 2.1 with the user's normal
+login and a consent page; only scopes matching the user's permissions can be
+granted, and each user manages the connections under *Profil ›
+KI-Assistenten*. Setup, tool list and conventions: `docs/mcp.md`
+(migrations 188 and 189).
+
+- Server: `src/Infrastructure/Mcp/McpServer.php`, tools: `McpToolbox.php`
+  (wrappers around the REST API controllers); OAuth:
+  `src/Application/OAuth/OAuthService.php`, `OAuthController.php`.
+- `McpToolboxTest` fails if a tool is missing in `docs/mcp.md` or uses a
+  controller action that is not a REST route.
+
 ## Statische Analyse (PHPStan)
 
 Das Projekt ist auf PHPStan **Level max** konfiguriert (`phpstan.neon`,

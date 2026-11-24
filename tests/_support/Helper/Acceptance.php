@@ -74,7 +74,7 @@ class Acceptance extends Module
      *
      * @param list<string> $scopes
      */
-    public function haveApiToken(array $scopes, bool $readOnly = false, ?int $rateLimitPerMinute = null, bool $enableApi = true): string
+    public function haveApiToken(array $scopes, bool $readOnly = false, ?int $rateLimitPerMinute = null, bool $enableApi = true, bool $mcpAllowed = false): string
     {
         $raw = 'mv_test' . bin2hex(random_bytes(8));
         /** @var \Codeception\Module\Db $db */
@@ -88,6 +88,7 @@ class Acceptance extends Module
             'scopes' => json_encode($scopes),
             'read_only' => $readOnly ? 1 : 0,
             'rate_limit_per_minute' => $rateLimitPerMinute,
+            'mcp_allowed' => $mcpAllowed ? 1 : 0,
         ]);
         if ($enableApi) {
             $db->updateInDatabase('api_settings', ['enabled' => 1], ['id' => 1]);
@@ -119,6 +120,46 @@ class Acceptance extends Module
         $body = json_decode((string) $response->getContent(), true);
 
         return [$response->getStatusCode(), is_array($body) ? $body : []];
+    }
+
+    /**
+     * Sends one JSON-RPC request to the MCP server /mcp and returns
+     * [status code, decoded JSON body].
+     *
+     * @param array<string, mixed> $params
+     * @return array{0: int, 1: array<string, mixed>}
+     */
+    public function sendMcpRequest(?string $token, string $method, array $params = []): array
+    {
+        $browser = $this->phpBrowser();
+        $server = ['HTTP_ACCEPT' => 'application/json, text/event-stream', 'CONTENT_TYPE' => 'application/json'];
+        if ($token !== null) {
+            $server['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+        }
+        $message = ['jsonrpc' => '2.0', 'id' => 1, 'method' => $method, 'params' => $params === [] ? new \stdClass() : $params];
+        $browser->_request('POST', '/mcp', [], [], $server, json_encode($message, JSON_THROW_ON_ERROR));
+        $response = $browser->client->getInternalResponse();
+        $body = json_decode((string) $response->getContent(), true);
+
+        return [$response->getStatusCode(), is_array($body) ? $body : []];
+    }
+
+    /**
+     * Calls an MCP tool and returns [isError, structured result or error text].
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{0: bool, 1: mixed}
+     */
+    public function callMcpTool(string $token, string $tool, array $arguments = []): array
+    {
+        [$status, $body] = $this->sendMcpRequest($token, 'tools/call', ['name' => $tool, 'arguments' => $arguments === [] ? new \stdClass() : $arguments]);
+        $this->assertSame(200, $status, 'tools/call ' . $tool . ' answered HTTP ' . $status);
+        $result = $body['result'] ?? [];
+        if (($result['isError'] ?? false) === true) {
+            return [true, (string) ($result['content'][0]['text'] ?? '')];
+        }
+
+        return [false, $result['structuredContent'] ?? null];
     }
 
     private function phpBrowser(): PhpBrowser

@@ -666,11 +666,14 @@ final class McpToolbox
             new McpTool(
                 'record_electrical_inspection',
                 'Record electrical inspection',
-                'Records an electrical inspection (E-Prüfung, DGUV V3) of a unit. inspected_at defaults to today; measured values as decimal numbers.',
-                McpSchemas::input('ElectricalInspectionInput', ['inventory_number_id' => McpSchemas::id('Id of the inventory number (see get_inventory_number).')], ['inventory_number_id']),
+                'Records an electrical inspection (E-Prüfung, DGUV V3) of a unit. inspected_at defaults to today; validity_years is 1 or 2 (years until the next inspection); measured values as decimal numbers.',
+                McpSchemas::input('ElectricalInspectionInput', [
+                    'inventory_number_id' => McpSchemas::id('Id of the inventory number (see get_inventory_number).'),
+                    'validity_years' => ['type' => ['string', 'integer'], 'enum' => ['1', '2', 1, 2], 'description' => 'Years until the next inspection.'],
+                ], ['inventory_number_id', 'validity_years']),
                 [S::InventoryWrite],
                 false,
-                fn (array $args, McpToolContext $ctx): array => self::compact($this->api($ctx, 'inventory', 'storeInspection', ['id' => self::str($args, 'inventory_number_id')], [], self::without($args, 'inventory_number_id'))['data']),
+                fn (array $args, McpToolContext $ctx): array => self::compact($this->api($ctx, 'inventory', 'storeInspection', ['id' => self::str($args, 'inventory_number_id')], [], self::without($args, 'inventory_number_id') + ['inspected_at' => $this->now()->format('Y-m-d')])['data']),
             ),
         ];
     }

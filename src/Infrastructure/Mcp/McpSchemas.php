@@ -25,7 +25,7 @@ final class McpSchemas
     /**
      * Schema of a request body of the REST API, e.g. input('CustomerInput').
      *
-     * @param array<string, array<string, mixed>> $extraProperties added in front (e.g. the id for updates)
+     * @param array<string, array<string, mixed>> $extraProperties added in front (e.g. the id for updates); override generated ones
      * @param list<string> $extraRequired
      * @param list<string> $omit body fields not offered
      * @return array<string, mixed>
@@ -37,7 +37,8 @@ final class McpSchemas
 
         $properties = $extraProperties;
         foreach ($openApi['properties'] ?? [] as $field => $schema) {
-            if (!in_array($field, $omit, true)) {
+            // Properties given by the tool take precedence (better description/enum).
+            if (!in_array($field, $omit, true) && !isset($extraProperties[$field])) {
                 $properties[$field] = self::convert($schema);
             }
         }

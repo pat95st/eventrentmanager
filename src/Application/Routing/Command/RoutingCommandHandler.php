@@ -48,22 +48,7 @@ final class RoutingCommandHandler implements CommandHandlerInterface
 
     private function saveSettings(SaveRoutingSettings $command): null
     {
-        $buffer = filter_var(trim($command->bufferMinutes), FILTER_VALIDATE_INT);
-        if ($buffer === false || $buffer < 0 || $buffer > 600) {
-            throw new ValidationException(['bufferMinutes' => 'Bitte einen Puffer zwischen 0 und 600 Minuten angeben.']);
-        }
-        $settings = $this->settings->get();
-        $key = trim($command->apiKey);
-        if ($command->removeKey) {
-            $settings->apiKey = null;
-        } elseif ($key !== '') {
-            if (mb_strlen($key) > 255) {
-                throw new ValidationException(['apiKey' => 'Der API-Schlüssel ist zu lang.']);
-            }
-            $settings->apiKey = $key;
-        }
-        $settings->bufferMinutes = $buffer;
-        $this->settings->save($settings);
+        (new SaveRoutingSettingsHandler($this->settings))->handle($command);
 
         return null;
     }

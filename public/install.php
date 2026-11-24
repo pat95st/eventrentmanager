@@ -9,8 +9,10 @@ declare(strict_types=1);
  * Datenbank-Zugangsdaten samt automatischem Einspielen aller Migrationen
  * aus database/migrations/ (siehe App\Infrastructure\Migrations\MigrationRunner),
  * (3) das Festlegen eines eigenen Administrator-Zugangs (ersetzt den sonst
- * per Migration 008 fest vergebenen Standard-Zugang) und (4) das
- * automatische Schreiben der database.yaml.
+ * per Migration 008 fest vergebenen Standard-Zugang) samt automatischem
+ * Schreiben der database.yaml und (4) optionale, einzeln überspringbare
+ * Einrichtungsschritte für alle Integrationen (siehe
+ * App\Infrastructure\Installer\IntegrationSetupSteps).
  *
  * WICHTIG: Diese Datei darf NICHT von src/bootstrap.php abhängen — bootstrap.php
  * verlangt zwingend eine bereits funktionierende database.yaml samt
@@ -29,6 +31,12 @@ declare(strict_types=1);
  * Server storage/installed.lock manuell löschen; die Migrationen werden
  * dank schema_migrations-Tabelle beim erneuten Durchlauf idempotent nur für
  * noch fehlende Dateien wiederholt.
+ *
+ * Die Integrationsschritte (4) laufen bereits NACH dem Anlegen der
+ * Sperrdatei: nur die Sitzung, die die Installation gerade abgeschlossen hat
+ * ('post_install' in der Installer-Sitzung), darf sie noch durchlaufen —
+ * und auch nur diese Schritte, alle übrigen Aktionen sind an frühere
+ * Schritte gebunden.
  */
 
 require_once __DIR__ . '/../src/autoload.php';
@@ -36,7 +44,9 @@ require_once __DIR__ . '/../src/autoload.php';
 use App\Infrastructure\Backup\BackupArchiveException;
 use App\Infrastructure\Backup\BackupArchiveImporter;
 use App\Infrastructure\Config\FlatYamlConfig;
+use App\Domain\Exception\ValidationException;
 use App\Infrastructure\Http\Csrf;
+use App\Infrastructure\Installer\IntegrationSetupSteps;
 use App\Infrastructure\Migrations\MigrationFailedException;
 use App\Infrastructure\Migrations\MigrationRunner;
 use App\Infrastructure\Persistence\Pdo\Connection;
@@ -110,7 +120,10 @@ function applyFreshSchema(\PDO $pdo): array
     // Absicherung, damit eine (z. B. lokal angepasste) Datei nie in eine
     // andere als die vom Administrator im Formular angegebene Datenbank
     // schreibt, auf die die PDO-Verbindung bereits zeigt.
-    $schemaSql = (string) preg_replace('/CREATE\s+DATABASE.*?;/si', '', $schemaSql);
+    // Anchored to the start of a line so that a mention inside an SQL comment
+    // (schema.sql's header says "kein CREATE DATABASE/USE") does not swallow
+    // everything up to the next semicolon, i.e. the first CREATE TABLE.
+    $schemaSql = (string) preg_replace('/^\s*CREATE\s+DATABASE\b[^;]*;/mi', '', $schemaSql);
     $schemaSql = (string) preg_replace('/^\s*USE\s+`?\w+`?\s*;\s*$/mi', '', $schemaSql);
 
     // PDO_MySQL führt bei exec() mehrere, durch Semikolon getrennte
@@ -148,11 +161,20 @@ function h(?string $value): string
 }
 
 /**
- * Bereits abgeschlossene Installationen brechen hier sofort ab, VOR dem
- * Start der Session und VOR jeder Verarbeitung von POST-Daten — siehe
- * Begründung oben im Datei-Kommentar.
+ * Bereits abgeschlossene Installationen brechen hier sofort ab, VOR jeder
+ * Verarbeitung von POST-Daten — siehe Begründung oben im Datei-Kommentar.
+ * Einzige Ausnahme: die Sitzung, die die Installation gerade abgeschlossen
+ * hat, darf noch die optionalen Integrationsschritte durchlaufen. Eine
+ * Sitzung wird dafür nur fortgesetzt, wenn bereits ein Sitzungs-Cookie
+ * existiert — anonyme Besucher bekommen keine neue Sitzung angelegt.
  */
-if (is_file(LOCK_FILE)) {
+$postInstall = false;
+if (is_file(LOCK_FILE) && isset($_COOKIE[session_name()])) {
+    session_start();
+    $postInstall = ($_SESSION['installer']['post_install'] ?? false) === true;
+}
+
+if (is_file(LOCK_FILE) && !$postInstall) {
     http_response_code(200);
     ?>
     <!DOCTYPE html>
@@ -181,7 +203,9 @@ if (is_file(LOCK_FILE)) {
     exit;
 }
 
-session_start();
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
 
 if (!isset($_SESSION['installer']) || !is_array($_SESSION['installer'])) {
     $_SESSION['installer'] = [
@@ -255,6 +279,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$csrfOk) {
         $error = 'Sicherheitsprüfung fehlgeschlagen (Sitzung abgelaufen?). Bitte die Seite neu laden und erneut versuchen.';
+    } elseif (in_array($action, ['save_integration', 'skip_integration', 'skip_all_integrations'], true)
+        && $postInstall && $state['step'] === 4 && is_array($state['db'])
+    ) {
+        $integration = (string) ($state['integration_step'] ?? '');
+
+        if (!IntegrationSetupSteps::isStep($integration)) {
+            completeIntegrationSetup();
+        } elseif ($action === 'skip_all_integrations') {
+            foreach (IntegrationSetupSteps::STEPS as $remaining) {
+                $state['integration_results'][$remaining] ??= 'skipped';
+            }
+            completeIntegrationSetup();
+        } elseif ($action === 'skip_integration') {
+            $state['integration_results'][$integration] = 'skipped';
+            advanceIntegrationStep($integration);
+        } else {
+            try {
+                IntegrationSetupSteps::forPdo(Connection::fromConfig($state['db']))->save($integration, $_POST);
+                $state['integration_results'][$integration] = 'saved';
+                advanceIntegrationStep($integration);
+            } catch (ValidationException $e) {
+                $error = implode("\n", $e->errors());
+                $formValues = $_POST;
+            } catch (\PDOException|\RuntimeException $e) {
+                $error = 'Die Einstellungen konnten nicht gespeichert werden: ' . $e->getMessage();
+                $formValues = $_POST;
+            }
+        }
     } elseif ($action === 'continue_to_db' && $state['step'] === 1) {
         if ($requirementsOk) {
             $state['step'] = 2;
@@ -460,9 +512,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /**
- * Schließt den Assistenten ab: schreibt storage/database.yaml, legt die
- * Sperrdatei (storage/installed.lock) an und setzt die Installer-Sitzung
- * zurück. $successEmail ist null, wenn nach einer Wiederherstellung bewusst
+ * Schließt die eigentliche Installation ab: schreibt storage/database.yaml,
+ * legt die Sperrdatei (storage/installed.lock) an und setzt die
+ * Installer-Sitzung auf die optionalen Integrationsschritte (Schritt 4).
+ * Nur die Datenbank-Zugangsdaten bleiben dafür noch in der Sitzung, bis
+ * completeIntegrationSetup() sie entfernt. $successEmail ist null, wenn nach einer Wiederherstellung bewusst
  * KEIN zusätzlicher Administrator angelegt wurde (siehe
  * 'choose_admin_handling' oben) — Schritt 4 zeigt dann statt der
  * Administrator-E-Mail einen Hinweis auf die im Backup enthaltenen Zugänge.
@@ -477,11 +531,53 @@ function finishInstallation(array $db, ?string $successEmail, ?array $restoreSum
 
     $sslEnabled = ($db['ssl_ca'] ?? '') !== '';
 
-    $_SESSION['installer'] = ['step' => 1, 'db' => null, 'migration_log' => null, 'restored' => false, 'restore_summary' => null, 'skip_admin' => null];
-    $_SESSION['installer']['step'] = 4;
-    $_SESSION['installer']['success_email'] = $successEmail;
-    $_SESSION['installer']['restore_summary'] = $restoreSummary;
-    $_SESSION['installer']['ssl_enabled'] = $sslEnabled;
+    $_SESSION['installer'] = [
+        'step' => 4,
+        'db' => $db,
+        'migration_log' => null,
+        'restored' => $restoreSummary !== null,
+        'restore_summary' => $restoreSummary,
+        'skip_admin' => null,
+        'success_email' => $successEmail,
+        'ssl_enabled' => $sslEnabled,
+        'post_install' => true,
+        'integration_step' => IntegrationSetupSteps::STEPS[0],
+        'integration_results' => [],
+    ];
+}
+
+/** Moves on to the integration step after $current, or finishes the wizard after the last one. */
+function advanceIntegrationStep(string $current): void
+{
+    $next = IntegrationSetupSteps::next($current);
+    if ($next === null) {
+        completeIntegrationSetup();
+
+        return;
+    }
+
+    $_SESSION['installer']['integration_step'] = $next;
+}
+
+/** Ends the integration steps: drops the database credentials from the session and shows the final page. */
+function completeIntegrationSetup(): void
+{
+    $_SESSION['installer']['step'] = 5;
+    $_SESSION['installer']['db'] = null;
+    $_SESSION['installer']['integration_step'] = null;
+}
+
+/** Best guess of the public base URL from the current request, used to prefill the base URL step. */
+function guessBaseUrl(): string
+{
+    $https = (($_SERVER['HTTPS'] ?? '') !== '' && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
+    if ($host === '' || preg_match('/^[A-Za-z0-9.\-:\[\]]+$/', $host) !== 1) {
+        return '';
+    }
+
+    return ($https ? 'https' : 'http') . '://' . $host;
 }
 
 /**
@@ -570,6 +666,33 @@ function writeDatabaseConfig(array $config): void
 
 $csrfToken = Csrf::token();
 $step = $state['step'];
+
+// Prefill for the current integration step: submitted input after a failed
+// validation, otherwise the values currently stored in the database.
+$integrationStep = null;
+$integrationValues = [];
+if ($step === 4 && is_array($state['db']) && IntegrationSetupSteps::isStep((string) ($state['integration_step'] ?? ''))) {
+    $integrationStep = (string) $state['integration_step'];
+    try {
+        $integrationValues = IntegrationSetupSteps::forPdo(Connection::fromConfig($state['db']))->currentValues($integrationStep);
+    } catch (\PDOException|\RuntimeException $e) {
+        $error ??= 'Die aktuellen Einstellungen konnten nicht geladen werden: ' . $e->getMessage();
+    }
+    if ($formValues !== []) {
+        foreach ($integrationValues as $key => $current) {
+            if (str_starts_with($key, 'has_')) {
+                continue;
+            }
+            // Checkboxes are missing from the POST data when unchecked.
+            $integrationValues[$key] = is_bool($current)
+                ? isset($formValues[$key])
+                : (string) ($formValues[$key] ?? $current);
+        }
+    }
+    if ($integrationStep === IntegrationSetupSteps::BASE_URL && $integrationValues['base_url'] === '') {
+        $integrationValues['base_url'] = guessBaseUrl();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="de">
@@ -586,7 +709,8 @@ $step = $state['step'];
             <span class="<?= $step >= 1 ? 'is-active' : '' ?>">1. Voraussetzungen</span>
             <span class="<?= $step >= 2 ? 'is-active' : '' ?>">2. Datenbank</span>
             <span class="<?= $step >= 3 ? 'is-active' : '' ?>">3. Administrator</span>
-            <span class="<?= $step >= 4 ? 'is-active' : '' ?>">4. Fertig</span>
+            <span class="<?= $step >= 4 ? 'is-active' : '' ?>">4. Integrationen</span>
+            <span class="<?= $step >= 5 ? 'is-active' : '' ?>">5. Fertig</span>
         </div>
 
         <h1>Materialverleih Software – Installation</h1>
@@ -596,7 +720,7 @@ $step = $state['step'];
         <?php endif; ?>
 
         <?php if ($step === 1): ?>
-            <p>Dieser Assistent richtet die Anwendung einmalig ein: Systemvoraussetzungen prüfen, Datenbank verbinden und einrichten, Administrator-Zugang anlegen.</p>
+            <p>Dieser Assistent richtet die Anwendung einmalig ein: Systemvoraussetzungen prüfen, Datenbank verbinden und einrichten, Administrator-Zugang anlegen und optional die Integrationen konfigurieren.</p>
             <ul class="install-checklist">
                 <?php foreach ($requirements as $check): ?>
                     <li class="<?= $check['ok'] ? 'is-ok' : ($check['blocking'] ? 'is-error' : 'is-warning') ?>">
@@ -742,10 +866,13 @@ $step = $state['step'];
                 <label>Passwort wiederholen
                     <input type="password" name="admin_password_confirm" required minlength="10">
                 </label>
-                <button class="install-btn" type="submit">Administrator anlegen &amp; Installation abschließen</button>
+                <button class="install-btn" type="submit">Administrator anlegen &amp; weiter</button>
             </form>
 
-        <?php elseif ($step === 4): ?>
+        <?php elseif ($step === 4 && $integrationStep !== null): ?>
+            <?php require __DIR__ . '/../resources/views/_install_integration_step.php'; ?>
+
+        <?php elseif ($step === 4 || $step === 5): ?>
             <div class="install-alert install-alert-ok">Installation abgeschlossen.</div>
             <?php if ($state['success_email'] !== null): ?>
                 <p>Der Administrator-Zugang <strong><?= h($state['success_email']) ?></strong> wurde angelegt. Die Datenbank-Zugangsdaten
@@ -756,6 +883,20 @@ $step = $state['step'];
             <?php endif; ?>
             <?php if ($state['ssl_enabled'] ?? false): ?>
                 <p class="install-hint">Die Verbindung zur Datenbank erfolgt verschlüsselt (TLS/SSL, CA-Zertifikat unter <code>storage/database-ssl-ca.pem</code> gespeichert).</p>
+            <?php endif; ?>
+            <?php if (($state['integration_results'] ?? []) !== []): ?>
+                <ul class="install-checklist">
+                    <?php foreach (IntegrationSetupSteps::STEPS as $integration): ?>
+                        <?php $saved = ($state['integration_results'][$integration] ?? 'skipped') === 'saved'; ?>
+                        <li class="<?= $saved ? 'is-ok' : 'is-skipped' ?>">
+                            <?= $saved ? '✓' : '–' ?>
+                            <?= h(IntegrationSetupSteps::title($integration)) ?>: <?= $saved ? 'eingerichtet' : 'übersprungen' ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+                <p class="install-hint">
+                    Alle Integrationen lassen sich jederzeit unter <code>Einstellungen&nbsp;&rarr;&nbsp;Integrationen</code> ändern oder nachträglich einrichten.
+                </p>
             <?php endif; ?>
             <p class="install-hint">
                 Zum eigenen Schutz kann <code>public/install.php</code> nach der Installation gelöscht werden; notwendig ist das

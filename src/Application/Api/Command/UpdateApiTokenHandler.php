@@ -30,6 +30,7 @@ final class UpdateApiTokenHandler implements CommandHandlerInterface
         $token->scopes = $input['scopes'];
         $token->readOnly = $command->readOnly;
         $token->rateLimitPerMinute = $input['rateLimit'];
+        $token->mcpAllowed = $command->mcpAllowed;
         $this->repository->save($token);
 
         return null;

@@ -61,6 +61,10 @@ final class UpdateApiSettingsHandler implements CommandHandlerInterface
             }
         }
 
+        if ($command->mcpEnabled && !$command->enabled) {
+            $errors['mcpEnabled'] = 'Der MCP-Server nutzt Tokens, Ratenbegrenzung und Protokoll der REST-API — bitte dafür auch die API aktivieren.';
+        }
+
         if ($errors !== []) {
             throw new ValidationException($errors);
         }
@@ -80,6 +84,8 @@ final class UpdateApiSettingsHandler implements CommandHandlerInterface
             redisTimeoutSeconds: $timeoutMs / 1000,
             redisLastError: $current->redisLastError,
             redisLastErrorAt: $current->redisLastErrorAt,
+            mcpEnabled: $command->mcpEnabled,
+            mcpReadOnly: $command->mcpReadOnly,
         ));
 
         return null;

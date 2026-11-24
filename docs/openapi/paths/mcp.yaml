@@ -1,0 +1,89 @@
+# MCP server (Model Context Protocol) for AI assistants, see docs/mcp.md. Paths are referenced from ../openapi.yaml.
+/mcp:
+  post:
+    tags:
+    - MCP server
+    operationId: mcpMessage
+    security:
+    - apiToken: []
+    summary: Send a JSON-RPC message
+    description: |
+      Endpoint of the MCP server ("Streamable HTTP" transport, protocol versions `2025-06-18`, `2025-03-26`
+      and `2024-11-05`). Every request carries exactly one JSON-RPC 2.0 message; requests are answered with one
+      JSON response (no SSE stream, no `Mcp-Session-Id`), notifications and client responses with `202`.
+
+      Supported methods: `initialize`, `ping`, `tools/list`, `tools/call`. The tools are described in
+      `docs/mcp.md`; `tools/list` returns only the tools the token may use (its scopes; no write tools while
+      the token or the global MCP setting is read only). Tool errors (invalid input, not found, business rule
+      violated, missing permission) are returned as a result with `"isError": true`, protocol errors as a
+      JSON-RPC `error`.
+
+      Access: switched on under *Einstellungen › API* („MCP-Server ist aktiviert“, requires the REST API) and a
+      token with „Für MCP zulassen“ (Settings › API). The token's IP filter and request limit apply; every
+      `tools/call` is logged (method `MCP`) with tool, arguments and number of results.
+    parameters:
+    - name: MCP-Protocol-Version
+      in: header
+      required: false
+      description: Negotiated protocol version; unsupported values are rejected with `400`.
+      schema:
+        type: string
+        enum:
+        - '2025-06-18'
+        - '2025-03-26'
+        - '2024-11-05'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: ../components/common.yaml#/schemas/JsonRpcMessage
+          examples:
+            listTools:
+              summary: List tools
+              value:
+                jsonrpc: '2.0'
+                id: 1
+                method: tools/list
+            callTool:
+              summary: Call a tool
+              value:
+                jsonrpc: '2.0'
+                id: 2
+                method: tools/call
+                params:
+                  name: check_availability
+                  arguments:
+                    article_ids:
+                    - 6f1c2a90-0000-4000-8000-000000000001
+                    from: '2026-12-05'
+                    to: '2026-12-06'
+    responses:
+      '200':
+        description: JSON-RPC response (`result` or `error`).
+        content:
+          application/json:
+            schema:
+              $ref: ../components/common.yaml#/schemas/JsonRpcResponse
+      '202':
+        description: Notification or client response accepted (no body).
+      '400':
+        description: Body is not valid JSON (JSON-RPC parse error) or unsupported `MCP-Protocol-Version`.
+      '401':
+        description: Token missing, unknown or disabled.
+      '403':
+        description: Token not released for MCP, or IP address not allowed.
+      '404':
+        description: REST API or MCP server switched off.
+      '429':
+        description: Request limit of the token exceeded (shared with the REST API).
+  get:
+    tags:
+    - MCP server
+    operationId: mcpStream
+    security: []
+    summary: Event stream (not offered)
+    description: The server offers no SSE stream and answers `GET` (and `DELETE`) with `405`.
+    responses:
+      '405':
+        description: Only `POST` is supported.

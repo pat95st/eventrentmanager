@@ -38,6 +38,9 @@ final class ApiToken
         public bool $readOnly = false,
         // Requests per minute for this token; null = global default from ApiSettings.
         public ?int $rateLimitPerMinute = null,
+        // Released for the MCP server /mcp (migration 183); off by default so an
+        // existing integration token does not become usable by an LLM client.
+        public bool $mcpAllowed = false,
     ) {
     }
 

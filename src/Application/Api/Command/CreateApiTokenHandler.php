@@ -43,6 +43,7 @@ final class CreateApiTokenHandler implements CommandHandlerInterface
             scopes: $input['scopes'],
             readOnly: $command->readOnly,
             rateLimitPerMinute: $input['rateLimit'],
+            mcpAllowed: $command->mcpAllowed,
         );
 
         $this->repository->save($token);

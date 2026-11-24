@@ -17,6 +17,8 @@ final class UpdateApiToken implements CommandInterface
         public readonly bool $readOnly = false,
         // Empty/null = global default from the API settings.
         public readonly ?string $rateLimitPerMinute = null,
+        // Released for the MCP server /mcp.
+        public readonly bool $mcpAllowed = false,
     ) {
     }
 }

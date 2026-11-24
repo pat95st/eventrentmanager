@@ -3128,6 +3128,16 @@ $router->post('/einstellungen/kalender/{id}/zugriff', $auth->guard(Permission::A
 // REST API /api/v1 (token + scopes, no session/CSRF, see ApiKernel). The route
 // table lives in ApiRoutes so the documentation test can check it.
 \App\Infrastructure\Http\Api\ApiRoutes::register($router, $apiKernel, $apiControllers);
+// MCP server /mcp (migration 183): JSON-RPC over HTTP POST on top of the REST
+// API controllers, same tokens/scopes/rate limit/log (see McpServer).
+$mcpServer = new \App\Infrastructure\Mcp\McpServer(
+    $apiSettingsRepository,
+    $apiKernel,
+    new \App\Infrastructure\Mcp\McpToolbox($apiControllers, $inventoryNumberRepository),
+);
+foreach (['get', 'post', 'delete'] as $mcpMethod) {
+    $router->{$mcpMethod}(\App\Infrastructure\Mcp\McpServer::PATH, $mcpServer->route());
+}
 // Federation protocol between partner installations (migration 160): bearer
 // token of the partnership (or the secret invitation code), no session/CSRF.
 $router->get('/api/federation/v1/invitations/{code}', [$federationApiController, 'invitation']);

@@ -63,6 +63,8 @@ final class ApiSettingsController
                 redisDatabase: $request->input('redis_database'),
                 redisKeyPrefix: $request->input('redis_key_prefix'),
                 redisTimeoutMs: $request->input('redis_timeout_ms'),
+                mcpEnabled: $request->input('mcp_enabled') === '1',
+                mcpReadOnly: $request->input('mcp_read_only') === '1',
             ));
         } catch (ValidationException $e) {
             $this->render($e->errors(), null, null);
@@ -97,6 +99,7 @@ final class ApiSettingsController
                 scopes: $request->inputArray('scopes'),
                 readOnly: $request->input('read_only') === '1',
                 rateLimitPerMinute: $request->input('rate_limit_per_minute'),
+                mcpAllowed: $request->input('mcp_allowed') === '1',
             ));
         } catch (ValidationException $e) {
             $this->render($e->errors(), null, null);
@@ -121,6 +124,7 @@ final class ApiSettingsController
                 scopes: $request->inputArray('scopes'),
                 readOnly: $request->input('read_only') === '1',
                 rateLimitPerMinute: $request->input('rate_limit_per_minute'),
+                mcpAllowed: $request->input('mcp_allowed') === '1',
             ));
             Flash::success('Token wurde aktualisiert.');
             Response::redirect('/einstellungen/api');

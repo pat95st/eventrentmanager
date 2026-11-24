@@ -76,6 +76,41 @@ final class ApiTokenCommandsTest extends Unit
         $this->assertNull($repository->get()->redisPassword);
     }
 
+    public function testTokenCanBeReleasedForMcp(): void
+    {
+        $repository = new InMemoryApiTokenRepository();
+        $created = (new CreateApiTokenHandler($repository))->handle(new CreateApiToken('Claude', null, ['customers:read'], false, null, true));
+        $this->assertTrue($repository->findById($created->id)?->mcpAllowed);
+
+        (new UpdateApiTokenHandler($repository))->handle(new UpdateApiToken($created->id, 'Claude', null, ['customers:read']));
+        $this->assertFalse($repository->findById($created->id)?->mcpAllowed, 'unticked checkbox revokes the release');
+
+        $shop = (new CreateApiTokenHandler($repository))->handle(new CreateApiToken('Shop', null, ['articles:read']));
+        $this->assertFalse($repository->findById($shop->id)?->mcpAllowed, 'tokens are not released for MCP by default');
+    }
+
+    public function testMcpSwitchesAreSavedAndRequireTheApi(): void
+    {
+        $repository = new InMemoryApiSettingsRepository(new ApiSettings());
+        $handler = new UpdateApiSettingsHandler($repository);
+
+        $handler->handle(new UpdateApiSettings(true, mcpEnabled: true, mcpReadOnly: true));
+        $this->assertTrue($repository->get()->mcpEnabled);
+        $this->assertTrue($repository->get()->mcpReadOnly);
+        $this->assertTrue($repository->get()->mcpAvailable());
+
+        try {
+            $handler->handle(new UpdateApiSettings(false, mcpEnabled: true));
+            $this->fail('ValidationException expected');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('mcpEnabled', $e->errors());
+        }
+
+        $handler->handle(new UpdateApiSettings(false));
+        $this->assertFalse($repository->get()->mcpEnabled);
+        $this->assertFalse($repository->get()->mcpAvailable());
+    }
+
     public function testSocketConnectionRequiresAPath(): void
     {
         $this->expectException(ValidationException::class);

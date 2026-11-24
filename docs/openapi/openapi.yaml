@@ -17,6 +17,7 @@ info:
     | Stage & FOH displays | `/api/display/v1` | Display token `mvd_…` |
     | Partner instances | `/api/federation/v1` | Partnership token / invitation code |
     | Online payment | `/api/payments` | – (webhook) |
+    | **MCP server** for AI assistants (Claude etc.) | `/mcp` | API token released for MCP (see `docs/mcp.md`) |
 
     The web interface itself is German; UI labels are quoted in German with an English translation where helpful.
 
@@ -166,6 +167,10 @@ tags:
     all others by the bearer token exchanged when the invitation is accepted.
 - name: Online payment
   description: Incoming notifications from payment providers.
+- name: MCP server
+  description: |
+    Model Context Protocol server for AI assistants such as Claude. It offers about 30 task-oriented tools on top
+    of the REST API v1 (same tokens, scopes, validations, request limit and log). Setup and tool list: `docs/mcp.md`.
 x-tagGroups:
 - name: 'REST API v1: Master data'
   tags:
@@ -192,6 +197,9 @@ x-tagGroups:
   tags:
   - Partner instances
   - Online payment
+- name: AI assistants
+  tags:
+  - MCP server
 paths:
   /api/v1/customers:
     $ref: paths/customers.yaml#/~1api~1v1~1customers
@@ -455,6 +463,8 @@ paths:
     $ref: paths/integrations.yaml#/~1api~1federation~1v1~1requests~1{reference}~1status
   /api/payments/sumup/webhook:
     $ref: paths/integrations.yaml#/~1api~1payments~1sumup~1webhook
+  /mcp:
+    $ref: paths/mcp.yaml#/~1mcp
 components:
   securitySchemes:
     apiToken:

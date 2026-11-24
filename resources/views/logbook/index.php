@@ -26,7 +26,7 @@ $km = static fn (int $value): string => number_format($value, 0, ',', '.') . ' k
         <p class="text-sm text-slate-500 dark:text-slate-400"><?= $manager ? 'Alle Fahrten' : 'Deine Fahrten' ?></p>
     </div>
     <div class="flex flex-wrap gap-2">
-        <a href="/fahrtenbuch?<?= e(http_build_query($query + ['export' => 'pdf'])) ?>" target="_blank" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" title="Fahrtenbuch mit den gewählten Filtern, z. B. je Fahrzeug und Zeitraum">PDF</a>
+        <a href="/fahrtenbuch/fahrtenbuch.pdf<?= $query !== [] ? '?' . e(http_build_query($query)) : '' ?>" target="_blank" data-pdf-viewer class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" title="Fahrtenbuch mit den gewählten Filtern, z. B. je Fahrzeug und Zeitraum">PDF</a>
         <a href="/fahrtenbuch?<?= e(http_build_query($query + ['export' => 'csv'])) ?>" class="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">CSV-Export</a>
         <a href="/fahrtenbuch/neu" class="rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">+ Fahrt erfassen</a>
     </div>

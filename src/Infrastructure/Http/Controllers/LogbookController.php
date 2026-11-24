@@ -75,6 +75,12 @@ final class LogbookController
     ) {
     }
 
+    /** PDF of the logbook with the filters of the list (own path so the PDF viewer of the app recognises it). */
+    public function exportPdf(Request $request): void
+    {
+        $this->index(new Request($request->method, $request->path, ['export' => 'pdf'] + $request->query, $request->post, $request->files, $request->routeParams, $request->ajax));
+    }
+
     public function index(Request $request): void
     {
         $user = $this->user();
@@ -166,7 +172,7 @@ final class LogbookController
             }
         }
 
-        $this->renderCapture(null, $form, [], $user);
+        $this->renderCapture(null, $form, [], $user, self::viaQr($request));
     }
 
     public function store(Request $request): void
@@ -179,7 +185,7 @@ final class LogbookController
             $rentalId = $request->input('return_to_rental');
             Response::redirect($rentalId !== null && $rentalId !== '' ? '/veranstaltungen/' . rawurlencode($rentalId) : '/fahrtenbuch');
         } catch (ValidationException $e) {
-            $this->renderCapture(null, $request->post, $e->errors(), $user);
+            $this->renderCapture(null, $request->post, $e->errors(), $user, self::viaQr($request));
         } catch (ForbiddenException $e) {
             Flash::error($e->getMessage());
             Response::redirect('/fahrtenbuch');
@@ -193,7 +199,7 @@ final class LogbookController
         if ($entry === null) {
             return;
         }
-        $this->renderCapture($entry, $this->formFromEntry($entry), [], $user);
+        $this->renderCapture($entry, $this->formFromEntry($entry), [], $user, self::viaQr($request));
     }
 
     public function update(Request $request): void
@@ -208,7 +214,7 @@ final class LogbookController
             Flash::success('Die Fahrt wurde geändert.');
             Response::redirect('/fahrtenbuch');
         } catch (ValidationException $e) {
-            $this->renderCapture($entry, $request->post, $e->errors(), $user);
+            $this->renderCapture($entry, $request->post, $e->errors(), $user, self::viaQr($request));
         } catch (ForbiddenException|NotFoundException $e) {
             Flash::error($e->getMessage());
             Response::redirect('/fahrtenbuch');
@@ -262,28 +268,28 @@ final class LogbookController
     /** Odometer check page of a vehicle for logged-in drivers (migration 185). */
     public function odometerForm(Request $request): void
     {
-        $vehicle = $this->checkedVehicle($request->param('id'));
+        $vehicle = $this->checkedVehicle($request->param('id'), self::viaQr($request));
         if ($vehicle !== null) {
-            $this->renderOdometer($vehicle, null, null);
+            $this->renderOdometer($vehicle, null, null, null, self::viaQr($request));
         }
     }
 
     public function odometerCheck(Request $request): void
     {
-        $vehicle = $this->checkedVehicle($request->param('id'));
+        $vehicle = $this->checkedVehicle($request->param('id'), self::viaQr($request));
         if ($vehicle === null) {
             return;
         }
         $client = 'user:' . $this->user()->id;
         $locked = $this->throttle?->odometerLockedUntil($vehicle->id, $client);
         if ($locked !== null) {
-            $this->renderOdometer($vehicle, null, null, $locked);
+            $this->renderOdometer($vehicle, null, null, $locked, self::viaQr($request));
 
             return;
         }
         $reading = self::parseReading($request->input('odometer'));
         if ($reading === null) {
-            $this->renderOdometer($vehicle, 'Bitte den aktuellen Kilometerstand als ganze Zahl angeben.', null);
+            $this->renderOdometer($vehicle, 'Bitte den aktuellen Kilometerstand als ganze Zahl angeben.', null, null, self::viaQr($request));
 
             return;
         }
@@ -291,7 +297,7 @@ final class LogbookController
         if ($chain->matches($vehicle, $reading)) {
             $this->throttle?->resetOdometer($vehicle->id, $client);
             LogbookOdometerSession::remember($vehicle->id, $reading);
-            Response::redirect('/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+            Response::redirect(self::newTripUrl($vehicle->id, self::viaQr($request)));
 
             return;
         }
@@ -301,12 +307,13 @@ final class LogbookController
             'Der Kilometerstand passt nicht zum zuletzt erfassten Stand.',
             $chain->isGap($vehicle, $reading) ? ['expected' => (int) $chain->expected($vehicle), 'reading' => $reading] : null,
             $locked,
+            self::viaQr($request),
         );
     }
 
     public function reportGap(Request $request): void
     {
-        $vehicle = $this->checkedVehicle($request->param('id'));
+        $vehicle = $this->checkedVehicle($request->param('id'), self::viaQr($request));
         if ($vehicle === null) {
             return;
         }
@@ -314,17 +321,17 @@ final class LogbookController
         try {
             $this->commands->dispatch(new ReportOdometerGap($vehicle->id, $this->user()->id, (int) $reading));
         } catch (ValidationException|ForbiddenException $e) {
-            $this->renderOdometer($vehicle, $e instanceof ValidationException ? implode(' ', $e->errors()) : $e->getMessage(), null);
+            $this->renderOdometer($vehicle, $e instanceof ValidationException ? implode(' ', $e->errors()) : $e->getMessage(), null, null, self::viaQr($request));
 
             return;
         }
         $this->throttle?->resetOdometer($vehicle->id, 'user:' . $this->user()->id);
         LogbookOdometerSession::remember($vehicle->id, (int) $reading);
         Flash::success('Die Lücke wurde gemeldet; ein Fahrtenbuch-Verwalter klärt sie. Du kannst jetzt deine Fahrt erfassen.');
-        Response::redirect('/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+        Response::redirect(self::newTripUrl($vehicle->id, self::viaQr($request)));
     }
 
-    private function checkedVehicle(string $id): ?Vehicle
+    private function checkedVehicle(string $id, bool $qr = false): ?Vehicle
     {
         $vehicle = $this->vehicles->findById($id);
         if ($vehicle === null || !LogbookAccess::canUseVehicle($this->user(), $vehicle)) {
@@ -333,7 +340,7 @@ final class LogbookController
             return null;
         }
         if (!$vehicle->logbookOdometerCheck) {
-            Response::redirect('/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+            Response::redirect(self::newTripUrl($vehicle->id, $qr));
 
             return null;
         }
@@ -342,18 +349,25 @@ final class LogbookController
     }
 
     /** @param array{expected: int, reading: int}|null $gap */
-    private function renderOdometer(Vehicle $vehicle, ?string $error, ?array $gap, ?DateTimeImmutable $lockedUntil = null): void
+    private function renderOdometer(Vehicle $vehicle, ?string $error, ?array $gap, ?DateTimeImmutable $lockedUntil = null, bool $qr = false): void
     {
-        echo View::render('logbook/odometer', [
+        $suffix = $qr ? '?qr=1' : '';
+        $data = [
             'vehicle' => $vehicle,
-            'action' => '/fahrtenbuch/fahrzeug/' . $vehicle->id . '/kilometerstand',
-            'gapAction' => '/fahrtenbuch/fahrzeug/' . $vehicle->id . '/luecke',
+            'action' => '/fahrtenbuch/fahrzeug/' . $vehicle->id . '/kilometerstand' . $suffix,
+            'gapAction' => '/fahrtenbuch/fahrzeug/' . $vehicle->id . '/luecke' . $suffix,
             'error' => $error,
             'gap' => $gap,
             'lockedUntil' => $lockedUntil,
             'who' => $this->user()->displayName(),
             'backUrl' => '/fahrtenbuch',
-        ]);
+        ];
+        if ($qr) {
+            echo View::render('logbook/odometer', $data);
+
+            return;
+        }
+        echo View::page('logbook/odometer-page', $data, activeNav: 'logbook', title: 'Kilometerstand – ' . $vehicle->name);
     }
 
     public static function parseReading(?string $value): ?int
@@ -432,7 +446,7 @@ final class LogbookController
      * @param array<string, mixed> $form values by input name
      * @param array<string, string> $errors
      */
-    private function renderCapture(?LogbookEntry $entry, array $form, array $errors, User $user): void
+    private function renderCapture(?LogbookEntry $entry, array $form, array $errors, User $user, bool $qr = false): void
     {
         $manager = LogbookAccess::canManage($user);
         $date = DateTimeImmutable::createFromFormat('!Y-m-d', (string) ($form['trip_date'] ?? '')) ?: new DateTimeImmutable('today');
@@ -440,7 +454,7 @@ final class LogbookController
         $rental = $rentalId !== '' ? $this->rentalParam($rentalId) : null;
         $settings = $this->settings->get();
 
-        echo View::render('logbook/capture', [
+        $data = [
             'entry' => $entry,
             'form' => $form,
             'errors' => $errors,
@@ -456,7 +470,26 @@ final class LogbookController
             'editableUntil' => $entry !== null && !$manager ? $entry->createdAt->modify('+' . $settings->editWindowDays . ' days') : null,
             'driverLabel' => $entry !== null ? $this->driverLabel($entry) : $user->displayName(),
             'external' => false,
-        ]);
+            'qr' => $qr,
+        ];
+        // Mobile page only when coming from the QR code of a vehicle; otherwise the normal layout.
+        if ($qr) {
+            echo View::render('logbook/capture', $data);
+
+            return;
+        }
+        echo View::page('logbook/form', $data, activeNav: 'logbook', title: $entry !== null ? 'Fahrt bearbeiten' : 'Fahrt erfassen');
+    }
+
+    /** Request comes from the QR code of a vehicle (query on GET, hidden field on POST). */
+    private static function viaQr(Request $request): bool
+    {
+        return $request->query('qr') === '1' || $request->input('qr') === '1';
+    }
+
+    private static function newTripUrl(string $vehicleId, bool $qr): string
+    {
+        return '/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicleId) . ($qr ? '&qr=1' : '');
     }
 
     /** @return array<string, mixed> */

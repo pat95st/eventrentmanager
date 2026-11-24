@@ -69,6 +69,7 @@
     .install-checklist li.is-ok { color: #047857; }
     .install-checklist li.is-error { color: #b91c1c; font-weight: 600; }
     .install-checklist li.is-warning { color: #b45309; }
+    .install-checklist li.is-skipped { color: #94a3b8; }
     form label {
         display: block;
         font-size: 0.8rem;
@@ -84,7 +85,26 @@
         border-radius: 6px;
         font-size: 0.9rem;
     }
-    form input:focus {
+    form select {
+        margin-top: 4px;
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        background: #ffffff;
+    }
+    form label.install-checkbox {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+    form label.install-checkbox input {
+        width: auto;
+        margin-top: 0;
+    }
+    form input:focus, form select:focus {
         outline: none;
         border-color: #2563eb;
         box-shadow: 0 0 0 1px #2563eb;
@@ -113,6 +133,33 @@
         border: 1px solid #cbd5e1;
     }
     .install-btn-secondary:hover { background: #f1f5f9; }
+    .install-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+    .install-btn-link {
+        background: none;
+        border: none;
+        padding: 0;
+        margin-top: 20px;
+        color: #64748b;
+        font-size: 0.8rem;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    .install-btn-link:hover { color: #334155; }
+    .install-card h2 {
+        font-size: 1.05rem;
+        margin: 0 0 8px;
+        color: #0f172a;
+    }
+    .install-substeps {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 4px;
+    }
     .install-btn-danger { background: #dc2626; }
     .install-btn-danger:hover { background: #b91c1c; }
     .install-restore {

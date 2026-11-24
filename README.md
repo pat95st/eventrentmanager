@@ -384,6 +384,19 @@ unter „Einstellungen → Sicherung" exportierte Backup-ZIP hochgeladen werden
 unten. Enthält die Sicherung bereits eigene Administrator-Zugänge, fragt
 der Assistent danach, ob zusätzlich noch ein weiterer angelegt werden soll.
 
+**Schritt 4: Integrationen (optional).** Nach dem Administrator-Zugang führt
+der Assistent nacheinander durch alle Bereiche von „Einstellungen →
+Integrationen": Basis-URL, Google Merchant Center, Google
+Unternehmensprofil (Client-ID/-Secret), WhatsApp Business und DATEV-Export
+(Grunddaten). Jeder Schritt kann gespeichert oder übersprungen werden,
+„Alle weiteren Integrationen überspringen" beendet den Assistenten sofort.
+Die Installation selbst (inkl. `storage/installed.lock`) ist zu diesem
+Zeitpunkt bereits abgeschlossen; nur die Sitzung, die sie abgeschlossen hat,
+darf diese Schritte noch durchlaufen. Alles, was eine Anmeldung voraussetzt
+(Upload der Google-Service-Account-Datei, „Mit Google verbinden",
+DATEV-Kontenzuordnung und automatischer Versand), bleibt in den
+Einstellungen.
+
 **Hinweis zur Testabdeckung:** `MigrationRunner` und die Installer-Logik
 (Konfigurationsdatei schreiben/lesen, Admin-Anlage) wurden ausführlich gegen
 SQLite sowie per Lint/Regex-Prüfung gegen alle realen Migrationsdateien

@@ -115,7 +115,7 @@ final class OfferApiController extends ApiController
         $rentalId = (string) $this->dispatch(new ConvertOfferToRental($request->param('id')));
         $rental = $this->ask(new GetRental($rentalId));
 
-        return $this->created(Normalizer::normalize($rental->rental, ['termsSignatureFile']));
+        return $this->created(Normalizer::normalize($rental->rental, ['termsSignatureFile', 'plannedTripsInitialized']));
     }
 
     /** POST /offers/{id}/order-confirmation */

@@ -2,6 +2,9 @@
 /** @var \App\Domain\Vehicle\Vehicle[] $vehicles */
 /** @var string $search */
 /** @var \App\Domain\Vehicle\VehicleSettings $vehicleSettings */
+/** @var array<string, string> $ownerNames owner user id => name (migration 183) */
+/** @var bool $canEditVehicles */
+/** @var bool $canManageLogbook */
 
 use App\Domain\Vehicle\VehicleCategory;
 /** @var int $page */
@@ -29,6 +32,9 @@ if (!function_exists('formatVehicleDimension')) {
         return rtrim(rtrim($value, '0'), '.');
     }
 }
+$ownerNames ??= [];
+$canEditVehicles ??= true;
+$canManageLogbook ??= false;
 ?>
 
 <div class="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
@@ -66,6 +72,11 @@ if (!function_exists('formatVehicleDimension')) {
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800">
                         <td class="break-words px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                             <?= e($vehicle->name) ?>
+                            <?php if ($vehicle->isPrivate): ?>
+                                <span class="mt-0.5 block text-[11px] font-normal text-amber-700 dark:text-amber-400">
+                                    Privatfahrzeug<?= $vehicle->ownerUserId !== null && isset($ownerNames[$vehicle->ownerUserId]) ? ' von ' . e($ownerNames[$vehicle->ownerUserId]) : ' (ohne Eigentümer)' ?>
+                                </span>
+                            <?php endif; ?>
                         </td>
                         <td class="break-words px-4 py-3">
                             <span style="white-space: nowrap; max-width: 100%;" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium <?= $vehicle->category === VehicleCategory::Auto ? 'bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200 dark:bg-brand-950/40 dark:text-brand-400 dark:ring-brand-800' : 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600' ?>">
@@ -123,11 +134,18 @@ if (!function_exists('formatVehicleDimension')) {
                             <?php endif; ?>
                         </td>
                         <td class="break-words px-4 py-3 text-right">
+                            <?php if ($canEditVehicles): ?>
                             <a href="/fahrzeuge/<?= e($vehicle->id) ?>/bearbeiten" class="text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Bearbeiten</a>
+                            <?php endif; ?>
+                            <?php if ($canManageLogbook): ?>
+                            <a href="/fahrzeuge/<?= e($vehicle->id) ?>/fahrtenbuch" class="block text-xs font-medium text-brand-700 hover:underline dark:text-brand-400">Fahrtenbuch</a>
+                            <?php endif; ?>
+                            <?php if ($canEditVehicles): ?>
                             <form method="post" action="/fahrzeuge/<?= e($vehicle->id) ?>/loeschen" data-confirm-key="vehicles.delete" data-confirm="Dieses Fahrzeug wirklich löschen?" data-confirm-style="danger" class="mt-1">
                               <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
                                 <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Löschen</button>
                             </form>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

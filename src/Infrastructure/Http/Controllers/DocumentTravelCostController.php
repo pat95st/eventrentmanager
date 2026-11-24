@@ -89,6 +89,48 @@ final class DocumentTravelCostController
         Response::redirect($this->documentUrl($type, $id));
     }
 
+    /** HTML fragment of the document page (loaded in the background): which kilometres to bill (migration 187). */
+    public function choices(Request $request, TravelCostDocumentType $type): void
+    {
+        $id = $request->param('id');
+        try {
+            $document = $this->service->document($type, $id);
+            $choices = $this->service->choices($type, $id);
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+        $section = $this->service->find($type, $id);
+        echo View::render('documents/travel-cost-choices', [
+            'type' => $type,
+            'documentId' => $id,
+            'editable' => $document['editable'],
+            'choices' => $choices,
+            'section' => $section,
+            'logbookChanged' => $section !== null && $this->service->logbookChanged($section),
+        ]);
+    }
+
+    public function import(Request $request, TravelCostDocumentType $type): void
+    {
+        $id = $request->param('id');
+        $basis = (string) $request->input('basis', '');
+        $this->run(fn () => $this->service->import($type, $id, $basis), match ($basis) {
+            'actual' => 'Die tatsächlich gefahrenen Kilometer wurden als Fahrtkosten übernommen.',
+            'planned' => 'Die geplanten Kilometer wurden als Fahrtkosten übernommen.',
+            default => 'Das Dokument enthält keine Fahrtkosten.',
+        });
+        Response::redirect($this->documentUrl($type, $id));
+    }
+
+    public function estimateNote(Request $request, TravelCostDocumentType $type): void
+    {
+        $id = $request->param('id');
+        $this->run(fn () => $this->service->setEstimateNote($type, $id, $request->input('show') === '1'), 'Gespeichert.');
+        Response::redirect('/' . $type->pathSegment() . '/' . $id . '/fahrtkosten');
+    }
+
     public function importFromTour(Request $request, TravelCostDocumentType $type): void
     {
         $id = $request->param('id');

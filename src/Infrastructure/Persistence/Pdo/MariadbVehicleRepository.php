@@ -23,12 +23,16 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
                 id, category, name, license_plate, payload_kg,
                 load_area_length_cm, load_area_width_cm, load_area_height_cm, load_area_open_top,
                 tow_hitch_available, tow_capacity_kg, empty_weight_kg,
-                acquisition_year, purchase_price, current_value, height_cm, width_cm, length_cm, gross_weight_kg, passenger_seats, cost_per_km, notes, created_at, updated_at
+                acquisition_year, purchase_price, current_value, height_cm, width_cm, length_cm, gross_weight_kg, passenger_seats, cost_per_km,
+                is_private, owner_user_id, logbook_qr_enabled, logbook_anonymous_allowed, logbook_anonymous_private_allowed, logbook_anonymous_requires_approval, logbook_odometer_check, logbook_odometer_tolerance_km, logbook_odometer_initial_km, logbook_qr_token,
+                notes, created_at, updated_at
              ) VALUES (
                 :id, :category, :name, :license_plate, :payload_kg,
                 :load_area_length_cm, :load_area_width_cm, :load_area_height_cm, :load_area_open_top,
                 :tow_hitch_available, :tow_capacity_kg, :empty_weight_kg,
-                :acquisition_year, :purchase_price, :current_value, :height_cm, :width_cm, :length_cm, :gross_weight_kg, :passenger_seats, :cost_per_km, :notes, :created_at, :updated_at
+                :acquisition_year, :purchase_price, :current_value, :height_cm, :width_cm, :length_cm, :gross_weight_kg, :passenger_seats, :cost_per_km,
+                :is_private, :owner_user_id, :logbook_qr_enabled, :logbook_anonymous_allowed, :logbook_anonymous_private_allowed, :logbook_anonymous_requires_approval, :logbook_odometer_check, :logbook_odometer_tolerance_km, :logbook_odometer_initial_km, :logbook_qr_token,
+                :notes, :created_at, :updated_at
              )
              ON DUPLICATE KEY UPDATE
                 category = :category2, name = :name2, license_plate = :license_plate2,
@@ -41,6 +45,16 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
                 height_cm = :height_cm2, width_cm = :width_cm2, length_cm = :length_cm2, gross_weight_kg = :gross_weight_kg2,
                 passenger_seats = :passenger_seats2,
                 cost_per_km = :cost_per_km2,
+                is_private = :is_private2,
+                owner_user_id = :owner_user_id2,
+                logbook_qr_enabled = :logbook_qr_enabled2,
+                logbook_anonymous_allowed = :logbook_anonymous_allowed2,
+                logbook_anonymous_private_allowed = :logbook_anonymous_private_allowed2,
+                logbook_anonymous_requires_approval = :logbook_anonymous_requires_approval2,
+                logbook_odometer_check = :logbook_odometer_check2,
+                logbook_odometer_tolerance_km = :logbook_odometer_tolerance_km2,
+                logbook_odometer_initial_km = :logbook_odometer_initial_km2,
+                logbook_qr_token = :logbook_qr_token2,
                 notes = :notes2, updated_at = :updated_at2'
         );
 
@@ -66,6 +80,16 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'gross_weight_kg' => $vehicle->grossWeightKg,
             'passenger_seats' => $vehicle->passengerSeats,
             'cost_per_km' => $vehicle->costPerKm,
+            'is_private' => (int) $vehicle->isPrivate,
+            'owner_user_id' => $vehicle->ownerUserId,
+            'logbook_qr_enabled' => (int) $vehicle->logbookQrEnabled,
+            'logbook_anonymous_allowed' => (int) $vehicle->logbookAnonymousAllowed,
+            'logbook_anonymous_private_allowed' => (int) $vehicle->logbookAnonymousPrivateAllowed,
+            'logbook_anonymous_requires_approval' => (int) $vehicle->logbookAnonymousRequiresApproval,
+            'logbook_odometer_check' => (int) $vehicle->logbookOdometerCheck,
+            'logbook_odometer_tolerance_km' => $vehicle->logbookOdometerToleranceKm,
+            'logbook_odometer_initial_km' => $vehicle->logbookOdometerInitialKm,
+            'logbook_qr_token' => $vehicle->logbookQrToken,
             'notes' => $vehicle->notes,
             'created_at' => $vehicle->createdAt->format('Y-m-d H:i:s'),
             'updated_at' => $vehicle->updatedAt->format('Y-m-d H:i:s'),
@@ -89,6 +113,16 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             'gross_weight_kg2' => $vehicle->grossWeightKg,
             'passenger_seats2' => $vehicle->passengerSeats,
             'cost_per_km2' => $vehicle->costPerKm,
+            'is_private2' => (int) $vehicle->isPrivate,
+            'owner_user_id2' => $vehicle->ownerUserId,
+            'logbook_qr_enabled2' => (int) $vehicle->logbookQrEnabled,
+            'logbook_anonymous_allowed2' => (int) $vehicle->logbookAnonymousAllowed,
+            'logbook_anonymous_private_allowed2' => (int) $vehicle->logbookAnonymousPrivateAllowed,
+            'logbook_anonymous_requires_approval2' => (int) $vehicle->logbookAnonymousRequiresApproval,
+            'logbook_odometer_check2' => (int) $vehicle->logbookOdometerCheck,
+            'logbook_odometer_tolerance_km2' => $vehicle->logbookOdometerToleranceKm,
+            'logbook_odometer_initial_km2' => $vehicle->logbookOdometerInitialKm,
+            'logbook_qr_token2' => $vehicle->logbookQrToken,
             'notes2' => $vehicle->notes,
             'updated_at2' => $vehicle->updatedAt->format('Y-m-d H:i:s'),
         ]);
@@ -167,6 +201,15 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
         return [' WHERE name LIKE :search OR license_plate LIKE :search2', ['search' => $needle, 'search2' => $needle]];
     }
 
+    public function findByLogbookQrToken(string $token): ?Vehicle
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM vehicles WHERE logbook_qr_token = :token');
+        $stmt->execute(['token' => $token]);
+        $row = $stmt->fetch();
+
+        return $row ? $this->hydrate($row) : null;
+    }
+
     public function isUsedByVehicleLoads(string $id): bool
     {
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM rental_vehicle_loads WHERE vehicle_id = :id');
@@ -216,6 +259,16 @@ final class MariadbVehicleRepository implements VehicleRepositoryInterface
             grossWeightKg: $row['gross_weight_kg'] ?? null,
             passengerSeats: isset($row['passenger_seats']) ? (int) $row['passenger_seats'] : null,
             costPerKm: $row['cost_per_km'] ?? null,
+            isPrivate: (bool) ($row['is_private'] ?? false),
+            ownerUserId: $row['owner_user_id'] ?? null,
+            logbookQrEnabled: (bool) ($row['logbook_qr_enabled'] ?? false),
+            logbookAnonymousAllowed: (bool) ($row['logbook_anonymous_allowed'] ?? false),
+            logbookAnonymousPrivateAllowed: (bool) ($row['logbook_anonymous_private_allowed'] ?? false),
+            logbookAnonymousRequiresApproval: (bool) ($row['logbook_anonymous_requires_approval'] ?? false),
+            logbookOdometerCheck: (bool) ($row['logbook_odometer_check'] ?? false),
+            logbookOdometerToleranceKm: (int) ($row['logbook_odometer_tolerance_km'] ?? 0),
+            logbookOdometerInitialKm: isset($row['logbook_odometer_initial_km']) ? (int) $row['logbook_odometer_initial_km'] : null,
+            logbookQrToken: $row['logbook_qr_token'] ?? null,
         );
     }
 }

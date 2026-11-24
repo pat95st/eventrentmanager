@@ -33,6 +33,8 @@ final class VehicleSettingsController
             $request->input('default_cost_per_km_auto', '') ?? '',
             $request->input('default_cost_per_km_trailer', '') ?? '',
             $request->input('travel_cost_markup_percent', '') ?? '',
+            $request->input('event_travel_costs_default') !== null,
+            $request->input('travel_cost_estimate_note', '') ?? '',
         );
 
         try {
@@ -43,6 +45,7 @@ final class VehicleSettingsController
                 'default_cost_per_km_auto' => $command->defaultCostPerKmAuto,
                 'default_cost_per_km_trailer' => $command->defaultCostPerKmTrailer,
                 'travel_cost_markup_percent' => (string) $command->travelCostMarkupPercent,
+                'travel_cost_estimate_note' => (string) $command->travelCostEstimateNote,
             ]);
 
             return;

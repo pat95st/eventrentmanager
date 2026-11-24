@@ -897,7 +897,7 @@ claude.ai and Claude Desktop connect via OAuth 2.1 with the user's normal
 login and a consent page; only scopes matching the user's permissions can be
 granted, and each user manages the connections under *Profil ›
 KI-Assistenten*. Setup, tool list and conventions: `docs/mcp.md`
-(migrations 183 and 184).
+(migrations 188 and 189).
 
 - Server: `src/Infrastructure/Mcp/McpServer.php`, tools: `McpToolbox.php`
   (wrappers around the REST API controllers); OAuth:

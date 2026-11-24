@@ -41,7 +41,7 @@ final class ApiSettings
         public float $redisTimeoutSeconds = 1.0,
         public ?string $redisLastError = null,
         public ?DateTimeImmutable $redisLastErrorAt = null,
-        // MCP server at /mcp (migration 183). Requires $enabled; while off,
+        // MCP server at /mcp (migration 188). Requires $enabled; while off,
         // /mcp answers 404 like the REST API does when it is switched off.
         public bool $mcpEnabled = false,
         // Global read-only switch for MCP: no write tool is offered to any

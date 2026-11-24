@@ -180,9 +180,14 @@ final class OfferPdfGenerator
         $travelCostRows = $detail->travelCosts !== null
             ? TravelCostPdfRows::build($detail->travelCosts, $this->columnLayout()['article']['width'], self::TABLE_FONT_SIZE, fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize), fn (float $amount): string => $this->formatAmount($amount))
             : [];
+        $travelCostLineCount = count($travelCostRows);
+        $travelCostNote = $detail->travelCosts !== null ? TravelCostPdfRows::estimateNote($detail->travelCosts) : null;
+        if ($travelCostRows !== [] && $travelCostNote !== null) {
+            $travelCostRows[] = TravelCostPdfRows::noteRow($travelCostNote, $this->columnLayout()['article']['width'], fn (string $text, float $width, float $fontSize): array => $this->wrapText($text, $width, $fontSize));
+        }
         if ($travelCostRows !== []) {
             $y = $this->drawTableSection($writer, $y, $pageWidth, TravelCostPdfRows::TITLE, TravelCostPdfRows::LABELS, $travelCostRows, $newPage, $pdfDesignSettings);
-            if (count($travelCostRows) > 1) {
+            if ($travelCostLineCount > 1) {
                 $y -= 12;
                 $this->drawSummaryLine($writer, $pageWidth, $y, 'Summe Fahrtkosten:', $this->formatAmount($totals->travelCostTotal));
                 $y -= 4;

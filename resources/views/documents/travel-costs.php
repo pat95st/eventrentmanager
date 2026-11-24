@@ -35,8 +35,21 @@ $secondary = 'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium
     <p class="text-sm text-slate-500 dark:text-slate-400">
         <?= $section->vehiclesLabel !== null ? e($section->vehiclesLabel) . ' · ' : '' ?><?= number_format((float) $section->ratePerKm, 2, ',', '.') ?> € pro km beim Übernehmen
         · <?= count($section->trips) ?> <?= count($section->trips) === 1 ? 'Fahrt' : 'Fahrten' ?>
+        · Grundlage: <?= e($section->basis->label()) ?>
     </p>
 </div>
+
+<?php if ($type !== \App\Domain\TravelCost\TravelCostDocumentType::Invoice && $section->basis->isPlanned()): ?>
+    <form method="post" action="<?= e($base) ?>/fahrtkosten/hinweis" class="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900">
+        <?= $csrf ?>
+        <input type="hidden" name="show" value="<?= $section->estimateNote !== null ? '0' : '1' ?>">
+        <span class="min-w-0 flex-1 text-slate-700 dark:text-slate-300">
+            <?php if ($section->estimateNote !== null): ?>Hinweis unter den Fahrtkosten: <em><?= e($section->estimateNote) ?></em><?php else: ?>Kein Hinweis unter den Fahrtkosten.<?php endif; ?>
+            <span class="block text-xs text-slate-500">Text unter <a href="/einstellungen/fahrzeuge" class="underline">Einstellungen › Fahrzeuge</a>; er wird beim Übernehmen ins Dokument kopiert.</span>
+        </span>
+        <button type="submit" class="<?= $secondary ?>"><?= $section->estimateNote !== null ? 'Hinweis weglassen' : 'Hinweis einfügen' ?></button>
+    </form>
+<?php endif; ?>
 
 <?php if ($errors !== []): ?>
     <div class="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">

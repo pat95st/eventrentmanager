@@ -131,6 +131,14 @@ $activeLocale = Locale::get();
 $canArticles = $currentUser?->has(Permission::Artikelverwaltung) ?? false;
 $canCustomers = $currentUser?->has(Permission::Kundenverwaltung) ?? false;
 $canRentals = $currentUser?->has(Permission::AusgabeRuecknahme) ?? false;
+$canLogbook = \App\Domain\Logbook\LogbookAccess::canCapture($currentUser);
+$canVehicles = $canRentals || ($currentUser?->has(Permission::FahrtenbuchVerwalten) ?? false);
+// Menu "Fuhrpark": driver's logbook and vehicles (only the entries the user may open).
+$fleetChildren = array_values(array_filter([
+    $canLogbook ? ['key' => 'logbook', 'label' => t('nav.logbook'), 'href' => '/fahrtenbuch'] : null,
+    $canVehicles ? ['key' => 'vehicles', 'label' => t('nav.vehicles'), 'href' => '/fahrzeuge'] : null,
+]));
+$isFleetGroupActive = in_array($activeNav, ['logbook', 'vehicles'], true);
 $isAdmin = $currentUser?->has(Permission::Administration) ?? false;
 // Eigener Menüpunkt "Elektroprüfung" für Benutzer mit diesem Recht, aber ohne
 // Artikelverwaltung (sonst steht er im Menü "Artikel").
@@ -576,12 +584,25 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
         </div>
         <?php endif; ?>
 
-        <?php if ($canRentals): ?>
-        <a
-          data-tour="nav-vehicles"
-          href="/fahrzeuge"
-          class="rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $activeNav === 'vehicles' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-        ><?= e(t('nav.vehicles')) ?></a>
+        <?php if ($fleetChildren !== []): ?>
+        <div class="group relative">
+          <a
+            data-tour="nav-vehicles"
+            href="<?= e($fleetChildren[0]['href']) ?>"
+            class="flex items-center gap-1 rounded-md px-2 py-1.5 xl:px-3 text-sm font-medium <?= $isFleetGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          >
+            <?= e(t('nav.fleet')) ?>
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.25a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clip-rule="evenodd"/></svg>
+          </a>
+          <div class="nav-flyout invisible absolute left-0 top-full z-10 rounded-md border border-slate-200 bg-white py-1 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-slate-800 dark:bg-slate-900">
+            <?php foreach ($fleetChildren as $child): ?>
+              <a
+                href="<?= e($child['href']) ?>"
+                class="block px-3 py-2 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+              ><?= e($child['label']) ?></a>
+            <?php endforeach; ?>
+          </div>
+        </div>
         <?php endif; ?>
 
         <?php if ($isAdmin): ?>
@@ -874,11 +895,27 @@ $canSearch = $currentUser !== null && \App\Application\Search\Query\GlobalSearch
       </div>
       <?php endif; ?>
 
-      <?php if ($canRentals): ?>
-      <a
-        href="/fahrzeuge"
-        class="block rounded-md px-3 py-2.5 text-sm font-medium <?= $activeNav === 'vehicles' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
-      ><?= e(t('nav.vehicles')) ?></a>
+      <?php if ($fleetChildren !== []): ?>
+      <div data-mobile-group>
+        <div class="flex items-center gap-1">
+          <a
+            href="<?= e($fleetChildren[0]['href']) ?>"
+            class="block min-w-0 flex-1 rounded-md px-3 py-2.5 text-sm font-medium <?= $isFleetGroupActive ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+          ><?= e(t('nav.fleet')) ?></a>
+          <button type="button" data-mobile-group-toggle aria-expanded="<?= $isFleetGroupActive ? 'true' : 'false' ?>" aria-label="<?= e(t('nav.toggle_subitems')) ?>"
+                  class="rounded-md px-3 py-2.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800">
+            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="transition: transform .15s;<?= $isFleetGroupActive ? ' transform: rotate(180deg);' : '' ?>"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+        <div data-mobile-group-children class="<?= $isFleetGroupActive ? '' : 'hidden' ?>">
+          <?php foreach ($fleetChildren as $child): ?>
+            <a
+              href="<?= e($child['href']) ?>"
+              class="block rounded-md py-2.5 pl-7 pr-3 text-sm <?= $activeNav === $child['key'] ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-400' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' ?>"
+            ><?= e($child['label']) ?></a>
+          <?php endforeach; ?>
+        </div>
+      </div>
       <?php endif; ?>
 
       <?php if ($isAdmin): ?>

@@ -129,13 +129,13 @@ final class DocumentTravelCostServiceTest extends Unit
         $this->service()->setMode(TravelCostDocumentType::Offer, 'of-1', 'itemized');
     }
 
-    public function testImportNeedsALinkedTour(): void
+    public function testImportNeedsALinkedEvent(): void
     {
         try {
             $this->service()->importFromTour(TravelCostDocumentType::Offer, 'of-1');
             $this->fail('ValidationException expected');
         } catch (ValidationException $e) {
-            $this->assertStringContainsString('keiner Tour', implode(' ', $e->errors()));
+            $this->assertStringContainsString('keiner Veranstaltung', implode(' ', $e->errors()));
         }
     }
 

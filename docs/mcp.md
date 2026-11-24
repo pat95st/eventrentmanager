@@ -1,6 +1,6 @@
 # MCP Server for AI Assistants
 
-Status: migrations 183 "MCP-Server" and 184 "MCP-OAuth". The application contains a server for the
+Status: migrations 188 "MCP-Server" and 189 "MCP-OAuth". The application contains a server for the
 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) at `/mcp`. AI assistants such as Claude
 (claude.ai, Claude Desktop, Claude Code) or your own agents use it to look up and edit customers,
 articles, availability, events, offers and invoices — e.g. "Which events are next weekend?", "Are 8 tops

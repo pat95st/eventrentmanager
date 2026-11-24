@@ -33,6 +33,9 @@ final class CreateVehicle implements CommandInterface
         public readonly ?string $passengerSeats = null,
         // Migration 181: empty = default of the category from the settings
         public readonly ?string $costPerKm = null,
+        // Migration 183: private vehicle; ownerUserId is required while isPrivate
+        public readonly bool $isPrivate = false,
+        public readonly ?string $ownerUserId = null,
     ) {
     }
 }

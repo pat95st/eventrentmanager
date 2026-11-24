@@ -32,6 +32,12 @@ final class TravelCostSection
         public array $trips,
         public array $lines = [],
         public ?string $sourceRentalId = null,
+        // Migration 187: what the section was taken over from, fingerprint of
+        // the logbook trips (basis actual) and the note below planned costs
+        // on offers and order confirmations (copied from the vehicle settings).
+        public TravelCostBasis $basis = TravelCostBasis::Tour,
+        public ?string $sourceHash = null,
+        public ?string $estimateNote = null,
     ) {
     }
 
@@ -59,7 +65,7 @@ final class TravelCostSection
     /** Rebuilds the lines from the stored trips in the current mode (manual changes to lines are lost). */
     public function rebuildLines(): void
     {
-        $this->lines = self::buildLines($this->mode, $this->trips, $this->ratePerKm, $this->vehiclesLabel, $this->routeLabel);
+        $this->lines = self::buildLines($this->mode, $this->trips, $this->ratePerKm, $this->vehiclesLabel, $this->routeLabel, $this->basis);
     }
 
     /** Copy of this section for another document (e.g. invoice from an offer). */
@@ -76,34 +82,52 @@ final class TravelCostSection
             $this->trips,
             array_map(static fn (TravelCostLine $l) => new TravelCostLine(Uuid::v4(), $l->description, $l->kilometers, $l->ratePerKm, $l->detail, $l->tripDate, $l->sortOrder), $this->lines),
             $this->sourceRentalId,
+            $this->basis,
+            $this->sourceHash,
+            $this->estimateNote,
         );
     }
 
     /**
      * Summary: one line "Fahrtkosten Tour (n Fahrten), vehicles" with all
-     * kilometres and the route below. Itemized: one line per trip with date
-     * and "from → to".
+     * kilometres and the route below; trips with their own price per km
+     * (logbook, migration 187) get one line per price. Itemized: one line per
+     * trip with date and "from → to" (and the vehicle below for logbook trips).
      *
      * @param TravelCostTrip[] $trips
      * @return TravelCostLine[]
      */
-    public static function buildLines(TravelCostMode $mode, array $trips, string $ratePerKm, ?string $vehiclesLabel, ?string $routeLabel): array
+    public static function buildLines(TravelCostMode $mode, array $trips, string $ratePerKm, ?string $vehiclesLabel, ?string $routeLabel, TravelCostBasis $basis = TravelCostBasis::Tour): array
     {
         if ($trips === []) {
             return [];
         }
         if ($mode === TravelCostMode::Summary) {
-            $count = count($trips);
-            $km = array_sum(array_map(static fn (TravelCostTrip $t) => $t->kilometers, $trips));
-            $description = 'Fahrtkosten Tour (' . $count . ' ' . ($count === 1 ? 'Fahrt' : 'Fahrten') . ')'
-                . ($vehiclesLabel !== null && $vehiclesLabel !== '' ? ', ' . $vehiclesLabel : '');
+            $groups = [];
+            foreach ($trips as $trip) {
+                $groups[$trip->ratePerKm ?? $ratePerKm][] = $trip;
+            }
+            $lines = [];
+            foreach ($groups as $rate => $group) {
+                $count = count($group);
+                $km = array_sum(array_map(static fn (TravelCostTrip $t) => $t->kilometers, $group));
+                $groupVehicles = $count === count($trips) ? $vehiclesLabel : implode(' + ', array_unique(array_filter(array_map(static fn (TravelCostTrip $t) => $t->vehicle, $group))));
+                $description = match ($basis) {
+                    TravelCostBasis::Tour => 'Fahrtkosten Tour',
+                    TravelCostBasis::Planned => 'Fahrtkosten',
+                    TravelCostBasis::Actual => 'Fahrtkosten, gefahrene Kilometer',
+                } . ' (' . $count . ' ' . ($count === 1 ? 'Fahrt' : 'Fahrten') . ')'
+                    . ($groupVehicles !== null && $groupVehicles !== '' ? ', ' . $groupVehicles : '');
+                $detail = count($groups) === 1 && $routeLabel !== null && $routeLabel !== '' ? mb_substr($routeLabel, 0, 1000) : null;
+                $lines[] = new TravelCostLine(Uuid::v4(), mb_substr($description, 0, 255), number_format($km, 2, '.', ''), (string) $rate, $detail, null, count($lines));
+            }
 
-            return [new TravelCostLine(Uuid::v4(), mb_substr($description, 0, 255), number_format($km, 2, '.', ''), $ratePerKm, $routeLabel !== null && $routeLabel !== '' ? mb_substr($routeLabel, 0, 1000) : null, null, 0)];
+            return $lines;
         }
 
         $lines = [];
         foreach (array_values($trips) as $i => $trip) {
-            $lines[] = new TravelCostLine(Uuid::v4(), mb_substr($trip->from . ' → ' . $trip->to, 0, 255), number_format($trip->kilometers, 2, '.', ''), $ratePerKm, null, $trip->date, $i);
+            $lines[] = new TravelCostLine(Uuid::v4(), mb_substr($trip->from . ' → ' . $trip->to, 0, 255), number_format($trip->kilometers, 2, '.', ''), $trip->ratePerKm ?? $ratePerKm, $trip->vehicle !== null ? mb_substr($trip->vehicle, 0, 1000) : null, $trip->date, $i);
         }
 
         return $lines;

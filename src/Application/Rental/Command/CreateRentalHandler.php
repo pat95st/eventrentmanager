@@ -23,6 +23,8 @@ final class CreateRentalHandler implements CommandHandlerInterface
         private readonly CustomerRepositoryInterface $customers,
         private readonly VenueRepositoryInterface $venues,
         private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
+        // Migration 186: default of "Fahrtkosten abrechnen" for new events.
+        private readonly ?\App\Domain\Vehicle\VehicleSettingsRepositoryInterface $vehicleSettings = null,
     ) {
     }
 
@@ -64,6 +66,7 @@ final class CreateRentalHandler implements CommandHandlerInterface
             returnAt: $returnAt,
             blocksOtherRentals: $command->blocksOtherRentals,
             noStrobe: $command->noStrobe,
+            travelCostsEnabled: $this->vehicleSettings?->get()->eventTravelCostsDefault ?? false,
         );
 
         // Betriebsurlaub / exklusive Veranstaltungen (Migration 130)

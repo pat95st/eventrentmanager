@@ -89,6 +89,8 @@ final class TourCommandHandler implements CommandHandlerInterface
             return null;
         }
         $rental->isTour = true;
+        // Tours bill their kilometres by default (migration 182); events that are not tours may have it off (migration 186).
+        $rental->travelCostsEnabled = true;
         $rental->updatedAt = new DateTimeImmutable();
         $this->rentals->save($rental);
         $this->tours->saveStop(new TourStop(

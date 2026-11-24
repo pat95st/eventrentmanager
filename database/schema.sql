@@ -5203,7 +5203,236 @@ CREATE TABLE document_travel_cost_lines (
     INDEX idx_document_travel_cost_lines_section (travel_cost_id, sort_order)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
--- --- 183_mcp_server.sql ---
+-- --- 183_driver_logbook_vehicles.sql ---
+-- Driver's logbook, part 1: private vehicles and per-vehicle logbook settings.
+--
+--  - vehicles.is_private / owner_user_id: private vehicle of a user (e.g. a
+--    technician's own car). The owner is required while is_private = 1; if
+--    the user is deleted the vehicle keeps the flag without an owner.
+--  - vehicles.logbook_qr_enabled: trips can be recorded through the QR code
+--    of the vehicle.
+--  - vehicles.logbook_anonymous_allowed: the QR code also works without a
+--    login (external drivers enter their name).
+--  - vehicles.logbook_anonymous_private_allowed: external drivers may record
+--    private trips.
+--  - vehicles.logbook_anonymous_requires_approval: trips of external drivers
+--    only count for billing after a logbook manager approved them.
+--  - vehicles.logbook_odometer_check: the current odometer reading has to be
+--    entered correctly (last recorded reading +/- logbook_odometer_tolerance_km)
+--    before a trip can be recorded. logbook_odometer_initial_km is the
+--    reading the chain starts with.
+ALTER TABLE vehicles
+    ADD COLUMN is_private                          TINYINT(1)   NOT NULL DEFAULT 0 AFTER cost_per_km,
+    ADD COLUMN owner_user_id                       CHAR(36)     NULL AFTER is_private,
+    ADD COLUMN logbook_qr_enabled                  TINYINT(1)   NOT NULL DEFAULT 0 AFTER owner_user_id,
+    ADD COLUMN logbook_anonymous_allowed           TINYINT(1)   NOT NULL DEFAULT 0 AFTER logbook_qr_enabled,
+    ADD COLUMN logbook_anonymous_private_allowed   TINYINT(1)   NOT NULL DEFAULT 0 AFTER logbook_anonymous_allowed,
+    ADD COLUMN logbook_anonymous_requires_approval TINYINT(1)   NOT NULL DEFAULT 0 AFTER logbook_anonymous_private_allowed,
+    ADD COLUMN logbook_odometer_check              TINYINT(1)   NOT NULL DEFAULT 0 AFTER logbook_anonymous_requires_approval,
+    ADD COLUMN logbook_odometer_tolerance_km       INT UNSIGNED NOT NULL DEFAULT 0 AFTER logbook_odometer_check,
+    ADD COLUMN logbook_odometer_initial_km         INT UNSIGNED NULL AFTER logbook_odometer_tolerance_km,
+    ADD CONSTRAINT fk_vehicles_owner_user FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE SET NULL;
+
+-- --- 184_driver_logbook_entries.sql ---
+-- Driver's logbook, part 2: trips.
+--
+--  - logbook_settings: edit_window_days = how long drivers may edit or
+--    delete their own trips (logbook managers always can), default 7.
+--  - logbook_entries: one trip. category 'event' (rental_id required,
+--    tour_stop_id optional for tours), 'business' (purpose required),
+--    'private' or 'unclear' (gap in the odometer chain, created by the
+--    odometer check). Start and destination are stored as a snapshot
+--    (from_*/to_*): type warehouse | event_venue | tour_stop | company |
+--    saved_address | venue | custom, the referenced id, a label, the
+--    address and coordinates at the time of saving, so the trip does not
+--    change when master data changes later. distance_km is the whole trip
+--    (doubled for round_trip); with both odometer readings it is end - start.
+--    Drivers are users (driver_user_id) or external people (driver_name,
+--    is_external). status 'approved' | 'pending' | 'rejected' (approval of
+--    external trips). not_billed is set by logbook managers only.
+--    Deleting is a soft delete (deleted_at).
+--  - logbook_entry_changes: audit trail (created/updated/deleted/restored)
+--    with the changed fields as JSON {field: [old, new]}.
+CREATE TABLE logbook_settings (
+    id               TINYINT           NOT NULL PRIMARY KEY DEFAULT 1,
+    edit_window_days SMALLINT UNSIGNED NOT NULL DEFAULT 7,
+    updated_at       DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT chk_logbook_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+INSERT INTO logbook_settings (id) VALUES (1);
+
+CREATE TABLE logbook_entries (
+    id                      CHAR(36)       NOT NULL PRIMARY KEY,
+    trip_date               DATE           NOT NULL,
+    depart_time             TIME           NULL,
+    arrive_time             TIME           NULL,
+    driver_user_id          CHAR(36)       NULL,
+    driver_name             VARCHAR(150)   NULL,
+    driver_phone            VARCHAR(50)    NULL,
+    is_external             TINYINT(1)     NOT NULL DEFAULT 0,
+    vehicle_id              CHAR(36)       NULL,
+    other_vehicle_label     VARCHAR(150)   NULL,
+    trailer_id              CHAR(36)       NULL,
+    category                VARCHAR(20)    NOT NULL,
+    rental_id               CHAR(36)       NULL,
+    tour_stop_id            CHAR(36)       NULL,
+    purpose                 VARCHAR(500)   NULL,
+    from_type               VARCHAR(20)    NULL,
+    from_ref_id             CHAR(36)       NULL,
+    from_label              VARCHAR(255)   NULL,
+    from_address            VARCHAR(500)   NULL,
+    from_latitude           DECIMAL(10, 7) NULL,
+    from_longitude          DECIMAL(10, 7) NULL,
+    to_type                 VARCHAR(20)    NULL,
+    to_ref_id               CHAR(36)       NULL,
+    to_label                VARCHAR(255)   NULL,
+    to_address              VARCHAR(500)   NULL,
+    to_latitude             DECIMAL(10, 7) NULL,
+    to_longitude            DECIMAL(10, 7) NULL,
+    round_trip              TINYINT(1)     NOT NULL DEFAULT 0,
+    distance_km             INT UNSIGNED   NOT NULL,
+    odometer_start          INT UNSIGNED   NULL,
+    odometer_end            INT UNSIGNED   NULL,
+    not_billed              TINYINT(1)     NOT NULL DEFAULT 0,
+    status                  VARCHAR(10)    NOT NULL DEFAULT 'approved',
+    odometer_check_bypassed TINYINT(1)     NOT NULL DEFAULT 0,
+    created_by_user_id      CHAR(36)       NULL,
+    created_at              DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at              DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at              DATETIME       NULL,
+    deleted_by_user_id      CHAR(36)       NULL,
+    CONSTRAINT fk_logbook_entries_driver FOREIGN KEY (driver_user_id) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_logbook_entries_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicles (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_logbook_entries_trailer FOREIGN KEY (trailer_id) REFERENCES vehicles (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_logbook_entries_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE SET NULL,
+    CONSTRAINT fk_logbook_entries_tour_stop FOREIGN KEY (tour_stop_id) REFERENCES rental_tour_stops (id) ON DELETE SET NULL,
+    CONSTRAINT fk_logbook_entries_created_by FOREIGN KEY (created_by_user_id) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_logbook_entries_deleted_by FOREIGN KEY (deleted_by_user_id) REFERENCES users (id) ON DELETE SET NULL,
+    INDEX idx_logbook_entries_date (trip_date),
+    INDEX idx_logbook_entries_vehicle (vehicle_id, trip_date),
+    INDEX idx_logbook_entries_rental (rental_id),
+    INDEX idx_logbook_entries_driver (driver_user_id, trip_date)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+CREATE TABLE logbook_entry_changes (
+    id         CHAR(36)     NOT NULL PRIMARY KEY,
+    entry_id   CHAR(36)     NOT NULL,
+    user_id    CHAR(36)     NULL,
+    actor_name VARCHAR(150) NULL,
+    action     VARCHAR(10)  NOT NULL,
+    changes    MEDIUMTEXT   NOT NULL,
+    created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_logbook_entry_changes_entry FOREIGN KEY (entry_id) REFERENCES logbook_entries (id) ON DELETE CASCADE,
+    CONSTRAINT fk_logbook_entry_changes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
+    INDEX idx_logbook_entry_changes_entry (entry_id, created_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 185_driver_logbook_qr.sql ---
+-- Driver's logbook, part 3: QR capture and odometer check.
+--
+--  - vehicles.logbook_qr_token: random token of the QR code (URL /fahrt/<token>).
+--    It is stored as is so the QR code can be printed again at any time; a
+--    new token invalidates printed codes. NULL = no QR code generated yet.
+--  - logbook_attempts: counters of the public capture pages per vehicle and
+--    client (key = SHA-256 of scope, vehicle and IP address):
+--    scope 'odometer' counts wrong odometer readings (locked_until after 5
+--    failures for 15 minutes), scope 'submit' counts trips of external
+--    drivers per hour (rate limit).
+ALTER TABLE vehicles
+    ADD COLUMN logbook_qr_token VARCHAR(40) NULL AFTER logbook_odometer_initial_km,
+    ADD UNIQUE KEY uq_vehicles_logbook_qr_token (logbook_qr_token);
+
+CREATE TABLE logbook_attempts (
+    attempt_key  CHAR(64)          NOT NULL PRIMARY KEY,
+    scope        VARCHAR(10)       NOT NULL,
+    counter      SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    window_start DATETIME          NOT NULL,
+    locked_until DATETIME          NULL,
+    updated_at   DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_logbook_attempts_updated (updated_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 186_rental_planned_trips.sql ---
+-- Driver's logbook, part 4: planned trips of events that are not tours.
+--
+--  - rental_planned_trips: planned trips of an event (tours keep their route,
+--    migration 178). Start and destination are snapshots like in
+--    logbook_entries (from_*/to_*). distance_km is the calculated driving
+--    distance (OpenRouteService), km_override the kilometres entered by
+--    hand (wins if set). default_kind 'outbound' (pickup warehouse → event)
+--    or 'return' (event → return warehouse) marks an unchanged default trip;
+--    it follows changes of the warehouses, location and dates of the event
+--    (default_signature = state the trip was built from). Editing a trip
+--    makes it a custom trip (default_kind NULL).
+--  - rentals.planned_trips_initialized: the default trips were created once,
+--    so deleting them does not bring them back automatically.
+--  - vehicle_settings.event_travel_costs_default: "Fahrtkosten abrechnen" for
+--    new events that are not tours (default off). Existing events that are
+--    not tours get travel costs switched off; tours keep theirs.
+ALTER TABLE vehicle_settings
+    ADD COLUMN event_travel_costs_default TINYINT(1) NOT NULL DEFAULT 0 AFTER travel_cost_markup_percent;
+
+ALTER TABLE rentals
+    ADD COLUMN planned_trips_initialized TINYINT(1) NOT NULL DEFAULT 0 AFTER travel_costs_mode;
+
+UPDATE rentals SET travel_costs_enabled = 0 WHERE is_tour = 0;
+
+CREATE TABLE rental_planned_trips (
+    id                CHAR(36)       NOT NULL PRIMARY KEY,
+    rental_id         CHAR(36)       NOT NULL,
+    sort_order        INT            NOT NULL DEFAULT 0,
+    trip_date         DATE           NULL,
+    from_type         VARCHAR(20)    NULL,
+    from_ref_id       CHAR(36)       NULL,
+    from_label        VARCHAR(255)   NULL,
+    from_address      VARCHAR(500)   NULL,
+    from_latitude     DECIMAL(10, 7) NULL,
+    from_longitude    DECIMAL(10, 7) NULL,
+    to_type           VARCHAR(20)    NULL,
+    to_ref_id         CHAR(36)       NULL,
+    to_label          VARCHAR(255)   NULL,
+    to_address        VARCHAR(500)   NULL,
+    to_latitude       DECIMAL(10, 7) NULL,
+    to_longitude      DECIMAL(10, 7) NULL,
+    distance_km       INT UNSIGNED   NULL,
+    km_override       INT UNSIGNED   NULL,
+    default_kind      VARCHAR(10)    NULL,
+    default_signature VARCHAR(500)   NULL,
+    created_at        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_rental_planned_trips_rental FOREIGN KEY (rental_id) REFERENCES rentals (id) ON DELETE CASCADE,
+    INDEX idx_rental_planned_trips_rental (rental_id, trip_date, sort_order)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- --- 187_travel_cost_basis.sql ---
+-- Driver's logbook, part 5: travel costs from planned or driven kilometres.
+--
+--  - document_travel_costs.basis: what the section was taken over from:
+--    'tour' (route of a tour, migration 182), 'planned' (planned trips of an
+--    event, migration 186) or 'actual' (billable trips of the driver's
+--    logbook, migration 184; invoices only).
+--  - document_travel_costs.source_hash: fingerprint of the logbook trips at
+--    the time of the import (basis 'actual'), to point out later changes.
+--  - document_travel_costs.estimate_note: note printed below planned travel
+--    costs on offers and order confirmations, copied from
+--    vehicle_settings.travel_cost_estimate_note when the travel costs are
+--    taken over (NULL = no note; can be switched off per document).
+--  - document_travel_costs.trips: trips may carry their own price per km and
+--    vehicle ({date, from, to, km, rate, vehicle}); trips of the logbook are
+--    billed with the cost per km of their own vehicle (+ trailer) plus markup.
+ALTER TABLE document_travel_costs
+    ADD COLUMN basis              VARCHAR(10) NOT NULL DEFAULT 'tour' AFTER mode,
+    ADD COLUMN source_hash        CHAR(64)    NULL AFTER basis,
+    ADD COLUMN estimate_note      VARCHAR(1000) NULL AFTER source_hash;
+
+ALTER TABLE vehicle_settings
+    ADD COLUMN travel_cost_estimate_note VARCHAR(1000) NULL AFTER event_travel_costs_default;
+
+UPDATE vehicle_settings
+   SET travel_cost_estimate_note = 'Die Fahrtkosten basieren auf den geplanten Kilometern. Abgerechnet werden die tatsächlich gefahrenen Kilometer; der Betrag kann daher abweichen.'
+ WHERE travel_cost_estimate_note IS NULL;
+-- --- 188_mcp_server.sql ---
 -- MCP server (Model Context Protocol) at /mcp, built on top of the REST API:
 -- global switch and global read-only switch on Settings › API, plus a per-token
 -- release ("Für MCP zulassen"). See App\Infrastructure\Mcp\McpServer and docs/mcp.md.
@@ -5216,7 +5445,7 @@ ALTER TABLE api_settings
 ALTER TABLE api_tokens
     ADD COLUMN mcp_allowed TINYINT(1) NOT NULL DEFAULT 0 AFTER read_only;
 
--- --- 184_mcp_oauth.sql ---
+-- --- 189_mcp_oauth.sql ---
 -- OAuth 2.1 authorization server for the MCP server /mcp, so clients such as
 -- claude.ai / Claude Desktop can connect with the user's normal login.
 -- Dynamic client registration (RFC 7591), authorization code + PKCE (S256),
@@ -5485,5 +5714,10 @@ INSERT INTO schema_migrations (migration, applied_at) VALUES
     ('180_vehicle_passenger_seats.sql', NOW()),
     ('181_vehicle_cost_per_km.sql', NOW()),
     ('182_tour_travel_costs.sql', NOW()),
-    ('183_mcp_server.sql', NOW()),
-    ('184_mcp_oauth.sql', NOW());
+    ('183_driver_logbook_vehicles.sql', NOW()),
+    ('184_driver_logbook_entries.sql', NOW()),
+    ('185_driver_logbook_qr.sql', NOW()),
+    ('186_rental_planned_trips.sql', NOW()),
+    ('187_travel_cost_basis.sql', NOW()),
+    ('188_mcp_server.sql', NOW()),
+    ('189_mcp_oauth.sql', NOW());

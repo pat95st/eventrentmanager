@@ -8,12 +8,15 @@ use App\Application\Command\CommandBus;
 use App\Application\Query\QueryBus;
 use App\Application\Vehicle\Command\CreateVehicle;
 use App\Application\Vehicle\Command\DeleteVehicle;
+use App\Application\Vehicle\Command\SaveVehicleLogbookSettings;
 use App\Application\Vehicle\Command\UpdateVehicle;
 use App\Application\Vehicle\Query\GetVehicle;
 use App\Application\Vehicle\Query\ListVehicles;
 use App\Domain\Exception\ConflictException;
 use App\Domain\Exception\NotFoundException;
 use App\Domain\Exception\ValidationException;
+use App\Domain\User\Permission;
+use App\Domain\User\UserRepositoryInterface;
 use App\Domain\Vehicle\Vehicle;
 use App\Domain\Vehicle\VehicleSettingsRepositoryInterface;
 use App\Infrastructure\Http\Auth\CurrentUser;
@@ -29,6 +32,7 @@ final class VehicleController
         private readonly CommandBus $commands,
         private readonly QueryBus $queries,
         private readonly VehicleSettingsRepositoryInterface $vehicleSettings,
+        private readonly ?UserRepositoryInterface $users = null,
     ) {
     }
 
@@ -43,6 +47,9 @@ final class VehicleController
         $viewData = [
             'vehicles' => $result->items,
             'vehicleSettings' => $this->vehicleSettings->get(),
+            'ownerNames' => $this->ownerNames($result->items),
+            'canEditVehicles' => CurrentUser::get()?->has(Permission::AusgabeRuecknahme) ?? false,
+            'canManageLogbook' => CurrentUser::get()?->has(Permission::FahrtenbuchVerwalten) ?? false,
             'search' => $search ?? '',
             'page' => $result->page,
             'pageSize' => $result->pageSize,
@@ -92,6 +99,8 @@ final class VehicleController
             grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
             passengerSeats: $this->nullIfEmpty($request->input('passenger_seats')),
             costPerKm: $this->nullIfEmpty($request->input('cost_per_km')),
+            isPrivate: $request->input('is_private') !== null,
+            ownerUserId: $this->nullIfEmpty($request->input('owner_user_id')),
         );
 
         try {
@@ -145,6 +154,8 @@ final class VehicleController
             grossWeightKg: $this->nullIfEmpty($request->input('gross_weight_kg')),
             passengerSeats: $this->nullIfEmpty($request->input('passenger_seats')),
             costPerKm: $this->nullIfEmpty($request->input('cost_per_km')),
+            isPrivate: $request->input('is_private') !== null,
+            ownerUserId: $this->nullIfEmpty($request->input('owner_user_id')),
         );
 
         try {
@@ -182,7 +193,113 @@ final class VehicleController
             'old' => $old,
             'editingId' => $editingId,
             'vehicleSettings' => $this->vehicleSettings->get(),
+            'ownerOptions' => $this->ownerOptions($vehicle?->ownerUserId),
         ], activeNav: 'vehicles', title: $vehicle !== null ? 'Fahrzeug bearbeiten' : 'Neues Fahrzeug');
+    }
+
+    /** Logbook settings of a vehicle (migration 183, "Fahrtenbuch verwalten"). */
+    public function logbook(Request $request): void
+    {
+        try {
+            $vehicle = $this->queries->ask(new GetVehicle($request->param('id')));
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+
+            return;
+        }
+
+        $this->renderLogbook($vehicle, [], []);
+    }
+
+    public function saveLogbook(Request $request): void
+    {
+        $id = $request->param('id');
+        $command = new SaveVehicleLogbookSettings(
+            vehicleId: $id,
+            qrEnabled: $request->input('logbook_qr_enabled') !== null,
+            anonymousAllowed: $request->input('logbook_anonymous_allowed') !== null,
+            anonymousPrivateAllowed: $request->input('logbook_anonymous_private_allowed') !== null,
+            anonymousRequiresApproval: $request->input('logbook_anonymous_requires_approval') !== null,
+            odometerCheck: $request->input('logbook_odometer_check') !== null,
+            odometerToleranceKm: $this->nullIfEmpty($request->input('logbook_odometer_tolerance_km')),
+            odometerInitialKm: $this->nullIfEmpty($request->input('logbook_odometer_initial_km')),
+        );
+
+        try {
+            $this->commands->dispatch($command);
+            Flash::success('Die Fahrtenbuch-Einstellungen wurden gespeichert.');
+            Response::redirect('/fahrzeuge/' . $id . '/fahrtenbuch');
+        } catch (ValidationException $e) {
+            $vehicle = $this->queries->ask(new GetVehicle($id));
+            $this->renderLogbook($vehicle, $e->errors(), [
+                'logbook_qr_enabled' => $command->qrEnabled,
+                'logbook_anonymous_allowed' => $command->anonymousAllowed,
+                'logbook_anonymous_private_allowed' => $command->anonymousPrivateAllowed,
+                'logbook_anonymous_requires_approval' => $command->anonymousRequiresApproval,
+                'logbook_odometer_check' => $command->odometerCheck,
+                'logbook_odometer_tolerance_km' => $command->odometerToleranceKm,
+                'logbook_odometer_initial_km' => $command->odometerInitialKm,
+            ]);
+        } catch (NotFoundException $e) {
+            Response::notFound($e->getMessage());
+        }
+    }
+
+    /** @param array<string, string> $errors @param array<string, mixed> $old */
+    private function renderLogbook(Vehicle $vehicle, array $errors, array $old): void
+    {
+        $owner = $vehicle->ownerUserId !== null ? $this->users?->findById($vehicle->ownerUserId) : null;
+        echo View::page('vehicles/logbook', [
+            'vehicle' => $vehicle,
+            'ownerName' => $owner?->displayName(),
+            'errors' => $errors,
+            'old' => $old,
+        ], activeNav: 'vehicles', title: 'Fahrtenbuch – ' . $vehicle->name);
+    }
+
+    /**
+     * Active users that can own a private vehicle, plus the current owner if
+     * that account is inactive by now.
+     *
+     * @return array<string, string> user id => display name
+     */
+    private function ownerOptions(?string $currentOwnerId): array
+    {
+        if ($this->users === null) {
+            return [];
+        }
+        $options = [];
+        foreach ($this->users->findAllActive() as $user) {
+            $options[$user->id] = $user->displayName();
+        }
+        if ($currentOwnerId !== null && !isset($options[$currentOwnerId])) {
+            $owner = $this->users->findById($currentOwnerId);
+            if ($owner !== null) {
+                $options[$owner->id] = $owner->displayName() . ' (inaktiv)';
+            }
+        }
+        asort($options, SORT_NATURAL | SORT_FLAG_CASE);
+
+        return $options;
+    }
+
+    /**
+     * @param Vehicle[] $vehicles
+     * @return array<string, string> owner user id => display name
+     */
+    private function ownerNames(array $vehicles): array
+    {
+        $names = [];
+        foreach ($vehicles as $vehicle) {
+            if ($vehicle->ownerUserId !== null && !isset($names[$vehicle->ownerUserId])) {
+                $owner = $this->users?->findById($vehicle->ownerUserId);
+                if ($owner !== null) {
+                    $names[$owner->id] = $owner->displayName();
+                }
+            }
+        }
+
+        return $names;
     }
 
     /** @return array<string, mixed> */
@@ -210,6 +327,8 @@ final class VehicleController
             'gross_weight_kg' => $command->grossWeightKg,
             'passenger_seats' => $command->passengerSeats,
             'cost_per_km' => $command->costPerKm,
+            'is_private' => $command->isPrivate,
+            'owner_user_id' => $command->ownerUserId,
         ];
     }
 

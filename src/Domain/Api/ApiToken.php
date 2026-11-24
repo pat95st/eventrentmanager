@@ -38,10 +38,10 @@ final class ApiToken
         public bool $readOnly = false,
         // Requests per minute for this token; null = global default from ApiSettings.
         public ?int $rateLimitPerMinute = null,
-        // Released for the MCP server /mcp (migration 183); off by default so an
+        // Released for the MCP server /mcp (migration 188); off by default so an
         // existing integration token does not become usable by an LLM client.
         public bool $mcpAllowed = false,
-        // Tokens issued via OAuth (migration 184): owner, connection and expiry.
+        // Tokens issued via OAuth (migration 189): owner, connection and expiry.
         // They are only valid for /mcp and are not listed under Settings › API › tokens.
         public readonly ?string $userId = null,
         public readonly ?string $oauthGrantId = null,

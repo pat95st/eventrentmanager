@@ -51,6 +51,8 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
         private readonly ?\App\Domain\ArticleSet\ArticleSetRepositoryInterface $articleSets = null,
         // Exklusive Veranstaltungen (Migration 130)
         private readonly ?\App\Application\Rental\RentalScheduleRules $schedule = null,
+        // Migration 186: default of "Fahrtkosten abrechnen" for new events.
+        private readonly ?\App\Domain\Vehicle\VehicleSettingsRepositoryInterface $vehicleSettings = null,
     ) {
     }
 
@@ -152,6 +154,7 @@ final class ConvertOfferToRentalHandler implements CommandHandlerInterface
             deploymentDays: $offer->maxDeploymentDays(),
             createdAt: $now,
             updatedAt: $now,
+            travelCostsEnabled: $this->vehicleSettings?->get()->eventTravelCostsDefault ?? false,
         );
         $blocking = $this->schedule?->blockingError($rental);
         if ($blocking !== null) {

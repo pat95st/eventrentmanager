@@ -50,6 +50,9 @@ final class MariadbTravelCostSectionRepository implements TravelCostSectionRepos
                 sortOrder: (int) $l['sort_order'],
             ), $lines->fetchAll(PDO::FETCH_ASSOC)),
             sourceRentalId: $row['source_rental_id'],
+            basis: \App\Domain\TravelCost\TravelCostBasis::tryFrom((string) ($row['basis'] ?? 'tour')) ?? \App\Domain\TravelCost\TravelCostBasis::Tour,
+            sourceHash: $row['source_hash'] ?? null,
+            estimateNote: $row['estimate_note'] ?? null,
         );
     }
 
@@ -66,9 +69,10 @@ final class MariadbTravelCostSectionRepository implements TravelCostSectionRepos
 
             $column = $section->documentType->column();
             $this->pdo->prepare(
-                'INSERT INTO document_travel_costs (id, ' . $column . ', source_rental_id, mode, vehicles_label, route_label, rate_per_km, trips)
-                 VALUES (:id, :doc, :rental, :mode, :vehicles, :route, :rate, :trips)
+                'INSERT INTO document_travel_costs (id, ' . $column . ', source_rental_id, mode, basis, source_hash, estimate_note, vehicles_label, route_label, rate_per_km, trips)
+                 VALUES (:id, :doc, :rental, :mode, :basis, :hash, :note, :vehicles, :route, :rate, :trips)
                  ON DUPLICATE KEY UPDATE source_rental_id = VALUES(source_rental_id), mode = VALUES(mode),
+                    basis = VALUES(basis), source_hash = VALUES(source_hash), estimate_note = VALUES(estimate_note),
                     vehicles_label = VALUES(vehicles_label), route_label = VALUES(route_label),
                     rate_per_km = VALUES(rate_per_km), trips = VALUES(trips)'
             )->execute([
@@ -76,6 +80,9 @@ final class MariadbTravelCostSectionRepository implements TravelCostSectionRepos
                 'doc' => $section->documentId,
                 'rental' => $section->sourceRentalId,
                 'mode' => $section->mode->value,
+                'basis' => $section->basis->value,
+                'hash' => $section->sourceHash,
+                'note' => $section->estimateNote,
                 'vehicles' => $section->vehiclesLabel,
                 'route' => $section->routeLabel,
                 'rate' => $section->ratePerKm,

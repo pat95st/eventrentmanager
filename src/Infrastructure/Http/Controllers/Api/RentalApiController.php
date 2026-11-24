@@ -56,7 +56,7 @@ final class RentalApiController extends ApiController
         $result = $this->ask(new ListRentals(customerId: $request->query('customer_id'), page: 1, pageSize: self::ALL));
         $items = [];
         foreach ($result->items as $entry) {
-            $items[] = Normalizer::normalize($entry->rental, ['termsSignatureFile']) + ['customer' => $this->customerRef($entry->customer)];
+            $items[] = Normalizer::normalize($entry->rental, ['termsSignatureFile', 'plannedTripsInitialized']) + ['customer' => $this->customerRef($entry->customer)];
         }
 
         return $this->listResponse($request, $items);
@@ -145,7 +145,7 @@ final class RentalApiController extends ApiController
         }
         $items = [];
         foreach ($this->ask(new ListRentalsInRange($from->format('Y-m-d'), $to->format('Y-m-d'))) as $entry) {
-            $items[] = Normalizer::normalize($entry->rental, ['termsSignatureFile']) + [
+            $items[] = Normalizer::normalize($entry->rental, ['termsSignatureFile', 'plannedTripsInitialized']) + [
                 'customer' => $this->customerRef($entry->customer),
                 'material' => $entry->materialLabels,
             ];
@@ -209,7 +209,7 @@ final class RentalApiController extends ApiController
     {
         $detail = $this->load($id);
 
-        return Normalizer::normalize($detail->rental, ['termsSignatureFile']) + [
+        return Normalizer::normalize($detail->rental, ['termsSignatureFile', 'plannedTripsInitialized']) + [
             'customer' => $this->customerRef($detail->customer),
             'items' => array_map(static fn ($entry) => Normalizer::normalize($entry->item) + [
                 'article' => ['id' => $entry->article->id, 'name' => $entry->article->name],

@@ -75,6 +75,16 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
         </p>
     <?php endif; ?>
 
+    <?php if (($travelSummary ?? null) !== null): ?>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            🚗 Fahrten:
+            <?php if ($travelSummary['planned'] !== null): ?>geplant <?= e(number_format($travelSummary['planned'], 0, ',', '.')) ?> km<?= $travelSummary['plannedMissing'] > 0 ? ' <span class="text-amber-700 dark:text-amber-400">(bei ' . $travelSummary['plannedMissing'] . ' ' . ($travelSummary['plannedMissing'] === 1 ? 'Fahrt' : 'Fahrten') . ' fehlen km)</span>' : '' ?> ·<?php endif; ?>
+            gefahren <?= e(number_format($travelSummary['driven'], 0, ',', '.')) ?> km<?= $travelSummary['trips'] > 0 ? ' (' . $travelSummary['trips'] . ' im Fahrtenbuch)' : '' ?>
+            · Fahrtkosten <?= $travelSummary['enabled'] ? 'werden abgerechnet' : 'werden nicht abgerechnet' ?>
+            · <a href="/veranstaltungen/<?= e($rental->id) ?><?= $rental->isTour ? '/tour/route#fahrtkosten' : '/fahrten' ?>" class="text-brand-700 underline dark:text-brand-400"><?= $rental->isTour ? 'Route &amp; Fahrtkosten' : 'Fahrten &amp; Fahrtkosten' ?></a>
+        </p>
+    <?php endif; ?>
+
     <div class="mt-4 flex flex-wrap items-center gap-2">
         <a href="/veranstaltungen/<?= e($rental->id) ?>/ausgabe" class="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">
             <?= e(t('rentals.show.checklist_link', ['issued' => (string) $totalIssued, 'planned' => (string) $totalPlanned])) ?>
@@ -129,6 +139,22 @@ $secondaryButtonClass = 'inline-flex cursor-pointer list-none items-center gap-1
         <a href="/veranstaltungen/<?= e($rental->id) ?>/bearbeiten" class="<?= $secondaryButtonClass ?>">
             <?= e(t('common.edit')) ?>
         </a>
+
+        <?php if (\App\Domain\Logbook\LogbookAccess::canCapture(\App\Infrastructure\Http\Auth\CurrentUser::get())): ?>
+        <details class="relative">
+            <summary class="<?= $secondaryButtonClass ?>">
+                🚗 Fahrt erfassen
+                <svg class="h-4 w-4 text-slate-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.06l3.71-3.83a.75.75 0 111.08 1.04l-4.25 4.39a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z" clip-rule="evenodd"/></svg>
+            </summary>
+            <div data-dropdown-menu role="menu" class="absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-slate-200 bg-white py-1 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                <a href="/fahrtenbuch/neu?veranstaltung=<?= e($rental->id) ?>&amp;vorlage=hin" class="<?= $menuItemClass ?>">Hinfahrt (Lager → Veranstaltung)</a>
+                <a href="/fahrtenbuch/neu?veranstaltung=<?= e($rental->id) ?>&amp;vorlage=rueck" class="<?= $menuItemClass ?>">Rückfahrt (Veranstaltung → Lager)</a>
+                <a href="/fahrtenbuch/neu?veranstaltung=<?= e($rental->id) ?>" class="<?= $menuItemClass ?>">Andere Fahrt …</a>
+                <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+                <a href="/fahrtenbuch?veranstaltung=<?= e($rental->id) ?>" class="<?= $menuItemClass ?>">Fahrten dieser Veranstaltung</a>
+            </div>
+        </details>
+        <?php endif; ?>
 
         <details class="relative">
             <summary class="<?= $secondaryButtonClass ?> px-2.5" title="<?= e(t('rentals.show.more_actions')) ?>">

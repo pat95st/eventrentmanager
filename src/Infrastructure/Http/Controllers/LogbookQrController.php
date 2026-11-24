@@ -69,9 +69,10 @@ final class LogbookQrController
         }
         $user = $this->sessionUser();
         if ($user !== null && LogbookAccess::canUseVehicle($user, $vehicle)) {
+            // Logged-in drivers keep the mobile pages of the QR code (qr=1).
             Response::redirect($vehicle->logbookOdometerCheck
-                ? '/fahrtenbuch/fahrzeug/' . rawurlencode($vehicle->id) . '/kilometerstand'
-                : '/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id));
+                ? '/fahrtenbuch/fahrzeug/' . rawurlencode($vehicle->id) . '/kilometerstand?qr=1'
+                : '/fahrtenbuch/neu?fahrzeug=' . rawurlencode($vehicle->id) . '&qr=1');
 
             return;
         }

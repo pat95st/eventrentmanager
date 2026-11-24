@@ -2436,6 +2436,7 @@ $logbookController = new \App\Infrastructure\Http\Controllers\LogbookController(
 $logbookAccess = [Permission::Fahrer, Permission::FahrtenbuchVerwalten];
 $router->get('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'index']));
 $router->get('/fahrtenbuch/neu', $auth->guard($logbookAccess, [$logbookController, 'create']));
+$router->get('/fahrtenbuch/fahrtenbuch.pdf', $auth->guard($logbookAccess, [$logbookController, 'exportPdf']));
 $router->post('/fahrtenbuch', $auth->guard($logbookAccess, [$logbookController, 'store']));
 $router->get('/fahrtenbuch/veranstaltungen', $auth->guard($logbookAccess, [$logbookController, 'events']));
 $router->get('/fahrtenbuch/veranstaltungen/{id}/orte', $auth->guard($logbookAccess, [$logbookController, 'rentalOptions']));

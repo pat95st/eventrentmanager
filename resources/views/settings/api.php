@@ -6,6 +6,7 @@
  * @var array<string, string> $errors
  * @var string|null $newRawToken
  * @var string|null $editTokenId
+ * @var \App\Application\OAuth\OAuthConnection[] $connections
  */
 
 use App\Domain\Api\ApiScope;
@@ -293,6 +294,35 @@ $val = static fn (string $field, string $current): string => $settingsErrors && 
                 <button type="submit" class="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">Token erstellen</button>
             </form>
         </div>
+    </div>
+
+    <!-- Über OAuth verbundene KI-Assistenten (claude.ai, Claude Desktop, …) -->
+    <div class="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h2 class="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-300">Verbundene KI-Assistenten</h2>
+        <p class="mb-3 text-xs text-slate-500 dark:text-slate-400">Assistenten wie claude.ai oder Claude Desktop verbinden sich über OAuth mit dem MCP-Server: Ein Benutzer meldet sich mit seinem normalen Login an und gibt Berechtigungen frei, die er selbst hat (nicht möglich für Benutzer, die nur das Recht „Techniker“ haben). Zugriffs-Tokens gelten eine Stunde und werden automatisch erneuert; nach 90 Tagen ohne Nutzung endet die Verbindung. Wird ein Benutzer deaktiviert oder werden ihm Rechte entzogen, gilt das sofort. Jeder Benutzer sieht und trennt seine eigenen Verbindungen unter Profil › KI-Assistenten.</p>
+        <?php if ($connections === []): ?>
+            <p class="text-sm text-slate-400 dark:text-slate-500">Noch keine Verbindungen.</p>
+        <?php else: ?>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                <?php foreach ($connections as $connection): ?>
+                    <div class="flex flex-wrap items-center justify-between gap-3 py-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-800 dark:text-slate-200"><?= e($connection->clientName) ?> <span class="text-xs font-normal text-slate-400"><?= e($connection->redirectHost) ?></span> · <?= e($connection->userName) ?></p>
+                            <p class="mt-1 flex flex-wrap gap-1">
+                                <?php foreach ($connection->grant->scopes as $scope): ?>
+                                    <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] <?= $scope->isRead() ? 'text-slate-500 dark:text-slate-400' : 'text-amber-700 dark:text-amber-400' ?> dark:bg-slate-800"><?= e($scope->value) ?></span>
+                                <?php endforeach; ?>
+                            </p>
+                            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-500">Verbunden am <?= e($connection->grant->createdAt->format('d.m.Y H:i')) ?> · Zuletzt genutzt: <?= $connection->lastUsedAt !== null ? e($connection->lastUsedAt->format('d.m.Y H:i')) : 'noch nie' ?></p>
+                        </div>
+                        <form method="post" action="/einstellungen/api/verbindungen/<?= e($connection->grant->id) ?>/trennen" data-confirm-key="settings.api.connection.disconnect" data-confirm="Verbindung wirklich trennen? Der Assistent muss danach neu verbunden werden." data-confirm-style="danger">
+                            <input type="hidden" name="csrf_token" value="<?= e(\App\Infrastructure\Http\Csrf::token()) ?>">
+                            <button type="submit" class="text-xs font-medium text-red-600 hover:underline dark:text-red-400">Trennen</button>
+                        </form>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <!-- Protokoll schreibender Zugriffe -->

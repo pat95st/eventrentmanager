@@ -10,6 +10,7 @@ use App\Application\Api\Command\SetApiTokenEnabled;
 use App\Application\Api\Command\UpdateApiToken;
 use App\Application\Api\Query\ListApiTokens;
 use App\Application\Command\CommandBus;
+use App\Application\OAuth\OAuthService;
 use App\Application\Query\QueryBus;
 use App\Application\Settings\Command\UpdateApiSettings;
 use App\Application\Settings\Query\GetApiSettings;
@@ -38,6 +39,7 @@ final class ApiSettingsController
         private readonly QueryBus $queries,
         private readonly ApiRequestLogRepositoryInterface $requestLog,
         private readonly ApiSettingsRepositoryInterface $settings,
+        private readonly ?OAuthService $oauth = null,
     ) {
     }
 
@@ -185,6 +187,7 @@ final class ApiSettingsController
             'errors' => $errors,
             'newRawToken' => $newRawToken,
             'editTokenId' => $editTokenId !== '' ? $editTokenId : null,
+            'connections' => $this->oauth?->connections(null) ?? [],
         ], activeNav: 'settings-api', title: 'API');
     }
 }

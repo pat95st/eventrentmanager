@@ -1,6 +1,6 @@
 # MCP Server for AI Assistants
 
-Status: migration 183 "MCP-Server". The application contains a server for the
+Status: migrations 183 "MCP-Server" and 184 "MCP-OAuth". The application contains a server for the
 [Model Context Protocol](https://modelcontextprotocol.io) (MCP) at `/mcp`. AI assistants such as Claude
 (claude.ai, Claude Desktop, Claude Code) or your own agents use it to look up and edit customers,
 articles, availability, events, offers and invoices — e.g. "Which events are next weekend?", "Are 8 tops
@@ -15,6 +15,8 @@ The web interface is German; UI labels are quoted in German with an English tran
   answered with one JSON response; there is no SSE stream and no session, so it runs on any PHP hosting.
 - **Built on the REST API v1:** the tools call the same controllers, commands and validations as
   `/api/v1`. Tokens, scopes, IP filter, request limit and the log are shared with the REST API.
+- **Two ways to sign in:** an API token released for MCP (Claude Code, own agents), or **OAuth 2.1** with
+  the user's normal login (claude.ai, Claude Desktop and other clients that cannot store a fixed token).
 - **Only tools, no resources or prompts.** About 30 task-oriented tools (list below). Results are compact
   JSON (empty fields dropped) and contain a `url` to the record in the web interface instead of PDFs.
 - **Never possible via MCP:** finalizing or cancelling invoices, sending e-mails to customers, deleting
@@ -34,6 +36,55 @@ The web interface is German; UI labels are quoted in German with an English tran
 
 Effective permissions are always the strictest combination of: global „MCP nur lesen“, the token's
 „Nur lesen“, and the token's scopes.
+
+### claude.ai and Claude Desktop (OAuth)
+
+These clients connect with the user's own login instead of a fixed token:
+
+1. Steps 1–2 above (no token is needed).
+2. In the client add a custom connector with the URL `https://<your installation>/mcp`
+   (claude.ai: Settings › Connectors › Add custom connector). Each user can copy the URL from
+   **Profil › KI-Assistenten** (Profile › AI assistants).
+3. The client registers itself, opens the login page of the installation (password, passkey, LDAP or
+   OAuth/OIDC login with two-factor authentication as usual) and then a **consent page**: it shows the
+   client's name and the address it returns to, and lists the scopes the user may grant; the user ticks
+   what the assistant may do and clicks „Zugriff erlauben“ (allow access).
+
+Rules:
+
+- Only scopes derived from the user's own permissions are offered (see table below); `invoices:finalize`
+  and `email:send` are never granted. Users who only have the permission „Techniker“ cannot connect
+  (they only see the events they are assigned to, which scopes cannot express).
+- Access tokens are valid for 1 hour and are renewed automatically with a refresh token, which is replaced
+  on every use and expires after 90 days without use. Reusing an old refresh token ends the connection.
+- On every request the user's current permissions are checked again: a deactivated user has no access at
+  once, withdrawn permissions remove the corresponding tools.
+- OAuth tokens are valid for `/mcp` only, not for the REST API. They do not appear in the token list;
+  every user sees and disconnects their connections under Profil › KI-Assistenten, administrators see all
+  connections under Settings › API („Verbundene KI-Assistenten“).
+
+| Permission of the user | Scopes that can be granted |
+|---|---|
+| Administration | all scopes except `invoices:finalize` and `email:send` |
+| Kundenverwaltung | `customers:read`, `customers:write` |
+| Artikelverwaltung | `articles:*`, `master_data:*`, `inventory:*`, `finance:*` |
+| Ausgabe und Rücknahme | `rentals:*`, `sales:*`, `invoices:read`, `invoices:write`, `customers:read`, `articles:read`, `master_data:read` |
+| Minutenprogramme | `minute_programs:read` |
+| Elektroprüfung | `inventory:read`, `inventory:write`, `articles:read` |
+
+#### OAuth endpoints (for client developers)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /.well-known/oauth-protected-resource` | Protected resource metadata (RFC 9728); `/mcp` answers `401` with `WWW-Authenticate: Bearer resource_metadata="…"` |
+| `GET /.well-known/oauth-authorization-server` | Authorization server metadata (RFC 8414) |
+| `POST /oauth/register` | Dynamic client registration (RFC 7591), open; redirect URIs must use https, or http with `localhost`/`127.0.0.1`/`[::1]` (any port) |
+| `GET /oauth/authorize` | Authorization code flow, PKCE with `S256` required, optional `scope` (space separated) and `resource` (must be the `/mcp` URL) |
+| `POST /oauth/token` | `authorization_code` and `refresh_token` grants; public clients (`none`) or `client_secret_post`/`client_secret_basic` |
+| `POST /oauth/revoke` | Token revocation (RFC 7009); revoking a refresh token ends the connection |
+
+Registration and token endpoints are limited per IP address (10 and 60 requests per minute). All
+endpoints answer `404` while the REST API or the MCP server is switched off.
 
 ### Claude Code
 
@@ -125,7 +176,7 @@ data returned by the tools is processed by the AI provider of the client.
 | `200` | JSON-RPC response (`result` or `error`) |
 | `202` | Notification accepted |
 | `400` | Body is not JSON, or unsupported `MCP-Protocol-Version` header |
-| `401` | Token missing, unknown or disabled |
+| `401` | Token missing, unknown, disabled or expired (`WWW-Authenticate` points to the OAuth metadata) |
 | `403` | Token not released for MCP, or IP address not allowed |
 | `404` | REST API or MCP server switched off |
 | `405` | `GET`/`DELETE`: no SSE stream, no sessions |

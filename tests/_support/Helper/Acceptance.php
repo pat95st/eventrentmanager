@@ -162,6 +162,46 @@ class Acceptance extends Module
         return [false, $result['structuredContent'] ?? null];
     }
 
+    /**
+     * Sends a form-encoded POST (OAuth token/revocation endpoint) and returns
+     * [status code, decoded JSON body].
+     *
+     * @param array<string, string> $form
+     * @return array{0: int, 1: array<string, mixed>}
+     */
+    public function sendFormRequest(string $path, array $form): array
+    {
+        $browser = $this->phpBrowser();
+        $browser->_request('POST', $path, $form, [], ['HTTP_ACCEPT' => 'application/json']);
+        $response = $browser->client->getInternalResponse();
+        $body = json_decode((string) $response->getContent(), true);
+
+        return [$response->getStatusCode(), is_array($body) ? $body : []];
+    }
+
+    /**
+     * Sends a raw JSON POST (e.g. OAuth client registration) and returns
+     * [status code, decoded JSON body].
+     *
+     * @param array<string, mixed> $json
+     * @return array{0: int, 1: array<string, mixed>}
+     */
+    public function sendJsonPost(string $path, array $json): array
+    {
+        $browser = $this->phpBrowser();
+        $browser->_request('POST', $path, [], [], ['HTTP_ACCEPT' => 'application/json', 'CONTENT_TYPE' => 'application/json'], json_encode($json, JSON_THROW_ON_ERROR));
+        $response = $browser->client->getInternalResponse();
+        $body = json_decode((string) $response->getContent(), true);
+
+        return [$response->getStatusCode(), is_array($body) ? $body : []];
+    }
+
+    /** Header of the last response (PhpBrowser has no grabHttpHeader()). */
+    public function grabResponseHeader(string $name): ?string
+    {
+        return $this->phpBrowser()->client->getInternalResponse()->getHeader($name);
+    }
+
     private function phpBrowser(): PhpBrowser
     {
         /** @var PhpBrowser $browser */

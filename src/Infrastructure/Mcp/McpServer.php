@@ -7,10 +7,8 @@ namespace App\Infrastructure\Mcp;
 use App\Domain\Api\ApiToken;
 use App\Domain\Settings\ApiSettings;
 use App\Domain\Settings\ApiSettingsRepositoryInterface;
-use App\Infrastructure\Http\Api\ApiEmitter;
 use App\Infrastructure\Http\Api\ApiKernel;
 use App\Infrastructure\Http\Api\ApiResponse;
-use App\Infrastructure\Http\Request;
 use Closure;
 use DateTimeImmutable;
 use JsonException;
@@ -69,16 +67,8 @@ final class McpServer
     ) {
     }
 
-    /** Router handler for every method on /mcp. */
-    public function route(): callable
-    {
-        return function (Request $request): void {
-            ApiEmitter::emit($this->handle($request->method, $_SERVER));
-        };
-    }
-
     /**
-     * Processes one HTTP request; separated from route() for tests.
+     * Processes one HTTP request (bootstrap.php emits the response with CORS headers).
      *
      * @param array<string, mixed> $server $_SERVER-like array
      */

@@ -69,6 +69,17 @@ final class ApiKernelTest extends Unit
         $this->assertSame(200, $this->call('GET', [ApiScope::CustomersRead], 'secret', ip: '203.0.113.7')->status);
     }
 
+    public function testOAuthTokensAreNotValidForTheRestApi(): void
+    {
+        $now = new DateTimeImmutable('2026-01-01');
+        $this->tokens->save(new ApiToken('t9', 'Claude (Anna)', hash('sha256', 'oauth'), 'auth', null, true, null, $now, [ApiScope::CustomersRead], false, null, true, 'u1', 'g1', new DateTimeImmutable('2030-01-01')));
+
+        $response = $this->call('GET', [ApiScope::CustomersRead], 'oauth');
+
+        $this->assertSame(401, $response->status);
+        $this->assertStringContainsString('/mcp', $response->body()['error']);
+    }
+
     public function testMissingScopeIs403AndNamesTheScope(): void
     {
         $this->addToken('secret', [ApiScope::CustomersRead]);

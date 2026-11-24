@@ -49,6 +49,8 @@ final class ApiKernel
     /**
      * @param Closure(ApiSettings): ?RateLimiterInterface $rateLimiterFactory returns null when rate limiting is off
      * @param (Closure(): DateTimeImmutable)|null $clock
+     * @param (Closure(ApiToken, DateTimeImmutable): ?ApiToken)|null $tokenGuard checks/narrows a token after lookup
+     *        (OAuth tokens: expiry, owner still active, owner's current permissions); null = reject
      */
     public function __construct(
         private readonly ApiSettingsRepositoryInterface $settings,
@@ -56,6 +58,7 @@ final class ApiKernel
         private readonly ApiRequestLogRepositoryInterface $requestLog,
         private readonly Closure $rateLimiterFactory,
         private readonly ?Closure $clock = null,
+        private readonly ?Closure $tokenGuard = null,
     ) {
     }
 
@@ -92,6 +95,11 @@ final class ApiKernel
         if ($token instanceof ApiResponse) {
             return $token;
         }
+        if ($token->isOAuth()) {
+            // Issued for the resource /mcp (RFC 8707), not for the REST API.
+            return ApiResponse::error(401, 'Über OAuth ausgestellte Tokens gelten nur für den MCP-Server (/mcp).')
+                ->withHeaders(['WWW-Authenticate' => 'Bearer error="invalid_token"']);
+        }
         $ip = self::clientIp($server);
 
         $isWrite = in_array($request->method, self::WRITE_METHODS, true);
@@ -119,6 +127,9 @@ final class ApiKernel
                 ->withHeaders(['WWW-Authenticate' => $wwwAuthenticate]);
         }
         $token = $this->tokens->findByTokenHash(hash('sha256', $rawToken));
+        if ($token !== null && $this->tokenGuard !== null) {
+            $token = ($this->tokenGuard)($token, $this->now());
+        }
         if ($token === null || !$token->enabled) {
             return ApiResponse::error(401, 'Ungültiges oder deaktiviertes Token.')
                 ->withHeaders(['WWW-Authenticate' => $wwwAuthenticate . ($wwwAuthenticate === 'Bearer' ? ' ' : ', ') . 'error="invalid_token"']);
@@ -140,7 +151,17 @@ final class ApiKernel
      */
     public function rateLimit(ApiToken $token, ApiSettings $settings, DateTimeImmutable $now): array|ApiResponse
     {
-        $limit = $token->rateLimitPerMinute ?? $settings->rateLimitPerMinute;
+        return $this->rateLimitKey($token->id, $token->rateLimitPerMinute ?? $settings->rateLimitPerMinute, $settings, $now);
+    }
+
+    /**
+     * Rate limit for an arbitrary key (max. 36 characters, e.g. a hash of the
+     * client IP for the OAuth endpoints) in the same counter as the tokens.
+     *
+     * @return array<string, string>|ApiResponse
+     */
+    public function rateLimitKey(string $key, int $limit, ApiSettings $settings, DateTimeImmutable $now): array|ApiResponse
+    {
         if ($limit <= 0) {
             return [];
         }
@@ -149,7 +170,7 @@ final class ApiKernel
             return [];
         }
         try {
-            $result = $limiter->hit($token->id, $limit, $now);
+            $result = $limiter->hit($key, $limit, $now);
             if (!$result->allowed()) {
                 return ApiResponse::error(429, 'Zu viele Anfragen. Bitte nach Ablauf der Minute erneut versuchen.')
                     ->withHeaders($result->headers() + ['Retry-After' => (string) $result->retryAfterSeconds($now)]);

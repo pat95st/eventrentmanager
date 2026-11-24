@@ -54,6 +54,10 @@ final class Router
         '/api/v1/',
         // MCP server: bearer token only, no session (see Mcp\McpServer).
         '/mcp',
+        // OAuth endpoints for MCP clients (the consent form POST /oauth/authorize keeps CSRF).
+        '/oauth/register',
+        '/oauth/token',
+        '/oauth/revoke',
     ];
 
     public function get(string $path, callable $handler): void

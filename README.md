@@ -892,11 +892,16 @@ be switched on in addition to the REST API, optionally as „MCP nur lesen“
 tools (customers, articles and availability, events, offers, invoices,
 receipts, reports, inventory) with an API token that has „Für MCP zulassen“;
 scopes, IP filter, request limit and log of the token apply. Finalizing
-invoices, sending e-mails and deleting are never offered. Setup, tool list and
-conventions: `docs/mcp.md` (migration 183).
+invoices, sending e-mails and deleting are never offered. Clients such as
+claude.ai and Claude Desktop connect via OAuth 2.1 with the user's normal
+login and a consent page; only scopes matching the user's permissions can be
+granted, and each user manages the connections under *Profil ›
+KI-Assistenten*. Setup, tool list and conventions: `docs/mcp.md`
+(migrations 183 and 184).
 
 - Server: `src/Infrastructure/Mcp/McpServer.php`, tools: `McpToolbox.php`
-  (wrappers around the REST API controllers).
+  (wrappers around the REST API controllers); OAuth:
+  `src/Application/OAuth/OAuthService.php`, `OAuthController.php`.
 - `McpToolboxTest` fails if a tool is missing in `docs/mcp.md` or uses a
   controller action that is not a REST route.
 

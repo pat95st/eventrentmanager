@@ -41,7 +41,35 @@ final class ApiToken
         // Released for the MCP server /mcp (migration 183); off by default so an
         // existing integration token does not become usable by an LLM client.
         public bool $mcpAllowed = false,
+        // Tokens issued via OAuth (migration 184): owner, connection and expiry.
+        // They are only valid for /mcp and are not listed under Settings › API › tokens.
+        public readonly ?string $userId = null,
+        public readonly ?string $oauthGrantId = null,
+        public readonly ?DateTimeImmutable $expiresAt = null,
     ) {
+    }
+
+    public function isOAuth(): bool
+    {
+        return $this->oauthGrantId !== null;
+    }
+
+    public function isExpired(DateTimeImmutable $now): bool
+    {
+        return $this->expiresAt !== null && $this->expiresAt <= $now;
+    }
+
+    /**
+     * Copy with other scopes (the ApiKernel token guard narrows OAuth tokens to the owner's current permissions).
+     *
+     * @param list<ApiScope> $scopes
+     */
+    public function withScopes(array $scopes): self
+    {
+        $copy = clone $this;
+        $copy->scopes = array_values($scopes);
+
+        return $copy;
     }
 
     public function allows(ApiScope $scope): bool

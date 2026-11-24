@@ -1963,7 +1963,16 @@ $dryHireSettingsController = new \App\Infrastructure\Http\Controllers\DryHireSet
 $companySettingsController = new CompanySettingsController($commandBus, $queryBus, $fileStorage);
 $integrationSettingsController = new \App\Infrastructure\Http\Controllers\IntegrationSettingsController($commandBus, $queryBus, $googleBusinessApiClient);
 $apiRequestLogRepository = new \App\Infrastructure\Persistence\Pdo\MariadbApiRequestLogRepository($pdo);
-$apiSettingsController = new \App\Infrastructure\Http\Controllers\ApiSettingsController($commandBus, $queryBus, $apiRequestLogRepository, $apiSettingsRepository);
+// OAuth 2.1 authorization server for the MCP server (migration 184): clients
+// such as claude.ai connect with the user's normal login, see OAuthService.
+$oauthService = new \App\Application\OAuth\OAuthService(
+    new \App\Infrastructure\Persistence\Pdo\MariadbOAuthClientRepository($pdo),
+    new \App\Infrastructure\Persistence\Pdo\MariadbOAuthGrantRepository($pdo),
+    new \App\Infrastructure\Persistence\Pdo\MariadbOAuthAuthorizationCodeRepository($pdo),
+    $apiTokenRepository,
+    $userRepository,
+);
+$apiSettingsController = new \App\Infrastructure\Http\Controllers\ApiSettingsController($commandBus, $queryBus, $apiRequestLogRepository, $apiSettingsRepository, $oauthService);
 // REST API v1 (migration 175): kernel with token/scope/IP checks, rate limiting
 // (database counter, or Redis with automatic fallback to the database) and
 // write-request log; see App\Infrastructure\Http\Api\ApiKernel.
@@ -1988,6 +1997,7 @@ $apiKernel = new \App\Infrastructure\Http\Api\ApiKernel(
             },
         );
     },
+    tokenGuard: \Closure::fromCallable(new \App\Application\OAuth\OAuthTokenGuard($userRepository)),
 );
 $apiDocumentRenderer = new \App\Infrastructure\Http\Api\DocumentRenderer($queryBus, $offerPdfGenerator, $orderConfirmationPdfGenerator, $invoicePdfGenerator, $xRechnungGenerator, $invoiceCorrectionDocuments, $dunningPdfGenerator);
 $simpleApiResource = static fn (string $label, Closure $list, ?Closure $find, ?string $create, ?string $update, ?string $delete, array $exclude = []) => new \App\Infrastructure\Http\Controllers\Api\SimpleResourceApiController($queryBus, $commandBus, $label, $list, $find, $create, $update, $delete, $exclude);
@@ -3134,10 +3144,38 @@ $mcpServer = new \App\Infrastructure\Mcp\McpServer(
     $apiSettingsRepository,
     $apiKernel,
     new \App\Infrastructure\Mcp\McpToolbox($apiControllers, $inventoryNumberRepository),
+    static fn (array $server): string => \App\Infrastructure\Http\Controllers\OAuthController::challenge($server),
 );
+$oauthController = new \App\Infrastructure\Http\Controllers\OAuthController($oauthService, $apiSettingsRepository, $apiKernel);
+$emitOAuth = static fn (\Closure $action): callable => \App\Infrastructure\Http\Controllers\OAuthController::emitting($action);
 foreach (['get', 'post', 'delete'] as $mcpMethod) {
-    $router->{$mcpMethod}(\App\Infrastructure\Mcp\McpServer::PATH, $mcpServer->route());
+    $router->{$mcpMethod}(\App\Infrastructure\Mcp\McpServer::PATH, $emitOAuth(static fn (\App\Infrastructure\Http\Request $request) => $mcpServer->handle($request->method, $_SERVER)));
 }
+// OAuth 2.1 for MCP clients (metadata, registration, token, revocation) — no
+// session/CSRF, CORS open; the consent page uses the normal login.
+$oauthBody = static function (\App\Infrastructure\Http\Request $request): array {
+    if ($request->post !== []) {
+        return $request->post;
+    }
+    $json = json_decode((string) file_get_contents('php://input'), true);
+
+    return is_array($json) ? $json : [];
+};
+foreach (['/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp'] as $oauthPath) {
+    $router->get($oauthPath, $emitOAuth(static fn () => $oauthController->protectedResourceMetadata($_SERVER)));
+}
+$router->get('/.well-known/oauth-authorization-server', $emitOAuth(static fn () => $oauthController->authorizationServerMetadata($_SERVER)));
+$router->post('/oauth/register', $emitOAuth(static fn () => $oauthController->register($_SERVER, (string) file_get_contents('php://input'))));
+$router->post('/oauth/token', $emitOAuth(static fn (\App\Infrastructure\Http\Request $request) => $oauthController->token($oauthBody($request), $_SERVER)));
+$router->post('/oauth/revoke', $emitOAuth(static fn (\App\Infrastructure\Http\Request $request) => $oauthController->revoke($oauthBody($request), $_SERVER)));
+foreach ([\App\Infrastructure\Mcp\McpServer::PATH, '/oauth/register', '/oauth/token', '/oauth/revoke', '/.well-known/oauth-protected-resource', '/.well-known/oauth-protected-resource/mcp', '/.well-known/oauth-authorization-server'] as $oauthPath) {
+    $router->options($oauthPath, $emitOAuth(static fn () => $oauthController->preflight()));
+}
+$router->get('/oauth/authorize', static fn (\App\Infrastructure\Http\Request $request) => $oauthController->authorize($request, $auth->guard(null, [$oauthController, 'consent'])));
+$router->post('/oauth/authorize', $auth->guard(null, [$oauthController, 'decide']));
+$router->get('/profil/ki-assistenten', $auth->guard(null, [$oauthController, 'profile']));
+$router->post('/profil/ki-assistenten/{id}/trennen', $auth->guard(null, [$oauthController, 'disconnectOwn']));
+$router->post('/einstellungen/api/verbindungen/{id}/trennen', $auth->guard(Permission::Administration, [$oauthController, 'disconnectAny']));
 // Federation protocol between partner installations (migration 160): bearer
 // token of the partnership (or the secret invitation code), no session/CSRF.
 $router->get('/api/federation/v1/invitations/{code}', [$federationApiController, 'invitation']);

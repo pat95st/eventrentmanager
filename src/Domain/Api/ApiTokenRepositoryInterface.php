@@ -21,4 +21,7 @@ interface ApiTokenRepositoryInterface
 
     /** Leichtgewichtiges Update von last_used_at bei jeder erfolgreichen API-Anfrage, siehe Api\ApiKernel. */
     public function touchLastUsed(string $id, DateTimeImmutable $at): void;
+
+    /** Removes the access token(s) of an OAuth grant (before a new one is issued). */
+    public function deleteByOAuthGrant(string $grantId): void;
 }
